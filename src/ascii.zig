@@ -671,7 +671,7 @@ pub fn sampleStringFrom(allocator: std.mem.Allocator, source: anytype, len: usiz
 }
 
 pub fn appendString(allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), len: usize) !void {
-    try appendStringFrom(allocator, rng, string_buffer, len);
+    try Alphanumeric.appendString(allocator, rng, string_buffer, len);
 }
 
 pub fn appendStringFrom(allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), len: usize) !void {

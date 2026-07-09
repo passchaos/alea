@@ -5906,3 +5906,9 @@ generation directly
 `appendString` directly instead of routing through `appendStringCheckedFrom`.
 This improves ASCII Charset checked appendString facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1115 routes top-level ASCII caller-owned alphanumeric append generation
+directly (`compare/results/s4-m1115-ascii-append-string-facade-direct.md`):
+`ascii.appendString` now calls facade `Alphanumeric.appendString` directly
+instead of routing through `appendStringFrom`. This improves top-level ASCII
+appendString facade ergonomics but does not resolve S4-M11.

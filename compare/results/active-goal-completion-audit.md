@@ -1153,7 +1153,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1112 ASCII sampleString facade direct path | `src/ascii.zig`, `compare/results/s4-m1112-ascii-sample-string-facade-direct.md` | Closed for the current bar: top-level ASCII sampleString now avoids From wrappers. |
 | S4-M1113 ASCII Charset appendString facade direct path | `src/ascii.zig`, `compare/results/s4-m1113-ascii-charset-append-string-facade-direct.md` | Closed for the current bar: reusable ASCII Charset appendString now avoids From wrappers. |
 | S4-M1114 ASCII Charset checked appendString facade direct path | `src/ascii.zig`, `compare/results/s4-m1114-ascii-charset-checked-append-string-facade-direct.md` | Closed for the current bar: reusable ASCII Charset checked appendString now avoids From wrappers. |
-| S4-M1115 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1115 ASCII appendString facade direct path | `src/ascii.zig`, `compare/results/s4-m1115-ascii-append-string-facade-direct.md` | Closed for the current bar: top-level ASCII appendString now avoids From wrappers. |
+| S4-M1116 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4372,6 +4373,13 @@ preserving stream shape, caller-owned output behavior, empty validation,
 zero-length behavior, allocation-failure no-consume behavior, and singleton
 no-consume behavior while avoiding `appendStringCheckedFrom` wrapper aliases; it
 is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M1115 additionally routes top-level ASCII caller-owned alphanumeric append
+generation through the reusable direct `Charset.appendString` facade path,
+preserving stream shape, caller-owned output behavior, empty validation,
+zero-length behavior, allocation-failure no-consume behavior, and alphanumeric
+sampling behavior while avoiding `appendStringFrom` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
