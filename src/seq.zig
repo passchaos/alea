@@ -9900,7 +9900,8 @@ pub fn partialShuffleSplit(rng: Rng, comptime T: type, items: []T, amount: usize
 }
 
 pub fn partialShuffleSplitChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error!PartialShuffleSplit(T) {
-    return partialShuffleSplitCheckedFrom(rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleSplit(rng, T, items, amount);
 }
 
 pub fn partialShuffleSplitCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error!PartialShuffleSplit(T) {

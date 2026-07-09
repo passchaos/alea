@@ -5651,3 +5651,10 @@ S4-M1075 routes top-level sequence partialShuffleSplit directly
 the selected/rest split instead of routing through `partialShuffleSplitFrom`.
 This improves sequence partial shuffle split facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1076 routes top-level sequence partialShuffleSplitChecked directly
+(`compare/results/s4-m1076-seq-partial-shuffle-split-checked-facade-direct.md`):
+`seq.partialShuffleSplitChecked` now validates and calls facade
+`partialShuffleSplit` directly instead of routing through
+`partialShuffleSplitCheckedFrom`. This improves sequence checked partial shuffle
+split facade ergonomics but does not resolve S4-M11.

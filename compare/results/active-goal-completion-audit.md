@@ -1114,7 +1114,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1073 Seq partialShuffle facade direct path | `src/seq.zig`, `compare/results/s4-m1073-seq-partial-shuffle-facade-direct.md` | Closed for the current bar: top-level sequence partialShuffle facade now avoids From wrappers. |
 | S4-M1074 Seq partialShuffleChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1074-seq-partial-shuffle-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffle facade now avoids From wrappers. |
 | S4-M1075 Seq partialShuffleSplit facade direct path | `src/seq.zig`, `compare/results/s4-m1075-seq-partial-shuffle-split-facade-direct.md` | Closed for the current bar: top-level sequence partialShuffleSplit facade now avoids From wrappers. |
-| S4-M1076 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1076 Seq partialShuffleSplitChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1076-seq-partial-shuffle-split-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffleSplit facade now avoids From wrappers. |
+| S4-M1077 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4115,6 +4116,12 @@ S4-M1075 additionally routes top-level sequence partialShuffleSplit through the
 direct facade partialShuffle path, preserving stream shape, selected/rest
 partitioning, and zero-count behavior while avoiding `partialShuffleSplitFrom`
 wrapper aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
+complete the long-term objective.
+S4-M1076 additionally routes top-level sequence partialShuffleSplitChecked
+through validation plus the direct facade partialShuffleSplit path, preserving
+stream shape, invalid-count no-consume validation, selected/rest partitioning,
+and zero-count behavior while avoiding `partialShuffleSplitCheckedFrom` wrapper
+aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
