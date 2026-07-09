@@ -484,7 +484,40 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn sampleString(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
-        return self.sampleStringFrom(allocator, rng, length);
+        if (length == 0) return allocator.alloc(u8, 0);
+        try self.validateNonEmpty();
+        const capacity = try self.utf8Capacity(length);
+        var out = try std.ArrayList(u8).initCapacity(allocator, capacity);
+        errdefer out.deinit(allocator);
+
+        if (self.scalars.len == 1) {
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(self.scalars[0], &buf) catch unreachable;
+            var i: usize = 0;
+            while (i < length) : (i += 1) out.appendSliceAssumeCapacity(buf[0..written]);
+            return out.toOwnedSlice(allocator);
+        }
+
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            var i: usize = 0;
+            while (i < length) : (i += 1) {
+                const index = Rng.uintLessThanFrom(rng, u64, scalar_count);
+                var buf: [4]u8 = undefined;
+                const written = std.unicode.utf8Encode(self.scalars[@intCast(index)], &buf) catch unreachable;
+                out.appendSliceAssumeCapacity(buf[0..written]);
+            }
+            return out.toOwnedSlice(allocator);
+        }
+
+        var i: usize = 0;
+        while (i < length) : (i += 1) {
+            const index = Rng.uintLessThanFrom(rng, usize, self.scalars.len);
+            var buf: [4]u8 = undefined;
+            const written = std.unicode.utf8Encode(self.scalars[index], &buf) catch unreachable;
+            out.appendSliceAssumeCapacity(buf[0..written]);
+        }
+        return out.toOwnedSlice(allocator);
     }
 
     pub fn sampleStringFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
@@ -1216,6 +1249,17 @@ test "unicode charset unchecked strings validate before allocation" {
     try std.testing.expect(!invalid_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const rng = alea.Rng.init(&engine);
+    var empty_facade_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.sampleString(empty_facade_alloc.allocator(), rng, 3));
+    try std.testing.expect(!empty_facade_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var invalid_facade_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.InvalidParameter, invalid.sampleString(invalid_facade_alloc.allocator(), rng, 3));
+    try std.testing.expect(!invalid_facade_alloc.has_induced_failure);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 4);
     defer list.deinit(std.testing.allocator);
     try list.appendSlice(std.testing.allocator, "u:");
@@ -1268,6 +1312,11 @@ test "single-scalar unicode charset helpers do not consume random stream" {
     try std.testing.expectEqualStrings("♥♥♥", text);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const facade_text = try singleton.sampleString(std.testing.allocator, rng, 3);
+    defer std.testing.allocator.free(facade_text);
+    try std.testing.expectEqualStrings("♥♥♥", facade_text);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
     defer list.deinit(std.testing.allocator);
     try list.appendSlice(std.testing.allocator, "s:");
@@ -1286,6 +1335,14 @@ test "initial unicode charset allocation failures do not consume random stream" 
     try std.testing.expectError(error.OutOfMemory, symbols.sampleStringFrom(sample_alloc.allocator(), &sample_engine, 8));
     try std.testing.expect(sample_alloc.has_induced_failure);
     try std.testing.expectEqual(sample_control.next(), sample_engine.next());
+
+    var facade_sample_engine = alea.ScalarPrng.init(0x5150_b008);
+    var facade_sample_control = alea.ScalarPrng.init(0x5150_b008);
+    const facade_sample_rng = alea.Rng.init(&facade_sample_engine);
+    var facade_sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, symbols.sampleString(facade_sample_alloc.allocator(), facade_sample_rng, 8));
+    try std.testing.expect(facade_sample_alloc.has_induced_failure);
+    try std.testing.expectEqual(facade_sample_control.next(), facade_sample_engine.next());
 
     var append_engine = alea.ScalarPrng.init(0x5150_b005);
     var append_control = alea.ScalarPrng.init(0x5150_b005);
