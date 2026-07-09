@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1146 bar is S4-M1147: exact/default dense SIMD research,
+The active post-S4-M1147 bar is S4-M1148: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6051,3 +6051,5 @@ S4-M1144 aligns negative normal/log-normal standard-deviation semantics with loc
 S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics with local `rand_distr::Normal::new` and `LogNormal::new` (`compare/results/s4-m1145-nonfinite-normal-mean.md`): non-finite means are accepted while non-finite stddev remains invalid, and non-zero-stddev samples still consume the same standard-normal draws as the manual baseline. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1146 aligns exact reusable mean/CV edge semantics with local `rand_distr::Normal::from_mean_cv` and `LogNormal::from_mean_cv` (`compare/results/s4-m1146-mean-cv-edge.md`): Normal stores `mean * cv` directly after CV validation, LogNormal mirrors zero-CV branch ordering and infinite-mean behavior, and invalid infinite CV remains rejected. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1147 aligns Gamma-family infinity semantics with local `rand_distr::Gamma::new` and `ChiSquared::new` (`compare/results/s4-m1147-gamma-infinity.md`): Gamma/VectorGamma accept infinite shape or scale, ChiSquared/Chi scalar/vector helpers accept infinite dof, and deterministic infinity outputs do not consume randomness. This is a local `rand_distr` compatibility closure, not whole-goal completion.

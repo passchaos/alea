@@ -9796,8 +9796,8 @@ pub const StandardGeometric = struct {
 
 pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
-    if (scale == 0) return 0;
+    std.debug.assert(gammaParametersValid(T, shape, scale));
+    if (gammaPoint(T, shape, scale)) |point| return point;
     if (shape == 0.5) {
         const z = Rng.standardNormalFastFrom(rng, T);
         return (scale * 0.5) * z * z;
@@ -9818,8 +9818,8 @@ pub fn gammaCheckedFrom(source: anytype, comptime T: type, shape: T, scale: T) E
 
 pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
     comptime requireFloat(T);
-    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
-    if (scale == 0) return 0;
+    std.debug.assert(gammaParametersValid(T, shape, scale));
+    if (gammaPoint(T, shape, scale)) |point| return point;
 
     if (shape < 1) {
         if (shape == 0.5) {
@@ -9850,9 +9850,9 @@ pub fn gammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
 
 pub fn fillGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
-    if (scale == 0) {
-        @memset(dest, 0);
+    std.debug.assert(gammaParametersValid(T, shape, scale));
+    if (gammaPoint(T, shape, scale)) |point| {
+        @memset(dest, point);
         return;
     }
     if (shape == 0.5) {
@@ -9870,9 +9870,9 @@ pub fn fillGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void
 
 pub fn fillGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
     comptime requireFloat(T);
-    std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(shape) and std.math.isFinite(scale));
-    if (scale == 0) {
-        @memset(dest, 0);
+    std.debug.assert(gammaParametersValid(T, shape, scale));
+    if (gammaPoint(T, shape, scale)) |point| {
+        @memset(dest, point);
         return;
     }
     if (shape == 0.5) {
@@ -9898,6 +9898,18 @@ pub fn fillGammaCheckedFrom(source: anytype, comptime T: type, dest: []T, shape:
     if (dest.len == 0) return;
     const sampler = try Gamma(T).init(shape, scale);
     sampler.fillFrom(source, dest);
+}
+
+fn gammaParametersValid(comptime T: type, shape: T, scale: T) bool {
+    return shape > 0 and scale >= 0 and
+        (std.math.isFinite(shape) or shape == std.math.inf(T)) and
+        (std.math.isFinite(scale) or scale == std.math.inf(T));
+}
+
+fn gammaPoint(comptime T: type, shape: T, scale: T) ?T {
+    if (scale == 0) return 0;
+    if (shape == std.math.inf(T) or scale == std.math.inf(T)) return std.math.inf(T);
+    return null;
 }
 
 pub fn vectorGamma(rng: Rng, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
@@ -9984,22 +9996,22 @@ pub fn VectorGamma(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (gammaPoint(Child, self.sampler.shape, self.sampler.scale)) |point| return @splat(point);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (gammaPoint(Child, self.sampler.shape, self.sampler.scale)) |point| return @splat(point);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (gammaPoint(Child, self.sampler.shape, self.sampler.scale)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             if (self.sampler.shape == 1 and (comptime Child == f32 or Child == f64)) {
@@ -10018,8 +10030,8 @@ pub fn VectorGamma(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (gammaPoint(Child, self.sampler.shape, self.sampler.scale)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             if (self.sampler.shape == 1 and (comptime Child == f32 or Child == f64)) {
@@ -10054,8 +10066,7 @@ pub fn Gamma(comptime T: type) type {
 
         pub fn init(shape: T, scale: T) Error!Self {
             comptime requireFloat(T);
-            if (!(shape > 0) or !(scale >= 0)) return error.InvalidParameter;
-            if (!std.math.isFinite(shape) or !std.math.isFinite(scale)) return error.InvalidParameter;
+            if (!gammaParametersValid(T, shape, scale)) return error.InvalidParameter;
             return Self.initInternal(shape, scale);
         }
 
@@ -10072,14 +10083,17 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
+            if (self.scale == 0) return 0;
             return self.shape * self.scale;
         }
 
         pub fn varianceValue(self: Self) T {
+            if (self.scale == 0) return 0;
             return self.shape * self.scale * self.scale;
         }
 
         pub fn modeValue(self: Self) T {
+            if (self.scale == 0) return 0;
             if (self.shape <= 1) return 0;
             return (self.shape - 1) * self.scale;
         }
@@ -10090,11 +10104,13 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            if (self.scale == 0) return 0;
+            if (self.shape == std.math.inf(T) or self.scale == std.math.inf(T)) return std.math.inf(T);
+            return null;
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            if (self.isDegenerate()) return 0;
+            if (gammaPoint(T, self.shape, self.scale)) |point| return point;
             if (self.shape == 1) return self.scale * Rng.standardExponentialFastFrom(rng, T);
 
             if (self.is_boosted) {
@@ -10106,7 +10122,7 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return 0;
+            if (gammaPoint(T, self.shape, self.scale)) |point| return point;
             if (self.shape == 1) return self.scale * Rng.standardExponentialFastFrom(source, T);
 
             if (self.is_boosted) {
@@ -10118,8 +10134,8 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
+            if (gammaPoint(T, self.shape, self.scale)) |point| {
+                @memset(dest, point);
                 return;
             }
             if (self.shape == 1) {
@@ -10138,8 +10154,8 @@ pub fn Gamma(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
+            if (gammaPoint(T, self.shape, self.scale)) |point| {
+                @memset(dest, point);
                 return;
             }
             if (self.shape == 1) {
@@ -10158,7 +10174,7 @@ pub fn Gamma(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.scale == 0;
+            return gammaPoint(T, self.shape, self.scale) != null;
         }
 
         fn sampleMarsaglia(_: Self, source: anytype, d: T, c: T) T {
@@ -10175,6 +10191,15 @@ pub fn Gamma(comptime T: type) type {
         }
 
         fn initInternal(shape: T, scale: T) Self {
+            if (gammaPoint(T, shape, scale) != null) {
+                return .{
+                    .shape = shape,
+                    .scale = scale,
+                    .d = 0,
+                    .c = 0,
+                    .is_boosted = false,
+                };
+            }
             if (shape < 1) {
                 const boosted_shape = shape + 1;
                 const boosted_d = boosted_shape - @as(T, 1.0 / 3.0);
@@ -10204,8 +10229,8 @@ pub fn Gamma(comptime T: type) type {
 
 pub fn chiSquared(rng: Rng, comptime T: type, dof: T) T {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) return 0;
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| return point;
     return gamma(rng, T, dof / 2, 2);
 }
 
@@ -10221,16 +10246,16 @@ pub fn chiSquaredCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T 
 
 pub fn chiSquaredFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) return 0;
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| return point;
     return gammaFrom(source, T, dof / 2, 2);
 }
 
 pub fn fillChiSquared(rng: Rng, comptime T: type, dest: []T, dof: T) void {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) {
-        @memset(dest, 0);
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| {
+        @memset(dest, point);
         return;
     }
     if (dof == 1) {
@@ -10247,9 +10272,9 @@ pub fn fillChiSquared(rng: Rng, comptime T: type, dest: []T, dof: T) void {
 
 pub fn fillChiSquaredFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) {
-        @memset(dest, 0);
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| {
+        @memset(dest, point);
         return;
     }
     if (dof == 1) {
@@ -10274,6 +10299,16 @@ pub fn fillChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, d
     if (dest.len == 0) return;
     const sampler = try ChiSquared(T).init(dof);
     sampler.fillFrom(source, dest);
+}
+
+fn chiSquaredParametersValid(comptime T: type, dof: T) bool {
+    return dof >= 0 and (std.math.isFinite(dof) or dof == std.math.inf(T));
+}
+
+fn chiSquaredPoint(comptime T: type, dof: T) ?T {
+    if (dof == 0) return 0;
+    if (dof == std.math.inf(T)) return std.math.inf(T);
+    return null;
 }
 
 pub fn vectorChiSquared(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
@@ -10360,7 +10395,7 @@ pub fn VectorChiSquared(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (chiSquaredPoint(Child, self.sampler.dof)) |point| return @splat(point);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -10371,8 +10406,8 @@ pub fn VectorChiSquared(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (chiSquaredPoint(Child, self.sampler.dof)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             (VectorGamma(VectorType){ .sampler = self.sampler.gamma_sampler }).fillFrom(source, dest);
@@ -10389,7 +10424,7 @@ pub fn ChiSquared(comptime T: type) type {
 
         pub fn init(dof: T) Error!Self {
             comptime requireFloat(T);
-            if (!(dof >= 0) or !std.math.isFinite(dof)) return error.InvalidParameter;
+            if (!chiSquaredParametersValid(T, dof)) return error.InvalidParameter;
             return .{
                 .dof = dof,
                 .gamma_sampler = if (dof == 0)
@@ -10408,25 +10443,28 @@ pub fn ChiSquared(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
+            if (chiSquaredPoint(T, self.dof)) |point| return point;
             return self.dof;
         }
 
         pub fn varianceValue(self: Self) T {
+            if (chiSquaredPoint(T, self.dof) != null) return 0;
             return 2 * self.dof;
         }
 
         pub fn modeValue(self: Self) T {
+            if (chiSquaredPoint(T, self.dof)) |point| return point;
             if (self.dof <= 2) return 0;
             return self.dof - 2;
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
+            if (chiSquaredPoint(T, self.dof)) |point| return point;
             return 0;
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return chiSquaredPoint(T, self.dof);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -10446,15 +10484,15 @@ pub fn ChiSquared(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.dof == 0;
+            return chiSquaredPoint(T, self.dof) != null;
         }
     };
 }
 
 pub fn chi(rng: Rng, comptime T: type, dof: T) T {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) return 0;
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| return @sqrt(point);
     if (dof == 1) return @abs(Rng.standardNormalFastFrom(rng, T));
     const sampler = Chi(T).init(dof) catch unreachable;
     return sampler.sample(rng);
@@ -10472,17 +10510,17 @@ pub fn chiCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
 
 pub fn chiFrom(source: anytype, comptime T: type, dof: T) T {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) return 0;
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| return @sqrt(point);
     if (dof == 1) return @abs(Rng.standardNormalFastFrom(source, T));
     return @sqrt(chiSquaredFrom(source, T, dof));
 }
 
 pub fn fillChi(rng: Rng, comptime T: type, dest: []T, dof: T) void {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) {
-        @memset(dest, 0);
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| {
+        @memset(dest, @sqrt(point));
         return;
     }
     if (dof == 1) {
@@ -10496,9 +10534,9 @@ pub fn fillChi(rng: Rng, comptime T: type, dest: []T, dof: T) void {
 
 pub fn fillChiFrom(source: anytype, comptime T: type, dest: []T, dof: T) void {
     comptime requireFloat(T);
-    std.debug.assert(dof >= 0 and std.math.isFinite(dof));
-    if (dof == 0) {
-        @memset(dest, 0);
+    std.debug.assert(chiSquaredParametersValid(T, dof));
+    if (chiSquaredPoint(T, dof)) |point| {
+        @memset(dest, @sqrt(point));
         return;
     }
     if (dof == 1) {
@@ -10520,6 +10558,11 @@ pub fn fillChiCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T) 
     if (dest.len == 0) return;
     const sampler = try Chi(T).init(dof);
     sampler.fillFrom(source, dest);
+}
+
+fn chiPoint(comptime T: type, dof: T) ?T {
+    if (chiSquaredPoint(T, dof)) |point| return @sqrt(point);
+    return null;
 }
 
 pub fn vectorChi(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType)) VectorType {
@@ -10602,22 +10645,22 @@ pub fn VectorChi(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (chiPoint(Child, self.sampler.dofValue())) |point| return @splat(point);
             var out = (VectorChiSquared(VectorType){ .sampler = self.sampler.chi_squared_sampler }).sample(rng);
             out = @sqrt(out);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
+            if (chiPoint(Child, self.sampler.dofValue())) |point| return @splat(point);
             var out: VectorType = undefined;
             inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (chiPoint(Child, self.sampler.dofValue())) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             (VectorChiSquared(VectorType){ .sampler = self.sampler.chi_squared_sampler }).fill(rng, dest);
@@ -10625,8 +10668,8 @@ pub fn VectorChi(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (chiPoint(Child, self.sampler.dofValue())) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             (VectorChiSquared(VectorType){ .sampler = self.sampler.chi_squared_sampler }).fillFrom(source, dest);
@@ -10650,46 +10693,47 @@ pub fn Chi(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
-            if (self.isDegenerate()) return 0;
+            if (chiPoint(T, self.dofValue())) |point| return point;
             const dof = self.dofValue();
             const half = dof / 2;
             return @exp(@log(@as(T, 2)) / 2 + std.math.lgamma(T, (dof + 1) / 2) - std.math.lgamma(T, half));
         }
 
         pub fn varianceValue(self: Self) T {
-            if (self.isDegenerate()) return 0;
+            if (chiPoint(T, self.dofValue()) != null) return 0;
             const mean = self.expectedValue();
             return self.dofValue() - mean * mean;
         }
 
         pub fn modeValue(self: Self) T {
             const dof = self.dofValue();
+            if (chiPoint(T, dof)) |point| return point;
             if (dof <= 1) return 0;
             return @sqrt(dof - 1);
         }
 
         pub fn minValue(self: Self) T {
-            _ = self;
+            if (chiPoint(T, self.dofValue())) |point| return point;
             return 0;
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return chiPoint(T, self.dofValue());
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            if (self.isDegenerate()) return 0;
+            if (chiPoint(T, self.dofValue())) |point| return point;
             return @sqrt(self.chi_squared_sampler.sample(rng));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return 0;
+            if (chiPoint(T, self.dofValue())) |point| return point;
             return @sqrt(self.chi_squared_sampler.sampleFrom(source));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
+            if (chiPoint(T, self.dofValue())) |point| {
+                @memset(dest, point);
                 return;
             }
             self.chi_squared_sampler.fill(rng, dest);
@@ -10697,8 +10741,8 @@ pub fn Chi(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
+            if (chiPoint(T, self.dofValue())) |point| {
+                @memset(dest, point);
                 return;
             }
             self.chi_squared_sampler.fillFrom(source, dest);
@@ -10706,7 +10750,7 @@ pub fn Chi(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.dofValue() == 0;
+            return chiPoint(T, self.dofValue()) != null;
         }
     };
 }
@@ -25848,6 +25892,56 @@ test "degenerate gamma helpers do not consume random stream" {
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(std.math.inf(f64), gamma(rng, f64, std.math.inf(f64), 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), gammaFrom(&engine, f64, 2, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try gammaChecked(rng, f64, std.math.inf(f64), 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try gammaCheckedFrom(&engine, f64, 2, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillGammaFrom(&engine, f64, &scalar_buf, std.math.inf(f64), 2);
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillGammaChecked(rng, f64, &scalar_buf, 2, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape = try Gamma(f64).init(std.math.inf(f64), 2);
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.shapeValue());
+    try std.testing.expectEqual(@as(f64, 2), infinite_shape.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.expectedValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.varianceValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape.minValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.maxValue().?);
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_scale = try Gamma(f32).init(2, std.math.inf(f32));
+    try std.testing.expectEqual(std.math.inf(f32), infinite_scale.scaleValue());
+    try std.testing.expectEqual(std.math.inf(f32), infinite_scale.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vectorGammaFrom(&engine, @Vector(4, f64), std.math.inf(f64), 2));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), try vectorGammaChecked(rng, @Vector(4, f64), 2, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorGammaFrom(&engine, @Vector(4, f64), &vector_buf, std.math.inf(f64), 2);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_infinite_shape = try VectorGamma(@Vector(4, f64)).init(std.math.inf(f64), 2);
+    try std.testing.expectEqual(std.math.inf(f64), vector_infinite_shape.shapeValue());
+    try std.testing.expectEqual(std.math.inf(f64), vector_infinite_shape.sampleFrom(&engine)[0]);
+    try std.testing.expectEqual(control.next(), engine.next());
 }
 
 test "degenerate erlang helpers do not consume random stream" {
@@ -26100,6 +26194,51 @@ test "degenerate chi-squared and chi helpers do not consume random stream" {
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    try std.testing.expectEqual(std.math.inf(f64), chiSquared(rng, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), chiSquaredFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try chiSquaredChecked(rng, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try chiSquaredCheckedFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillChiSquaredFrom(&engine, f64, &scalar_buf, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillChiSquaredChecked(rng, f64, &scalar_buf, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const chi_squared_inf = try ChiSquared(f64).init(std.math.inf(f64));
+    try std.testing.expectEqual(std.math.inf(f64), chi_squared_inf.dofValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_squared_inf.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), chi_squared_inf.varianceValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_squared_inf.modeValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_squared_inf.minValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_squared_inf.maxValue().?);
+    try std.testing.expectEqual(std.math.inf(f64), chi_squared_inf.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vectorChiSquaredFrom(&engine, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), try vectorChiSquaredChecked(rng, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorChiSquaredFrom(&engine, @Vector(4, f64), &vector_buf, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_chi_squared_inf = try VectorChiSquared(@Vector(4, f64)).init(std.math.inf(f64));
+    try std.testing.expectEqual(std.math.inf(f64), vector_chi_squared_inf.dofValue());
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vector_chi_squared_inf.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     try std.testing.expectEqual(@as(f64, 0), chiFrom(&engine, f64, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -26126,6 +26265,51 @@ test "degenerate chi-squared and chi helpers do not consume random stream" {
 
     chi_sampler.fillFrom(&engine, &scalar_buf);
     for (scalar_buf) |sample| try std.testing.expectEqual(@as(f64, 0), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), chi(rng, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), chiFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try chiChecked(rng, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try chiCheckedFrom(&engine, f64, std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillChiFrom(&engine, f64, &scalar_buf, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillChiChecked(rng, f64, &scalar_buf, std.math.inf(f64));
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const chi_inf = try Chi(f64).init(std.math.inf(f64));
+    try std.testing.expectEqual(std.math.inf(f64), chi_inf.dofValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_inf.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), chi_inf.varianceValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_inf.modeValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_inf.minValue());
+    try std.testing.expectEqual(std.math.inf(f64), chi_inf.maxValue().?);
+    try std.testing.expectEqual(std.math.inf(f64), chi_inf.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vectorChiFrom(&engine, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), try vectorChiChecked(rng, @Vector(4, f64), std.math.inf(f64)));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorChiFrom(&engine, @Vector(4, f64), &vector_buf, std.math.inf(f64));
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_chi_inf = try VectorChi(@Vector(4, f64)).init(std.math.inf(f64));
+    try std.testing.expectEqual(std.math.inf(f64), vector_chi_inf.dofValue());
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vector_chi_inf.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vectorChiFrom(&engine, @Vector(4, f64), 0));
