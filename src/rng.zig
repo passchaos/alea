@@ -2593,11 +2593,15 @@ pub fn unicodeScalar(self: Rng) u21 {
 }
 
 pub fn unicodeScalarRangeLessThan(self: Rng, min: u21, less_than: u21) u21 {
-    return unicodeScalarRangeLessThanFrom(self, min, less_than);
+    const range = unicodeScalarExclusiveRange(min, less_than) catch unreachable;
+    if (exclusiveIntRangeHasSingleValue(u21, range.min, range.end)) return unicodeScalarFromCompressed(range.min);
+    return unicodeScalarFromCompressed(self.intRangeLessThan(u21, range.min, range.end));
 }
 
 pub fn unicodeScalarRangeAtMost(self: Rng, min: u21, at_most: u21) u21 {
-    return unicodeScalarRangeAtMostFrom(self, min, at_most);
+    const range = unicodeScalarInclusiveRange(min, at_most) catch unreachable;
+    if (range.min == range.max) return unicodeScalarFromCompressed(range.min);
+    return unicodeScalarFromCompressed(self.intRangeAtMost(u21, range.min, range.max));
 }
 
 pub fn unicodeScalarRangeLessThanChecked(self: Rng, min: u21, less_than: u21) Error!u21 {
@@ -5726,6 +5730,24 @@ test "unicode scalar range helpers preserve checked stream shape" {
     const alea = @import("root.zig");
 
     inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var less_scalar_direct = Engine.init(0x5150_989d);
+        var less_scalar_facade = Engine.init(0x5150_989d);
+        const less_scalar_rng = Rng.init(&less_scalar_facade);
+        try std.testing.expectEqual(
+            unicodeScalarRangeLessThanFrom(&less_scalar_direct, 0xD7F0, 0xE010),
+            less_scalar_rng.unicodeScalarRangeLessThan(0xD7F0, 0xE010),
+        );
+        try std.testing.expectEqual(less_scalar_direct.next(), less_scalar_facade.next());
+
+        var at_most_scalar_direct = Engine.init(0x5150_989e);
+        var at_most_scalar_facade = Engine.init(0x5150_989e);
+        const at_most_scalar_rng = Rng.init(&at_most_scalar_facade);
+        try std.testing.expectEqual(
+            unicodeScalarRangeAtMostFrom(&at_most_scalar_direct, 0x41, 0x5A),
+            at_most_scalar_rng.unicodeScalarRangeAtMost(0x41, 0x5A),
+        );
+        try std.testing.expectEqual(at_most_scalar_direct.next(), at_most_scalar_facade.next());
+
         var unchecked = Engine.init(0x5150_98a0);
         var checked = Engine.init(0x5150_98a0);
 

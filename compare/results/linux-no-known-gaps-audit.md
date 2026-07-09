@@ -5919,3 +5919,10 @@ S4-M1116 routes `Rng.unicodeScalar` directly
 `intRangeLessThan` and maps around the surrogate gap directly instead of routing
 through `unicodeScalarFrom`. This improves Unicode scalar facade ergonomics but
 does not resolve S4-M11.
+
+S4-M1117 routes bounded `Rng` Unicode scalar range helpers directly
+(`compare/results/s4-m1117-rng-unicode-scalar-range-facade-direct.md`):
+`Rng.unicodeScalarRangeLessThan` and `Rng.unicodeScalarRangeAtMost` now sample
+compressed scalar ranges through facade integer range helpers directly instead
+of routing through `unicodeScalarRange*From`. This improves Unicode scalar range
+facade ergonomics but does not resolve S4-M11.
