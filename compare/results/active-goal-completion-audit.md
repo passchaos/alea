@@ -1143,7 +1143,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1102 ASCII Charset alloc facade direct path | `src/ascii.zig`, `compare/results/s4-m1102-ascii-charset-alloc-facade-direct.md` | Closed for the current bar: reusable ASCII Charset allocation-returning batches now avoid From wrappers. |
 | S4-M1103 ASCII Charset checked alloc facade direct path | `src/ascii.zig`, `compare/results/s4-m1103-ascii-charset-checked-alloc-facade-direct.md` | Closed for the current bar: reusable ASCII Charset checked allocation-returning batches now avoid From wrappers. |
 | S4-M1104 ASCII Charset sampleString facade direct path | `src/ascii.zig`, `compare/results/s4-m1104-ascii-charset-sample-string-facade-direct.md` | Closed for the current bar: reusable ASCII Charset sampleString now avoids From wrappers. |
-| S4-M1105 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1105 ASCII Charset checked sampleString facade direct path | `src/ascii.zig`, `compare/results/s4-m1105-ascii-charset-checked-sample-string-facade-direct.md` | Closed for the current bar: reusable ASCII Charset checked sampleString now avoids From wrappers. |
+| S4-M1106 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4302,6 +4303,12 @@ through the direct alloc facade, preserving stream shape, allocation ownership,
 empty validation, zero-length behavior, and singleton no-consume behavior while
 avoiding `sampleStringFrom` wrapper aliases; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
+S4-M1105 additionally routes reusable ASCII Charset checked allocation-returning
+strings through the direct checked alloc facade, preserving stream shape,
+allocation ownership, empty validation, zero-length behavior, and singleton
+no-consume behavior while avoiding `sampleStringCheckedFrom` wrapper aliases; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -240,7 +240,7 @@ pub const Charset = struct {
     }
 
     pub fn sampleStringChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
-        return self.sampleStringCheckedFrom(allocator, rng, length);
+        return self.allocChecked(allocator, rng, length);
     }
 
     pub fn sampleStringCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {

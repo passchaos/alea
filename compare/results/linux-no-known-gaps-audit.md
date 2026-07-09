@@ -5841,3 +5841,9 @@ S4-M1104 routes reusable ASCII Charset allocation-returning strings directly
 `ascii.Charset.sampleString` now calls facade `alloc` directly instead of routing
 through `sampleStringFrom`. This improves ASCII Charset sampleString facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1105 routes reusable ASCII Charset checked allocation-returning strings
+directly (`compare/results/s4-m1105-ascii-charset-checked-sample-string-facade-direct.md`):
+`ascii.Charset.sampleStringChecked` now calls facade `allocChecked` directly
+instead of routing through `sampleStringCheckedFrom`. This improves ASCII Charset
+checked sampleString facade ergonomics but does not resolve S4-M11.
