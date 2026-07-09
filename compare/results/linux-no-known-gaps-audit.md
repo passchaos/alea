@@ -5823,3 +5823,9 @@ S4-M1101 routes reusable UnicodeCharset checked scalar fills directly
 `ascii.UnicodeCharset.fillChecked` now validates and calls facade `fill` directly
 instead of routing through `fillCheckedFrom`. This improves UnicodeCharset
 checked scalar fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1102 routes reusable ASCII Charset allocation-returning byte batches directly
+(`compare/results/s4-m1102-ascii-charset-alloc-facade-direct.md`):
+`ascii.Charset.alloc` now allocates and fills through facade `fill` directly
+instead of routing through `allocFrom`. This improves ASCII Charset owned byte
+batch facade ergonomics but does not resolve S4-M11.
