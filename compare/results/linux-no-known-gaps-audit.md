@@ -5417,3 +5417,10 @@ directly (`compare/results/s4-m1039-native-f32-exponential-facade-direct.md`):
 `fill` now call native-f32 standard-exponential facade helpers directly instead of
 routing through `sampleFrom` / `fillFrom` wrappers. This improves native-f32
 Exponential facade ergonomics but does not resolve S4-M11.
+
+S4-M1040 routes reusable vector approximate-log f32 Exponential facade helpers
+directly (`compare/results/s4-m1040-vector-approx-log-exponential-facade-direct.md`):
+`VectorExponentialApproxLogF32.sample` / `fill` now call approximate-log vector
+exponential facade helpers directly instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves approximate-log Exponential facade ergonomics
+but does not resolve S4-M11.

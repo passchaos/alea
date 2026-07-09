@@ -6499,7 +6499,8 @@ pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.inverse_rate == 0) return @splat(0);
+            return vectorStandardExponentialApproxLogF32(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -6508,7 +6509,13 @@ pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.inverse_rate == 0) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            fillVectorStandardExponentialApproxLogF32(rng, VectorType, dest);
+            const scalars = std.mem.bytesAsSlice(f32, std.mem.sliceAsBytes(dest));
+            for (scalars) |*item| item.* *= self.inverse_rate;
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
