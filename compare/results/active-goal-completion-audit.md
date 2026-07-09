@@ -1117,7 +1117,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1076 Seq partialShuffleSplitChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1076-seq-partial-shuffle-split-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffleSplit facade now avoids From wrappers. |
 | S4-M1077 Seq partialShuffleTail facade direct path | `src/seq.zig`, `compare/results/s4-m1077-seq-partial-shuffle-tail-facade-direct.md` | Closed for the current bar: top-level sequence partialShuffleTail facade now avoids From wrappers. |
 | S4-M1078 Seq partialShuffleTailChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1078-seq-partial-shuffle-tail-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffleTail facade now avoids From wrappers. |
-| S4-M1079 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1079 Seq partialShuffleTailSplit facade direct path | `src/seq.zig`, `compare/results/s4-m1079-seq-partial-shuffle-tail-split-facade-direct.md` | Closed for the current bar: top-level sequence partialShuffleTailSplit facade now avoids From wrappers. |
+| S4-M1080 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4135,6 +4136,11 @@ shape, invalid-count no-consume validation, tail-selected semantics, and
 zero-count behavior while avoiding `partialShuffleTailCheckedFrom` wrapper
 aliases; it is reliability/ergonomics work and does not resolve S4-M11 or
 complete the long-term objective.
+S4-M1079 additionally routes top-level sequence partialShuffleTailSplit through
+the direct facade partialShuffleTail path, preserving stream shape,
+selected-tail/rest-prefix partitioning, and zero-count behavior while avoiding
+`partialShuffleTailSplitFrom` wrapper aliases; it is reliability/ergonomics work
+and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

@@ -9947,7 +9947,8 @@ pub fn partialShuffleTailFrom(source: anytype, comptime T: type, items: []T, amo
 }
 
 pub fn partialShuffleTailSplit(rng: Rng, comptime T: type, items: []T, amount: usize) PartialShuffleTailSplit(T) {
-    return partialShuffleTailSplitFrom(rng, T, items, amount);
+    const selected = partialShuffleTail(rng, T, items, amount);
+    return .{ .selected = selected, .rest = items[0 .. items.len - selected.len] };
 }
 
 pub fn partialShuffleTailSplitChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error!PartialShuffleTailSplit(T) {
