@@ -232,7 +232,7 @@ pub const Charset = struct {
     }
 
     pub fn sampleString(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
-        return self.sampleStringFrom(allocator, rng, length);
+        return self.alloc(allocator, rng, length);
     }
 
     pub fn sampleStringFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {

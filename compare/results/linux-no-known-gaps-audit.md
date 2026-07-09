@@ -5835,3 +5835,9 @@ directly (`compare/results/s4-m1103-ascii-charset-checked-alloc-facade-direct.md
 `ascii.Charset.allocChecked` now validates and calls facade `alloc` directly
 instead of routing through `allocCheckedFrom`. This improves ASCII Charset checked
 owned byte batch facade ergonomics but does not resolve S4-M11.
+
+S4-M1104 routes reusable ASCII Charset allocation-returning strings directly
+(`compare/results/s4-m1104-ascii-charset-sample-string-facade-direct.md`):
+`ascii.Charset.sampleString` now calls facade `alloc` directly instead of routing
+through `sampleStringFrom`. This improves ASCII Charset sampleString facade
+ergonomics but does not resolve S4-M11.
