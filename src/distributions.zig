@@ -19411,7 +19411,7 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            try self.fillCheckedFrom(rng, dest);
+            self.fill(rng, dest);
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {

@@ -5602,3 +5602,9 @@ S4-M1067 routes reusable AliasTable checked u32 fills directly
 through facade `Rng` directly instead of routing through `fillU32CheckedFrom`.
 This improves AliasTable checked u32 fill facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1068 routes reusable AliasTable checked fills directly
+(`compare/results/s4-m1068-alias-table-checked-fill-facade-direct.md`):
+`AliasTable(Weight).fillChecked` now calls the AliasTable fill facade directly
+instead of routing through `fillCheckedFrom`. This improves AliasTable checked
+fill facade ergonomics but does not resolve S4-M11.

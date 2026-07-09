@@ -1106,7 +1106,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1065 Seq WeightedChoice index fill facade direct path | `src/seq.zig`, `compare/results/s4-m1065-seq-weightedchoice-index-fill-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice index fill now avoids From wrappers. |
 | S4-M1066 Seq WeightedChoice checked index fill facade direct path | `src/seq.zig`, `compare/results/s4-m1066-seq-weightedchoice-checked-index-fill-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice checked index fill now avoids From wrappers. |
 | S4-M1067 AliasTable checked u32 fill facade direct path | `src/distributions.zig`, `compare/results/s4-m1067-alias-table-checked-u32-fill-facade-direct.md` | Closed for the current bar: reusable AliasTable checked u32 fills now avoid From wrappers. |
-| S4-M1068 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1068 AliasTable checked fill facade direct path | `src/distributions.zig`, `compare/results/s4-m1068-alias-table-checked-fill-facade-direct.md` | Closed for the current bar: reusable AliasTable checked fills now avoid From wrappers. |
+| S4-M1069 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4068,6 +4069,11 @@ facade cached-alias sampling, preserving stream shape, u32 population validation
 zero-length behavior, and single-positive behavior while avoiding
 `fillU32CheckedFrom` wrapper aliases; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
+S4-M1068 additionally routes reusable AliasTable checked usize fills through the
+AliasTable fill facade directly, preserving stream shape, zero-length behavior,
+and single-positive behavior while avoiding `fillCheckedFrom` wrapper aliases; it
+is reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
