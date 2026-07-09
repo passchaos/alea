@@ -6735,7 +6735,8 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            if (self.isDegenerate()) return @splat(0);
+            return vectorStandardExponential(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -6744,7 +6745,19 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            if (self.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            if (comptime Child == f32 or Child == f64) {
+                fillVectorStandardExponential(rng, VectorType, dest);
+                if (self.inverse_rate != 1) {
+                    const scalars = std.mem.bytesAsSlice(Child, std.mem.sliceAsBytes(dest));
+                    scaleInPlace(Child, scalars, self.inverse_rate);
+                }
+            } else {
+                fillVectorExponential(rng, VectorType, dest, 1 / self.inverse_rate);
+            }
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {

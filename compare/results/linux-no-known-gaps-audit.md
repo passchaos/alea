@@ -5431,3 +5431,9 @@ S4-M1041 routes reusable vector table Exponential facade helpers directly
 / `fill` now call table-exponential facade helpers directly instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves vector table Exponential
 facade ergonomics but does not resolve S4-M11.
+
+S4-M1042 routes reusable generic VectorExponential facade helpers directly
+(`compare/results/s4-m1042-vector-exponential-facade-direct.md`):
+`VectorExponential.sample` / `fill` now call vector exponential facade helpers
+directly instead of routing through `sampleFrom` / `fillFrom` wrappers. This
+improves generic VectorExponential facade ergonomics but does not resolve S4-M11.
