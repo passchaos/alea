@@ -8217,7 +8217,7 @@ pub fn VectorLogNormalExp2F32(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            return vectorLogNormalExp2F32(rng, VectorType, self.mean, self.stddev);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -8225,7 +8225,7 @@ pub fn VectorLogNormalExp2F32(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            fillVectorLogNormalExp2F32(rng, VectorType, dest, self.mean, self.stddev);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
