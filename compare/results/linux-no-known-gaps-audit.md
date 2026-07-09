@@ -5449,3 +5449,10 @@ S4-M1044 routes reusable BufferedLogNormal facade helpers directly
 `BufferedLogNormal.sample` / `fill` now refill through log-normal facade helpers
 directly instead of routing through `sampleFrom` / `fillFrom` wrappers. This
 improves BufferedLogNormal facade ergonomics but does not resolve S4-M11.
+
+S4-M1045 routes reusable scalar/vector native-f32 LogNormal facade helpers
+directly (`compare/results/s4-m1045-native-f32-log-normal-facade-direct.md`):
+`LogNormalNativeF32.sample` / `fill` and `VectorLogNormalNativeF32.sample` /
+`fill` now call native-f32 log-normal facade helpers directly instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves native-f32 LogNormal
+facade ergonomics but does not resolve S4-M11.
