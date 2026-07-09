@@ -5892,3 +5892,9 @@ S4-M1112 routes top-level ASCII allocation-returning sample strings directly
 `ascii.sampleString` now calls facade `Alphanumeric.sampleString` directly
 instead of routing through `sampleStringFrom`. This improves top-level ASCII
 sampleString facade ergonomics but does not resolve S4-M11.
+
+S4-M1113 routes reusable ASCII Charset caller-owned string append generation
+directly (`compare/results/s4-m1113-ascii-charset-append-string-facade-direct.md`):
+`ascii.Charset.appendString` now resizes and fills through facade `fill`
+directly instead of routing through `appendStringFrom`. This improves ASCII
+Charset appendString facade ergonomics but does not resolve S4-M11.

@@ -248,7 +248,11 @@ pub const Charset = struct {
     }
 
     pub fn appendString(self: Charset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
-        try self.appendStringFrom(allocator, rng, string_buffer, length);
+        if (length == 0) return;
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        const old_len = string_buffer.items.len;
+        try string_buffer.resize(allocator, old_len + length);
+        self.fill(rng, string_buffer.items[old_len..]);
     }
 
     pub fn appendStringFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
@@ -1038,6 +1042,13 @@ test "sampleString unchecked aliases handle empty charsets before allocation" {
     try std.testing.expectEqualStrings("seed", list.items);
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const rng = alea.Rng.init(&engine);
+    var facade_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.EmptyCharset, empty.appendString(facade_append_alloc.allocator(), rng, &list, 4));
+    try std.testing.expect(!facade_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("seed", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const zero = try empty.sampleStringFrom(std.testing.allocator, &engine, 0);
     defer std.testing.allocator.free(zero);
     try std.testing.expectEqual(@as(usize, 0), zero.len);
@@ -1495,6 +1506,13 @@ test "single-byte charset helpers do not consume random stream" {
     const checked_allocated = try only_x.allocChecked(std.testing.allocator, rng, 5);
     defer std.testing.allocator.free(checked_allocated);
     try std.testing.expectEqualSlices(u8, "xxxxx", checked_allocated);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+    defer list.deinit(std.testing.allocator);
+    try list.appendSlice(std.testing.allocator, "s:");
+    try only_x.appendString(std.testing.allocator, rng, &list, 5);
+    try std.testing.expectEqualStrings("s:xxxxx", list.items);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
