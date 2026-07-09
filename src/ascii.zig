@@ -212,7 +212,9 @@ pub const Charset = struct {
     }
 
     pub fn allocChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
-        return self.allocCheckedFrom(allocator, rng, length);
+        if (length == 0) return allocator.alloc(u8, 0);
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        return self.alloc(allocator, rng, length);
     }
 
     pub fn allocCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {

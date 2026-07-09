@@ -5829,3 +5829,9 @@ S4-M1102 routes reusable ASCII Charset allocation-returning byte batches directl
 `ascii.Charset.alloc` now allocates and fills through facade `fill` directly
 instead of routing through `allocFrom`. This improves ASCII Charset owned byte
 batch facade ergonomics but does not resolve S4-M11.
+
+S4-M1103 routes reusable ASCII Charset checked allocation-returning byte batches
+directly (`compare/results/s4-m1103-ascii-charset-checked-alloc-facade-direct.md`):
+`ascii.Charset.allocChecked` now validates and calls facade `alloc` directly
+instead of routing through `allocCheckedFrom`. This improves ASCII Charset checked
+owned byte batch facade ergonomics but does not resolve S4-M11.
