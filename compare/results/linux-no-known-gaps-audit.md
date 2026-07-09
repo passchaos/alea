@@ -5510,3 +5510,10 @@ S4-M1053 routes reusable vector approximate-f32 LogNormal facade helpers directl
 log-normal facade helpers directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves vector approximate-f32 LogNormal facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1054 routes reusable scalar/vector HalfNormal facade helpers directly
+(`compare/results/s4-m1054-half-normal-sampler-facade-direct.md`):
+`HalfNormal.sample` / `fill` and `VectorHalfNormal.sample` / `fill` now call
+HalfNormal facade helpers directly instead of routing through `sampleFrom` /
+`fillFrom` wrappers. This improves HalfNormal sampler facade ergonomics but does
+not resolve S4-M11.

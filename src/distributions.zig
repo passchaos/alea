@@ -8415,7 +8415,7 @@ pub fn HalfNormal(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            return halfNormal(rng, T, self.scale);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -8423,7 +8423,7 @@ pub fn HalfNormal(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            fillHalfNormal(rng, T, dest, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -8472,7 +8472,7 @@ pub fn VectorHalfNormal(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            return vectorHalfNormal(rng, VectorType, self.scale);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -8480,7 +8480,7 @@ pub fn VectorHalfNormal(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            fillVectorHalfNormal(rng, VectorType, dest, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
