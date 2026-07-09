@@ -9304,7 +9304,13 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
-            self.fillFrom(rng, dest);
+            if (dest.len == 0) return;
+            const items = self.items;
+            if (self.table.constantIndex()) |index| {
+                @memset(dest, &items[index]);
+                return;
+            }
+            for (dest) |*slot| slot.* = &items[self.table.sample(rng)];
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {

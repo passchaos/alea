@@ -5529,3 +5529,9 @@ S4-M1056 routes sequence-layer reusable Choice pointer fills directly
 `seq.Choice(T).fill` now maps direct facade-generated indexes into item storage
 instead of routing through `fillFrom`. This improves seq Choice pointer-fill
 facade ergonomics but does not resolve S4-M11.
+
+S4-M1057 routes sequence-layer reusable WeightedChoice pointer fills directly
+(`compare/results/s4-m1057-seq-weightedchoice-pointer-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fill` now maps direct facade-sampled alias-table indexes
+into item storage instead of routing through `fillFrom`. This improves seq
+WeightedChoice pointer-fill facade ergonomics but does not resolve S4-M11.
