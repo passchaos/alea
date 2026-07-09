@@ -5912,3 +5912,10 @@ directly (`compare/results/s4-m1115-ascii-append-string-facade-direct.md`):
 `ascii.appendString` now calls facade `Alphanumeric.appendString` directly
 instead of routing through `appendStringFrom`. This improves top-level ASCII
 appendString facade ergonomics but does not resolve S4-M11.
+
+S4-M1116 routes `Rng.unicodeScalar` directly
+(`compare/results/s4-m1116-rng-unicode-scalar-facade-direct.md`):
+`Rng.unicodeScalar` now samples the compressed scalar range through facade
+`intRangeLessThan` and maps around the surrogate gap directly instead of routing
+through `unicodeScalarFrom`. This improves Unicode scalar facade ergonomics but
+does not resolve S4-M11.

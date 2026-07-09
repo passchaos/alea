@@ -2586,7 +2586,10 @@ pub fn durationRangeAtMostCheckedFrom(source: anytype, min: std.Io.Duration, max
 }
 
 pub fn unicodeScalar(self: Rng) u21 {
-    return unicodeScalarFrom(self);
+    const gap_size = 0xDFFF - 0xD800 + 1;
+    var scalar = self.intRangeLessThan(u21, gap_size, 0x11_0000);
+    if (scalar <= 0xDFFF) scalar -= gap_size;
+    return scalar;
 }
 
 pub fn unicodeScalarRangeLessThan(self: Rng, min: u21, less_than: u21) u21 {
@@ -5688,6 +5691,12 @@ test "unicode scalar fills and batches preserve scalar stream shape" {
     const alea = @import("root.zig");
 
     inline for (.{ alea.ScalarPrng, alea.DefaultPrng }) |Engine| {
+        var scalar_manual = Engine.init(0x5150_979f);
+        var scalar_facade = Engine.init(0x5150_979f);
+        const rng = Rng.init(&scalar_facade);
+        try std.testing.expectEqual(unicodeScalarFrom(&scalar_manual), rng.unicodeScalar());
+        try std.testing.expectEqual(scalar_manual.next(), scalar_facade.next());
+
         var manual = Engine.init(0x5150_97a0);
         var filled = Engine.init(0x5150_97a0);
 
