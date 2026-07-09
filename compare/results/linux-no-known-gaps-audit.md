@@ -5811,3 +5811,9 @@ S4-M1099 routes reusable UnicodeCharset checked scalar sampling directly
 directly instead of routing through `sampleCheckedFrom`. This improves
 UnicodeCharset checked scalar sample facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1100 routes reusable ASCII Charset checked byte fills directly
+(`compare/results/s4-m1100-ascii-charset-checked-fill-facade-direct.md`):
+`ascii.Charset.fillChecked` now validates and calls facade `fill` directly
+instead of routing through `fillCheckedFrom`. This improves ASCII Charset checked
+fill facade ergonomics but does not resolve S4-M11.

@@ -175,7 +175,9 @@ pub const Charset = struct {
     }
 
     pub fn fillChecked(self: Charset, rng: Rng, out: []u8) error{EmptyCharset}!void {
-        try self.fillCheckedFrom(rng, out);
+        if (out.len == 0) return;
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        self.fill(rng, out);
     }
 
     pub fn fillCheckedFrom(self: Charset, source: anytype, out: []u8) error{EmptyCharset}!void {
