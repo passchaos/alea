@@ -5706,3 +5706,10 @@ S4-M1083 routes top-level sequence reservoirSampleChecked directly
 directly instead of routing through `reservoirSampleCheckedFrom`. This improves
 sequence checked allocation-returning reservoir facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1084 routes top-level sequence reservoirSamplePtrsInto directly
+(`compare/results/s4-m1084-seq-reservoir-ptrs-into-facade-direct.md`):
+`seq.reservoirSamplePtrsInto` now validates and performs the const-pointer
+reservoir replacement loop through facade `Rng` directly instead of routing
+through `reservoirSamplePtrsIntoFrom`. This improves sequence caller-owned
+reservoir pointer facade ergonomics but does not resolve S4-M11.

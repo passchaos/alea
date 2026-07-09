@@ -10067,7 +10067,8 @@ pub fn reservoirSampleIntoFrom(source: anytype, comptime T: type, items: []const
 }
 
 pub fn reservoirSamplePtrsInto(rng: Rng, comptime T: type, items: []const T, out: []*const T) Error!void {
-    return reservoirSamplePtrsIntoFrom(rng, T, items, out);
+    if (out.len > items.len) return error.InvalidParameter;
+    reservoirSamplePtrsFill(rng, T, items, out);
 }
 
 pub fn reservoirSamplePtrsIntoFrom(source: anytype, comptime T: type, items: []const T, out: []*const T) Error!void {
@@ -10082,6 +10083,17 @@ pub fn reservoirSampleMutPtrsInto(rng: Rng, comptime T: type, items: []T, out: [
 pub fn reservoirSampleMutPtrsIntoFrom(source: anytype, comptime T: type, items: []T, out: []*T) Error!void {
     if (out.len > items.len) return error.InvalidParameter;
     reservoirSampleMutPtrsFillFrom(source, T, items, out);
+}
+
+fn reservoirSamplePtrsFill(rng: Rng, comptime T: type, items: []const T, out: []*const T) void {
+    if (out.len == 0) return;
+
+    for (items[0..out.len], out) |*item, *slot| slot.* = item;
+    var i = out.len;
+    while (i < items.len) : (i += 1) {
+        const j = rng.uintAtMost(usize, i);
+        if (j < out.len) out[j] = &items[i];
+    }
 }
 
 fn reservoirSamplePtrsFillFrom(source: anytype, comptime T: type, items: []const T, out: []*const T) void {
