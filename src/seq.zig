@@ -9843,7 +9843,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 }
 
 pub fn shuffle(rng: Rng, comptime T: type, items: []T) void {
-    shuffleFrom(rng, T, items);
+    rng.shuffle(T, items);
 }
 
 pub fn shuffleFrom(source: anytype, comptime T: type, items: []T) void {

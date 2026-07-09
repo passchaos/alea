@@ -5627,3 +5627,8 @@ construction directly (`compare/results/s4-m1071-seq-weightedchoice-owned-iter-f
 `seq.WeightedChoice(T).ownedIter` now constructs the iterator directly with the
 facade `Rng` instead of routing through `ownedIterFrom`. This improves seq
 WeightedChoice owned iterator facade ergonomics but does not resolve S4-M11.
+
+S4-M1072 routes top-level sequence shuffle directly
+(`compare/results/s4-m1072-seq-shuffle-facade-direct.md`): `seq.shuffle` now
+calls `Rng.shuffle` directly instead of routing through `shuffleFrom`. This
+improves sequence shuffle facade ergonomics but does not resolve S4-M11.
