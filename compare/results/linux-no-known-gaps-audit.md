@@ -5880,3 +5880,9 @@ S4-M1110 routes top-level ASCII alphanumeric byte sampling directly
 facade `Alphanumeric.sample` directly instead of routing through `charFrom`.
 This improves top-level ASCII char facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1111 routes top-level ASCII allocation-returning alphanumeric strings
+directly (`compare/results/s4-m1111-ascii-string-facade-direct.md`):
+`ascii.string` now calls facade `Alphanumeric.alloc` directly instead of routing
+through `stringFrom`. This improves top-level ASCII string facade ergonomics but
+does not resolve S4-M11.

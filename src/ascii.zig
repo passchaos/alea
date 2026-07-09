@@ -649,7 +649,7 @@ pub fn charFrom(source: anytype) u8 {
 }
 
 pub fn string(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
-    return stringFrom(allocator, rng, len);
+    return Alphanumeric.alloc(allocator, rng, len);
 }
 
 pub fn stringFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
