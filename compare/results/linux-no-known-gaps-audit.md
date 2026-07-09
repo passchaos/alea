@@ -5463,3 +5463,10 @@ S4-M1046 routes reusable LogNormalLibmvec facade helpers directly
 facade `Rng` directly instead of routing through `sampleFrom` / `fillFrom`
 wrappers. This improves LogNormalLibmvec facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1047 routes reusable LogNormalDlsymExp facade helpers directly
+(`compare/results/s4-m1047-log-normal-dlsym-exp-facade-direct.md`):
+`LogNormalDlsymExp.sample` / `fill` now refill through the loaded-libm path from
+facade `Rng` directly instead of routing through `sampleFrom` / `fillFrom`
+wrappers. This improves LogNormalDlsymExp facade ergonomics but does not resolve
+S4-M11.
