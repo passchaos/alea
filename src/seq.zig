@@ -9999,7 +9999,11 @@ pub fn reservoirSampleFrom(allocator: std.mem.Allocator, source: anytype, compti
 }
 
 pub fn reservoirSamplePtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
-    return reservoirSamplePtrsFrom(allocator, rng, T, items, amount);
+    const count = @min(amount, items.len);
+    const out = try allocator.alloc(*const T, count);
+    errdefer allocator.free(out);
+    try reservoirSamplePtrsInto(rng, T, items, out);
+    return out;
 }
 
 pub fn reservoirSamplePtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
