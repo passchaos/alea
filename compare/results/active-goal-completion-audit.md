@@ -27,9 +27,9 @@ local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
 `zig build validate-local` passes, S4-M438/S4-M449 keep the S4-M11 evidence chain
 visible, S4-M1123 records direct Wasmtime 31.0.0 execution of the accepted
 profile long sweep, S4-M1124 restores the post-S4-M11 `validate-all` aggregate,
-and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence, and S4-M1133 routes rate-one vector exponential fills through standard-exponential fills, and S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills, and S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples, and S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples, and S4-M1138 refreshes current status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence-path drift, and S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 standard vector fill specializations to facade standard-parameter workflows, and S4-M1142 extends the f64x4 call-shape specialization to parameterized vector fills, S4-M1143 aligns zero-rate exponential semantics with local rand_distr, S4-M1144 aligns negative normal/log-normal stddev semantics, S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics, S4-M1146 aligns mean/CV edge semantics, S4-M1147 aligns Gamma-family infinity semantics, and S4-M1148 aligns FisherF infinity semantics. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
+and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence, and S4-M1133 routes rate-one vector exponential fills through standard-exponential fills, and S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills, and S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples, and S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples, and S4-M1138 refreshes current status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence-path drift, and S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 standard vector fill specializations to facade standard-parameter workflows, and S4-M1142 extends the f64x4 call-shape specialization to parameterized vector fills, S4-M1143 aligns zero-rate exponential semantics with local rand_distr, S4-M1144 aligns negative normal/log-normal stddev semantics, S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics, S4-M1146 aligns mean/CV edge semantics, S4-M1147 aligns Gamma-family infinity semantics, S4-M1148 aligns FisherF infinity semantics, and S4-M1149 aligns StudentT infinity semantics. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
 kernels are still not known to beat scalar lane-fill, and the roadmap has raised
-the next product bar to S4-M1149. Therefore do not call
+the next product bar to S4-M1150. Therefore do not call
 `update_goal(status=complete)`.
 
 ## Prompt-to-Artifact Checklist
@@ -1188,7 +1188,8 @@ the next product bar to S4-M1149. Therefore do not call
 | S4-M1146 mean/CV edge compatibility | `src/distributions.zig`, `compare/results/s4-m1146-mean-cv-edge.md` | Closed for the current bar: exact reusable Normal/LogNormal mean-CV constructors now mirror local `rand_distr::from_mean_cv` edge semantics for non-finite means and zero-CV branch ordering. |
 | S4-M1147 gamma infinity compatibility | `src/distributions.zig`, `compare/results/s4-m1147-gamma-infinity.md` | Closed for the current bar: Gamma/ChiSquared/Chi scalar and vector helpers accept local `rand_distr` infinite-parameter edges and return/fill infinity without consuming randomness. |
 | S4-M1148 fisher-f infinity compatibility | `src/distributions.zig`, `compare/results/s4-m1148-fisher-f-infinity.md` | Closed for the current bar: FisherF scalar/vector helpers now accept local `rand_distr` infinite-dof combinations, produce NaN, and preserve Gamma/ChiSquared draw shape. |
-| S4-M1149 next post-S4-M1148 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1148 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
+| S4-M1149 student-t infinity compatibility | `src/distributions.zig`, `compare/results/s4-m1149-student-t-infinity.md` | Closed for the current bar: StudentT scalar/vector helpers now accept local `rand_distr` infinite-dof combinations, produce NaN, and preserve StandardNormal plus ChiSquared/Gamma draw shape. |
+| S4-M1150 next post-S4-M1149 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1149 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1220,8 +1221,8 @@ S4-M1136 routes scalar rate-one exponential single samples through
 standard-exponential samples, and S4-M1137 routes standard-parameter scalar
 normal single samples through standard-normal samples, S4-M1138 refreshes
 status after those delegation fixes, S4-M1139 repairs roadmapcheck evidence
-path drift, S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, S4-M1143 aligns zero-rate exponential semantics, S4-M1144 aligns negative normal/log-normal stddev semantics, S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics, S4-M1146 aligns mean/CV edge semantics, S4-M1147 aligns Gamma-family infinity semantics, and S4-M1148 aligns FisherF infinity semantics, so the next active
-product bar is S4-M1149.
+path drift, S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, S4-M1143 aligns zero-rate exponential semantics, S4-M1144 aligns negative normal/log-normal stddev semantics, S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics, S4-M1146 aligns mean/CV edge semantics, S4-M1147 aligns Gamma-family infinity semantics, S4-M1148 aligns FisherF infinity semantics, and S4-M1149 aligns StudentT infinity semantics, so the next active
+product bar is S4-M1150.
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
@@ -3856,7 +3857,7 @@ avoiding `From` wrapper aliases; it is reliability/ergonomics work and does not
 resolve S4-M11 or complete the long-term objective.
 S4-M1010 additionally routes reusable scalar/vector StudentT facade sample/fill
 helpers through direct standard-normal and cached ChiSquared facade sampling,
-preserving stream shape, infinite-degree standard-normal behavior, and zero-length
+preserving stream shape, S4-M1149-superseded infinite-degree NaN/draw-shape behavior, and zero-length
 checked fill semantics while avoiding `sampleFrom` / `fillFrom` wrapper aliases;
 it is reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
@@ -4505,12 +4506,12 @@ exponential fills through standard-exponential fills, and S4-M1136 routes scalar
 rate-one exponential single samples through standard-exponential samples, and
 S4-M1137 routes standard-parameter scalar normal single samples through
 standard-normal samples, S4-M1138 refreshes status, S4-M1139 repairs evidence
-map drift, S4-M1140 refreshes status again, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, S4-M1143 aligns zero-rate exponential semantics, S4-M1144 aligns negative normal/log-normal stddev semantics, S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics, S4-M1146 aligns mean/CV edge semantics, S4-M1147 aligns Gamma-family infinity semantics, and S4-M1148 aligns FisherF infinity semantics, so the next active product bar
-is S4-M1149.
+map drift, S4-M1140 refreshes status again, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, S4-M1143 aligns zero-rate exponential semantics, S4-M1144 aligns negative normal/log-normal stddev semantics, S4-M1145 aligns unrestricted normal/log-normal log-space mean semantics, S4-M1146 aligns mean/CV edge semantics, S4-M1147 aligns Gamma-family infinity semantics, S4-M1148 aligns FisherF infinity semantics, and S4-M1149 aligns StudentT infinity semantics, so the next active product bar
+is S4-M1150.
 
 ## Required Next Work Before Completion
 
-The goal remains active under the new S4-M1149 bar until at least one of these
+The goal remains active under the new S4-M1150 bar until at least one of these
 happens:
 
 - a default/exact-compatible dense SIMD normal/exponential candidate beats

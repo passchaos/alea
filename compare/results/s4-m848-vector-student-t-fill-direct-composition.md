@@ -1,5 +1,9 @@
 # S4-M848 VectorStudentT Reusable Fill Direct Normal/ChiSquared Lanes
 
+## S4-M1149 Supersession Note
+
+S4-M1149 later replaces the former StudentT infinite-degree standard-normal limit extension with local `rand_distr`-compatible NaN output while preserving the corresponding StandardNormal plus ChiSquared/Gamma draw shape. The direct finite-degree composition conclusions below remain relevant; infinite-degree edge semantics now come from S4-M1149.
+
 ## Gap
 
 S4-M847 made scalar reusable `StudentT.fillFrom` draw the standard-normal and
@@ -13,18 +17,18 @@ lane.
 Local `rand_distr` implements StudentT as a standard-normal draw scaled by a
 cached ChiSquared draw: `norm * sqrt(dof / chi.sample(rng))`. Alea now mirrors
 that composition directly for each vector lane in reusable finite-degree fills,
-while keeping the existing infinite-degree standard-normal vector path unchanged.
+while keeping the then-current infinite-degree vector edge unchanged; S4-M1149 later supersedes that edge with rand_distr-compatible NaN/draw-shape semantics.
 
 ## Implementation
 
 - `src/distributions.zig` updates `VectorStudentT.fillFrom` to keep the existing
-  infinite-degree standard-normal vector fill path, then for finite degrees draw
+  S4-M1149-superseded infinite-degree vector edge path, then for finite degrees draw
   `Rng.normalFastFrom(source, Child, 0, 1)` and
   `self.sampler.chi_squared_sampler.sampleFrom(source)` directly for each lane.
 - Focused tests compare f64x4 and f32x8 reusable vector fills with scalar
   `VectorStudentT.sampleFrom` loops under identical seeds, proving output values
-  and stream position stay aligned. Existing infinite-dof tests continue to cover
-  the standard-normal vector stream-shape path.
+  and stream position stay aligned. Infinite-dof edge coverage is now
+  superseded by S4-M1149's rand_distr-compatible NaN/draw-shape test.
 
 ## Validation
 

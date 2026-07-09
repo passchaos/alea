@@ -1,11 +1,15 @@
 # S4-M1010 StudentT Sampler Facade Direct Paths
 
+## S4-M1149 Supersession Note
+
+S4-M1149 later replaces the former StudentT infinite-degree standard-normal limit extension with local `rand_distr`-compatible NaN output while preserving the corresponding StandardNormal plus ChiSquared/Gamma draw shape. The direct finite-degree composition conclusions below remain relevant; infinite-degree edge semantics now come from S4-M1149.
+
 ## Gap
 
 Reusable scalar/vector `StudentT` facade sample/fill helpers still routed through
 `sampleFrom` / `fillFrom` wrappers. S4-M999 through S4-M1002 made ChiSquared/Chi
 facade paths direct; StudentT can now draw standard-normal and ChiSquared values
-directly through facade `Rng` while preserving infinite-degree behavior.
+directly through facade `Rng` while preserving the then-current infinite-degree behavior; S4-M1149 now supplies the current rand_distr-compatible NaN/draw-shape edge.
 
 ## Local `rand` Baseline
 
@@ -18,11 +22,10 @@ bouncing through direct-source aliases.
 
 - `src/distributions.zig` updates `StudentT(T).sample` and `StudentT(T).fill` to
   draw standard-normal and cached ChiSquared samples directly through facade
-  `Rng`, with direct standard-normal behavior for infinite degrees of freedom.
+  `Rng`, with infinite-degree behavior now superseded by S4-M1149's rand_distr-compatible NaN/draw-shape edge.
 - `src/distributions.zig` updates `VectorStudentT(VectorType).sample` and
   `VectorStudentT(VectorType).fill` to draw each vector lane directly through
-  facade `Rng`, with direct vector standard-normal behavior for infinite degrees
-  of freedom.
+  facade `Rng`, with vector infinite-degree behavior now superseded by S4-M1149's rand_distr-compatible NaN/draw-shape edge.
 - Direct-source `sampleFrom` / `fillFrom` remain unchanged for explicit
   direct-source workflows and top-level helpers.
 
@@ -41,8 +44,8 @@ $ zig test src/distributions.zig --test-filter "distribution vector helpers pres
 2/2 root.test_0...OK
 All 2 tests passed.
 
-$ zig test src/distributions.zig --test-filter "infinite-dof student-t preserves standard-normal stream shape"
-1/2 distributions.test.infinite-dof student-t preserves standard-normal stream shape...OK
+$ zig test src/distributions.zig --test-filter "infinite-dof student-t preserves rand_distr-compatible stream shape"
+1/2 distributions.test.infinite-dof student-t preserves rand_distr-compatible stream shape...OK
 2/2 root.test_0...OK
 All 2 tests passed.
 
@@ -74,6 +77,6 @@ apicheck ok
 
 S4-M1010 is closed for the current bar: reusable scalar/vector StudentT facade
 sample/fill helpers now avoid direct-source wrapper aliases while preserving
-stream shape, infinite-degree standard-normal behavior, and zero-length checked
+stream shape, current S4-M1149 infinite-degree NaN/draw-shape behavior, and zero-length checked
 fill semantics. This is reliability/ergonomics work only; it does not resolve
 S4-M11 and is not whole-goal completion evidence.

@@ -1,5 +1,9 @@
 # S4-M847 StudentT Reusable Fill Direct Normal/ChiSquared Composition
 
+## S4-M1149 Supersession Note
+
+S4-M1149 later replaces the former StudentT infinite-degree standard-normal limit extension with local `rand_distr`-compatible NaN output while preserving the corresponding StandardNormal plus ChiSquared/Gamma draw shape. The direct finite-degree composition conclusions below remain relevant; infinite-degree edge semantics now come from S4-M1149.
+
 ## Gap
 
 Reusable `StudentT.fillFrom` still looped through `StudentT.sampleFrom` for every
@@ -13,18 +17,18 @@ paths added in earlier milestones.
 Local `rand_distr` implements StudentT as a standard-normal draw scaled by a
 cached ChiSquared draw: `norm * sqrt(dof / chi.sample(rng))`. Alea now mirrors
 that composition directly in reusable finite-degree fills while keeping the
-existing infinite-degree standard-normal path unchanged.
+then-current infinite-degree edge unchanged; S4-M1149 later supersedes that edge with rand_distr-compatible NaN/draw-shape semantics.
 
 ## Implementation
 
 - `src/distributions.zig` updates `StudentT.fillFrom` to keep the existing
-  infinite-degree standard-normal path, then for finite degrees draw
+  S4-M1149-superseded infinite-degree edge path, then for finite degrees draw
   `Rng.normalFastFrom(source, T, 0, 1)` and
   `self.chi_squared_sampler.sampleFrom(source)` directly for each output.
 - Focused tests compare f64 and f32 reusable fills with scalar
   `StudentT.sampleFrom` loops under identical seeds, proving output values and
   stream position stay aligned. Existing infinite-dof tests continue to cover
-  the standard-normal stream-shape path.
+  the rand_distr-compatible NaN/draw-shape path.
 
 ## Validation
 
