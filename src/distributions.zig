@@ -9174,14 +9174,25 @@ fn logFactorial(k: u64) f64 {
     return std.math.lgamma(f64, @as(f64, @floatFromInt(k + 1)));
 }
 
+const geometricFailureMax: u64 = std.math.maxInt(u64);
+
+fn geometricFailuresSaturates(p: f64) bool {
+    return 1.0 - p == 1.0;
+}
+
+fn geometricProbabilityValid(p: f64, comptime allow_zero: bool) bool {
+    return std.math.isFinite(p) and p <= 1 and if (allow_zero) p >= 0 else p > 0;
+}
+
 pub fn geometric(rng: Rng, p: f64) u64 {
     const dist = Geometric.init(p) catch unreachable;
     return dist.sample(rng);
 }
 
 pub fn geometricFrom(source: anytype, p: f64) u64 {
-    std.debug.assert(p > 0 and p <= 1);
-    return geometricFailuresFrom(source, p) + 1;
+    std.debug.assert(geometricProbabilityValid(p, false));
+    const failures = geometricFailuresFrom(source, p);
+    return if (failures == geometricFailureMax) geometricFailureMax else failures + 1;
 }
 
 pub fn geometricChecked(rng: Rng, p: f64) Error!u64 {
@@ -9200,8 +9211,9 @@ pub fn geometricFailures(rng: Rng, p: f64) u64 {
 }
 
 pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
-    std.debug.assert(p > 0 and p <= 1);
+    std.debug.assert(geometricProbabilityValid(p, true));
     if (p == 1) return 0;
+    if (geometricFailuresSaturates(p)) return geometricFailureMax;
     return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(source, f64)) / @log(1 - p)));
 }
 
@@ -9347,7 +9359,7 @@ pub const Geometric = struct {
     p: f64,
 
     pub fn init(p: f64) Error!Geometric {
-        if (!(p > 0 and p <= 1)) return error.InvalidProbability;
+        if (!geometricProbabilityValid(p, false)) return error.InvalidProbability;
         return .{ .p = p };
     }
 
@@ -9356,30 +9368,29 @@ pub const Geometric = struct {
     }
 
     pub fn expectedValue(self: Geometric) f64 {
-        return 1 / self.p;
+        return if (geometricFailuresSaturates(self.p)) @floatFromInt(geometricFailureMax) else 1 / self.p;
     }
 
     pub fn varianceValue(self: Geometric) f64 {
-        return (1 - self.p) / (self.p * self.p);
+        return if (geometricFailuresSaturates(self.p)) 0 else (1 - self.p) / (self.p * self.p);
     }
 
     pub fn modeValue(self: Geometric) u64 {
-        _ = self;
-        return 1;
+        return if (geometricFailuresSaturates(self.p)) geometricFailureMax else 1;
     }
 
     pub fn minValue(self: Geometric) u64 {
-        _ = self;
-        return 1;
+        return if (geometricFailuresSaturates(self.p)) geometricFailureMax else 1;
     }
 
     pub fn maxValue(self: Geometric) ?u64 {
-        _ = self;
-        return null;
+        if (geometricFailuresSaturates(self.p)) return geometricFailureMax;
+        return if (self.p == 1) 1 else null;
     }
 
     pub fn sample(self: Geometric, rng: Rng) u64 {
         if (self.p == 1) return 1;
+        if (geometricFailuresSaturates(self.p)) return geometricFailureMax;
         return @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - self.p)))) + 1;
     }
 
@@ -9392,6 +9403,10 @@ pub const Geometric = struct {
             @memset(dest, 1);
             return;
         }
+        if (geometricFailuresSaturates(self.p)) {
+            @memset(dest, geometricFailureMax);
+            return;
+        }
         const p = self.p;
         for (dest) |*item| item.* = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
     }
@@ -9399,6 +9414,10 @@ pub const Geometric = struct {
     pub fn fillFrom(self: Geometric, source: anytype, dest: []u64) void {
         if (self.p == 1) {
             @memset(dest, 1);
+            return;
+        }
+        if (geometricFailuresSaturates(self.p)) {
+            @memset(dest, geometricFailureMax);
             return;
         }
         for (dest) |*item| item.* = geometricFrom(source, self.p);
@@ -9444,6 +9463,7 @@ pub fn VectorGeometric(comptime VectorType: type) type {
 
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.p == 1) return @splat(1);
+            if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
             const p = self.sampler.p;
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| {
@@ -9454,6 +9474,7 @@ pub fn VectorGeometric(comptime VectorType: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.p == 1) return @splat(1);
+            if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -9462,6 +9483,10 @@ pub fn VectorGeometric(comptime VectorType: type) type {
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
             if (self.sampler.p == 1) {
                 @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
+            if (geometricFailuresSaturates(self.sampler.p)) {
+                @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
             const p = self.sampler.p;
@@ -9479,6 +9504,10 @@ pub fn VectorGeometric(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(1)));
                 return;
             }
+            if (geometricFailuresSaturates(self.sampler.p)) {
+                @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
+                return;
+            }
             const p = self.sampler.p;
             for (dest) |*item| {
                 var out: VectorType = undefined;
@@ -9493,7 +9522,7 @@ pub const GeometricFailures = struct {
     p: f64,
 
     pub fn init(p: f64) Error!GeometricFailures {
-        if (!(p > 0 and p <= 1)) return error.InvalidProbability;
+        if (!geometricProbabilityValid(p, true)) return error.InvalidProbability;
         return .{ .p = p };
     }
 
@@ -9506,30 +9535,30 @@ pub const GeometricFailures = struct {
     }
 
     pub fn expectedValue(self: GeometricFailures) f64 {
+        if (geometricFailuresSaturates(self.p)) return @floatFromInt(geometricFailureMax);
         return (1 - self.p) / self.p;
     }
 
     pub fn varianceValue(self: GeometricFailures) f64 {
-        return (1 - self.p) / (self.p * self.p);
+        return if (self.p == 1 or geometricFailuresSaturates(self.p)) 0 else (1 - self.p) / (self.p * self.p);
     }
 
     pub fn modeValue(self: GeometricFailures) u64 {
-        _ = self;
-        return 0;
+        return if (geometricFailuresSaturates(self.p)) geometricFailureMax else 0;
     }
 
     pub fn minValue(self: GeometricFailures) u64 {
-        _ = self;
-        return 0;
+        return if (geometricFailuresSaturates(self.p)) geometricFailureMax else 0;
     }
 
     pub fn maxValue(self: GeometricFailures) ?u64 {
-        _ = self;
-        return null;
+        if (geometricFailuresSaturates(self.p)) return geometricFailureMax;
+        return if (self.p == 1) 0 else null;
     }
 
     pub fn sample(self: GeometricFailures, rng: Rng) u64 {
         if (self.p == 1) return 0;
+        if (geometricFailuresSaturates(self.p)) return geometricFailureMax;
         return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - self.p)));
     }
 
@@ -9542,6 +9571,10 @@ pub const GeometricFailures = struct {
             @memset(dest, 0);
             return;
         }
+        if (geometricFailuresSaturates(self.p)) {
+            @memset(dest, geometricFailureMax);
+            return;
+        }
         const p = self.p;
         for (dest) |*item| item.* = @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)));
     }
@@ -9549,6 +9582,10 @@ pub const GeometricFailures = struct {
     pub fn fillFrom(self: GeometricFailures, source: anytype, dest: []u64) void {
         if (self.p == 1) {
             @memset(dest, 0);
+            return;
+        }
+        if (geometricFailuresSaturates(self.p)) {
+            @memset(dest, geometricFailureMax);
             return;
         }
         for (dest) |*item| item.* = geometricFailuresFrom(source, self.p);
@@ -9636,6 +9673,7 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
 
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.p == 1) return @splat(0);
+            if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
             const p = self.sampler.p;
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| {
@@ -9646,6 +9684,7 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.p == 1) return @splat(0);
+            if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -9654,6 +9693,10 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
             if (self.sampler.p == 1) {
                 @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            if (geometricFailuresSaturates(self.sampler.p)) {
+                @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
             const p = self.sampler.p;
@@ -9669,6 +9712,10 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.p == 1) {
                 @memset(dest, @as(VectorType, @splat(0)));
+                return;
+            }
+            if (geometricFailuresSaturates(self.sampler.p)) {
+                @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
             const p = self.sampler.p;
@@ -29533,7 +29580,7 @@ test "invalid discrete distribution helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, negativeBinomialCheckedFrom(&engine, 5, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidProbability, geometricFailuresCheckedFrom(&engine, 0));
+    try std.testing.expectError(error.InvalidProbability, geometricFailuresCheckedFrom(&engine, -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidProbability, geometricCheckedFrom(&engine, 0));
@@ -32265,14 +32312,14 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, vectorGeometricCheckedFrom(&engine, @Vector(4, u64), 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidProbability, vectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), 0));
+    try std.testing.expectError(error.InvalidProbability, vectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var geometric_buf: [4]@Vector(4, u64) = undefined;
     try std.testing.expectError(error.InvalidProbability, fillVectorGeometricCheckedFrom(&engine, @Vector(4, u64), &geometric_buf, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidProbability, fillVectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), &geometric_buf, 0));
+    try std.testing.expectError(error.InvalidProbability, fillVectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), &geometric_buf, -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorPoissonCheckedFrom(&engine, @Vector(4, u64), std.math.inf(f64)));
@@ -32710,7 +32757,7 @@ test "invalid probability distribution fills do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, fillNegativeBinomialCheckedFrom(&engine, &ints, 5, 0));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&engine, &ints, 0));
+    try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&engine, &ints, -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidProbability, fillGeometricCheckedFrom(&engine, &ints, 0));
@@ -32735,7 +32782,7 @@ test "invalid distribution facade misc scalars do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, poissonAhrensDieterChecked(rng, 11));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidProbability, geometricFailuresChecked(rng, 0));
+    try std.testing.expectError(error.InvalidProbability, geometricFailuresChecked(rng, -0.1));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, zetaChecked(rng, f64, 1));
@@ -33263,6 +33310,87 @@ test "degenerate discrete distribution helpers do not consume random stream" {
     vector_zeta_sampler.fillFrom(&engine, &vector_f64_buf);
     for (vector_f64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+
+test "geometric failures zero probability matches local rand_distr" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x9015_1156);
+    var control = alea.ScalarPrng.init(0x9015_1156);
+    const rng = Rng.init(&engine);
+    const max = std.math.maxInt(u64);
+    const tiny = std.math.floatTrueMin(f64);
+
+    try std.testing.expectEqual(max, geometricFailures(rng, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(max, geometricFailuresFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(max, try geometricFailuresCheckedFrom(&engine, -0.0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(max, try geometricFailuresChecked(rng, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(max, try geometricFailuresCheckedFrom(&engine, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const failures = try GeometricFailures.init(0);
+    _ = try GeometricFailures.init(-0.0);
+    try std.testing.expectEqual(@as(f64, 0), failures.probabilityValue());
+    try std.testing.expectEqual(@as(f64, @floatFromInt(max)), failures.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), failures.varianceValue());
+    try std.testing.expectEqual(max, failures.modeValue());
+    try std.testing.expectEqual(max, failures.minValue());
+    try std.testing.expectEqual(max, failures.maxValue().?);
+    try std.testing.expectEqual(max, failures.sample(rng));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(max, failures.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [4]u64 = undefined;
+    failures.fill(rng, &scalar_buf);
+    for (scalar_buf) |value| try std.testing.expectEqual(max, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    failures.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |value| try std.testing.expectEqual(max, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillGeometricFailuresChecked(rng, &scalar_buf, 0);
+    for (scalar_buf) |value| try std.testing.expectEqual(max, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillGeometricFailuresCheckedFrom(&engine, &scalar_buf, 0);
+    for (scalar_buf) |value| try std.testing.expectEqual(max, value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vec_failures = try VectorGeometricFailures(@Vector(4, u64)).init(0);
+    try std.testing.expectEqual(max, vec_failures.minValue());
+    try std.testing.expectEqual(max, vec_failures.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), vectorGeometricFailures(rng, @Vector(4, u64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), vectorGeometricFailuresFrom(&engine, @Vector(4, u64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), try vectorGeometricFailuresChecked(rng, @Vector(4, u64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), try vectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [2]@Vector(4, u64) = undefined;
+    vec_failures.fill(rng, &vector_buf);
+    for (vector_buf) |value| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    vec_failures.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |value| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGeometricFailuresChecked(rng, @Vector(4, u64), &vector_buf, 0);
+    for (vector_buf) |value| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try fillVectorGeometricFailuresCheckedFrom(&engine, @Vector(4, u64), &vector_buf, 0);
+    for (vector_buf) |value| try std.testing.expectEqual(@as(@Vector(4, u64), @splat(max)), value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(max, geometricFrom(&engine, tiny));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(max, (try Geometric.init(tiny)).sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidProbability, Geometric.init(0));
+    try std.testing.expectError(error.InvalidProbability, GeometricFailures.init(-0.1));
 }
 
 test "poisson max lambda guard matches local rand_distr" {
@@ -35374,7 +35502,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (geometric_failures_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
     try fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 1);
     for (geometric_failures_buf) |value| try std.testing.expectEqual(@as(u64, 0), value);
-    try std.testing.expectError(error.InvalidProbability, fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 0));
+    try fillGeometricFailuresCheckedFrom(&direct_engine, &geometric_failures_buf, 0);
+    for (geometric_failures_buf) |value| try std.testing.expectEqual(geometricFailureMax, value);
     var failures_direct_fill_engine = alea.ScalarPrng.init(0x9e0_f001);
     var failures_scalar_loop_engine = alea.ScalarPrng.init(0x9e0_f001);
     var failures_direct_fill: [8]u64 = undefined;
@@ -35393,7 +35522,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     geometric_failures_sampler.fillFrom(&direct_engine, &geometric_failures_buf);
     try std.testing.expectEqual(@as(u64, 0), geometricFailures(rng, 1));
     try std.testing.expect(try geometricFailuresCheckedFrom(&direct_engine, 0.25) < 64);
-    try std.testing.expectError(error.InvalidProbability, geometricFailuresCheckedFrom(&direct_engine, 0));
+    try std.testing.expectEqual(geometricFailureMax, try geometricFailuresCheckedFrom(&direct_engine, 0));
     const always_success_failures = GeometricFailures.init(1) catch unreachable;
     try std.testing.expectEqual(@as(u64, 0), always_success_failures.sample(rng));
     var standard_geometric_buf: [8]u64 = undefined;
