@@ -2619,11 +2619,23 @@ pub fn fillUnicodeScalar(self: Rng, dest: []u21) void {
 }
 
 pub fn fillUnicodeScalarRangeLessThan(self: Rng, dest: []u21, min: u21, less_than: u21) void {
-    fillUnicodeScalarRangeLessThanFrom(self, dest, min, less_than);
+    if (dest.len == 0) return;
+    const range = unicodeScalarExclusiveRange(min, less_than) catch unreachable;
+    if (exclusiveIntRangeHasSingleValue(u21, range.min, range.end)) {
+        @memset(dest, unicodeScalarFromCompressed(range.min));
+        return;
+    }
+    for (dest) |*item| item.* = unicodeScalarFromCompressed(self.intRangeLessThan(u21, range.min, range.end));
 }
 
 pub fn fillUnicodeScalarRangeAtMost(self: Rng, dest: []u21, min: u21, at_most: u21) void {
-    fillUnicodeScalarRangeAtMostFrom(self, dest, min, at_most);
+    if (dest.len == 0) return;
+    const range = unicodeScalarInclusiveRange(min, at_most) catch unreachable;
+    if (range.min == range.max) {
+        @memset(dest, unicodeScalarFromCompressed(range.min));
+        return;
+    }
+    for (dest) |*item| item.* = unicodeScalarFromCompressed(self.intRangeAtMost(u21, range.min, range.max));
 }
 
 pub fn fillUnicodeScalarRangeLessThanChecked(self: Rng, dest: []u21, min: u21, less_than: u21) Error!void {
@@ -5775,6 +5787,26 @@ test "unicode scalar range helpers preserve checked stream shape" {
             try at_most_checked_rng.unicodeScalarRangeAtMostChecked(0x41, 0x5A),
         );
         try std.testing.expectEqual(at_most_checked_direct.next(), at_most_checked_facade.next());
+
+        var less_fill_direct = Engine.init(0x5150_98a5);
+        var less_fill_facade = Engine.init(0x5150_98a5);
+        const less_fill_rng = Rng.init(&less_fill_facade);
+        var less_fill_direct_buf: [16]u21 = undefined;
+        var less_fill_facade_buf: [16]u21 = undefined;
+        fillUnicodeScalarRangeLessThanFrom(&less_fill_direct, &less_fill_direct_buf, 0xD7F0, 0xE010);
+        less_fill_rng.fillUnicodeScalarRangeLessThan(&less_fill_facade_buf, 0xD7F0, 0xE010);
+        try std.testing.expectEqualSlices(u21, &less_fill_direct_buf, &less_fill_facade_buf);
+        try std.testing.expectEqual(less_fill_direct.next(), less_fill_facade.next());
+
+        var at_most_fill_direct = Engine.init(0x5150_98a6);
+        var at_most_fill_facade = Engine.init(0x5150_98a6);
+        const at_most_fill_rng = Rng.init(&at_most_fill_facade);
+        var at_most_fill_direct_buf: [16]u21 = undefined;
+        var at_most_fill_facade_buf: [16]u21 = undefined;
+        fillUnicodeScalarRangeAtMostFrom(&at_most_fill_direct, &at_most_fill_direct_buf, 0x41, 0x5A);
+        at_most_fill_rng.fillUnicodeScalarRangeAtMost(&at_most_fill_facade_buf, 0x41, 0x5A);
+        try std.testing.expectEqualSlices(u21, &at_most_fill_direct_buf, &at_most_fill_facade_buf);
+        try std.testing.expectEqual(at_most_fill_direct.next(), at_most_fill_facade.next());
 
         var unchecked = Engine.init(0x5150_98a0);
         var checked = Engine.init(0x5150_98a0);

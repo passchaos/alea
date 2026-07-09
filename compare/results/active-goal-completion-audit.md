@@ -1158,7 +1158,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1117 Rng Unicode scalar range facade direct paths | `src/rng.zig`, `compare/results/s4-m1117-rng-unicode-scalar-range-facade-direct.md` | Closed for the current bar: Rng Unicode scalar range helpers now avoid From wrappers. |
 | S4-M1118 Rng checked Unicode scalar range facade direct paths | `src/rng.zig`, `compare/results/s4-m1118-rng-checked-unicode-scalar-range-facade-direct.md` | Closed for the current bar: Rng checked Unicode scalar range helpers now avoid From wrappers. |
 | S4-M1119 Rng fillUnicodeScalar facade direct path | `src/rng.zig`, `compare/results/s4-m1119-rng-fill-unicode-scalar-facade-direct.md` | Closed for the current bar: Rng fillUnicodeScalar now avoids From wrappers. |
-| S4-M1120 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1120 Rng fill Unicode scalar range facade direct paths | `src/rng.zig`, `compare/results/s4-m1120-rng-fill-unicode-scalar-range-facade-direct.md` | Closed for the current bar: Rng Unicode scalar range fills now avoid From wrappers. |
+| S4-M1121 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4407,6 +4408,13 @@ scalar draws, preserving stream shape, caller-owned output behavior, Unicode
 scalar validity, and downstream UTF-8 string behavior while avoiding
 `fillUnicodeScalarFrom` wrapper aliases; it is reliability/ergonomics work and
 does not resolve S4-M11 or complete the long-term objective.
+S4-M1120 additionally routes bounded `Rng` Unicode scalar range fills through
+direct facade compressed-range sampling plus surrogate-gap mapping, preserving
+stream shape, caller-owned output behavior, Unicode scalar validity,
+empty-output no-consume behavior, and degenerate no-consume behavior while
+avoiding `fillUnicodeScalarRange*From` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

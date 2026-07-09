@@ -5939,3 +5939,10 @@ S4-M1119 routes `Rng.fillUnicodeScalar` directly
 `Rng.fillUnicodeScalar` now fills caller-owned output through facade
 `unicodeScalar` directly instead of routing through `fillUnicodeScalarFrom`.
 This improves Unicode scalar fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1120 routes bounded `Rng` Unicode scalar range fills directly
+(`compare/results/s4-m1120-rng-fill-unicode-scalar-range-facade-direct.md`):
+`Rng.fillUnicodeScalarRangeLessThan` and `Rng.fillUnicodeScalarRangeAtMost` now
+sample compressed scalar ranges through facade integer range helpers directly
+instead of routing through `fillUnicodeScalarRange*From`. This improves Unicode
+scalar range fill facade ergonomics but does not resolve S4-M11.
