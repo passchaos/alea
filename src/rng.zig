@@ -2651,7 +2651,10 @@ pub fn fillUnicodeScalarRangeAtMostChecked(self: Rng, dest: []u21, min: u21, at_
 }
 
 pub fn unicodeScalarBatch(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u21 {
-    return unicodeScalarBatchFrom(self, allocator, count);
+    const out = try allocator.alloc(u21, count);
+    errdefer allocator.free(out);
+    self.fillUnicodeScalar(out);
+    return out;
 }
 
 pub fn unicodeScalarRangeLessThanBatch(self: Rng, allocator: std.mem.Allocator, count: usize, min: u21, less_than: u21) ![]u21 {
@@ -5749,6 +5752,18 @@ test "unicode scalar fills and batches preserve scalar stream shape" {
 
         try std.testing.expectEqualSlices(u21, &owned_manual_buf, owned_buf);
         try std.testing.expectEqual(owned_manual.next(), owned.next());
+
+        var facade_owned_manual = Engine.init(0x5150_97a2);
+        var facade_owned = Engine.init(0x5150_97a2);
+        const facade_owned_rng = Rng.init(&facade_owned);
+        var facade_owned_manual_buf: [8]u21 = undefined;
+        for (&facade_owned_manual_buf) |*item| item.* = unicodeScalarFrom(&facade_owned_manual);
+
+        const facade_owned_buf = try facade_owned_rng.unicodeScalarBatch(std.testing.allocator, 8);
+        defer std.testing.allocator.free(facade_owned_buf);
+
+        try std.testing.expectEqualSlices(u21, &facade_owned_manual_buf, facade_owned_buf);
+        try std.testing.expectEqual(facade_owned_manual.next(), facade_owned.next());
     }
 }
 
@@ -7686,6 +7701,14 @@ test "owned unicode scalar batches allocate before consuming random stream" {
     try std.testing.expectError(error.OutOfMemory, unicodeScalarBatchFrom(&engine, alloc.allocator(), 8));
     try std.testing.expect(alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    var facade_engine = alea.ScalarPrng.init(0x5150_97a3);
+    var facade_control = alea.ScalarPrng.init(0x5150_97a3);
+    const facade_rng = Rng.init(&facade_engine);
+    var facade_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, facade_rng.unicodeScalarBatch(facade_alloc.allocator(), 8));
+    try std.testing.expect(facade_alloc.has_induced_failure);
+    try std.testing.expectEqual(facade_control.next(), facade_engine.next());
 }
 
 test "owned unicode scalar range batches allocate and validate before consuming random stream" {

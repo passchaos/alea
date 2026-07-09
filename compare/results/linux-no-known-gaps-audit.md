@@ -5953,3 +5953,10 @@ S4-M1121 routes checked bounded `Rng` Unicode scalar range fills directly
 `Rng.fillUnicodeScalarRangeAtMostChecked` now validate and call direct facade
 range fills instead of routing through checked `From` wrappers. This improves
 checked Unicode scalar range fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1122 routes allocation-returning `Rng` Unicode scalar batches directly
+(`compare/results/s4-m1122-rng-unicode-scalar-batch-facade-direct.md`):
+`Rng.unicodeScalarBatch` now allocates and fills through facade
+`fillUnicodeScalar` directly instead of routing through `unicodeScalarBatchFrom`.
+This improves Unicode scalar batch facade ergonomics but does not resolve
+S4-M11.
