@@ -89,3 +89,4 @@ S4-M1136 remains active after S4-M1135 closes scalar rate-one exponential fill d
 S4-M1137 remains active after S4-M1136 closes scalar rate-one exponential sample delegation in `compare/results/s4-m1136-scalar-exponential-rate-one-sample.md`.
 S4-M1138 remains active after S4-M1137 closes scalar standard-normal sample delegation in `compare/results/s4-m1137-scalar-normal-standard-sample.md`.
 S4-M1139 remains active after S4-M1138 refreshes rand-status in `compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md`.
+S4-M1140 remains active after S4-M1139 fixes roadmapcheck evidence mapping in `compare/results/s4-m1139-roadmapcheck-evidence-map-fix.md`.
