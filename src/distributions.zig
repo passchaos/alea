@@ -19386,7 +19386,24 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []usize) void {
-            self.fillFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (self.constant_index) |index| {
+                @memset(dest, index);
+                return;
+            }
+            const table_len = self.prob.len;
+            if (aliasTableCanSampleWithOneWord(table_len)) {
+                for (dest) |*item| {
+                    const raw = Rng.nextFrom(rng);
+                    const column = @as(usize, @intCast(raw & @as(u64, @intCast(table_len - 1))));
+                    item.* = if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column];
+                }
+                return;
+            }
+            for (dest) |*item| {
+                const column = Rng.uintLessThanFrom(rng, usize, table_len);
+                item.* = if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column];
+            }
         }
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {

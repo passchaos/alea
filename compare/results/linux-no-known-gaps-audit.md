@@ -5517,3 +5517,9 @@ S4-M1054 routes reusable scalar/vector HalfNormal facade helpers directly
 HalfNormal facade helpers directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves HalfNormal sampler facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1055 routes reusable AliasTable facade fills directly
+(`compare/results/s4-m1055-alias-table-fill-facade-direct.md`): `AliasTable.fill`
+now samples cached alias-table indexes directly through facade `Rng` instead of
+routing through `fillFrom`. This improves AliasTable fill facade ergonomics but
+does not resolve S4-M11.
