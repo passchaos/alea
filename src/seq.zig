@@ -9372,7 +9372,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         pub fn ptrs(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]*const T {
             const out = try allocator.alloc(*const T, amount);
             errdefer allocator.free(out);
-            self.fillFrom(rng, out);
+            self.fill(rng, out);
             return out;
         }
 
