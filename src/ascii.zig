@@ -531,7 +531,9 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn sampleStringChecked(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, length: usize) ![]u8 {
-        return self.sampleStringCheckedFrom(allocator, rng, length);
+        if (length == 0) return allocator.alloc(u8, 0);
+        try self.validateNonEmpty();
+        return self.sampleString(allocator, rng, length);
     }
 
     pub fn sampleStringCheckedFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, length: usize) ![]u8 {
@@ -1206,6 +1208,12 @@ test "unicode charset checked helpers validate without consuming" {
     try std.testing.expectError(error.InvalidParameter, invalid.sampleStringCheckedFrom(std.testing.allocator, &engine, 3));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const rng = alea.Rng.init(&engine);
+    try std.testing.expectError(error.EmptyCharset, empty.sampleStringChecked(std.testing.allocator, rng, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, invalid.sampleStringChecked(std.testing.allocator, rng, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     var list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
     defer list.deinit(std.testing.allocator);
     try list.appendSlice(std.testing.allocator, "x:");
@@ -1343,6 +1351,14 @@ test "initial unicode charset allocation failures do not consume random stream" 
     try std.testing.expectError(error.OutOfMemory, symbols.sampleString(facade_sample_alloc.allocator(), facade_sample_rng, 8));
     try std.testing.expect(facade_sample_alloc.has_induced_failure);
     try std.testing.expectEqual(facade_sample_control.next(), facade_sample_engine.next());
+
+    var checked_sample_engine = alea.ScalarPrng.init(0x5150_b009);
+    var checked_sample_control = alea.ScalarPrng.init(0x5150_b009);
+    const checked_sample_rng = alea.Rng.init(&checked_sample_engine);
+    var checked_sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, symbols.sampleStringChecked(checked_sample_alloc.allocator(), checked_sample_rng, 8));
+    try std.testing.expect(checked_sample_alloc.has_induced_failure);
+    try std.testing.expectEqual(checked_sample_control.next(), checked_sample_engine.next());
 
     var append_engine = alea.ScalarPrng.init(0x5150_b005);
     var append_control = alea.ScalarPrng.init(0x5150_b005);

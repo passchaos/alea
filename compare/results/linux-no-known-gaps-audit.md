@@ -5853,3 +5853,10 @@ directly (`compare/results/s4-m1106-unicode-charset-sample-string-facade-direct.
 `ascii.UnicodeCharset.sampleString` now allocates and encodes through facade
 `Rng` directly instead of routing through `sampleStringFrom`. This improves
 UnicodeCharset sampleString facade ergonomics but does not resolve S4-M11.
+
+S4-M1107 routes reusable UnicodeCharset checked allocation-returning UTF-8
+strings directly (`compare/results/s4-m1107-unicode-charset-checked-sample-string-facade-direct.md`):
+`ascii.UnicodeCharset.sampleStringChecked` now validates and calls facade
+`sampleString` directly instead of routing through `sampleStringCheckedFrom`.
+This improves UnicodeCharset checked sampleString facade ergonomics but does not
+resolve S4-M11.
