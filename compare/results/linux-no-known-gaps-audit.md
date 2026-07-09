@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1136 bar is S4-M1137: exact/default dense SIMD research,
+The active post-S4-M1137 bar is S4-M1138: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6031,3 +6031,5 @@ S4-M1134 extends the rate-one vector exponential delegation to single-vector hel
 S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills (`compare/results/s4-m1135-scalar-exponential-rate-one-fill.md`), matching the vector rate-one delegation work with focused stream-shape and batch validation. This is a narrow exact/default call-shape closure, not whole-goal completion; S4-M1136 remains active.
 
 S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples (`compare/results/s4-m1136-scalar-exponential-rate-one-sample.md`), matching the scalar fill and vector rate-one delegation work with focused f32/f64 stream-shape tests. This is a narrow exact/default call-shape closure, not whole-goal completion; S4-M1137 remains active.
+
+S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples (`compare/results/s4-m1137-scalar-normal-standard-sample.md`), matching scalar fill/vector standard-normal behavior with focused f32/f64 stream-shape tests. This is a narrow exact/default call-shape closure, not whole-goal completion; S4-M1138 remains active.

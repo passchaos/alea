@@ -87,3 +87,4 @@ S4-M1134 remains active after S4-M1133 closes rate-one vector exponential delega
 S4-M1135 remains active after S4-M1134 closes single-vector rate-one exponential delegation in `compare/results/s4-m1134-single-vector-exponential-rate-one-delegate.md`.
 S4-M1136 remains active after S4-M1135 closes scalar rate-one exponential fill delegation in `compare/results/s4-m1135-scalar-exponential-rate-one-fill.md`.
 S4-M1137 remains active after S4-M1136 closes scalar rate-one exponential sample delegation in `compare/results/s4-m1136-scalar-exponential-rate-one-sample.md`.
+S4-M1138 remains active after S4-M1137 closes scalar standard-normal sample delegation in `compare/results/s4-m1137-scalar-normal-standard-sample.md`.

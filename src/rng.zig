@@ -2869,6 +2869,7 @@ pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev:
     comptime requireFloat(T);
     std.debug.assert(stddev >= 0);
     if (stddev == 0) return mean;
+    if (mean == 0 and stddev == 1) return standardNormalFastFrom(source, T);
     return mean + stddev * standardNormalFastFrom(source, T);
 }
 
@@ -7371,6 +7372,24 @@ test "invalid facade scalar helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "standard scalar normal parameters match standard stream shape" {
+    const alea = @import("root.zig");
+    var normal_engine = alea.ScalarPrng.init(0x5150_501d);
+    var standard_engine = alea.ScalarPrng.init(0x5150_501d);
+
+    try std.testing.expectEqual(
+        standardNormalFastFrom(&standard_engine, f64),
+        normalFastFrom(&normal_engine, f64, 0, 1),
+    );
+    try std.testing.expectEqual(standard_engine.next(), normal_engine.next());
+
+    try std.testing.expectEqual(
+        standardNormalFastFrom(&standard_engine, f32),
+        normalFastFrom(&normal_engine, f32, 0, 1),
+    );
+    try std.testing.expectEqual(standard_engine.next(), normal_engine.next());
 }
 
 test "rate-one scalar exponential matches standard stream shape" {
