@@ -1,5 +1,9 @@
 # S4-M845 FisherF Reusable Fill Direct Cached Gamma Ratio Loop
 
+## S4-M1148 Supersession Note
+
+S4-M1148 later replaces the former both-infinite FisherF deterministic edge with local `rand_distr`-compatible NaN output while preserving the corresponding ChiSquared/Gamma draw shape. The cached-Gamma direct-fill conclusions below remain relevant for finite FisherF paths; infinite-degree edge semantics now come from S4-M1148.
+
 ## Gap
 
 Reusable `FisherF.fillFrom` still looped through `FisherF.sampleFrom` for every
@@ -18,13 +22,12 @@ express that composition directly in the fill loop.
 ## Implementation
 
 - `src/distributions.zig` updates `FisherF.fillFrom` to keep the existing
-  infinite-degrees point-mass no-consume path, then draw
-  `self.numerator.sampleFrom(source) / self.denominator.sampleFrom(source)` for
-  each output.
+  finite-degree cached-Gamma ratio path directly; S4-M1148 now routes
+  infinite-degree edges through the rand_distr-compatible NaN/draw-shape path.
 - Focused tests compare f64 and f32 reusable fills with scalar
   `FisherF.sampleFrom` loops under identical seeds, proving output values and
-  stream position stay aligned. The focused test also covers the infinite-degrees
-  point-mass no-consume path.
+  stream position stay aligned. Infinite-degree edge coverage is now superseded
+  by S4-M1148's rand_distr-compatible NaN/draw-shape test.
 
 ## Validation
 
@@ -53,6 +56,7 @@ roadmapcheck ok
 
 S4-M845 is closed for the current bar: reusable `FisherF.fillFrom` now avoids
 per-output `FisherF.sampleFrom` wrapper calls for non-degenerate fills while
-preserving stream shape and point-mass no-consume behavior. This is reliability/
+preserving finite-path stream shape; infinite-degree behavior is now governed by
+S4-M1148. This is reliability/
 ergonomics work only; it does not resolve S4-M11 and is not whole-goal completion
 evidence.

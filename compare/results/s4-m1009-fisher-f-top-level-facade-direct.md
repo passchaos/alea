@@ -1,12 +1,17 @@
 # S4-M1009 FisherF Top-Level Facade Direct Paths
 
+## S4-M1148 Supersession Note
+
+S4-M1148 later replaces the former both-infinite FisherF deterministic edge with local `rand_distr`-compatible NaN output while preserving the corresponding ChiSquared/Gamma draw shape. The facade/direct routing conclusions below remain relevant for finite FisherF paths; infinite-degree edge semantics now come from S4-M1148.
+
 ## Gap
 
 Top-level scalar/vector FisherF facade helpers still routed through direct-source
 `From` wrappers. S4-M1008 made reusable scalar/vector FisherF facade sample/fill
 paths direct; the top-level checked/nonchecked helpers can now construct reusable
 samplers once and call facade `sample` / `fill` directly while preserving
-infinite-degree point-mass and zero-length checked-fill semantics.
+infinite-degree edge and zero-length checked-fill semantics. S4-M1148 later supersedes
+the infinite-degree edge with rand_distr-compatible NaN/draw-shape semantics.
 
 ## Local `rand` Baseline
 
@@ -20,7 +25,7 @@ facade `Rng` directly rather than bouncing through direct-source aliases.
   construct `FisherF(T)` once and call facade `sample` directly.
 - `src/distributions.zig` updates scalar `fillFisherF` / `fillFisherFChecked` to
   construct `FisherF(T)` once and call facade `fill` directly while preserving
-  unchecked infinite-degree point-mass and checked zero-length fast paths.
+  unchecked infinite-degree edge and checked zero-length fast paths.
 - `src/distributions.zig` updates `vectorFisherF`, `vectorFisherFChecked`,
   `fillVectorFisherF`, and `fillVectorFisherFChecked` to construct
   `VectorFisherF` once and call facade `sample` / `fill` directly.
@@ -40,8 +45,8 @@ $ zig test src/distributions.zig --test-filter "distribution vector helpers pres
 2/2 root.test_0...OK
 All 2 tests passed.
 
-$ zig test src/distributions.zig --test-filter "degenerate fisher-f helpers do not consume random stream"
-1/2 distributions.test.degenerate fisher-f helpers do not consume random stream...OK
+$ zig test src/distributions.zig --test-filter "infinite fisher-f helpers preserve rand_distr-compatible stream shape"
+1/2 distributions.test.infinite fisher-f helpers preserve rand_distr-compatible stream shape...OK
 2/2 root.test_0...OK
 All 2 tests passed.
 
@@ -73,6 +78,6 @@ readmecheck ok
 
 S4-M1009 is closed for the current bar: top-level scalar/vector FisherF facade
 helpers now avoid direct-source wrapper aliases while preserving stream shape,
-infinite-degree point-mass no-consume behavior, and zero-length checked fill
+current S4-M1148 infinite-degree NaN/draw-shape behavior, and zero-length checked fill
 semantics. This is reliability/ergonomics work only; it does not resolve S4-M11
 and is not whole-goal completion evidence.
