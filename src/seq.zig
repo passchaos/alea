@@ -9861,7 +9861,8 @@ pub fn partialShuffle(rng: Rng, comptime T: type, items: []T, amount: usize) []T
 }
 
 pub fn partialShuffleChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error![]T {
-    return partialShuffleCheckedFrom(rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffle(rng, T, items, amount);
 }
 
 pub fn partialShuffleCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error![]T {

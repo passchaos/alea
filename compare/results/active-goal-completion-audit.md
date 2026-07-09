@@ -1112,7 +1112,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1071 Seq WeightedChoice owned iterator facade direct path | `src/seq.zig`, `compare/results/s4-m1071-seq-weightedchoice-owned-iter-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice owned iterator facade now avoids From wrappers. |
 | S4-M1072 Seq shuffle facade direct path | `src/seq.zig`, `compare/results/s4-m1072-seq-shuffle-facade-direct.md` | Closed for the current bar: top-level sequence shuffle facade now avoids From wrappers. |
 | S4-M1073 Seq partialShuffle facade direct path | `src/seq.zig`, `compare/results/s4-m1073-seq-partial-shuffle-facade-direct.md` | Closed for the current bar: top-level sequence partialShuffle facade now avoids From wrappers. |
-| S4-M1074 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1074 Seq partialShuffleChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1074-seq-partial-shuffle-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffle facade now avoids From wrappers. |
+| S4-M1075 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4103,6 +4104,11 @@ and does not resolve S4-M11 or complete the long-term objective.
 S4-M1073 additionally routes top-level sequence partialShuffle through direct
 facade range sampling, preserving stream shape and zero-count behavior while
 avoiding `partialShuffleFrom` wrapper aliases; it is reliability/ergonomics work
+and does not resolve S4-M11 or complete the long-term objective.
+S4-M1074 additionally routes top-level sequence partialShuffleChecked through
+validation plus the direct facade partialShuffle path, preserving stream shape,
+invalid-count no-consume validation, and zero-count behavior while avoiding
+`partialShuffleCheckedFrom` wrapper aliases; it is reliability/ergonomics work
 and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
