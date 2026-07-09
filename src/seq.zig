@@ -9967,7 +9967,13 @@ pub fn partialShuffleTailSplitFrom(source: anytype, comptime T: type, items: []T
 }
 
 pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
-    return reservoirSampleFrom(allocator, rng, T, items, amount);
+    const count = @min(amount, items.len);
+    if (count == 0) return allocator.alloc(T, 0);
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    const out = try allocator.alloc(T, count);
+    errdefer allocator.free(out);
+    try reservoirSampleInto(rng, T, items, out);
+    return out;
 }
 
 pub fn reservoirSampleChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {

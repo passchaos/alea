@@ -5692,3 +5692,10 @@ S4-M1081 routes top-level sequence reservoirSampleInto directly
 loop through facade `Rng` directly instead of routing through
 `reservoirSampleIntoFrom`. This improves sequence caller-owned reservoir facade
 ergonomics but does not resolve S4-M11.
+
+S4-M1082 routes top-level sequence reservoirSample directly
+(`compare/results/s4-m1082-seq-reservoir-sample-facade-direct.md`):
+`seq.reservoirSample` now allocates and fills through facade
+`reservoirSampleInto` directly instead of routing through `reservoirSampleFrom`.
+This improves sequence allocation-returning reservoir facade ergonomics but does
+not resolve S4-M11.
