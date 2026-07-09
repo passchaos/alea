@@ -1091,7 +1091,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1050 Approx f32 LogNormal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1050-approx-f32-log-normal-facade-direct.md` | Closed for the current bar: reusable scalar approximate-f32 LogNormal facade helpers now avoid From wrappers. |
 | S4-M1051 Exp2 f32 LogNormal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1051-exp2-f32-log-normal-facade-direct.md` | Closed for the current bar: reusable scalar exp2-f32 LogNormal facade helpers now avoid From wrappers. |
 | S4-M1052 Vector exp2 f32 LogNormal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1052-vector-exp2-f32-log-normal-facade-direct.md` | Closed for the current bar: reusable vector exp2-f32 LogNormal facade helpers now avoid From wrappers. |
-| S4-M1053 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1053 Vector approx f32 LogNormal facade direct paths | `src/distributions.zig`, `compare/results/s4-m1053-vector-approx-f32-log-normal-facade-direct.md` | Closed for the current bar: reusable vector approximate-f32 LogNormal facade helpers now avoid From wrappers. |
+| S4-M1054 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -3978,6 +3979,11 @@ sample/fill helpers through direct vector exp2-f32 log-normal facade helpers,
 preserving snapshot-sensitive output semantics while avoiding `sampleFrom` /
 `fillFrom` wrapper aliases; it is reliability/ergonomics work and does not resolve
 S4-M11 or complete the long-term objective.
+S4-M1053 additionally routes reusable vector approximate-f32 LogNormal facade
+sample/fill helpers through direct vector approximate-f32 log-normal facade
+helpers, preserving snapshot-sensitive output semantics while avoiding
+`sampleFrom` / `fillFrom` wrapper aliases; it is reliability/ergonomics work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
