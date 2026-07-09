@@ -34,7 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m1157-inverse-gaussian-infinity.md
+compare/results/s4-m1158-skew-normal-location.md
 `1`
 Alea local rand/rand_distr status (2026-07-10)
 "schema_version"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1157-inverse-gaussian-infinity.md"
+"compare/results/s4-m1158-skew-normal-location.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -122,3 +122,5 @@ S4-M1156 remains active after S4-M1155 aligns Poisson max-lambda semantics in `c
 S4-M1157 remains active after S4-M1156 aligns Geometric zero-probability semantics in `compare/results/s4-m1156-geometric-zero-probability.md`.
 
 S4-M1158 remains active after S4-M1157 aligns InverseGaussian infinity semantics in `compare/results/s4-m1157-inverse-gaussian-infinity.md`.
+
+S4-M1159 remains active after S4-M1158 aligns SkewNormal unrestricted-location semantics in `compare/results/s4-m1158-skew-normal-location.md`.

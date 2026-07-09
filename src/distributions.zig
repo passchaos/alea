@@ -16169,7 +16169,7 @@ pub fn skewNormalCheckedFrom(source: anytype, comptime T: type, location: T, sca
 
 pub inline fn skewNormalFrom(source: anytype, comptime T: type, location: T, scale: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
     if (scale == 0) return location;
 
     const z1 = Rng.normalFastFrom(source, T, 0, 1);
@@ -16193,7 +16193,7 @@ pub fn fillSkewNormal(rng: Rng, comptime T: type, dest: []T, location: T, scale:
 
 pub fn fillSkewNormalFrom(source: anytype, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
+    std.debug.assert(scale >= 0 and std.math.isFinite(scale) and std.math.isFinite(shape));
     if (scale == 0) {
         @memset(dest, location);
         return;
@@ -16419,7 +16419,6 @@ pub fn SkewNormal(comptime T: type) type {
 
         pub fn init(location: T, scale: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!std.math.isFinite(location)) return error.InvalidParameter;
             if (!(scale >= 0) or !std.math.isFinite(scale)) return error.InvalidParameter;
             if (!std.math.isFinite(shape)) return error.InvalidParameter;
             return .{ .location = location, .scale = scale, .shape = shape };
@@ -28041,6 +28040,125 @@ test "degenerate normal-inverse-gaussian helpers do not consume random stream" {
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(point_vec, sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+
+test "skew-normal unrestricted location matches local rand_distr" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x9015_1158);
+    var control = alea.ScalarPrng.init(0x9015_1158);
+    const rng = Rng.init(&engine);
+    const control_rng = Rng.init(&control);
+    const inf = std.math.inf(f64);
+    const neg_inf = -std.math.inf(f64);
+    const nan = std.math.nan(f64);
+
+    const Reference = struct {
+        fn consumeNormal(source: anytype, count: usize) void {
+            for (0..count) |_| _ = Rng.standardNormalFastFrom(source, f64);
+        }
+
+        fn consumeVectorNormal(source: anytype, count: usize) void {
+            for (0..count) |_| _ = vectorStandardNormalFrom(source, @Vector(4, f64));
+        }
+    };
+
+    const Expect = struct {
+        fn nanScalar(value: f64) !void {
+            try std.testing.expect(std.math.isNan(value));
+        }
+
+        fn infScalar(value: f64) !void {
+            try std.testing.expectEqual(inf, value);
+        }
+
+        fn negInfScalar(value: f64) !void {
+            try std.testing.expectEqual(neg_inf, value);
+        }
+
+        fn nanVector(value: @Vector(4, f64)) !void {
+            inline for (0..4) |lane| try nanScalar(value[lane]);
+        }
+
+        fn infVector(value: @Vector(4, f64)) !void {
+            inline for (0..4) |lane| try infScalar(value[lane]);
+        }
+    };
+
+    try Expect.infScalar(skewNormalFrom(&engine, f64, inf, 1, 0));
+    Reference.consumeNormal(&control, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Expect.negInfScalar(try skewNormalChecked(rng, f64, neg_inf, 1, 0));
+    Reference.consumeNormal(control_rng, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Expect.nanScalar(try skewNormalCheckedFrom(&engine, f64, nan, 1, 0));
+    Reference.consumeNormal(&control, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Expect.infScalar(skewNormalFrom(&engine, f64, inf, 1, 2));
+    Reference.consumeNormal(&control, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [4]f64 = undefined;
+    try fillSkewNormalChecked(rng, f64, &scalar_buf, inf, 1, 0);
+    for (scalar_buf) |sample| try Expect.infScalar(sample);
+    Reference.consumeNormal(control_rng, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillSkewNormalCheckedFrom(&engine, f64, &scalar_buf, nan, 1, 2);
+    for (scalar_buf) |sample| try Expect.nanScalar(sample);
+    Reference.consumeNormal(&control, scalar_buf.len * 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler_inf = try SkewNormal(f64).init(inf, 1, 2);
+    try std.testing.expectEqual(inf, sampler_inf.locationValue());
+    try std.testing.expectEqual(inf, sampler_inf.locationParameter());
+    try std.testing.expectEqual(inf, sampler_inf.expectedValue());
+    try std.testing.expect(sampler_inf.minValue() == null);
+    try std.testing.expect(sampler_inf.maxValue() == null);
+    try Expect.infScalar(sampler_inf.sampleFrom(&engine));
+    Reference.consumeNormal(&control, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler_nan = try SkewNormal(f64).init(nan, 1, 2);
+    try Expect.nanScalar(sampler_nan.locationValue());
+    try Expect.nanScalar(sampler_nan.expectedValue());
+    try Expect.nanScalar(sampler_nan.sampleFrom(&engine));
+    Reference.consumeNormal(&control, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const degenerate_nan = try SkewNormal(f64).init(nan, 0, 2);
+    try Expect.nanScalar(degenerate_nan.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Expect.infVector(vectorSkewNormalFrom(&engine, @Vector(4, f64), inf, 1, 0));
+    Reference.consumeVectorNormal(&control, 1);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Expect.infVector(try vectorSkewNormalChecked(rng, @Vector(4, f64), inf, 1, 2));
+    Reference.consumeVectorNormal(control_rng, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler_nan = try VectorSkewNormal(@Vector(4, f64)).init(nan, 1, 2);
+    try Expect.nanVector(vector_sampler_nan.sampleFrom(&engine));
+    Reference.consumeVectorNormal(&control, 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [2]@Vector(4, f64) = undefined;
+    try fillVectorSkewNormalChecked(rng, @Vector(4, f64), &vector_buf, inf, 1, 0);
+    for (vector_buf) |sample| try Expect.infVector(sample);
+    Reference.consumeVectorNormal(control_rng, vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorSkewNormalCheckedFrom(&engine, @Vector(4, f64), &vector_buf, nan, 1, 2);
+    for (vector_buf) |sample| try Expect.nanVector(sample);
+    Reference.consumeVectorNormal(&control, vector_buf.len * 2);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, SkewNormal(f64).init(0, 1, std.math.inf(f64)));
 }
 
 test "degenerate skew-normal helpers do not consume random stream" {

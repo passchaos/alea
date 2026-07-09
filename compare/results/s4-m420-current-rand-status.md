@@ -47,29 +47,30 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1155 aligns Poisson max-lambda validation with local `rand_distr::Poisson`;
 - S4-M1156 aligns Geometric failure-count zero-probability behavior with local `rand_distr::Geometric`;
 - S4-M1157 aligns InverseGaussian infinite-parameter sampling with local `rand_distr::InverseGaussian`;
+- S4-M1158 aligns SkewNormal unrestricted-location behavior with local `rand_distr::SkewNormal`;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1157 refreshed status output after updating `latest_validate_local_evidence` in
-`rand-status-json` to the InverseGaussian infinity compatibility evidence. The passing
+S4-M1158 refreshed status output after updating `latest_validate_local_evidence` in
+`rand-status-json` to the SkewNormal unrestricted-location compatibility evidence. The passing
 run and retained runtime evidence include:
 
 ```text
-rand_distr standard-normal: 29.8 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 28.7 M samples/s checksum=-3.640
+rand_distr standard-normal: 33.6 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 34.8 M samples/s checksum=-3.640
 1
 Alea local rand/rand_distr status (2026-07-10)
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1157 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1158 post-S4-M1157 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1158 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1159 post-S4-M1158 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1157-inverse-gaussian-infinity.md",
+  "latest_validate_local_evidence": "compare/results/s4-m1158-skew-normal-location.md",
 rand-status self-test ok
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137
@@ -81,9 +82,9 @@ wasmtime 31.0.0 (7a9be587f 2025-03-20)
 profilelongcheck ok
 ```
 
-S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 confirms the schema-version build step is part of the local aggregate; S4-M459 keeps the latest validate-local evidence pointer visible here; S4-M462 keeps the blocker-audit pointer visible here; S4-M463 confirms that pointer is present in the latest validate-local aggregate output; S4-M466 also keeps the explicit local-status pointer visible here; S4-M469 refreshed the latest validate-local evidence pointer to the then-current artifact, S4-M1125 refreshed it after S4-M1124 restored validate-all, and S4-M1129 refreshed it after S4-M1127/S4-M1128 direct-source f64x4 fill improvements, and S4-M1131 refreshed it after the S4-M1130 validate-all evidence refresh, S4-M1138 refreshed it after S4-M1133-S4-M1137 delegation fixes, S4-M1140 refreshed it after the S4-M1139 evidence-map fix, S4-M1141 refreshed it again after the f64x4 facade standard-vector fill closure, S4-M1142 refreshed it after the parameterized f64x4 vector fill closure, S4-M1143 refreshed it after the zero-rate exponential compatibility closure, S4-M1144 refreshed it after the negative normal stddev compatibility closure, S4-M1145 refreshed it after the unrestricted normal mean compatibility closure, S4-M1146 refreshed it after the mean/CV edge compatibility closure, S4-M1147 refreshed it after the Gamma-family infinity compatibility closure, and S4-M1148 refreshed it after the FisherF infinity compatibility closure, and S4-M1149 refreshed it after the StudentT infinity compatibility closure, and S4-M1150 refreshed it after the Cauchy non-finite parameter compatibility closure, and S4-M1151 refreshed it after the Pareto/Weibull infinite-scale compatibility closure, and S4-M1152 refreshed it after the Beta infinity compatibility closure, and S4-M1153 refreshed it after the Triangular non-finite bound compatibility closure, and S4-M1154 refreshes it after the PERT infinite-shape compatibility closure, and S4-M1155 refreshes it after the Poisson max-lambda compatibility closure, and S4-M1156 refreshes it after the Geometric zero-probability compatibility closure, and S4-M1157 refreshes it after the InverseGaussian infinity compatibility closure.
+S4-M419 synchronized validate-local signals into `compare/results/s4-m11-blocker-audit.md`; S4-M428 confirmed `rand-status` output is part of the local aggregate; S4-M433 confirmed stable JSON status output is part of the local aggregate; S4-M437 additionally confirms the `rand-status` self-test is part of the local aggregate; S4-M442 keeps the JSON boolean status fields visible in this snapshot; S4-M444 keeps the JSON schema version visible here; S4-M448 confirms the schema-version build step is part of the local aggregate; S4-M459 keeps the latest validate-local evidence pointer visible here; S4-M462 keeps the blocker-audit pointer visible here; S4-M463 confirms that pointer is present in the latest validate-local aggregate output; S4-M466 also keeps the explicit local-status pointer visible here; S4-M469 refreshed the latest validate-local evidence pointer to the then-current artifact, S4-M1125 refreshed it after S4-M1124 restored validate-all, and S4-M1129 refreshed it after S4-M1127/S4-M1128 direct-source f64x4 fill improvements, and S4-M1131 refreshed it after the S4-M1130 validate-all evidence refresh, S4-M1138 refreshed it after S4-M1133-S4-M1137 delegation fixes, S4-M1140 refreshed it after the S4-M1139 evidence-map fix, S4-M1141 refreshed it again after the f64x4 facade standard-vector fill closure, S4-M1142 refreshed it after the parameterized f64x4 vector fill closure, S4-M1143 refreshed it after the zero-rate exponential compatibility closure, S4-M1144 refreshed it after the negative normal stddev compatibility closure, S4-M1145 refreshed it after the unrestricted normal mean compatibility closure, S4-M1146 refreshed it after the mean/CV edge compatibility closure, S4-M1147 refreshed it after the Gamma-family infinity compatibility closure, and S4-M1148 refreshed it after the FisherF infinity compatibility closure, and S4-M1149 refreshed it after the StudentT infinity compatibility closure, and S4-M1150 refreshed it after the Cauchy non-finite parameter compatibility closure, and S4-M1151 refreshed it after the Pareto/Weibull infinite-scale compatibility closure, and S4-M1152 refreshed it after the Beta infinity compatibility closure, and S4-M1153 refreshed it after the Triangular non-finite bound compatibility closure, and S4-M1154 refreshes it after the PERT infinite-shape compatibility closure, and S4-M1155 refreshes it after the Poisson max-lambda compatibility closure, and S4-M1156 refreshes it after the Geometric zero-probability compatibility closure, and S4-M1157 refreshes it after the InverseGaussian infinity compatibility closure, and S4-M1158 refreshes it after the SkewNormal unrestricted-location compatibility closure.
 
-## Current Post-S4-M1157 Bar
+## Current Post-S4-M1158 Bar
 
 The long-term product goal is not complete. S4-M11 is closed for the current bar
 by direct Wasmtime profilelongcheck evidence in
@@ -110,8 +111,9 @@ S4-M1151 aligns Pareto/Weibull infinite-scale acceptance with local
 with local `rand_distr::Triangular`, S4-M1154 aligns PERT infinite-shape
 behavior with local `rand_distr::Pert`, S4-M1155 aligns Poisson max-lambda
 validation with local `rand_distr::Poisson`, S4-M1156 aligns Geometric
-failure-count zero-probability behavior with local `rand_distr::Geometric`, and S4-M1157 aligns
-InverseGaussian infinite-parameter sampling with local `rand_distr::InverseGaussian`. The next bar is S4-M1158: pursue exact/default-compatible dense SIMD normal/exponential
+failure-count zero-probability behavior with local `rand_distr::Geometric`, S4-M1157 aligns
+InverseGaussian infinite-parameter sampling with local `rand_distr::InverseGaussian`, and S4-M1158 aligns
+SkewNormal unrestricted-location behavior with local `rand_distr::SkewNormal`. The next bar is S4-M1159: pursue exact/default-compatible dense SIMD normal/exponential
 kernels, additional non-WASI OS/architecture execution, broader/longer
 validation, or newly discovered local `rand` / `rand_distr` gaps.
 
@@ -119,4 +121,4 @@ validation, or newly discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1157 S4-M1158 bar continues to block whole-goal completion.
+while the post-S4-M1158 S4-M1159 bar continues to block whole-goal completion.
