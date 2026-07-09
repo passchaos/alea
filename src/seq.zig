@@ -10033,7 +10033,8 @@ pub fn reservoirSampleMutPtrs(allocator: std.mem.Allocator, rng: Rng, comptime T
 }
 
 pub fn reservoirSampleMutPtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
-    return reservoirSampleMutPtrsCheckedFrom(allocator, rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    return reservoirSampleMutPtrs(allocator, rng, T, items, amount);
 }
 
 pub fn reservoirSampleMutPtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []T, amount: usize) ![]*T {
