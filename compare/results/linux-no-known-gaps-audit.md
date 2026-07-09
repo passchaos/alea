@@ -5750,3 +5750,9 @@ S4-M1089 routes top-level sequence reservoirSampleMutPtrsChecked directly
 `reservoirSampleMutPtrsCheckedFrom`. This improves sequence checked
 allocation-returning mutable reservoir pointer facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1090 routes reusable sequence Choice value fills directly
+(`compare/results/s4-m1090-seq-choice-value-fill-facade-direct.md`):
+`seq.Choice(T).fillValues` now maps direct facade-generated indexes into value
+output instead of routing through `fillValuesFrom`. This improves seq Choice
+value-fill facade ergonomics but does not resolve S4-M11.
