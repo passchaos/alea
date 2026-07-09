@@ -671,7 +671,14 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
-            self.fillIndicesFrom(rng, dest);
+            if (dest.len == 0) return;
+            const item_len = self.items.len;
+            std.debug.assert(item_len > 0);
+            if (item_len == 1) {
+                @memset(dest, 0);
+                return;
+            }
+            for (dest) |*index| index.* = Rng.uintLessThanFrom(rng, usize, item_len);
         }
 
         pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
