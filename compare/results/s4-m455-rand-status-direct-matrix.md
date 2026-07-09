@@ -2,7 +2,7 @@
 
 ## Gap
 
-After S4-M1124 restored `validate-all` following direct Wasmtime runtime evidence,
+After S4-M1127/S4-M1128 closed f64x4 direct-source fill specializations after direct Wasmtime runtime evidence,
 the documented direct argument forms for `rand-status` needed a fresh recorded
 run matching the updated status JSON and self-test output.
 
@@ -25,14 +25,14 @@ $ zig build rand-status -- --json
   "rust_comparison": "parser tests and rand-bench-smoke pass",
   "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "S4-M11 runtime branch closed and S4-M1124 validate-all restoration closed for current bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127/S4-M1128 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M1126 post-S4-M1125 next product bar",
+  "remaining_blocker": "S4-M1130 post-S4-M1129 next product bar",
   "s4_m11_blocked": false,
   "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1129-post-s4-m1128-rand-status-refresh.md"
 }
 $ zig build rand-status -- --schema-version
 1
@@ -54,7 +54,7 @@ $ git diff --check
 ## Result
 
 S4-M455 is refreshed for the current bar: the documented direct `rand-status`
-argument forms pass and report that the S4-M11 runtime branch and S4-M1124
-validate-all restoration are closed for the current bar while S4-M1126 is the
-next post-S4-M1125 product bar. This is tooling
+argument forms pass and report that the S4-M11 runtime branch and S4-M1124/S4-M1127/S4-M1128
+follow-ups are closed for the current bar while S4-M1130 is the
+next post-S4-M1129 product bar. This is tooling
 validation evidence only; it is not whole-goal completion evidence.

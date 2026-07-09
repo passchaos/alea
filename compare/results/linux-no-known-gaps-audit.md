@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1128 bar is S4-M1129: exact/default dense SIMD research,
+The active post-S4-M1129 bar is S4-M1130: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6009,3 +6009,8 @@ direct-source fill specialization (`compare/results/s4-m1128-f64x4-standard-expo
 rate-one exponential rows now match or slightly exceed the benchmark-local scalar
 helper. This is a narrow performance closure, not whole-goal completion;
 S4-M1129 remains active.
+
+S4-M1129 refreshes current status tooling after S4-M1127/S4-M1128 direct-source
+f64x4 fill closures (`compare/results/s4-m1129-post-s4-m1128-rand-status-refresh.md`): `rand-status` now reports those follow-ups closed
+for the current bar and points to S4-M1130. This is status synchronization, not
+whole-goal completion.
