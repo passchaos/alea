@@ -19427,7 +19427,25 @@ pub fn AliasTable(comptime Weight: type) type {
         }
 
         pub fn fillU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {
-            try self.fillU32CheckedFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (self.prob.len > std.math.maxInt(u32)) return error.InvalidParameter;
+            if (self.constant_index) |index| {
+                @memset(dest, @intCast(index));
+                return;
+            }
+            const table_len = self.prob.len;
+            if (aliasTableCanSampleWithOneWord(table_len)) {
+                for (dest) |*item| {
+                    const raw = Rng.nextFrom(rng);
+                    const column = @as(usize, @intCast(raw & @as(u64, @intCast(table_len - 1))));
+                    item.* = @intCast(if ((raw >> 11) < self.prob_threshold[column]) column else self.alias[column]);
+                }
+                return;
+            }
+            for (dest) |*item| {
+                const column = Rng.uintLessThanFrom(rng, usize, table_len);
+                item.* = @intCast(if (Rng.floatFrom(rng, f64) < self.prob[column]) column else self.alias[column]);
+            }
         }
 
         pub fn fillIndicesU32Checked(self: Self, rng: Rng, dest: []u32) Error!void {

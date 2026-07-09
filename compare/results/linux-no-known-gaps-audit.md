@@ -5595,3 +5595,10 @@ directly (`compare/results/s4-m1066-seq-weightedchoice-checked-index-fill-facade
 `seq.WeightedChoice(T).fillIndicesChecked` now calls the AliasTable fill facade
 directly instead of routing through `fillFrom` with facade RNG. This improves seq
 WeightedChoice checked index-fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1067 routes reusable AliasTable checked u32 fills directly
+(`compare/results/s4-m1067-alias-table-checked-u32-fill-facade-direct.md`):
+`AliasTable(Weight).fillU32Checked` now samples cached alias-table indexes
+through facade `Rng` directly instead of routing through `fillU32CheckedFrom`.
+This improves AliasTable checked u32 fill facade ergonomics but does not resolve
+S4-M11.
