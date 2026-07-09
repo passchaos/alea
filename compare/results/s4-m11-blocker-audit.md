@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-09)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1129-post-s4-m1128-rand-status-refresh.md"
+"compare/results/s4-m1131-post-s4-m1130-rand-status-refresh.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -81,3 +81,4 @@ S4-M1128 remains active after S4-M1127 closes `compare/results/s4-m1127-f64x4-st
 S4-M1129 remains active after S4-M1128 closes `compare/results/s4-m1128-f64x4-standard-exponential-direct-fill.md` for direct-source f64x4 standard-exponential fills.
 S4-M1130 remains active after S4-M1129 refreshes rand-status in `compare/results/s4-m1129-post-s4-m1128-rand-status-refresh.md`.
 S4-M1131 remains active after S4-M1130 refreshes validate-all in `compare/results/s4-m1130-post-s4-m1129-validate-all.md`.
+S4-M1132 remains active after S4-M1131 refreshes rand-status in `compare/results/s4-m1131-post-s4-m1130-rand-status-refresh.md`.
