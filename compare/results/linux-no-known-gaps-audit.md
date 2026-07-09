@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1125 bar is S4-M1126: exact/default dense SIMD research,
+The active post-S4-M1127 bar is S4-M1128: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -5995,3 +5995,10 @@ f32x8 `vectorbench` evidence (`compare/results/s4-m1126-f32x8-dense-simd-probe.m
 flat-slice and repair candidates still trail direct scalar lane-fill, while
 faster native/table/approx-log rows keep different output mappings. This is
 useful negative evidence, not whole-goal completion, and S4-M1126 remains active.
+
+S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill
+specialization (`compare/results/s4-m1127-f64x4-standard-normal-direct-fill.md`): focused vector tests pass, and focused `vectorbench`
+shows direct-source `fillVectorStandardNormal f64x4` / `fillVectorNormal f64x4`
+rows near 480M lanes/s with unchanged checksums after the private
+`@Vector(4, f64)` standard-normal fill helper. This is a concrete performance
+bar closure, not whole-goal completion; S4-M1128 remains active.

@@ -1185,6 +1185,10 @@ pub fn vectorStandardNormalBatchFrom(source: anytype, comptime VectorType: type,
 pub fn fillVectorStandardNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (info.child == f64 and info.len == 4 and comptime @TypeOf(source) != Rng) {
+        fillVectorStandardNormalF64x4From(source, dest);
+        return;
+    }
     for (dest) |*item| item.* = vectorStandardNormalFrom(source, VectorType);
 }
 
@@ -4533,6 +4537,14 @@ fn fillVectorExponentialScalarFrom(source: anytype, comptime VectorType: type, d
     if (info.child != f32 and info.child != f64) @compileError("fillVectorExponentialScalarFrom expects a float vector");
 
     for (dest) |*item| item.* = vectorExponentialScalarFrom(source, VectorType, rate);
+}
+
+fn fillVectorStandardNormalF64x4From(source: anytype, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| {
+        var out: @Vector(4, f64) = undefined;
+        inline for (0..4) |lane| out[lane] = normalZigguratF64(source);
+        item.* = out;
+    }
 }
 
 fn normalAffineInPlace(comptime T: type, dest: []T, mean: T, stddev: T) void {

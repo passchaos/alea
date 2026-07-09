@@ -77,3 +77,4 @@ raising the bar.
 S4-M1125 post-S4-M11 next product bar remains active after S4-M1124 restores validate-all.
 S4-M1126 post-S4-M1125 next product bar remains active after S4-M1125 refreshes rand-status.
 S4-M1126 remains active after `compare/results/s4-m1126-f32x8-dense-simd-probe.md` found no checksum-preserving f32x8 dense SIMD winner.
+S4-M1128 remains active after S4-M1127 closes `compare/results/s4-m1127-f64x4-standard-normal-direct-fill.md` for direct-source f64x4 standard-normal fills.
