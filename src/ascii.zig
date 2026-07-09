@@ -391,7 +391,14 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn sample(self: UnicodeCharset, rng: Rng) u21 {
-        return self.sampleFrom(rng);
+        std.debug.assert(self.scalars.len > 0);
+        if (self.scalars.len == 1) return self.scalars[0];
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const scalar_count: u64 = @intCast(self.scalars.len);
+            const index = Rng.uintLessThanFrom(rng, u64, scalar_count);
+            return self.scalars[@intCast(index)];
+        }
+        return self.scalars[Rng.uintLessThanFrom(rng, usize, self.scalars.len)];
     }
 
     pub fn sampleChecked(self: UnicodeCharset, rng: Rng) error{ EmptyCharset, InvalidParameter }!u21 {
