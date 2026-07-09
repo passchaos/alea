@@ -2500,7 +2500,10 @@ pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: v
     comptime requireFloat(info.child);
     std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(info.child)));
     if (rate == std.math.inf(info.child)) return @splat(0);
-    if (info.child == f32 or info.child == f64) return vectorExponentialScalarFrom(source, VectorType, rate);
+    if (info.child == f32 or info.child == f64) {
+        if (rate == 1) return vectorStandardExponentialFrom(source, VectorType);
+        return vectorExponentialScalarFrom(source, VectorType, rate);
+    }
     var out: VectorType = undefined;
     var std_random = randomFrom(source);
     inline for (0..info.len) |i| out[i] = std_random.floatExp(info.child) / rate;
@@ -6348,6 +6351,11 @@ test "checked fill helpers preserve valid-parameter stream shape" {
         fillVectorStandardExponentialFrom(&unchecked, @Vector(8, f32), &vector_standard_exponential_unchecked);
         try fillVectorExponentialCheckedFrom(&checked, @Vector(8, f32), &vector_standard_exponential_checked, 1);
         try std.testing.expectEqualSlices(@Vector(8, f32), &vector_standard_exponential_unchecked, &vector_standard_exponential_checked);
+        try std.testing.expectEqual(unchecked.next(), checked.next());
+
+        const single_vector_exponential = vectorExponentialFrom(&unchecked, @Vector(8, f32), 1);
+        const single_vector_standard_exponential = vectorStandardExponentialFrom(&checked, @Vector(8, f32));
+        try std.testing.expectEqual(single_vector_standard_exponential, single_vector_exponential);
         try std.testing.expectEqual(unchecked.next(), checked.next());
 
         const vector_exponential_owned = try vectorExponentialBatchFrom(&unchecked, @Vector(8, f32), std.testing.allocator, 4, 1);
