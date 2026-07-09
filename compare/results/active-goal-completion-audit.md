@@ -27,9 +27,9 @@ local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
 `zig build validate-local` passes, S4-M438/S4-M449 keep the S4-M11 evidence chain
 visible, S4-M1123 records direct Wasmtime 31.0.0 execution of the accepted
 profile long sweep, S4-M1124 restores the post-S4-M11 `validate-all` aggregate,
-and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence, and S4-M1133 routes rate-one vector exponential fills through standard-exponential fills, and S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills, and S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples, and S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples, and S4-M1138 refreshes current status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence-path drift, and S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 standard vector fill specializations to facade standard-parameter workflows, and S4-M1142 extends the f64x4 call-shape specialization to parameterized vector fills, and S4-M1143 aligns zero-rate exponential semantics with local rand_distr. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
+and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence, and S4-M1133 routes rate-one vector exponential fills through standard-exponential fills, and S4-M1134 applies the same delegation to single-vector helpers, and S4-M1135 routes scalar rate-one exponential fills through standard-exponential fills, and S4-M1136 routes scalar rate-one exponential single samples through standard-exponential samples, and S4-M1137 routes standard-parameter scalar normal single samples through standard-normal samples, and S4-M1138 refreshes current status after those delegation fixes, and S4-M1139 repairs roadmapcheck evidence-path drift, and S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 standard vector fill specializations to facade standard-parameter workflows, and S4-M1142 extends the f64x4 call-shape specialization to parameterized vector fills, S4-M1143 aligns zero-rate exponential semantics with local rand_distr, and S4-M1144 aligns negative normal/log-normal stddev semantics. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
 kernels are still not known to beat scalar lane-fill, and the roadmap has raised
-the next product bar to S4-M1144. Therefore do not call
+the next product bar to S4-M1145. Therefore do not call
 `update_goal(status=complete)`.
 
 ## Prompt-to-Artifact Checklist
@@ -1183,7 +1183,8 @@ the next product bar to S4-M1144. Therefore do not call
 | S4-M1141 f64x4 facade standard vector fill specialization | `src/rng.zig`, `compare/results/s4-m1141-f64x4-facade-standard-vector-fill.md` | Closed for the current bar: facade f64x4 standard-normal, standard-exponential, standard-parameter normal, and rate-one exponential fills now reuse the specialized standard fill paths while preserving stream shape. |
 | S4-M1142 parameterized f64x4 vector fill specialization | `src/rng.zig`, `compare/results/s4-m1142-parameterized-f64x4-vector-fill.md` | Closed for the current bar: non-standard normal and finite-rate exponential f64x4 fills now reuse the exact f64 ziggurat draw shape plus vector affine/rate transforms while preserving scalar stream shape. |
 | S4-M1143 zero-rate exponential compatibility | `src/rng.zig`, `src/distributions.zig`, `compare/results/s4-m1143-zero-rate-exponential.md` | Closed for the current bar: positive zero rate now returns/fills infinity without consuming randomness across scalar/vector/top-level/checked/reusable exponential workflows, while negative zero remains invalid. |
-| S4-M1144 next post-S4-M1143 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1143 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
+| S4-M1144 negative normal stddev compatibility | `src/rng.zig`, `src/distributions.zig`, `compare/results/s4-m1144-negative-normal-stddev.md` | Closed for the current bar: finite negative normal/log-normal standard deviations are accepted across exact/default scalar/vector/checked/reusable workflows while non-finite stddev remains invalid. |
+| S4-M1145 next post-S4-M1144 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1144 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1215,8 +1216,8 @@ S4-M1136 routes scalar rate-one exponential single samples through
 standard-exponential samples, and S4-M1137 routes standard-parameter scalar
 normal single samples through standard-normal samples, S4-M1138 refreshes
 status after those delegation fixes, S4-M1139 repairs roadmapcheck evidence
-path drift, S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, and S4-M1143 aligns zero-rate exponential semantics, so the next active
-product bar is S4-M1144.
+path drift, S4-M1140 refreshes status after that fix, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, S4-M1143 aligns zero-rate exponential semantics, and S4-M1144 aligns negative normal/log-normal stddev semantics, so the next active
+product bar is S4-M1145.
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
@@ -4500,12 +4501,12 @@ exponential fills through standard-exponential fills, and S4-M1136 routes scalar
 rate-one exponential single samples through standard-exponential samples, and
 S4-M1137 routes standard-parameter scalar normal single samples through
 standard-normal samples, S4-M1138 refreshes status, S4-M1139 repairs evidence
-map drift, S4-M1140 refreshes status again, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, and S4-M1143 aligns zero-rate exponential semantics, so the next active product bar
-is S4-M1144.
+map drift, S4-M1140 refreshes status again, and S4-M1141 extends f64x4 facade standard vector fills, S4-M1142 extends parameterized f64x4 vector fills, S4-M1143 aligns zero-rate exponential semantics, and S4-M1144 aligns negative normal/log-normal stddev semantics, so the next active product bar
+is S4-M1145.
 
 ## Required Next Work Before Completion
 
-The goal remains active under the new S4-M1144 bar until at least one of these
+The goal remains active under the new S4-M1145 bar until at least one of these
 happens:
 
 - a default/exact-compatible dense SIMD normal/exponential candidate beats

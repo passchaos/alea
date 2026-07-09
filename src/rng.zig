@@ -1204,7 +1204,7 @@ pub fn vectorNormalBatchFrom(source: anytype, comptime VectorType: type, allocat
     if (count == 0) return allocator.alloc(VectorType, 0);
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     const out = try allocator.alloc(VectorType, count);
     errdefer allocator.free(out);
     fillVectorNormalFrom(source, VectorType, out, mean, stddev);
@@ -1215,7 +1215,7 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
     if (dest.len == 0) return;
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    std.debug.assert(stddev >= 0);
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, @as(VectorType, @splat(mean)));
         return;
@@ -1247,7 +1247,7 @@ pub fn vectorNormalBatchCheckedFrom(source: anytype, comptime VectorType: type, 
     if (count == 0) return allocator.alloc(VectorType, 0);
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     return vectorNormalBatchFrom(source, VectorType, allocator, count, mean, stddev);
 }
 
@@ -1255,7 +1255,7 @@ pub fn fillVectorNormalCheckedFrom(source: anytype, comptime VectorType: type, d
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
 }
 
@@ -1386,7 +1386,7 @@ pub fn normalBatch(self: Rng, comptime T: type, allocator: std.mem.Allocator, co
 pub fn normalBatchFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, mean: T, stddev: T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     comptime requireFloat(T);
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     const out = try allocator.alloc(T, count);
     errdefer allocator.free(out);
     fillNormalFrom(source, T, out, mean, stddev);
@@ -1400,14 +1400,14 @@ pub fn normalBatchChecked(self: Rng, comptime T: type, allocator: std.mem.Alloca
 pub fn normalBatchCheckedFrom(source: anytype, comptime T: type, allocator: std.mem.Allocator, count: usize, mean: T, stddev: T) ![]T {
     if (count == 0) return allocator.alloc(T, 0);
     comptime requireFloat(T);
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     return normalBatchFrom(source, T, allocator, count, mean, stddev);
 }
 
 pub fn fillNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
     if (dest.len == 0) return;
     comptime requireFloat(T);
-    std.debug.assert(stddev >= 0);
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
         @memset(dest, mean);
         return;
@@ -1428,7 +1428,7 @@ pub fn fillNormalChecked(self: Rng, comptime T: type, dest: []T, mean: T, stddev
 pub fn fillNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
     comptime requireFloat(T);
     if (dest.len == 0) return;
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     fillNormalFrom(source, T, dest, mean, stddev);
 }
 
@@ -2477,14 +2477,14 @@ pub fn vectorNormalChecked(self: Rng, comptime VectorType: type, mean: vectorChi
 pub fn vectorNormalCheckedFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     return vectorNormalFrom(source, VectorType, mean, stddev);
 }
 
 pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
-    std.debug.assert(stddev >= 0);
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return @splat(mean);
     if (info.child == f32 or info.child == f64) {
         if (mean == 0 and stddev == 1) return vectorStandardNormalFrom(source, VectorType);
@@ -2865,7 +2865,7 @@ pub fn normalChecked(self: Rng, comptime T: type, mean: T, stddev: T) Error!T {
 
 pub fn normalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T) Error!T {
     comptime requireFloat(T);
-    if (!std.math.isFinite(mean) or !(stddev >= 0) or !std.math.isFinite(stddev)) return error.InvalidParameter;
+    if (!std.math.isFinite(mean) or !std.math.isFinite(stddev)) return error.InvalidParameter;
     return normalFastFrom(source, T, mean, stddev);
 }
 
@@ -2880,7 +2880,7 @@ pub inline fn standardNormalFastFrom(source: anytype, comptime T: type) T {
 
 pub inline fn normalFastFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
-    std.debug.assert(stddev >= 0);
+    std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) return mean;
     if (mean == 0 and stddev == 1) return standardNormalFastFrom(source, T);
     return mean + stddev * standardNormalFastFrom(source, T);
@@ -5375,25 +5375,25 @@ test "rng facade covers scalar APIs" {
     try std.testing.expectError(error.EmptyRange, Rng.fillVectorRangeCheckedFrom(&engine, @Vector(8, f32), &vec_range_buf, 2, 1));
     try std.testing.expectError(error.InvalidProbability, Rng.fillVectorChanceCheckedFrom(&engine, @Vector(8, bool), &vec_chance_buf, -0.1));
     try std.testing.expectError(error.InvalidProbability, Rng.fillVectorRatioCheckedFrom(&engine, @Vector(8, bool), &vec_ratio_buf, 2, 1));
-    try std.testing.expectError(error.InvalidParameter, rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.fillVectorNormalChecked(@Vector(8, f32), &vec_normal_buf, 0, std.math.inf(f32)));
     try std.testing.expectError(error.InvalidParameter, rng.fillVectorExponentialChecked(@Vector(8, f32), &vec_exp_buf, -0.0));
-    try std.testing.expectError(error.InvalidParameter, Rng.fillVectorNormalCheckedFrom(&engine, @Vector(8, f32), &vec_normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, Rng.fillVectorNormalCheckedFrom(&engine, @Vector(8, f32), &vec_normal_buf, 0, std.math.inf(f32)));
     try std.testing.expectError(error.InvalidParameter, Rng.fillVectorExponentialCheckedFrom(&engine, @Vector(8, f32), &vec_exp_buf, -0.0));
-    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), -0.0));
     try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), std.math.nan(f64)));
-    try std.testing.expectError(error.InvalidParameter, Rng.vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
+    try std.testing.expectError(error.InvalidParameter, Rng.vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Rng.vectorExponentialCheckedFrom(&engine, @Vector(4, f64), -0.0));
     try rng.fillRangeChecked(u32, &.{}, 3, 3);
     try Rng.fillRangeCheckedFrom(&engine, u32, &.{}, 3, 3);
     try Rng.fillChanceCheckedFrom(&engine, &.{}, -0.1);
     try Rng.fillRatioCheckedFrom(&engine, &.{}, 2, 1);
-    try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &normal_buf, 0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &exp_buf, -0.0));
-    try std.testing.expectError(error.InvalidParameter, Rng.fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, Rng.fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Rng.fillExponentialCheckedFrom(&engine, f64, &exp_buf, -0.0));
-    try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, std.math.inf(f64)));
     try std.testing.expectError(error.InvalidParameter, Rng.normalCheckedFrom(&engine, f64, std.math.inf(f64), 1));
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, -0.0));
     try std.testing.expectError(error.InvalidParameter, Rng.exponentialCheckedFrom(&engine, f64, std.math.nan(f64)));
@@ -6720,7 +6720,7 @@ test "invalid checked helpers do not consume random stream" {
     try std.testing.expectEqual(@as(u64, 0x9900c6c9195b42f9), engine.next());
 
     var f64_buf: [4]f64 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillNormalCheckedFrom(&engine, f64, &f64_buf, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, fillNormalCheckedFrom(&engine, f64, &f64_buf, 0, std.math.inf(f64)));
     try std.testing.expectEqual(@as(u64, 0x32ac91fd8b7e3970), engine.next());
 
     var bool_buf: [8]bool = undefined;
@@ -6856,7 +6856,7 @@ test "invalid vector distribution helpers do not consume random stream" {
     var engine = alea.ScalarPrng.init(0x5150_baa);
     var control = alea.ScalarPrng.init(0x5150_baa);
 
-    try std.testing.expectError(error.InvalidParameter, vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, -1));
+    try std.testing.expectError(error.InvalidParameter, vectorNormalCheckedFrom(&engine, @Vector(4, f64), 0, std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), -0.0));
@@ -6884,7 +6884,7 @@ test "invalid facade vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, rng.vectorRatioChecked(@Vector(8, bool), 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalChecked(@Vector(4, f64), 0, std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, rng.vectorExponentialChecked(@Vector(4, f64), -0.0));
@@ -7406,7 +7406,7 @@ test "invalid facade scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, rng.ratioChecked(2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.normalChecked(f64, 0, std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, -0.0));
@@ -7429,6 +7429,55 @@ test "standard scalar normal parameters match standard stream shape" {
         normalFastFrom(&normal_engine, f32, 0, 1),
     );
     try std.testing.expectEqual(standard_engine.next(), normal_engine.next());
+}
+
+test "negative normal stddev helpers preserve rand_distr-compatible stream shape" {
+    const alea = @import("root.zig");
+
+    var scalar_engine = alea.ScalarPrng.init(0x5150_5d01);
+    var scalar_manual_engine = alea.ScalarPrng.init(0x5150_5d01);
+    try std.testing.expectEqual(
+        @as(f64, 2.5) - @as(f64, 0.75) * standardNormalFastFrom(&scalar_manual_engine, f64),
+        normalFastFrom(&scalar_engine, f64, 2.5, -0.75),
+    );
+    try std.testing.expectEqual(scalar_manual_engine.next(), scalar_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x5150_5d02);
+    var fill_manual_engine = alea.ScalarPrng.init(0x5150_5d02);
+    var fill_out: [5]f64 = undefined;
+    var fill_manual: [5]f64 = undefined;
+    fillNormalFrom(&fill_engine, f64, &fill_out, -1.5, -2.0);
+    for (&fill_manual) |*item| item.* = -1.5 - 2.0 * standardNormalFastFrom(&fill_manual_engine, f64);
+    try std.testing.expectEqualSlices(f64, &fill_manual, &fill_out);
+    try std.testing.expectEqual(fill_manual_engine.next(), fill_engine.next());
+
+    var checked_engine = alea.ScalarPrng.init(0x5150_5d03);
+    var checked_manual_engine = alea.ScalarPrng.init(0x5150_5d03);
+    var checked_out: [5]f64 = undefined;
+    var checked_manual: [5]f64 = undefined;
+    try fillNormalCheckedFrom(&checked_engine, f64, &checked_out, 3.0, -1.25);
+    for (&checked_manual) |*item| item.* = 3.0 - 1.25 * standardNormalFastFrom(&checked_manual_engine, f64);
+    try std.testing.expectEqualSlices(f64, &checked_manual, &checked_out);
+    try std.testing.expectEqual(checked_manual_engine.next(), checked_engine.next());
+
+    var vector_engine = alea.ScalarPrng.init(0x5150_5d04);
+    var vector_manual_engine = alea.ScalarPrng.init(0x5150_5d04);
+    const vector_sample = vectorNormalFrom(&vector_engine, @Vector(4, f64), 1.0, -0.5);
+    var vector_manual: @Vector(4, f64) = undefined;
+    inline for (0..4) |lane| vector_manual[lane] = 1.0 - 0.5 * standardNormalFastFrom(&vector_manual_engine, f64);
+    try std.testing.expectEqual(vector_manual, vector_sample);
+    try std.testing.expectEqual(vector_manual_engine.next(), vector_engine.next());
+
+    var vector_fill_engine = alea.ScalarPrng.init(0x5150_5d05);
+    var vector_fill_manual_engine = alea.ScalarPrng.init(0x5150_5d05);
+    var vector_fill: [3]@Vector(4, f64) = undefined;
+    var vector_fill_manual: [3]@Vector(4, f64) = undefined;
+    fillVectorNormalFrom(&vector_fill_engine, @Vector(4, f64), &vector_fill, -2.0, -1.5);
+    for (&vector_fill_manual) |*item| inline for (0..4) |lane| {
+        item.*[lane] = -2.0 - 1.5 * standardNormalFastFrom(&vector_fill_manual_engine, f64);
+    };
+    try std.testing.expectEqualSlices(@Vector(4, f64), &vector_fill_manual, &vector_fill);
+    try std.testing.expectEqual(vector_fill_manual_engine.next(), vector_fill_engine.next());
 }
 
 test "rate-one scalar exponential matches standard stream shape" {
@@ -7808,7 +7857,7 @@ test "invalid facade checked fills do not consume random stream" {
     try std.testing.expectError(error.InvalidProbability, rng.fillRatioChecked(&bools, 2, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &floats, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.fillNormalChecked(f64, &floats, 0, std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, rng.fillExponentialChecked(f64, &floats, -0.0));
@@ -7840,7 +7889,7 @@ test "owned normal and exponential batches allocate and validate before consumin
     try std.testing.expectEqual(control.next(), engine.next());
 
     var invalid_normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, rng.normalBatchChecked(f64, invalid_normal_alloc.allocator(), 8, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.normalBatchChecked(f64, invalid_normal_alloc.allocator(), 8, 0, std.math.inf(f64)));
     try std.testing.expect(!invalid_normal_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
@@ -7918,7 +7967,7 @@ test "owned vector normal and exponential batches allocate and validate before c
     try std.testing.expectEqual(control.next(), engine.next());
 
     var invalid_normal_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalBatchChecked(@Vector(8, f32), invalid_normal_alloc.allocator(), 4, 0, -1));
+    try std.testing.expectError(error.InvalidParameter, rng.vectorNormalBatchChecked(@Vector(8, f32), invalid_normal_alloc.allocator(), 4, 0, std.math.inf(f32)));
     try std.testing.expect(!invalid_normal_alloc.has_induced_failure);
     try std.testing.expectEqual(control.next(), engine.next());
 
