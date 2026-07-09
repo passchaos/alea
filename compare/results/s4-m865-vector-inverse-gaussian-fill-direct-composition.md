@@ -1,5 +1,9 @@
 # S4-M865 VectorInverseGaussian Reusable Fill Direct Composition
 
+## S4-M1157 Supersession Note
+
+S4-M1157 later replaces the former finite-mean `shape == inf` no-consume point-mass extension with local `rand_distr`-compatible NaN output and StandardNormal-plus-uniform draw shape. The vector fill direct-composition conclusion below remains relevant for non-degenerate fills, and zero-mean still remains Alea's no-consume extension.
+
 ## Gap
 
 Scalar reusable `InverseGaussian.fillFrom` already avoids a per-output sampler
@@ -26,7 +30,7 @@ preserving the same stream as repeated `VectorInverseGaussian.sampleFrom` calls.
   `inverseGaussianFromNormalVector` directly.
 - Focused tests compare f64x4 and f32x8 reusable vector fills with scalar
   `VectorInverseGaussian.sampleFrom` loops under identical seeds and cover both
-  zero-mean and infinite-shape degenerate no-consume paths.
+  zero-mean no-consume and current S4-M1157 infinite-shape NaN/draw-shape paths.
 
 ## Validation
 

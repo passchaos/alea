@@ -17680,6 +17680,19 @@ pub fn VectorUnitBall(comptime VectorType: type) type {
     };
 }
 
+
+fn inverseGaussianParametersValid(comptime T: type, mean: T, shape: T) bool {
+    return mean >= 0 and
+        (std.math.isFinite(mean) or mean == std.math.inf(T)) and
+        shape > 0 and
+        (std.math.isFinite(shape) or shape == std.math.inf(T));
+}
+
+fn inverseGaussianIsDegenerate(comptime T: type, mean: T, shape: T) bool {
+    _ = shape;
+    return mean == 0;
+}
+
 pub fn inverseGaussian(rng: Rng, comptime T: type, mean: T, shape: T) T {
     return inverseGaussianFrom(rng, T, mean, shape);
 }
@@ -17695,8 +17708,8 @@ pub fn inverseGaussianCheckedFrom(source: anytype, comptime T: type, mean: T, sh
 
 pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
     comptime requireFloat(T);
-    std.debug.assert(mean >= 0 and std.math.isFinite(mean) and shape > 0 and (std.math.isFinite(shape) or shape == std.math.inf(T)));
-    if (mean == 0 or shape == std.math.inf(T)) return mean;
+    std.debug.assert(inverseGaussianParametersValid(T, mean, shape));
+    if (inverseGaussianIsDegenerate(T, mean, shape)) return mean;
 
     const z = Rng.normalFastFrom(source, T, 0, 1);
     const y = mean * z * z;
@@ -17712,8 +17725,8 @@ pub fn fillInverseGaussian(rng: Rng, comptime T: type, dest: []T, mean: T, shape
 
 pub fn fillInverseGaussianFrom(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
     comptime requireFloat(T);
-    std.debug.assert(mean >= 0 and std.math.isFinite(mean) and shape > 0 and (std.math.isFinite(shape) or shape == std.math.inf(T)));
-    if (mean == 0 or shape == std.math.inf(T)) {
+    std.debug.assert(inverseGaussianParametersValid(T, mean, shape));
+    if (inverseGaussianIsDegenerate(T, mean, shape)) {
         @memset(dest, mean);
         return;
     }
@@ -17874,8 +17887,7 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn init(mean: T, shape: T) Error!Self {
             comptime requireFloat(T);
-            if (!(mean >= 0) or !std.math.isFinite(mean)) return error.InvalidParameter;
-            if (!(shape > 0) or (!std.math.isFinite(shape) and shape != std.math.inf(T))) return error.InvalidParameter;
+            if (!inverseGaussianParametersValid(T, mean, shape)) return error.InvalidParameter;
             return .{
                 .mean = mean,
                 .shape = shape,
@@ -17948,7 +17960,7 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.mean == 0 or self.shape == std.math.inf(T);
+            return inverseGaussianIsDegenerate(T, self.mean, self.shape);
         }
 
         fn degenerateValue(self: Self) T {
@@ -27775,62 +27787,146 @@ test "degenerate inverse-gaussian helpers do not consume random stream" {
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    const infinite_shape_point: f64 = 2.5;
-    try std.testing.expectEqual(infinite_shape_point, inverseGaussianFrom(&engine, f64, infinite_shape_point, std.math.inf(f64)));
+    try std.testing.expectEqual(@as(f64, 0), inverseGaussianFrom(&engine, f64, 0, std.math.inf(f64)));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectEqual(infinite_shape_point, try inverseGaussianChecked(rng, f64, infinite_shape_point, std.math.inf(f64)));
+    const zero_infinite_shape = try InverseGaussian(f64).init(0, std.math.inf(f64));
+    try std.testing.expectEqual(@as(f64, 0), zero_infinite_shape.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+
+test "inverse-gaussian infinity semantics matches local rand_distr" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x9015_1157);
+    var control = alea.ScalarPrng.init(0x9015_1157);
+    const rng = Rng.init(&engine);
+    const control_rng = Rng.init(&control);
+    const inf = std.math.inf(f64);
+    const finite_mean: f64 = 2.5;
+    const finite_shape: f64 = 3.0;
+
+    const Reference = struct {
+        fn consumeScalar(source: anytype) void {
+            _ = Rng.standardNormalFastFrom(source, f64);
+            _ = Rng.floatFrom(source, f64);
+        }
+
+        fn consumeFill(source: anytype, len: usize) void {
+            for (0..len) |_| _ = Rng.standardNormalFastFrom(source, f64);
+            for (0..len) |_| _ = Rng.floatFrom(source, f64);
+        }
+
+        fn consumeVector(source: anytype) void {
+            _ = vectorStandardNormalFrom(source, @Vector(4, f64));
+            _ = Rng.vectorFrom(source, @Vector(4, f64));
+        }
+
+        fn consumeVectorFill(source: anytype, len: usize) void {
+            for (0..len) |_| {
+                _ = vectorStandardNormalFrom(source, @Vector(4, f64));
+                _ = Rng.vectorFrom(source, @Vector(4, f64));
+            }
+        }
+    };
+
+    const Expect = struct {
+        fn nan(value: f64) !void {
+            try std.testing.expect(std.math.isNan(value));
+        }
+
+        fn nanVector(value: @Vector(4, f64)) !void {
+            inline for (0..4) |lane| try nan(value[lane]);
+        }
+    };
+
+    try Expect.nan(inverseGaussianFrom(&engine, f64, finite_mean, inf));
+    Reference.consumeScalar(&control);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    fillInverseGaussianFrom(&engine, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
-    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    try Expect.nan(try inverseGaussianChecked(rng, f64, finite_mean, inf));
+    Reference.consumeScalar(control_rng);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try fillInverseGaussianChecked(rng, f64, &scalar_buf, infinite_shape_point, std.math.inf(f64));
-    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    var scalar_buf: [4]f64 = undefined;
+    fillInverseGaussianFrom(&engine, f64, &scalar_buf, finite_mean, inf);
+    for (scalar_buf) |sample| try Expect.nan(sample);
+    Reference.consumeFill(&control, scalar_buf.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    const infinite_shape_sampler = try InverseGaussian(f64).init(infinite_shape_point, std.math.inf(f64));
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.meanValue());
-    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_sampler.shapeValue());
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.expectedValue());
+    try fillInverseGaussianChecked(rng, f64, &scalar_buf, finite_mean, inf);
+    for (scalar_buf) |sample| try Expect.nan(sample);
+    Reference.consumeFill(control_rng, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_sampler = try InverseGaussian(f64).init(finite_mean, inf);
+    try std.testing.expectEqual(finite_mean, infinite_shape_sampler.meanValue());
+    try std.testing.expectEqual(inf, infinite_shape_sampler.shapeValue());
+    try std.testing.expectEqual(finite_mean, infinite_shape_sampler.expectedValue());
     try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.varianceValue());
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.minValue());
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.maxValue().?);
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_sampler.minValue());
+    try std.testing.expect(infinite_shape_sampler.maxValue() == null);
+    try Expect.nan(infinite_shape_sampler.sampleFrom(&engine));
+    Reference.consumeScalar(&control);
     try std.testing.expectEqual(control.next(), engine.next());
 
     infinite_shape_sampler.fillFrom(&engine, &scalar_buf);
-    for (scalar_buf) |sample| try std.testing.expectEqual(infinite_shape_point, sample);
+    for (scalar_buf) |sample| try Expect.nan(sample);
+    Reference.consumeFill(&control, scalar_buf.len);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), vectorInverseGaussianFrom(&engine, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    const infinite_mean_sampler = try InverseGaussian(f64).init(inf, finite_shape);
+    try std.testing.expectEqual(inf, infinite_mean_sampler.meanValue());
+    try std.testing.expectEqual(finite_shape, infinite_mean_sampler.shapeValue());
+    try std.testing.expectEqual(inf, infinite_mean_sampler.expectedValue());
+    try std.testing.expectEqual(inf, infinite_mean_sampler.varianceValue());
+    try Expect.nan(inverseGaussianFrom(&engine, f64, inf, finite_shape));
+    Reference.consumeScalar(&control);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try Expect.nan(infinite_mean_sampler.sampleFrom(&engine));
+    Reference.consumeScalar(&control);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), try vectorInverseGaussianChecked(rng, @Vector(4, f64), infinite_shape_point, std.math.inf(f64)));
+    const both_infinite_sampler = try InverseGaussian(f64).init(inf, inf);
+    try Expect.nan(both_infinite_sampler.sampleFrom(&engine));
+    Reference.consumeScalar(&control);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    fillVectorInverseGaussianFrom(&engine, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
-    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
+    try Expect.nanVector(vectorInverseGaussianFrom(&engine, @Vector(4, f64), finite_mean, inf));
+    Reference.consumeVector(&control);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try fillVectorInverseGaussianChecked(rng, @Vector(4, f64), &vector_buf, infinite_shape_point, std.math.inf(f64));
-    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
+    try Expect.nanVector(try vectorInverseGaussianChecked(rng, @Vector(4, f64), finite_mean, inf));
+    Reference.consumeVector(control_rng);
     try std.testing.expectEqual(control.next(), engine.next());
 
-    const infinite_shape_vector_sampler = try VectorInverseGaussian(@Vector(4, f64)).init(infinite_shape_point, std.math.inf(f64));
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.meanValue());
-    try std.testing.expectEqual(std.math.inf(f64), infinite_shape_vector_sampler.shapeValue());
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.expectedValue());
-    try std.testing.expectEqual(@as(f64, 0), infinite_shape_vector_sampler.varianceValue());
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.minValue());
-    try std.testing.expectEqual(infinite_shape_point, infinite_shape_vector_sampler.maxValue().?);
-    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), infinite_shape_vector_sampler.sampleFrom(&engine));
+    var vector_buf: [2]@Vector(4, f64) = undefined;
+    fillVectorInverseGaussianFrom(&engine, @Vector(4, f64), &vector_buf, finite_mean, inf);
+    for (vector_buf) |sample| try Expect.nanVector(sample);
+    Reference.consumeVectorFill(&control, vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorInverseGaussianChecked(rng, @Vector(4, f64), &vector_buf, finite_mean, inf);
+    for (vector_buf) |sample| try Expect.nanVector(sample);
+    Reference.consumeVectorFill(control_rng, vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape_vector_sampler = try VectorInverseGaussian(@Vector(4, f64)).init(finite_mean, inf);
+    try std.testing.expectEqual(finite_mean, infinite_shape_vector_sampler.meanValue());
+    try std.testing.expectEqual(inf, infinite_shape_vector_sampler.shapeValue());
+    try std.testing.expectEqual(@as(f64, 0), infinite_shape_vector_sampler.minValue());
+    try std.testing.expect(infinite_shape_vector_sampler.maxValue() == null);
+    try Expect.nanVector(infinite_shape_vector_sampler.sampleFrom(&engine));
+    Reference.consumeVector(&control);
     try std.testing.expectEqual(control.next(), engine.next());
 
     infinite_shape_vector_sampler.fillFrom(&engine, &vector_buf);
-    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(infinite_shape_point)), sample);
+    for (vector_buf) |sample| try Expect.nanVector(sample);
+    Reference.consumeVectorFill(&control, vector_buf.len);
     try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, InverseGaussian(f64).init(std.math.nan(f64), finite_shape));
+    try std.testing.expectError(error.InvalidParameter, InverseGaussian(f64).init(finite_mean, std.math.nan(f64)));
 }
 
 test "degenerate normal-inverse-gaussian helpers do not consume random stream" {
@@ -31937,11 +32033,13 @@ test "distribution vector helpers preserve support and stream shape" {
     for (vector_inverse_gaussian_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), vec);
     try std.testing.expectEqual(vector_inverse_gaussian_zero_control.next(), vector_inverse_gaussian_zero_engine.next());
     var vector_inverse_gaussian_inf_shape_engine = alea.ScalarPrng.init(0x5865_1af);
-    var vector_inverse_gaussian_inf_shape_control = alea.ScalarPrng.init(0x5865_1af);
+    var vector_inverse_gaussian_inf_shape_loop_engine = alea.ScalarPrng.init(0x5865_1af);
     const vector_inverse_gaussian_inf_shape = try VectorInverseGaussian(@Vector(4, f64)).init(1.5, std.math.inf(f64));
     vector_inverse_gaussian_inf_shape.fillFrom(&vector_inverse_gaussian_inf_shape_engine, &vector_inverse_gaussian_fill);
-    for (vector_inverse_gaussian_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
-    try std.testing.expectEqual(vector_inverse_gaussian_inf_shape_control.next(), vector_inverse_gaussian_inf_shape_engine.next());
+    for (&vector_inverse_gaussian_loop) |*slot| slot.* = vector_inverse_gaussian_inf_shape.sampleFrom(&vector_inverse_gaussian_inf_shape_loop_engine);
+    for (vector_inverse_gaussian_fill) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isNan(vec[lane]));
+    for (vector_inverse_gaussian_loop) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isNan(vec[lane]));
+    try std.testing.expectEqual(vector_inverse_gaussian_inf_shape_loop_engine.next(), vector_inverse_gaussian_inf_shape_engine.next());
 
     const nig_vec = try vectorNormalInverseGaussianChecked(rng, @Vector(4, f64), 2, 1);
     const direct_nig_vec = try vectorNormalInverseGaussianCheckedFrom(&direct_engine, @Vector(4, f64), 2, 1);

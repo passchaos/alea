@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1156 bar is S4-M1157: exact/default dense SIMD research,
+The active post-S4-M1157 bar is S4-M1158: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6070,3 +6070,5 @@ S4-M1154 aligns PERT infinite-shape semantics with local `rand_distr::Pert` (`co
 S4-M1155 aligns Poisson max-lambda validation with local `rand_distr::Poisson::new` (`compare/results/s4-m1155-poisson-max-lambda.md`): finite `lambda > 1.844e19` is now rejected across checked scalar/vector/reusable/fill helpers and asserted by unchecked helpers, while Alea keeps its documented zero-lambda point-mass extension. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1156 aligns Geometric failure-count zero-probability semantics with local `rand_distr::Geometric::new` (`compare/results/s4-m1156-geometric-zero-probability.md`): `GeometricFailures` scalar/vector checked, unchecked, reusable, and fill helpers now accept p=0/-0.0 and saturating tiny probabilities as no-consume max-`u64` states, while one-based `Geometric` keeps p=0 invalid and safely saturates tiny positive probabilities. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1157 aligns InverseGaussian infinity semantics with local `rand_distr::InverseGaussian::new` (`compare/results/s4-m1157-inverse-gaussian-infinity.md`): positive infinite mean and/or shape are accepted, samples/fills consume the StandardNormal plus uniform draw shape and produce NaN, while Alea keeps its documented zero-mean point-mass extension. This is a local `rand_distr` compatibility closure, not whole-goal completion.

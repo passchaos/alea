@@ -1,13 +1,17 @@
 # S4-M1028 InverseGaussian Sampler Facade Direct Paths
 
+## S4-M1157 Supersession Note
+
+S4-M1157 later replaces the former finite-mean `shape == inf` no-consume point-mass extension with local `rand_distr`-compatible NaN output and StandardNormal-plus-uniform draw shape. The facade direct-path conclusion below remains relevant; zero-mean still remains Alea's no-consume extension.
+
 ## Gap
 
 Reusable scalar/vector `InverseGaussian` facade sample/fill helpers still routed
 through `sampleFrom` / `fillFrom` wrappers. The direct-source paths already draw
 standard-normal components plus uniform acceptance variates and apply the
 Michael-Schucany-Haas transform directly; the facade paths can now do the same
-through facade `Rng` while preserving collapsed `mean == 0` and `shape == inf`
-point-mass behavior.
+through facade `Rng` while preserving collapsed `mean == 0`
+point-mass behavior and current S4-M1157 infinite-parameter NaN/draw-shape behavior.
 
 ## Local `rand` / `rand_distr` Baseline
 
@@ -16,7 +20,7 @@ InverseGaussian coverage intentionally extends the local `rand_distr` surface
 with scalar/vector fill and point-mass ergonomics. For this gap the relevant
 comparison is the reusable-sampler contract: a reusable sampler should drive the
 provided RNG directly and avoid avoidable wrapper hops, and Alea should retain
-its extra scalar/vector fill and degenerate point-mass semantics.
+its extra scalar/vector fill, zero-mean point-mass semantics, and current infinite-parameter compatibility semantics.
 
 ## Implementation
 
