@@ -5756,3 +5756,9 @@ S4-M1090 routes reusable sequence Choice value fills directly
 `seq.Choice(T).fillValues` now maps direct facade-generated indexes into value
 output instead of routing through `fillValuesFrom`. This improves seq Choice
 value-fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1091 routes reusable sequence Choice index fills directly
+(`compare/results/s4-m1091-seq-choice-index-fill-facade-direct.md`):
+`seq.Choice(T).fillIndices` now generates indexes through facade `Rng` directly
+instead of routing through `fillIndicesFrom`. This improves seq Choice index-fill
+facade ergonomics but does not resolve S4-M11.
