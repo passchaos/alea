@@ -5424,3 +5424,10 @@ directly (`compare/results/s4-m1040-vector-approx-log-exponential-facade-direct.
 exponential facade helpers directly instead of routing through `sampleFrom` /
 `fillFrom` wrappers. This improves approximate-log Exponential facade ergonomics
 but does not resolve S4-M11.
+
+S4-M1041 routes reusable vector table Exponential facade helpers directly
+(`compare/results/s4-m1041-vector-table-exponential-facade-direct.md`):
+`VectorExponentialTableF32.sample` / `fill` and `VectorExponentialTableF64.sample`
+/ `fill` now call table-exponential facade helpers directly instead of routing
+through `sampleFrom` / `fillFrom` wrappers. This improves vector table Exponential
+facade ergonomics but does not resolve S4-M11.
