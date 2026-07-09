@@ -54,7 +54,7 @@ through `GeometricFailures.new`.
 | Gumbel | Covered: `gumbel`, `Gumbel(T)`, including location/scale/moment/median/mode/support accessors and collapsed `scale == 0` point masses |
 | Frechet | Covered: `frechet`, `Frechet(T)`, including location/scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0` and infinite-shape point masses |
 | SkewNormal | Covered: `skewNormal`, `SkewNormal(T)`, including location/scale/shape parameter aliases, moment/support accessors, and collapsed `scale == 0` point masses |
-| Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, parameter/moment accessors, collapsed `min == mode == max` point masses, and infinite-shape mode point masses |
+| Pert | Covered: `pert`, `Pert(T)`, including default-shape, mean, range-builder constructors, builder diagnostics, parameter/moment accessors, collapsed `min == mode == max` point masses, and local `rand_distr` finite-range infinite-shape NaN/stream-shape behavior |
 | UnitCircle / UnitDisc | Covered: `unitCircle`, `unitDisc`, `UnitCircle(T)`, `UnitDisc(T)`, including geometry, coordinate-moment, and radial-moment accessors |
 | UnitSphere / UnitBall | Covered: `unitSphere`, `unitBall`, `UnitSphere(T)`, `UnitBall(T)`, including geometry, coordinate-moment, and radial-moment accessors |
 | Poisson | Covered: `poisson`, `Poisson`, large-lambda PTRS path, and lambda/moment/support accessors |

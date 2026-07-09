@@ -16508,7 +16508,6 @@ pub fn pertFrom(source: anytype, comptime T: type, min: T, mode: T, max: T, shap
     comptime requireFloat(T);
     std.debug.assert(pertParametersValid(T, min, mode, max, shape));
     if (min == max) return min;
-    if (shape == std.math.inf(T)) return mode;
 
     const range = max - min;
     const alpha = 1 + shape * (mode - min) / range;
@@ -16527,24 +16526,17 @@ pub fn fillPertFrom(source: anytype, comptime T: type, dest: []T, min: T, mode: 
         @memset(dest, min);
         return;
     }
-    if (shape == std.math.inf(T)) {
-        @memset(dest, mode);
-        return;
-    }
 
     const sampler = Pert(T).init(min, mode, max, shape) catch unreachable;
     sampler.fillFrom(source, dest);
 }
 
 fn pertParametersValid(comptime T: type, min: T, mode: T, max: T, shape: T) bool {
-    return std.math.isFinite(min) and
-        std.math.isFinite(mode) and
-        std.math.isFinite(max) and
-        min <= max and
-        min <= mode and
-        mode <= max and
-        shape >= 0 and
-        (std.math.isFinite(shape) or shape == std.math.inf(T));
+    if (!(std.math.isFinite(min) and std.math.isFinite(mode) and std.math.isFinite(max))) return false;
+    if (!(min <= max and min <= mode and mode <= max)) return false;
+    if (!(shape >= 0 and (std.math.isFinite(shape) or shape == std.math.inf(T)))) return false;
+    if (shape == std.math.inf(T) and min < max and (mode == min or mode == max)) return false;
+    return true;
 }
 
 pub fn fillPertChecked(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T, shape: T) Error!void {
@@ -16708,15 +16700,6 @@ pub fn Pert(comptime T: type) type {
                     .beta_param = 1 + half_shape,
                 };
             }
-            if (shape == std.math.inf(T)) {
-                return .{
-                    .min = mode,
-                    .range = 0,
-                    .alpha = std.math.inf(T),
-                    .beta_param = std.math.inf(T),
-                };
-            }
-
             return .{
                 .min = min,
                 .range = range,
@@ -16741,7 +16724,7 @@ pub fn Pert(comptime T: type) type {
         pub fn initMean(min: T, mean: T, max: T, shape: T) Error!Self {
             comptime requireFloat(T);
             if (!(shape > 0) or (!std.math.isFinite(shape) and shape != std.math.inf(T))) return error.InvalidParameter;
-            const mode = if (shape == std.math.inf(T)) mean else ((shape + 2) * mean - min - max) / shape;
+            const mode = ((shape + 2) * mean - min - max) / shape;
             return Self.init(min, mode, max, shape);
         }
 
@@ -27212,7 +27195,7 @@ test "degenerate pareto helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
-test "degenerate pert helpers do not consume random stream" {
+test "collapsed pert helpers do not consume random stream" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x5150_d146);
     var control = alea.ScalarPrng.init(0x5150_d146);
@@ -27259,68 +27242,6 @@ test "degenerate pert helpers do not consume random stream" {
     try std.testing.expectEqual(point, by_mean.sampleFrom(&engine));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    const min_value: f64 = -1.0;
-    const mode_value: f64 = 2.5;
-    const max_value: f64 = 6.0;
-    try std.testing.expectEqual(mode_value, pert(rng, f64, min_value, mode_value, max_value, std.math.inf(f64)));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try std.testing.expectEqual(mode_value, pertFrom(&engine, f64, min_value, mode_value, max_value, std.math.inf(f64)));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try std.testing.expectEqual(mode_value, try pertChecked(rng, f64, min_value, mode_value, max_value, std.math.inf(f64)));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try std.testing.expectEqual(mode_value, try pertCheckedFrom(&engine, f64, min_value, mode_value, max_value, std.math.inf(f64)));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    fillPert(rng, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
-    for (scalar_buf) |sample| try std.testing.expectEqual(mode_value, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    fillPertFrom(&engine, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
-    for (scalar_buf) |sample| try std.testing.expectEqual(mode_value, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try fillPertChecked(rng, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
-    for (scalar_buf) |sample| try std.testing.expectEqual(mode_value, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try fillPertCheckedFrom(&engine, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
-    for (scalar_buf) |sample| try std.testing.expectEqual(mode_value, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    const infinite_shape = try Pert(f64).init(min_value, mode_value, max_value, std.math.inf(f64));
-    try std.testing.expectEqual(mode_value, infinite_shape.minValue());
-    try std.testing.expectEqual(mode_value, infinite_shape.maxValue());
-    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.shapeValue());
-    try std.testing.expectEqual(mode_value, infinite_shape.modeValue().?);
-    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.alphaValue());
-    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.betaValue());
-    try std.testing.expectEqual(mode_value, infinite_shape.expectedValue());
-    try std.testing.expectEqual(@as(f64, 0), infinite_shape.varianceValue());
-    try std.testing.expectEqual(mode_value, infinite_shape.sample(rng));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try std.testing.expectEqual(mode_value, infinite_shape.sampleFrom(&engine));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    infinite_shape.fill(rng, &scalar_buf);
-    for (scalar_buf) |sample| try std.testing.expectEqual(mode_value, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    infinite_shape.fillFrom(&engine, &scalar_buf);
-    for (scalar_buf) |sample| try std.testing.expectEqual(mode_value, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    const infinite_shape_by_mean = try Pert(f64).initMean(min_value, mode_value, max_value, std.math.inf(f64));
-    try std.testing.expectEqual(mode_value, infinite_shape_by_mean.sampleFrom(&engine));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    const infinite_shape_builder = try Pert(f64).initRange(min_value, max_value).withShape(std.math.inf(f64)).withMode(mode_value);
-    try std.testing.expectEqual(mode_value, infinite_shape_builder.sampleFrom(&engine));
-    try std.testing.expectEqual(control.next(), engine.next());
-
     const vector_point: f32 = -1.5;
     try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), vectorPertFrom(&engine, @Vector(4, f32), vector_point, vector_point, vector_point, 4));
     try std.testing.expectEqual(control.next(), engine.next());
@@ -27352,61 +27273,164 @@ test "degenerate pert helpers do not consume random stream" {
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f32), @splat(vector_point)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "infinite-shape pert helpers preserve rand_distr-compatible stream shape" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d146);
+    var control = alea.ScalarPrng.init(0x5150_d146);
+    const rng = Rng.init(&engine);
+    const control_rng = Rng.init(&control);
+
+    const min_value: f64 = -1.0;
+    const mode_value: f64 = 2.5;
+    const max_value: f64 = 6.0;
+    var scalar_buf: [5]f64 = undefined;
+
+    const Reference = struct {
+        fn consume(source: anytype, comptime T: type, min: T, mode: T, max: T) void {
+            const range = max - min;
+            _ = betaInfiniteFrom(source, T, 1 + std.math.inf(T) * (mode - min) / range, 1 + std.math.inf(T) * (max - mode) / range);
+        }
+        fn consumeMany(source: anytype, comptime T: type, min: T, mode: T, max: T, count: usize) void {
+            for (0..count) |_| consume(source, T, min, mode, max);
+        }
+        fn expectNan(value: f64) !void {
+            try std.testing.expect(std.math.isNan(value));
+        }
+    };
+
+    try Reference.expectNan(pert(rng, f64, min_value, mode_value, max_value, std.math.inf(f64)));
+    Reference.consume(control_rng, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Reference.expectNan(pertFrom(&engine, f64, min_value, mode_value, max_value, std.math.inf(f64)));
+    Reference.consume(&control, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Reference.expectNan(try pertChecked(rng, f64, min_value, mode_value, max_value, std.math.inf(f64)));
+    Reference.consume(control_rng, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try Reference.expectNan(try pertCheckedFrom(&engine, f64, min_value, mode_value, max_value, std.math.inf(f64)));
+    Reference.consume(&control, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillPert(rng, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
+    for (scalar_buf) |sample| try Reference.expectNan(sample);
+    Reference.consumeMany(control_rng, f64, min_value, mode_value, max_value, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillPertFrom(&engine, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
+    for (scalar_buf) |sample| try Reference.expectNan(sample);
+    Reference.consumeMany(&control, f64, min_value, mode_value, max_value, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillPertChecked(rng, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
+    for (scalar_buf) |sample| try Reference.expectNan(sample);
+    Reference.consumeMany(control_rng, f64, min_value, mode_value, max_value, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillPertCheckedFrom(&engine, f64, &scalar_buf, min_value, mode_value, max_value, std.math.inf(f64));
+    for (scalar_buf) |sample| try Reference.expectNan(sample);
+    Reference.consumeMany(&control, f64, min_value, mode_value, max_value, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const infinite_shape = try Pert(f64).init(min_value, mode_value, max_value, std.math.inf(f64));
+    try std.testing.expectEqual(min_value, infinite_shape.minValue());
+    try std.testing.expectEqual(max_value, infinite_shape.maxValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.shapeValue());
+    try std.testing.expect(std.math.isNan(infinite_shape.modeValue().?));
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.alphaValue());
+    try std.testing.expectEqual(std.math.inf(f64), infinite_shape.betaValue());
+    try std.testing.expect(std.math.isNan(infinite_shape.expectedValue()));
+    try std.testing.expect(std.math.isNan(infinite_shape.varianceValue()));
+
+    try Reference.expectNan(infinite_shape.sample(rng));
+    Reference.consume(control_rng, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try Reference.expectNan(infinite_shape.sampleFrom(&engine));
+    Reference.consume(&control, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    infinite_shape.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try Reference.expectNan(sample);
+    Reference.consumeMany(control_rng, f64, min_value, mode_value, max_value, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    infinite_shape.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try Reference.expectNan(sample);
+    Reference.consumeMany(&control, f64, min_value, mode_value, max_value, scalar_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, Pert(f64).init(min_value, min_value, max_value, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, Pert(f64).init(min_value, max_value, max_value, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, Pert(f64).initMean(min_value, mode_value, max_value, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, Pert(f64).initRange(min_value, max_value).withShape(std.math.inf(f64)).withMode(min_value));
+    const infinite_shape_builder = try Pert(f64).initRange(min_value, max_value).withShape(std.math.inf(f64)).withMode(mode_value);
+    try Reference.expectNan(infinite_shape_builder.sampleFrom(&engine));
+    Reference.consume(&control, f64, min_value, mode_value, max_value);
+    try std.testing.expectEqual(control.next(), engine.next());
 
     const vector_min: f32 = -4.0;
     const vector_mode: f32 = -0.5;
     const vector_max: f32 = 2.0;
-    const vector_mode_splat: @Vector(4, f32) = @splat(vector_mode);
-    try std.testing.expectEqual(vector_mode_splat, vectorPert(rng, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
-    try std.testing.expectEqual(control.next(), engine.next());
+    var vector_buf: [3]@Vector(4, f32) = undefined;
+    const vector_inf = try VectorPert(@Vector(4, f32)).init(vector_min, vector_mode, vector_max, std.math.inf(f32));
+    var vector_engine = alea.ScalarPrng.init(0x5150_d146_2154);
+    var vector_control = alea.ScalarPrng.init(0x5150_d146_2154);
+    const vector_rng = Rng.init(&vector_engine);
 
-    try std.testing.expectEqual(vector_mode_splat, vectorPertFrom(&engine, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
-    try std.testing.expectEqual(control.next(), engine.next());
+    const VectorReference = struct {
+        fn consume(source: anytype) void {
+            const range = vector_max - vector_min;
+            const alpha = 1 + std.math.inf(f32) * (vector_mode - vector_min) / range;
+            const beta_param = 1 + std.math.inf(f32) * (vector_max - vector_mode) / range;
+            for (0..4) |_| _ = betaInfiniteFrom(source, f32, alpha, beta_param);
+        }
+        fn consumeMany(source: anytype, count: usize) void {
+            for (0..count) |_| consume(source);
+        }
+        fn expectNanVec(value: @Vector(4, f32)) !void {
+            inline for (0..4) |lane| try std.testing.expect(std.math.isNan(value[lane]));
+        }
+    };
 
-    try std.testing.expectEqual(vector_mode_splat, try vectorPertChecked(rng, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
-    try std.testing.expectEqual(control.next(), engine.next());
+    try VectorReference.expectNanVec(vectorPert(vector_rng, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
+    VectorReference.consume(&vector_control);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    try VectorReference.expectNanVec(vectorPertFrom(&vector_engine, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
+    VectorReference.consume(&vector_control);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    try VectorReference.expectNanVec(try vectorPertChecked(vector_rng, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
+    VectorReference.consume(&vector_control);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    try VectorReference.expectNanVec(try vectorPertCheckedFrom(&vector_engine, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
+    VectorReference.consume(&vector_control);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
 
-    try std.testing.expectEqual(vector_mode_splat, try vectorPertCheckedFrom(&engine, @Vector(4, f32), vector_min, vector_mode, vector_max, std.math.inf(f32)));
-    try std.testing.expectEqual(control.next(), engine.next());
+    fillVectorPert(vector_rng, @Vector(4, f32), &vector_buf, vector_min, vector_mode, vector_max, std.math.inf(f32));
+    for (vector_buf) |sample| try VectorReference.expectNanVec(sample);
+    VectorReference.consumeMany(&vector_control, vector_buf.len);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    fillVectorPertFrom(&vector_engine, @Vector(4, f32), &vector_buf, vector_min, vector_mode, vector_max, std.math.inf(f32));
+    for (vector_buf) |sample| try VectorReference.expectNanVec(sample);
+    VectorReference.consumeMany(&vector_control, vector_buf.len);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
 
-    fillVectorPert(rng, @Vector(4, f32), &vector_buf, vector_min, vector_mode, vector_max, std.math.inf(f32));
-    for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    fillVectorPertFrom(&engine, @Vector(4, f32), &vector_buf, vector_min, vector_mode, vector_max, std.math.inf(f32));
-    for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try fillVectorPertChecked(rng, @Vector(4, f32), &vector_buf, vector_min, vector_mode, vector_max, std.math.inf(f32));
-    for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try fillVectorPertCheckedFrom(&engine, @Vector(4, f32), &vector_buf, vector_min, vector_mode, vector_max, std.math.inf(f32));
-    for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    const infinite_shape_vector = try VectorPert(@Vector(4, f32)).init(vector_min, vector_mode, vector_max, std.math.inf(f32));
-    try std.testing.expectEqual(vector_mode, infinite_shape_vector.minValue());
-    try std.testing.expectEqual(vector_mode, infinite_shape_vector.maxValue());
-    try std.testing.expectEqual(std.math.inf(f32), infinite_shape_vector.shapeValue());
-    try std.testing.expectEqual(vector_mode, infinite_shape_vector.modeValue().?);
-    try std.testing.expectEqual(std.math.inf(f32), infinite_shape_vector.alphaValue());
-    try std.testing.expectEqual(std.math.inf(f32), infinite_shape_vector.betaValue());
-    try std.testing.expectEqual(vector_mode, infinite_shape_vector.expectedValue());
-    try std.testing.expectEqual(@as(f32, 0), infinite_shape_vector.varianceValue());
-    try std.testing.expectEqual(vector_mode_splat, infinite_shape_vector.sample(rng));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    try std.testing.expectEqual(vector_mode_splat, infinite_shape_vector.sampleFrom(&engine));
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    infinite_shape_vector.fill(rng, &vector_buf);
-    for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
-
-    infinite_shape_vector.fillFrom(&engine, &vector_buf);
-    for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
-    try std.testing.expectEqual(control.next(), engine.next());
+    try VectorReference.expectNanVec(vector_inf.sample(vector_rng));
+    VectorReference.consume(&vector_control);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    try VectorReference.expectNanVec(vector_inf.sampleFrom(&vector_engine));
+    VectorReference.consume(&vector_control);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    vector_inf.fill(vector_rng, &vector_buf);
+    for (vector_buf) |sample| try VectorReference.expectNanVec(sample);
+    VectorReference.consumeMany(&vector_control, vector_buf.len);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    vector_inf.fillFrom(&vector_engine, &vector_buf);
+    for (vector_buf) |sample| try VectorReference.expectNanVec(sample);
+    VectorReference.consumeMany(&vector_control, vector_buf.len);
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
 }
 
 test "infinite-scale pareto and weibull helpers preserve transform stream shape" {
@@ -31779,12 +31803,14 @@ test "distribution vector helpers preserve support and stream shape" {
     vector_pert_degenerate.fillFrom(&vector_pert_degenerate_engine, &vector_pert_fill);
     for (vector_pert_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1.5)), vec);
     try std.testing.expectEqual(vector_pert_degenerate_control.next(), vector_pert_degenerate_engine.next());
-    var vector_pert_infinite_shape_engine = alea.ScalarPrng.init(0x5864_1af);
-    var vector_pert_infinite_shape_control = alea.ScalarPrng.init(0x5864_1af);
+    var vector_pert_infinite_shape_fill_engine = alea.ScalarPrng.init(0x5864_1af);
+    var vector_pert_infinite_shape_loop_engine = alea.ScalarPrng.init(0x5864_1af);
     const vector_pert_infinite_shape = try VectorPert(@Vector(4, f64)).init(0, 4, 10, std.math.inf(f64));
-    vector_pert_infinite_shape.fillFrom(&vector_pert_infinite_shape_engine, &vector_pert_fill);
-    for (vector_pert_fill) |vec| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(4)), vec);
-    try std.testing.expectEqual(vector_pert_infinite_shape_control.next(), vector_pert_infinite_shape_engine.next());
+    vector_pert_infinite_shape.fillFrom(&vector_pert_infinite_shape_fill_engine, &vector_pert_fill);
+    for (&vector_pert_loop) |*slot| slot.* = vector_pert_infinite_shape.sampleFrom(&vector_pert_infinite_shape_loop_engine);
+    for (vector_pert_fill) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isNan(vec[lane]));
+    for (vector_pert_loop) |vec| inline for (0..4) |lane| try std.testing.expect(std.math.isNan(vec[lane]));
+    try std.testing.expectEqual(vector_pert_infinite_shape_loop_engine.next(), vector_pert_infinite_shape_fill_engine.next());
 
     const vector_pert_uniform = try VectorPert(@Vector(4, f64)).init(0, 4, 10, 0);
     try std.testing.expect(vector_pert_uniform.modeValue() == null);
