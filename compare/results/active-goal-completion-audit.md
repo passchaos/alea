@@ -1126,7 +1126,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1085 Seq reservoirSamplePtrs facade direct path | `src/seq.zig`, `compare/results/s4-m1085-seq-reservoir-ptrs-facade-direct.md` | Closed for the current bar: top-level sequence reservoirSamplePtrs facade now avoids From wrappers. |
 | S4-M1086 Seq reservoirSamplePtrsChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1086-seq-reservoir-ptrs-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked reservoirSamplePtrs facade now avoids From wrappers. |
 | S4-M1087 Seq reservoirSampleMutPtrsInto facade direct path | `src/seq.zig`, `compare/results/s4-m1087-seq-reservoir-mut-ptrs-into-facade-direct.md` | Closed for the current bar: top-level sequence reservoirSampleMutPtrsInto facade now avoids From wrappers. |
-| S4-M1088 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1088 Seq reservoirSampleMutPtrs facade direct path | `src/seq.zig`, `compare/results/s4-m1088-seq-reservoir-mut-ptrs-facade-direct.md` | Closed for the current bar: top-level sequence reservoirSampleMutPtrs facade now avoids From wrappers. |
+| S4-M1089 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4192,6 +4193,12 @@ S4-M1087 additionally routes top-level sequence reservoirSampleMutPtrsInto
 through a direct facade mutable-pointer reservoir loop, preserving stream shape,
 invalid-count no-consume validation, empty-output behavior, and mutable pointer
 identity while avoiding `reservoirSampleMutPtrsIntoFrom` wrapper aliases; it is
+reliability/ergonomics work and does not resolve S4-M11 or complete the
+long-term objective.
+S4-M1088 additionally routes top-level sequence reservoirSampleMutPtrs through
+direct facade allocation plus reservoirSampleMutPtrsInto filling, preserving
+stream shape, allocation ownership, empty-output behavior, and mutable pointer
+identity while avoiding `reservoirSampleMutPtrsFrom` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
 

@@ -10025,7 +10025,11 @@ pub fn reservoirSamplePtrsFrom(allocator: std.mem.Allocator, source: anytype, co
 }
 
 pub fn reservoirSampleMutPtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
-    return reservoirSampleMutPtrsFrom(allocator, rng, T, items, amount);
+    const count = @min(amount, items.len);
+    const out = try allocator.alloc(*T, count);
+    errdefer allocator.free(out);
+    try reservoirSampleMutPtrsInto(rng, T, items, out);
+    return out;
 }
 
 pub fn reservoirSampleMutPtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []T, amount: usize) ![]*T {
