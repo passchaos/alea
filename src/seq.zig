@@ -9851,7 +9851,13 @@ pub fn shuffleFrom(source: anytype, comptime T: type, items: []T) void {
 }
 
 pub fn partialShuffle(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
-    return partialShuffleFrom(rng, T, items, amount);
+    const count = @min(amount, items.len);
+    var i: usize = 0;
+    while (i < count) : (i += 1) {
+        const j = rng.intRangeLessThan(usize, i, items.len);
+        std.mem.swap(T, &items[i], &items[j]);
+    }
+    return items[0..count];
 }
 
 pub fn partialShuffleChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error![]T {

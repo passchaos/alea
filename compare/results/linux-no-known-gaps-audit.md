@@ -5632,3 +5632,9 @@ S4-M1072 routes top-level sequence shuffle directly
 (`compare/results/s4-m1072-seq-shuffle-facade-direct.md`): `seq.shuffle` now
 calls `Rng.shuffle` directly instead of routing through `shuffleFrom`. This
 improves sequence shuffle facade ergonomics but does not resolve S4-M11.
+
+S4-M1073 routes top-level sequence partialShuffle directly
+(`compare/results/s4-m1073-seq-partial-shuffle-facade-direct.md`):
+`seq.partialShuffle` now performs the prefix shuffle through facade `Rng` directly
+instead of routing through `partialShuffleFrom`. This improves sequence partial
+shuffle facade ergonomics but does not resolve S4-M11.
