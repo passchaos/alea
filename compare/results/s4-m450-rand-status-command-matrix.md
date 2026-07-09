@@ -2,10 +2,10 @@
 
 ## Gap
 
-After S4-M1141 extended f64x4 standard vector fill specializations to facade
-standard-parameter workflows, the lightweight `rand-status` command matrix needed
-a fresh recorded run showing the new current-bar conclusion while keeping the
-stable JSON schema shape.
+After S4-M1142 extended f64x4 exact/default vector fill specialization to
+parameterized normal and finite-rate exponential workflows, the lightweight
+`rand-status` command matrix needed a fresh recorded run showing the new
+current-bar conclusion while keeping the stable JSON schema shape.
 
 ## Validation
 
@@ -19,9 +19,9 @@ Alea local rand/rand_distr status (2026-07-09)
 - Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests
 - Rust comparison: parser tests and rand-bench-smoke pass
 - Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded
-- Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1141 follow-ups closed for current bar
+- Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1142 follow-ups closed for current bar
 - Local Rust gap: no known unblocked local Rust core RNG gap
-- Next bar: S4-M1142 post-S4-M1141 exact/default dense SIMD, broader runtime, or new local Rust gap
+- Next bar: S4-M1143 post-S4-M1142 exact/default dense SIMD, broader runtime, or new local Rust gap
 - Details: compare/results/s4-m420-current-rand-status.md
 $ zig build rand-status-json
 {
@@ -37,14 +37,14 @@ $ zig build rand-status-json
   "rust_comparison": "parser tests and rand-bench-smoke pass",
   "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1141 follow-ups closed for current bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1142 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M1142 post-S4-M1141 next product bar",
+  "remaining_blocker": "S4-M1143 post-S4-M1142 next product bar",
   "s4_m11_blocked": false,
   "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1141-f64x4-facade-standard-vector-fill.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1142-parameterized-f64x4-vector-fill.md"
 }
 $ zig build rand-status-schema-version
 1
@@ -74,6 +74,6 @@ $ git diff --check
 ## Result
 
 S4-M450 is refreshed for the current bar: all `rand-status` command modes pass
-and report that the S4-M11 runtime branch and S4-M1124/S4-M1127-S4-M1141 follow-ups
-are closed for the current bar while S4-M1142 is the next post-S4-M1141 product bar. This is tooling validation evidence
+and report that the S4-M11 runtime branch and S4-M1124/S4-M1127-S4-M1142 follow-ups
+are closed for the current bar while S4-M1143 is the next post-S4-M1142 product bar. This is tooling validation evidence
 only; it is not whole-goal completion evidence.

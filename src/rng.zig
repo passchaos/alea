@@ -1225,6 +1225,10 @@ pub fn fillVectorNormalFrom(source: anytype, comptime VectorType: type, dest: []
             fillVectorStandardNormalFrom(source, VectorType, dest);
             return;
         }
+        if (info.child == f64 and info.len == 4) {
+            fillVectorNormalF64x4From(source, dest, mean, stddev);
+            return;
+        }
         fillVectorNormalScalarFrom(source, VectorType, dest, mean, stddev);
         return;
     }
@@ -1286,6 +1290,10 @@ pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, des
     if (info.child == f32 or info.child == f64) {
         if (rate == 1) {
             fillVectorStandardExponentialFrom(source, VectorType, dest);
+            return;
+        }
+        if (info.child == f64 and info.len == 4) {
+            fillVectorExponentialF64x4From(source, dest, rate);
             return;
         }
         fillVectorExponentialScalarFrom(source, VectorType, dest, rate);
@@ -4560,11 +4568,30 @@ fn fillVectorStandardNormalF64x4From(source: anytype, dest: []@Vector(4, f64)) v
     }
 }
 
+fn fillVectorNormalF64x4From(source: anytype, dest: []@Vector(4, f64), mean: f64, stddev: f64) void {
+    const mean_vec: @Vector(4, f64) = @splat(mean);
+    const stddev_vec: @Vector(4, f64) = @splat(stddev);
+    for (dest) |*item| {
+        var out: @Vector(4, f64) = undefined;
+        inline for (0..4) |lane| out[lane] = normalZigguratF64(source);
+        item.* = mean_vec + stddev_vec * out;
+    }
+}
+
 fn fillVectorStandardExponentialF64x4From(source: anytype, dest: []@Vector(4, f64)) void {
     for (dest) |*item| {
         var out: @Vector(4, f64) = undefined;
         inline for (0..4) |lane| out[lane] = exponentialZigguratF64(source);
         item.* = out;
+    }
+}
+
+fn fillVectorExponentialF64x4From(source: anytype, dest: []@Vector(4, f64), rate: f64) void {
+    const rate_vec: @Vector(4, f64) = @splat(rate);
+    for (dest) |*item| {
+        var out: @Vector(4, f64) = undefined;
+        inline for (0..4) |lane| out[lane] = exponentialZigguratF64(source);
+        item.* = out / rate_vec;
     }
 }
 
@@ -7457,6 +7484,49 @@ test "facade f64x4 standard vector fills match direct stream shape" {
     fillVectorStandardExponentialFrom(&direct_rate_one_engine, VectorType, &direct_rate_one);
     try std.testing.expectEqualSlices(VectorType, &direct_rate_one, &facade_rate_one);
     try std.testing.expectEqual(direct_rate_one_engine.next(), facade_rate_one_engine.next());
+}
+
+test "parameterized f64x4 vector fills match scalar stream shape" {
+    const alea = @import("root.zig");
+    const VectorType = @Vector(4, f64);
+
+    var facade_normal_engine = alea.ScalarPrng.init(0x5150_6f64);
+    var scalar_normal_engine = alea.ScalarPrng.init(0x5150_6f64);
+    const normal_rng = Rng.init(&facade_normal_engine);
+    var facade_normal: [5]VectorType = undefined;
+    var scalar_normal: [5]VectorType = undefined;
+    normal_rng.fillVectorNormal(VectorType, &facade_normal, 2.5, 0.75);
+    for (&scalar_normal) |*item| item.* = vectorNormalScalarFrom(&scalar_normal_engine, VectorType, 2.5, 0.75);
+    try std.testing.expectEqualSlices(VectorType, &scalar_normal, &facade_normal);
+    try std.testing.expectEqual(scalar_normal_engine.next(), facade_normal_engine.next());
+
+    var direct_normal_engine = alea.ScalarPrng.init(0x5150_6f65);
+    var direct_scalar_normal_engine = alea.ScalarPrng.init(0x5150_6f65);
+    var direct_normal: [5]VectorType = undefined;
+    var direct_scalar_normal: [5]VectorType = undefined;
+    fillVectorNormalFrom(&direct_normal_engine, VectorType, &direct_normal, -3.0, 1.25);
+    for (&direct_scalar_normal) |*item| item.* = vectorNormalScalarFrom(&direct_scalar_normal_engine, VectorType, -3.0, 1.25);
+    try std.testing.expectEqualSlices(VectorType, &direct_scalar_normal, &direct_normal);
+    try std.testing.expectEqual(direct_scalar_normal_engine.next(), direct_normal_engine.next());
+
+    var facade_exp_engine = alea.ScalarPrng.init(0x5150_6f66);
+    var scalar_exp_engine = alea.ScalarPrng.init(0x5150_6f66);
+    const exp_rng = Rng.init(&facade_exp_engine);
+    var facade_exp: [5]VectorType = undefined;
+    var scalar_exp: [5]VectorType = undefined;
+    exp_rng.fillVectorExponential(VectorType, &facade_exp, 2.5);
+    for (&scalar_exp) |*item| item.* = vectorExponentialScalarFrom(&scalar_exp_engine, VectorType, 2.5);
+    try std.testing.expectEqualSlices(VectorType, &scalar_exp, &facade_exp);
+    try std.testing.expectEqual(scalar_exp_engine.next(), facade_exp_engine.next());
+
+    var direct_exp_engine = alea.ScalarPrng.init(0x5150_6f67);
+    var direct_scalar_exp_engine = alea.ScalarPrng.init(0x5150_6f67);
+    var direct_exp: [5]VectorType = undefined;
+    var direct_scalar_exp: [5]VectorType = undefined;
+    fillVectorExponentialFrom(&direct_exp_engine, VectorType, &direct_exp, 4.0);
+    for (&direct_scalar_exp) |*item| item.* = vectorExponentialScalarFrom(&direct_scalar_exp_engine, VectorType, 4.0);
+    try std.testing.expectEqualSlices(VectorType, &direct_scalar_exp, &direct_exp);
+    try std.testing.expectEqual(direct_scalar_exp_engine.next(), direct_exp_engine.next());
 }
 
 test "degenerate exponential helpers do not consume random stream" {
