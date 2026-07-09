@@ -7331,7 +7331,7 @@ pub fn LogNormal(comptime T: type) type {
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            return logNormal(rng, T, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
@@ -7398,7 +7398,7 @@ pub fn LogNormal(comptime T: type) type {
         }
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            fillLogNormal(rng, T, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {

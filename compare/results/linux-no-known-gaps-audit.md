@@ -5437,3 +5437,9 @@ S4-M1042 routes reusable generic VectorExponential facade helpers directly
 `VectorExponential.sample` / `fill` now call vector exponential facade helpers
 directly instead of routing through `sampleFrom` / `fillFrom` wrappers. This
 improves generic VectorExponential facade ergonomics but does not resolve S4-M11.
+
+S4-M1043 routes reusable scalar LogNormal facade helpers directly
+(`compare/results/s4-m1043-log-normal-sampler-facade-direct.md`): `LogNormal.sample`
+/ `fill` now call log-normal facade helpers directly instead of routing through
+`sampleFrom` / `fillFrom` wrappers. This improves LogNormal sampler facade
+ergonomics but does not resolve S4-M11.
