@@ -5562,3 +5562,10 @@ directly (`compare/results/s4-m1061-seq-weightedchoice-checked-value-fill-facade
 alias-table indexes into value output instead of using the direct-source sample
 wrapper. This improves seq WeightedChoice checked value-fill facade ergonomics
 but does not resolve S4-M11.
+
+S4-M1062 routes sequence-layer reusable WeightedChoice checked index samples
+directly (`compare/results/s4-m1062-seq-weightedchoice-checked-index-sample-facade-direct.md`):
+`seq.WeightedChoice(T).sampleIndexChecked` now calls the AliasTable checked facade
+sample directly instead of routing through `sampleCheckedFrom`. This improves seq
+WeightedChoice checked index-sample facade ergonomics but does not resolve
+S4-M11.

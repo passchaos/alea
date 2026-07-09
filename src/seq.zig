@@ -9248,7 +9248,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
-            return self.table.sampleCheckedFrom(rng) catch unreachable;
+            return self.table.sampleChecked(rng) catch unreachable;
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
