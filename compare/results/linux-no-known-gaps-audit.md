@@ -5866,3 +5866,11 @@ directly (`compare/results/s4-m1108-unicode-charset-append-string-facade-direct.
 `ascii.UnicodeCharset.appendString` now reserves and encodes through facade
 `Rng` directly instead of routing through `appendStringFrom`. This improves
 UnicodeCharset appendString facade ergonomics but does not resolve S4-M11.
+
+S4-M1109 routes reusable UnicodeCharset checked caller-owned UTF-8 append
+generation directly
+(`compare/results/s4-m1109-unicode-charset-checked-append-string-facade-direct.md`):
+`ascii.UnicodeCharset.appendStringChecked` now validates and calls facade
+`appendString` directly instead of routing through `appendStringCheckedFrom`.
+This improves UnicodeCharset checked appendString facade ergonomics but does not
+resolve S4-M11.

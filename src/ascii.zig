@@ -611,7 +611,9 @@ pub const UnicodeCharset = struct {
     }
 
     pub fn appendStringChecked(self: UnicodeCharset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
-        try self.appendStringCheckedFrom(allocator, rng, string_buffer, length);
+        if (length == 0) return;
+        try self.validateNonEmpty();
+        try self.appendString(allocator, rng, string_buffer, length);
     }
 
     pub fn appendStringCheckedFrom(self: UnicodeCharset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
@@ -1253,6 +1255,12 @@ test "unicode charset checked helpers validate without consuming" {
     try std.testing.expectEqual(control.next(), engine.next());
     try std.testing.expectEqualStrings("x:", list.items);
 
+    try std.testing.expectError(error.EmptyCharset, empty.appendStringChecked(std.testing.allocator, rng, &list, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, invalid.appendStringChecked(std.testing.allocator, rng, &list, 3));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqualStrings("x:", list.items);
+
     const zero_empty = try empty.sampleStringCheckedFrom(std.testing.allocator, &engine, 0);
     defer std.testing.allocator.free(zero_empty);
     try std.testing.expectEqual(@as(usize, 0), zero_empty.len);
@@ -1424,6 +1432,18 @@ test "initial unicode charset allocation failures do not consume random stream" 
     try std.testing.expect(facade_append_alloc.has_induced_failure);
     try std.testing.expectEqualStrings("f:", facade_list.items);
     try std.testing.expectEqual(facade_append_control.next(), facade_append_engine.next());
+
+    var checked_append_engine = alea.ScalarPrng.init(0x5150_b00b);
+    var checked_append_control = alea.ScalarPrng.init(0x5150_b00b);
+    const checked_append_rng = alea.Rng.init(&checked_append_engine);
+    var checked_append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var checked_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 2);
+    defer checked_list.deinit(std.testing.allocator);
+    try checked_list.appendSlice(std.testing.allocator, "c:");
+    try std.testing.expectError(error.OutOfMemory, symbols.appendStringChecked(checked_append_alloc.allocator(), checked_append_rng, &checked_list, 8));
+    try std.testing.expect(checked_append_alloc.has_induced_failure);
+    try std.testing.expectEqualStrings("c:", checked_list.items);
+    try std.testing.expectEqual(checked_append_control.next(), checked_append_engine.next());
 }
 
 test "invalid charset facade helpers do not consume random stream" {
