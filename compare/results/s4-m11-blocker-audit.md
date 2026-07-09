@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-09)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1131-post-s4-m1130-rand-status-refresh.md"
+"compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -88,3 +88,4 @@ S4-M1135 remains active after S4-M1134 closes single-vector rate-one exponential
 S4-M1136 remains active after S4-M1135 closes scalar rate-one exponential fill delegation in `compare/results/s4-m1135-scalar-exponential-rate-one-fill.md`.
 S4-M1137 remains active after S4-M1136 closes scalar rate-one exponential sample delegation in `compare/results/s4-m1136-scalar-exponential-rate-one-sample.md`.
 S4-M1138 remains active after S4-M1137 closes scalar standard-normal sample delegation in `compare/results/s4-m1137-scalar-normal-standard-sample.md`.
+S4-M1139 remains active after S4-M1138 refreshes rand-status in `compare/results/s4-m1138-post-s4-m1137-rand-status-refresh.md`.
