@@ -5490,3 +5490,9 @@ S4-M1050 routes reusable scalar approximate-f32 LogNormal facade helpers directl
 helpers directly instead of routing through `sampleFrom` / `fillFrom` wrappers.
 This improves approximate-f32 LogNormal facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1051 routes reusable scalar exp2-f32 LogNormal facade helpers directly
+(`compare/results/s4-m1051-exp2-f32-log-normal-facade-direct.md`):
+`LogNormalExp2F32.sample` / `fill` now call exp2-f32 log-normal facade helpers
+directly instead of routing through `sampleFrom` / `fillFrom` wrappers. This
+improves exp2-f32 LogNormal facade ergonomics but does not resolve S4-M11.

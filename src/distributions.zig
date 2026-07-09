@@ -8166,7 +8166,7 @@ pub const LogNormalExp2F32 = struct {
     }
 
     pub fn sample(self: Self, rng: Rng) f32 {
-        return self.sampleFrom(rng);
+        return logNormalExp2F32(rng, self.mean, self.stddev);
     }
 
     pub fn sampleFrom(self: Self, source: anytype) f32 {
@@ -8174,7 +8174,7 @@ pub const LogNormalExp2F32 = struct {
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []f32) void {
-        self.fillFrom(rng, dest);
+        fillLogNormalExp2F32(rng, dest, self.mean, self.stddev);
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
