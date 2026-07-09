@@ -5658,3 +5658,9 @@ S4-M1076 routes top-level sequence partialShuffleSplitChecked directly
 `partialShuffleSplit` directly instead of routing through
 `partialShuffleSplitCheckedFrom`. This improves sequence checked partial shuffle
 split facade ergonomics but does not resolve S4-M11.
+
+S4-M1077 routes top-level sequence partialShuffleTail directly
+(`compare/results/s4-m1077-seq-partial-shuffle-tail-facade-direct.md`):
+`seq.partialShuffleTail` now performs the tail-selected shuffle through facade
+`Rng` directly instead of routing through `partialShuffleTailFrom`. This improves
+sequence tail partial shuffle facade ergonomics but does not resolve S4-M11.

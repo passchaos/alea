@@ -9915,7 +9915,14 @@ pub fn partialShuffleSplitFrom(source: anytype, comptime T: type, items: []T, am
 }
 
 pub fn partialShuffleTail(rng: Rng, comptime T: type, items: []T, amount: usize) []T {
-    return partialShuffleTailFrom(rng, T, items, amount);
+    const count = @min(amount, items.len);
+    const start = items.len - count;
+    var i = start;
+    while (i < items.len) : (i += 1) {
+        const j = rng.intRangeLessThan(usize, 0, i + 1);
+        std.mem.swap(T, &items[i], &items[j]);
+    }
+    return items[start..];
 }
 
 pub fn partialShuffleTailChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error![]T {
