@@ -264,7 +264,9 @@ pub const Charset = struct {
     }
 
     pub fn appendStringChecked(self: Charset, allocator: std.mem.Allocator, rng: Rng, string_buffer: *std.ArrayList(u8), length: usize) !void {
-        try self.appendStringCheckedFrom(allocator, rng, string_buffer, length);
+        if (length == 0) return;
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        try self.appendString(allocator, rng, string_buffer, length);
     }
 
     pub fn appendStringCheckedFrom(self: Charset, allocator: std.mem.Allocator, source: anytype, string_buffer: *std.ArrayList(u8), length: usize) !void {
@@ -1007,6 +1009,10 @@ test "sampleString checked aliases handle empty charsets without consuming" {
     try std.testing.expectError(error.EmptyCharset, empty.appendStringCheckedFrom(std.testing.allocator, &engine, &list, 4));
     try std.testing.expectEqual(control.next(), engine.next());
 
+    const rng = alea.Rng.init(&engine);
+    try std.testing.expectError(error.EmptyCharset, empty.appendStringChecked(std.testing.allocator, rng, &list, 4));
+    try std.testing.expectEqual(control.next(), engine.next());
+
     const empty_string = try empty.sampleStringCheckedFrom(std.testing.allocator, &engine, 0);
     defer std.testing.allocator.free(empty_string);
     try std.testing.expectEqual(@as(usize, 0), empty_string.len);
@@ -1513,6 +1519,10 @@ test "single-byte charset helpers do not consume random stream" {
     try list.appendSlice(std.testing.allocator, "s:");
     try only_x.appendString(std.testing.allocator, rng, &list, 5);
     try std.testing.expectEqualStrings("s:xxxxx", list.items);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try only_x.appendStringChecked(std.testing.allocator, rng, &list, 5);
+    try std.testing.expectEqualStrings("s:xxxxxxxxxx", list.items);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 

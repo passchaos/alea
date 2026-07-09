@@ -5898,3 +5898,11 @@ directly (`compare/results/s4-m1113-ascii-charset-append-string-facade-direct.md
 `ascii.Charset.appendString` now resizes and fills through facade `fill`
 directly instead of routing through `appendStringFrom`. This improves ASCII
 Charset appendString facade ergonomics but does not resolve S4-M11.
+
+S4-M1114 routes reusable ASCII Charset checked caller-owned string append
+generation directly
+(`compare/results/s4-m1114-ascii-charset-checked-append-string-facade-direct.md`):
+`ascii.Charset.appendStringChecked` now validates and calls facade
+`appendString` directly instead of routing through `appendStringCheckedFrom`.
+This improves ASCII Charset checked appendString facade ergonomics but does not
+resolve S4-M11.
