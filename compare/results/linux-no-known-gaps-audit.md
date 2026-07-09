@@ -5699,3 +5699,10 @@ S4-M1082 routes top-level sequence reservoirSample directly
 `reservoirSampleInto` directly instead of routing through `reservoirSampleFrom`.
 This improves sequence allocation-returning reservoir facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1083 routes top-level sequence reservoirSampleChecked directly
+(`compare/results/s4-m1083-seq-reservoir-sample-checked-facade-direct.md`):
+`seq.reservoirSampleChecked` now validates and calls facade `reservoirSample`
+directly instead of routing through `reservoirSampleCheckedFrom`. This improves
+sequence checked allocation-returning reservoir facade ergonomics but does not
+resolve S4-M11.

@@ -9977,7 +9977,9 @@ pub fn reservoirSample(allocator: std.mem.Allocator, rng: Rng, comptime T: type,
 }
 
 pub fn reservoirSampleChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]T {
-    return reservoirSampleCheckedFrom(allocator, rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    if (amount != 0 and comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+    return reservoirSample(allocator, rng, T, items, amount);
 }
 
 pub fn reservoirSampleCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]T {
