@@ -80,3 +80,4 @@ S4-M1126 remains active after `compare/results/s4-m1126-f32x8-dense-simd-probe.m
 S4-M1128 remains active after S4-M1127 closes `compare/results/s4-m1127-f64x4-standard-normal-direct-fill.md` for direct-source f64x4 standard-normal fills.
 S4-M1129 remains active after S4-M1128 closes `compare/results/s4-m1128-f64x4-standard-exponential-direct-fill.md` for direct-source f64x4 standard-exponential fills.
 S4-M1130 remains active after S4-M1129 refreshes rand-status in `compare/results/s4-m1129-post-s4-m1128-rand-status-refresh.md`.
+S4-M1131 remains active after S4-M1130 refreshes validate-all in `compare/results/s4-m1130-post-s4-m1129-validate-all.md`.
