@@ -133,7 +133,8 @@ pub const Charset = struct {
     }
 
     pub fn sampleChecked(self: Charset, rng: Rng) error{EmptyCharset}!u8 {
-        return self.sampleCheckedFrom(rng);
+        if (self.bytes.len == 0) return error.EmptyCharset;
+        return self.sample(rng);
     }
 
     pub fn sampleCheckedFrom(self: Charset, source: anytype) error{EmptyCharset}!u8 {

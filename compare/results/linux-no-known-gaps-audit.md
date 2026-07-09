@@ -5792,3 +5792,9 @@ S4-M1096 routes reusable ASCII Charset scalar-byte sampling directly
 `ascii.Charset.sample` now samples charset indexes through facade `Rng` directly
 instead of routing through `sampleFrom`. This improves ASCII Charset scalar sample
 facade ergonomics but does not resolve S4-M11.
+
+S4-M1097 routes reusable ASCII Charset checked scalar-byte sampling directly
+(`compare/results/s4-m1097-ascii-charset-checked-sample-facade-direct.md`):
+`ascii.Charset.sampleChecked` now validates and calls facade `sample` directly
+instead of routing through `sampleCheckedFrom`. This improves ASCII Charset
+checked scalar sample facade ergonomics but does not resolve S4-M11.
