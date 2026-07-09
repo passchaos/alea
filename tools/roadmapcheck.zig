@@ -1121,6 +1121,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1123", .path = "compare/results/s4-m1123-wasmtime-profilelongcheck.md" },
     .{ .milestone = "S4-M1124", .path = "compare/results/s4-m1124-wasm32-oversized-u32-test-guard.md" },
     .{ .milestone = "S4-M1125", .path = "compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md" },
+    .{ .milestone = "S4-M1126", .path = "compare/results/s4-m1126-f32x8-dense-simd-probe.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1443,12 +1444,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1126 | Next post-S4-M1125 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1126 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1126 | f32x8 dense SIMD probe refresh") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1126 active dense-probe row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1126 next post-S4-M1125 product bar") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1126 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1126 f32x8 dense SIMD probe refresh") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1126 active dense-probe row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

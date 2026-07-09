@@ -5989,3 +5989,9 @@ S4-M1124 restored `validate-all`
 validate-all restoration as closed for the current bar, command-matrix evidence
 is refreshed, and the next product bar is S4-M1126. This is status/tooling
 synchronization, not whole-goal completion.
+
+S4-M1126 starts the post-S4-M1125 dense SIMD research bar with fresh focused
+f32x8 `vectorbench` evidence (`compare/results/s4-m1126-f32x8-dense-simd-probe.md`): checksum-preserving normal/exponential
+flat-slice and repair candidates still trail direct scalar lane-fill, while
+faster native/table/approx-log rows keep different output mappings. This is
+useful negative evidence, not whole-goal completion, and S4-M1126 remains active.

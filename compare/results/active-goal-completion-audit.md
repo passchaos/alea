@@ -27,7 +27,7 @@ local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
 `zig build validate-local` passes, S4-M438/S4-M449 keep the S4-M11 evidence chain
 visible, S4-M1123 records direct Wasmtime 31.0.0 execution of the accepted
 profile long sweep, S4-M1124 restores the post-S4-M11 `validate-all` aggregate,
-and S4-M1125 refreshes the status snapshots after that restoration. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
+and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 now adds fresh f32x8 dense SIMD probe evidence, but no checksum-preserving candidate beats scalar lane-fill. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
 kernels are still not known to beat scalar lane-fill, and the roadmap has raised
 the next product bar to S4-M1126. Therefore do not call
 `update_goal(status=complete)`.
@@ -1165,7 +1165,7 @@ the next product bar to S4-M1126. Therefore do not call
 | S4-M1123 Wasmtime accepted profile runtime evidence | `compare/results/s4-m1123-wasmtime-profilelongcheck.md` | Closed for the current bar: direct Wasmtime profilecheck and profilelongcheck wasm execution passed. |
 | S4-M1124 wasm32 oversized-u32 test guard | `src/distributions.zig`, `src/root.zig`, `src/seq.zig`, `compare/results/s4-m1124-wasm32-oversized-u32-test-guard.md` | Closed for the current bar: post-S4-M11 `validate-all` is restored by guarding impossible oversized-u32 tests on 32-bit targets. |
 | S4-M1125 post-S4-M1124 rand-status refresh | `tools/rand_status.zig`, `compare/results/s4-m420-current-rand-status.md`, `compare/results/s4-m450-rand-status-command-matrix.md`, `compare/results/s4-m455-rand-status-direct-matrix.md`, `compare/results/s4-m1125-post-s4-m1124-rand-status-refresh.md` | Closed for the current bar: status command output and checked-in status matrices now report S4-M1124 closure and point at S4-M1126. |
-| S4-M1126 next post-S4-M1125 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1125 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
+| S4-M1126 f32x8 dense SIMD probe refresh | `compare/results/s4-m1126-f32x8-dense-simd-probe.md`, `bench/vector.zig`, `compare/results/simd-distribution-kernel-notes.md` | In progress: fresh focused f32x8 vectorbench evidence shows checksum-preserving dense candidates still do not beat direct scalar lane-fill, so S4-M1126 remains active. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4455,8 +4455,9 @@ native+WASI `profiletailcheck` tail gates, and S4-M8 is closed by native+WASI
 Wasmtime 31.0.0 accepted-profile long-sweep execution. Exact/default
 normal/exponential kernels still remain scalar ziggurat lane-fill, and no new
 local Rust core gap is known. S4-M1124 restored the post-S4-M11 `validate-all`
-portability aggregate, and S4-M1125 refreshed the status snapshots, so the next
-active product bar is S4-M1126.
+portability aggregate, S4-M1125 refreshed the status snapshots, and S4-M1126
+now records fresh f32x8 dense SIMD probe evidence without finding an exact/default
+winner, so S4-M1126 remains the active product bar.
 
 ## Required Next Work Before Completion
 
