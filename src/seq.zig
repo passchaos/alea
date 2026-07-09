@@ -9330,7 +9330,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
                 @memset(dest, &items[index]);
                 return;
             }
-            for (dest) |*slot| slot.* = &items[self.table.sampleFrom(rng)];
+            for (dest) |*slot| slot.* = &items[self.table.sample(rng)];
         }
 
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []*const T) Error!void {

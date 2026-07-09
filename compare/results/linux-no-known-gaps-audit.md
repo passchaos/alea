@@ -5541,3 +5541,10 @@ directly (`compare/results/s4-m1058-seq-weightedchoice-owned-ptrs-facade-direct.
 `seq.WeightedChoice(T).ptrs` now calls facade `fill` directly after allocation
 instead of routing through `fillFrom`. This improves seq WeightedChoice owned
 pointer facade ergonomics but does not resolve S4-M11.
+
+S4-M1059 routes sequence-layer reusable WeightedChoice checked pointer fills
+directly (`compare/results/s4-m1059-seq-weightedchoice-checked-pointer-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fillChecked` now maps direct facade-sampled alias-table
+indexes into item storage instead of using the direct-source sample wrapper. This
+improves seq WeightedChoice checked pointer-fill facade ergonomics but does not
+resolve S4-M11.
