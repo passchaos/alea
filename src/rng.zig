@@ -1354,6 +1354,10 @@ pub fn vectorStandardExponentialBatchFrom(source: anytype, comptime VectorType: 
 pub fn fillVectorStandardExponentialFrom(source: anytype, comptime VectorType: type, dest: []VectorType) void {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (info.child == f64 and info.len == 4 and comptime @TypeOf(source) != Rng) {
+        fillVectorStandardExponentialF64x4From(source, dest);
+        return;
+    }
     for (dest) |*item| item.* = vectorStandardExponentialFrom(source, VectorType);
 }
 
@@ -4543,6 +4547,14 @@ fn fillVectorStandardNormalF64x4From(source: anytype, dest: []@Vector(4, f64)) v
     for (dest) |*item| {
         var out: @Vector(4, f64) = undefined;
         inline for (0..4) |lane| out[lane] = normalZigguratF64(source);
+        item.* = out;
+    }
+}
+
+fn fillVectorStandardExponentialF64x4From(source: anytype, dest: []@Vector(4, f64)) void {
+    for (dest) |*item| {
+        var out: @Vector(4, f64) = undefined;
+        inline for (0..4) |lane| out[lane] = exponentialZigguratF64(source);
         item.* = out;
     }
 }
