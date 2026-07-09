@@ -5874,3 +5874,9 @@ generation directly
 `appendString` directly instead of routing through `appendStringCheckedFrom`.
 This improves UnicodeCharset checked appendString facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1110 routes top-level ASCII alphanumeric byte sampling directly
+(`compare/results/s4-m1110-ascii-char-facade-direct.md`): `ascii.char` now calls
+facade `Alphanumeric.sample` directly instead of routing through `charFrom`.
+This improves top-level ASCII char facade ergonomics but does not resolve
+S4-M11.

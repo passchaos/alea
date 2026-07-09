@@ -641,7 +641,7 @@ pub const Uppercase = Charset{ .bytes = uppercase };
 pub const Digits = Charset{ .bytes = digits };
 
 pub fn char(rng: Rng) u8 {
-    return charFrom(rng);
+    return Alphanumeric.sample(rng);
 }
 
 pub fn charFrom(source: anytype) u8 {
