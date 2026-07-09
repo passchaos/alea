@@ -1286,6 +1286,10 @@ pub fn fillVectorExponentialFrom(source: anytype, comptime VectorType: type, des
         return;
     }
     if (info.child == f32 or info.child == f64) {
+        if (rate == 1) {
+            fillVectorStandardExponentialFrom(source, VectorType, dest);
+            return;
+        }
         fillVectorExponentialScalarFrom(source, VectorType, dest, rate);
         return;
     }
