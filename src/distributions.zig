@@ -5035,7 +5035,7 @@ pub fn exponential(rng: Rng, comptime T: type, rate: T) T {
 
 pub fn exponentialFrom(source: anytype, comptime T: type, rate: T) T {
     comptime requireFloat(T);
-    std.debug.assert(rate > 0);
+    std.debug.assert(isValidExponentialRate(T, rate));
     return Rng.exponentialFastFrom(source, T, rate);
 }
 
@@ -5044,7 +5044,8 @@ pub fn exponentialNativeF32(rng: Rng, rate: f32) f32 {
 }
 
 pub fn exponentialNativeF32From(source: anytype, rate: f32) f32 {
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) return std.math.inf(f32);
     if (rate == std.math.inf(f32)) return 0;
     return standardExponentialNativeF32From(source) / rate;
 }
@@ -5054,7 +5055,7 @@ pub fn exponentialNativeF32Checked(rng: Rng, rate: f32) Error!f32 {
 }
 
 pub fn exponentialNativeF32CheckedFrom(source: anytype, rate: f32) Error!f32 {
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     return exponentialNativeF32From(source, rate);
 }
 
@@ -5079,7 +5080,11 @@ pub fn fillExponentialNativeF32(rng: Rng, dest: []f32, rate: f32) void {
 }
 
 pub fn fillExponentialNativeF32From(source: anytype, dest: []f32, rate: f32) void {
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) {
+        @memset(dest, std.math.inf(f32));
+        return;
+    }
     if (rate == std.math.inf(f32)) {
         @memset(dest, 0);
         return;
@@ -5095,7 +5100,7 @@ pub fn fillExponentialNativeF32Checked(rng: Rng, dest: []f32, rate: f32) Error!v
 
 pub fn fillExponentialNativeF32CheckedFrom(source: anytype, dest: []f32, rate: f32) Error!void {
     if (dest.len == 0) return;
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     fillExponentialNativeF32From(source, dest, rate);
 }
 
@@ -5146,7 +5151,8 @@ pub fn vectorExponentialNativeF32(rng: Rng, comptime VectorType: type, rate: f32
 pub fn vectorExponentialNativeF32From(source: anytype, comptime VectorType: type, rate: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorExponentialNativeF32 expects an f32 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) return @splat(std.math.inf(f32));
     if (rate == std.math.inf(f32)) return @splat(0);
     var out: VectorType = undefined;
     inline for (0..info.len) |lane| out[lane] = exponentialNativeF32From(source, rate);
@@ -5160,7 +5166,7 @@ pub fn vectorExponentialNativeF32Checked(rng: Rng, comptime VectorType: type, ra
 pub fn vectorExponentialNativeF32CheckedFrom(source: anytype, comptime VectorType: type, rate: f32) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorExponentialNativeF32Checked expects an f32 vector");
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     return vectorExponentialNativeF32From(source, VectorType, rate);
 }
 
@@ -5171,7 +5177,11 @@ pub fn fillVectorExponentialNativeF32(rng: Rng, comptime VectorType: type, dest:
 pub fn fillVectorExponentialNativeF32From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorExponentialNativeF32 expects an f32 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) {
+        @memset(dest, @as(VectorType, @splat(std.math.inf(f32))));
+        return;
+    }
     if (rate == std.math.inf(f32)) {
         @memset(dest, @as(VectorType, @splat(0)));
         return;
@@ -5188,7 +5198,7 @@ pub fn fillVectorExponentialNativeF32CheckedFrom(source: anytype, comptime Vecto
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorExponentialNativeF32Checked expects an f32 vector");
     if (dest.len == 0) return;
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     fillVectorExponentialNativeF32From(source, VectorType, dest, rate);
 }
 
@@ -5199,7 +5209,8 @@ pub fn vectorExponentialTableF32(rng: Rng, comptime VectorType: type, rate: f32)
 pub fn vectorExponentialTableF32From(source: anytype, comptime VectorType: type, rate: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorExponentialTableF32 expects an f32 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) return @splat(std.math.inf(f32));
     if (rate == std.math.inf(f32)) return @splat(0);
     return vectorStandardExponentialTableF32From(source, VectorType) * @as(VectorType, @splat(1 / rate));
 }
@@ -5211,7 +5222,7 @@ pub fn vectorExponentialTableF32Checked(rng: Rng, comptime VectorType: type, rat
 pub fn vectorExponentialTableF32CheckedFrom(source: anytype, comptime VectorType: type, rate: f32) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorExponentialTableF32Checked expects an f32 vector");
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     return vectorExponentialTableF32From(source, VectorType, rate);
 }
 
@@ -5222,7 +5233,11 @@ pub fn fillVectorExponentialTableF32(rng: Rng, comptime VectorType: type, dest: 
 pub fn fillVectorExponentialTableF32From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorExponentialTableF32 expects an f32 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) {
+        @memset(dest, @as(VectorType, @splat(std.math.inf(f32))));
+        return;
+    }
     if (rate == std.math.inf(f32)) {
         @memset(dest, @as(VectorType, @splat(0)));
         return;
@@ -5239,7 +5254,7 @@ pub fn fillVectorExponentialTableF32CheckedFrom(source: anytype, comptime Vector
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorExponentialTableF32Checked expects an f32 vector");
     if (dest.len == 0) return;
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     fillVectorExponentialTableF32From(source, VectorType, dest, rate);
 }
 
@@ -5250,7 +5265,8 @@ pub fn vectorExponentialTableF64(rng: Rng, comptime VectorType: type, rate: f64)
 pub fn vectorExponentialTableF64From(source: anytype, comptime VectorType: type, rate: f64) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("vectorExponentialTableF64 expects an f64 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f64)));
+    std.debug.assert(isValidExponentialRate(f64, rate));
+    if (rate == 0) return @splat(std.math.inf(f64));
     if (rate == std.math.inf(f64)) return @splat(0);
     return vectorStandardExponentialTableF64From(source, VectorType) * @as(VectorType, @splat(1 / rate));
 }
@@ -5262,7 +5278,7 @@ pub fn vectorExponentialTableF64Checked(rng: Rng, comptime VectorType: type, rat
 pub fn vectorExponentialTableF64CheckedFrom(source: anytype, comptime VectorType: type, rate: f64) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("vectorExponentialTableF64Checked expects an f64 vector");
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f64))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f64, rate)) return error.InvalidParameter;
     return vectorExponentialTableF64From(source, VectorType, rate);
 }
 
@@ -5273,7 +5289,11 @@ pub fn fillVectorExponentialTableF64(rng: Rng, comptime VectorType: type, dest: 
 pub fn fillVectorExponentialTableF64From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f64) void {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("fillVectorExponentialTableF64 expects an f64 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f64)));
+    std.debug.assert(isValidExponentialRate(f64, rate));
+    if (rate == 0) {
+        @memset(dest, @as(VectorType, @splat(std.math.inf(f64))));
+        return;
+    }
     if (rate == std.math.inf(f64)) {
         @memset(dest, @as(VectorType, @splat(0)));
         return;
@@ -5290,7 +5310,7 @@ pub fn fillVectorExponentialTableF64CheckedFrom(source: anytype, comptime Vector
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("fillVectorExponentialTableF64Checked expects an f64 vector");
     if (dest.len == 0) return;
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f64))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f64, rate)) return error.InvalidParameter;
     fillVectorExponentialTableF64From(source, VectorType, dest, rate);
 }
 
@@ -5321,7 +5341,8 @@ pub fn vectorExponentialApproxLogF32(rng: Rng, comptime VectorType: type, rate: 
 pub fn vectorExponentialApproxLogF32From(source: anytype, comptime VectorType: type, rate: f32) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorExponentialApproxLogF32 expects an f32 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) return @splat(std.math.inf(f32));
     if (rate == std.math.inf(f32)) return @splat(0);
     return vectorStandardExponentialApproxLogF32From(source, VectorType) * @as(VectorType, @splat(1 / rate));
 }
@@ -5333,7 +5354,7 @@ pub fn vectorExponentialApproxLogF32Checked(rng: Rng, comptime VectorType: type,
 pub fn vectorExponentialApproxLogF32CheckedFrom(source: anytype, comptime VectorType: type, rate: f32) Error!VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("vectorExponentialApproxLogF32Checked expects an f32 vector");
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     return vectorExponentialApproxLogF32From(source, VectorType, rate);
 }
 
@@ -5344,7 +5365,11 @@ pub fn fillVectorExponentialApproxLogF32(rng: Rng, comptime VectorType: type, de
 pub fn fillVectorExponentialApproxLogF32From(source: anytype, comptime VectorType: type, dest: []VectorType, rate: f32) void {
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorExponentialApproxLogF32 expects an f32 vector");
-    std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(f32)));
+    std.debug.assert(isValidExponentialRate(f32, rate));
+    if (rate == 0) {
+        @memset(dest, @as(VectorType, @splat(std.math.inf(f32))));
+        return;
+    }
     if (rate == std.math.inf(f32)) {
         @memset(dest, @as(VectorType, @splat(0)));
         return;
@@ -5361,7 +5386,7 @@ pub fn fillVectorExponentialApproxLogF32CheckedFrom(source: anytype, comptime Ve
     const info = vectorInfo(VectorType);
     if (info.child != f32) @compileError("fillVectorExponentialApproxLogF32Checked expects an f32 vector");
     if (dest.len == 0) return;
-    if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+    if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
     fillVectorExponentialApproxLogF32From(source, VectorType, dest, rate);
 }
 
@@ -6244,7 +6269,7 @@ pub fn Exponential(comptime T: type) type {
 
         pub fn init(rate: T) Error!Self {
             comptime requireFloat(T);
-            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(T))) return error.InvalidParameter;
+            if (!isValidExponentialRate(T, rate)) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -6283,22 +6308,22 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn maxValue(self: Self) ?T {
-            return if (self.isDegenerate()) 0 else null;
+            return exponentialRatePoint(T, self.inverse_rate);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            if (self.isDegenerate()) return 0;
+            if (exponentialRatePoint(T, self.inverse_rate)) |point| return point;
             return rng.exponential(T, 1) * self.inverse_rate;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            if (self.isDegenerate()) return 0;
+            if (exponentialRatePoint(T, self.inverse_rate)) |point| return point;
             return Rng.exponentialFastFrom(source, T, 1) * self.inverse_rate;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
+            if (exponentialRatePoint(T, self.inverse_rate)) |point| {
+                @memset(dest, point);
                 return;
             }
             fillStandardExponential(rng, T, dest);
@@ -6306,8 +6331,8 @@ pub fn Exponential(comptime T: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
+            if (exponentialRatePoint(T, self.inverse_rate)) |point| {
+                @memset(dest, point);
                 return;
             }
             fillStandardExponentialFrom(source, T, dest);
@@ -6315,7 +6340,7 @@ pub fn Exponential(comptime T: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.inverse_rate == 0;
+            return exponentialRatePoint(T, self.inverse_rate) != null;
         }
     };
 }
@@ -6330,7 +6355,7 @@ pub const ExponentialNativeF32 = struct {
     inverse_rate: f32,
 
     pub fn init(rate: f32) Error!Self {
-        if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+        if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
         return .{ .inverse_rate = 1 / rate };
     }
 
@@ -6363,22 +6388,22 @@ pub const ExponentialNativeF32 = struct {
     }
 
     pub fn maxValue(self: Self) ?f32 {
-        return if (self.inverse_rate == 0) 0 else null;
+        return exponentialRatePoint(f32, self.inverse_rate);
     }
 
     pub fn sample(self: Self, rng: Rng) f32 {
-        if (self.inverse_rate == 0) return 0;
+        if (exponentialRatePoint(f32, self.inverse_rate)) |point| return point;
         return standardExponentialNativeF32(rng) * self.inverse_rate;
     }
 
     pub fn sampleFrom(self: Self, source: anytype) f32 {
-        if (self.inverse_rate == 0) return 0;
+        if (exponentialRatePoint(f32, self.inverse_rate)) |point| return point;
         return standardExponentialNativeF32From(source) * self.inverse_rate;
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []f32) void {
-        if (self.inverse_rate == 0) {
-            @memset(dest, 0);
+        if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+            @memset(dest, point);
             return;
         }
         fillStandardExponentialNativeF32(rng, dest);
@@ -6386,8 +6411,8 @@ pub const ExponentialNativeF32 = struct {
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
-        if (self.inverse_rate == 0) {
-            @memset(dest, 0);
+        if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+            @memset(dest, point);
             return;
         }
         fillStandardExponentialNativeF32From(source, dest);
@@ -6405,7 +6430,7 @@ pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
         inverse_rate: f32,
 
         pub fn init(rate: f32) Error!Self {
-            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+            if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -6438,22 +6463,22 @@ pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) ?f32 {
-            return if (self.inverse_rate == 0) 0 else null;
+            return exponentialRatePoint(f32, self.inverse_rate);
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialNativeF32(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialNativeF32From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialNativeF32(rng, VectorType, dest);
@@ -6462,8 +6487,8 @@ pub fn VectorExponentialNativeF32(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialNativeF32From(source, VectorType, dest);
@@ -6483,7 +6508,7 @@ pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
         inverse_rate: f32,
 
         pub fn init(rate: f32) Error!Self {
-            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+            if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -6516,22 +6541,22 @@ pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) ?f32 {
-            return if (self.inverse_rate == 0) 0 else null;
+            return exponentialRatePoint(f32, self.inverse_rate);
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialApproxLogF32(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialApproxLogF32From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialApproxLogF32(rng, VectorType, dest);
@@ -6540,8 +6565,8 @@ pub fn VectorExponentialApproxLogF32(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialApproxLogF32From(source, VectorType, dest);
@@ -6561,7 +6586,7 @@ pub fn VectorExponentialTableF32(comptime VectorType: type) type {
         inverse_rate: f32,
 
         pub fn init(rate: f32) Error!Self {
-            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f32))) return error.InvalidParameter;
+            if (!isValidExponentialRate(f32, rate)) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -6594,22 +6619,23 @@ pub fn VectorExponentialTableF32(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) f32 {
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return point;
             return exp_table_f32[exp_table_f32.len - 1] * self.inverse_rate;
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialTableF32(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialTableF32From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialTableF32(rng, VectorType, dest);
@@ -6618,8 +6644,8 @@ pub fn VectorExponentialTableF32(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f32, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialTableF32From(source, VectorType, dest);
@@ -6639,7 +6665,7 @@ pub fn VectorExponentialTableF64(comptime VectorType: type) type {
         inverse_rate: f64,
 
         pub fn init(rate: f64) Error!Self {
-            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(f64))) return error.InvalidParameter;
+            if (!isValidExponentialRate(f64, rate)) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -6672,22 +6698,23 @@ pub fn VectorExponentialTableF64(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) f64 {
+            if (exponentialRatePoint(f64, self.inverse_rate)) |point| return point;
             return exp_table_f64[exp_table_f64.len - 1] * self.inverse_rate;
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f64, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialTableF64(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.inverse_rate == 0) return @splat(0);
+            if (exponentialRatePoint(f64, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialTableF64From(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f64, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialTableF64(rng, VectorType, dest);
@@ -6696,8 +6723,8 @@ pub fn VectorExponentialTableF64(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.inverse_rate == 0) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(f64, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             fillVectorStandardExponentialTableF64From(source, VectorType, dest);
@@ -6717,7 +6744,7 @@ pub fn VectorExponential(comptime VectorType: type) type {
         inverse_rate: Child,
 
         pub fn init(rate: Child) Error!Self {
-            if (!(rate > 0) or (!std.math.isFinite(rate) and rate != std.math.inf(Child))) return error.InvalidParameter;
+            if (!isValidExponentialRate(Child, rate)) return error.InvalidParameter;
             return .{ .inverse_rate = 1 / rate };
         }
 
@@ -6752,22 +6779,22 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         pub fn maxValue(self: Self) ?Child {
-            return if (self.isDegenerate()) 0 else null;
+            return exponentialRatePoint(Child, self.inverse_rate);
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.isDegenerate()) return @splat(0);
+            if (exponentialRatePoint(Child, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponential(rng, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.isDegenerate()) return @splat(0);
+            if (exponentialRatePoint(Child, self.inverse_rate)) |point| return @splat(point);
             return vectorStandardExponentialFrom(source, VectorType) * @as(VectorType, @splat(self.inverse_rate));
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(Child, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             if (comptime Child == f32 or Child == f64) {
@@ -6782,8 +6809,8 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
+            if (exponentialRatePoint(Child, self.inverse_rate)) |point| {
+                @memset(dest, @as(VectorType, @splat(point)));
                 return;
             }
             if (comptime Child == f32 or Child == f64) {
@@ -6798,7 +6825,7 @@ pub fn VectorExponential(comptime VectorType: type) type {
         }
 
         fn isDegenerate(self: Self) bool {
-            return self.inverse_rate == 0;
+            return exponentialRatePoint(Child, self.inverse_rate) != null;
         }
     };
 }
@@ -21708,6 +21735,19 @@ fn validateFiniteFloatRange(comptime T: type, low: T, high: T, comptime allow_eq
     if (!std.math.isFinite(high - low)) return error.NonFinite;
 }
 
+fn isValidExponentialRate(comptime T: type, rate: T) bool {
+    comptime requireFloat(T);
+    return !std.math.isNan(rate) and !std.math.signbit(rate) and
+        (std.math.isFinite(rate) or rate == std.math.inf(T));
+}
+
+fn exponentialRatePoint(comptime T: type, inverse_rate: T) ?T {
+    comptime requireFloat(T);
+    if (inverse_rate == 0) return 0;
+    if (inverse_rate == std.math.inf(T)) return std.math.inf(T);
+    return null;
+}
+
 fn requireFloat(comptime T: type) void {
     if (@typeInfo(T) != .float) @compileError("expected float type, found " ++ @typeName(T));
 }
@@ -22641,7 +22681,7 @@ test "basic distributions stay in expected ranges" {
     for (top_exponential_buf) |value| try std.testing.expect(value >= 0);
     try fillExponentialCheckedFrom(&direct_bernoulli_engine, f64, &top_exponential_buf, 2);
     for (top_exponential_buf) |value| try std.testing.expect(value >= 0);
-    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&direct_bernoulli_engine, f64, &top_exponential_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&direct_bernoulli_engine, f64, &top_exponential_buf, -0.0));
     try std.testing.expect(poissonFrom(&direct_bernoulli_engine, 4) < 32);
     try std.testing.expect(try poissonCheckedFrom(&direct_bernoulli_engine, 4) < 32);
     try std.testing.expectError(error.InvalidParameter, poissonCheckedFrom(&direct_bernoulli_engine, std.math.inf(f64)));
@@ -25397,11 +25437,11 @@ test "invalid normal exponential wrapper helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillNormalCheckedFrom(&engine, f64, &normal_buf, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, exponentialCheckedFrom(&engine, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, exponentialCheckedFrom(&engine, f64, -0.0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var exponential_buf: [4]f64 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&engine, f64, &exponential_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillExponentialCheckedFrom(&engine, f64, &exponential_buf, -0.0));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -25471,6 +25511,118 @@ test "degenerate exponential distribution helpers do not consume random stream" 
 
     vector_sampler.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(0)), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "zero-rate exponential distribution helpers return infinity without consuming random stream" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d1e6);
+    var control = alea.ScalarPrng.init(0x5150_d1e6);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectEqual(std.math.inf(f64), exponentialFrom(&engine, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(std.math.inf(f64), try exponentialChecked(rng, f64, 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var scalar_buf: [5]f64 = undefined;
+    fillExponentialFrom(&engine, f64, &scalar_buf, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillExponentialChecked(rng, f64, &scalar_buf, 0);
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const sampler = try Exponential(f64).init(0);
+    try std.testing.expectEqual(@as(f64, 0), sampler.rateValue());
+    try std.testing.expectEqual(std.math.inf(f64), sampler.inverseRateValue());
+    try std.testing.expectEqual(std.math.inf(f64), sampler.expectedValue());
+    try std.testing.expectEqual(std.math.inf(f64), sampler.varianceValue());
+    try std.testing.expectEqual(std.math.inf(f64), sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), sampler.minValue());
+    try std.testing.expectEqual(std.math.inf(f64), sampler.maxValue().?);
+    try std.testing.expectEqual(std.math.inf(f64), sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(std.math.inf(f64), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vectorExponentialFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), try vectorExponentialChecked(rng, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    fillVectorExponentialFrom(&engine, @Vector(4, f64), &vector_buf, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillVectorExponentialChecked(rng, @Vector(4, f64), &vector_buf, 0);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_sampler = try VectorExponential(@Vector(4, f64)).init(0);
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.rateValue());
+    try std.testing.expectEqual(std.math.inf(f64), vector_sampler.inverseRateValue());
+    try std.testing.expectEqual(std.math.inf(f64), vector_sampler.expectedValue());
+    try std.testing.expectEqual(std.math.inf(f64), vector_sampler.varianceValue());
+    try std.testing.expectEqual(std.math.inf(f64), vector_sampler.medianValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), vector_sampler.minValue());
+    try std.testing.expectEqual(std.math.inf(f64), vector_sampler.maxValue().?);
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const native_sampler = try ExponentialNativeF32.init(0);
+    try std.testing.expectEqual(std.math.inf(f32), native_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var native_buf: [4]f32 = undefined;
+    native_sampler.fillFrom(&engine, &native_buf);
+    for (native_buf) |sample| try std.testing.expectEqual(std.math.inf(f32), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const native_vector_sampler = try VectorExponentialNativeF32(@Vector(8, f32)).init(0);
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(std.math.inf(f32))), native_vector_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var native_vector_buf: [2]@Vector(8, f32) = undefined;
+    native_vector_sampler.fillFrom(&engine, &native_vector_buf);
+    for (native_vector_buf) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(std.math.inf(f32))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(std.math.inf(f32))), vectorExponentialApproxLogF32From(&engine, @Vector(8, f32), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const approx_sampler = try VectorExponentialApproxLogF32(@Vector(8, f32)).init(0);
+    try std.testing.expectEqual(@as(@Vector(8, f32), @splat(std.math.inf(f32))), approx_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var approx_buf: [2]@Vector(8, f32) = undefined;
+    approx_sampler.fillFrom(&engine, &approx_buf);
+    for (approx_buf) |sample| try std.testing.expectEqual(@as(@Vector(8, f32), @splat(std.math.inf(f32))), sample);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), vectorExponentialTableF64From(&engine, @Vector(4, f64), 0));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const table_sampler = try VectorExponentialTableF64(@Vector(4, f64)).init(0);
+    try std.testing.expectEqual(std.math.inf(f64), table_sampler.maxValue());
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), table_sampler.sampleFrom(&engine));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var table_buf: [2]@Vector(4, f64) = undefined;
+    table_sampler.fillFrom(&engine, &table_buf);
+    for (table_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(std.math.inf(f64))), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -31231,7 +31383,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, vectorZetaCheckedFrom(&engine, @Vector(4, f64), 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), 0));
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialCheckedFrom(&engine, @Vector(4, f64), -0.0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     var uniform_buf: [4]@Vector(4, f64) = undefined;
@@ -31335,7 +31487,7 @@ test "invalid distribution vector helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, fillVectorZetaCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialCheckedFrom(&engine, @Vector(4, f64), &uniform_buf, -0.0));
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
@@ -31804,7 +31956,7 @@ test "invalid distribution facade scalar helpers do not consume random stream" {
     try std.testing.expectError(error.InvalidParameter, normalChecked(rng, f64, 0, -1));
     try std.testing.expectEqual(control.next(), engine.next());
 
-    try std.testing.expectError(error.InvalidParameter, exponentialChecked(rng, f64, 0));
+    try std.testing.expectError(error.InvalidParameter, exponentialChecked(rng, f64, -0.0));
     try std.testing.expectEqual(control.next(), engine.next());
 
     try std.testing.expectError(error.InvalidParameter, logisticChecked(rng, f64, 0, -1));
@@ -32989,7 +33141,7 @@ test "native f32 parameterized samplers have stable snapshots" {
     var invalid_engine = alea.ScalarPrng.init(0x3252);
     var invalid_control = alea.ScalarPrng.init(0x3252);
     try std.testing.expectError(error.InvalidParameter, normalNativeF32CheckedFrom(&invalid_engine, 0, -1));
-    try std.testing.expectError(error.InvalidParameter, exponentialNativeF32CheckedFrom(&invalid_engine, 0));
+    try std.testing.expectError(error.InvalidParameter, exponentialNativeF32CheckedFrom(&invalid_engine, -0.0));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     var empty_engine = alea.ScalarPrng.init(0x3253);
@@ -33062,7 +33214,7 @@ test "vector native f32 parameterized samplers have stable snapshots" {
     var invalid_engine = alea.ScalarPrng.init(0x3262);
     var invalid_control = alea.ScalarPrng.init(0x3262);
     try std.testing.expectError(error.InvalidParameter, vectorNormalNativeF32CheckedFrom(&invalid_engine, @Vector(8, f32), 0, -1));
-    try std.testing.expectError(error.InvalidParameter, vectorExponentialNativeF32CheckedFrom(&invalid_engine, @Vector(8, f32), 0));
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialNativeF32CheckedFrom(&invalid_engine, @Vector(8, f32), -0.0));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     var empty_engine = alea.ScalarPrng.init(0x3263);
@@ -33301,9 +33453,9 @@ test "vector approximate-log f32 exponential has stable snapshots" {
 
     var invalid_engine = alea.ScalarPrng.init(0x3273);
     var invalid_control = alea.ScalarPrng.init(0x3273);
-    try std.testing.expectError(error.InvalidParameter, vectorExponentialApproxLogF32CheckedFrom(&invalid_engine, @Vector(8, f32), 0));
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialApproxLogF32CheckedFrom(&invalid_engine, @Vector(8, f32), -0.0));
     var invalid_out: [1]@Vector(8, f32) = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialApproxLogF32CheckedFrom(&invalid_engine, @Vector(8, f32), &invalid_out, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialApproxLogF32CheckedFrom(&invalid_engine, @Vector(8, f32), &invalid_out, -0.0));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     var empty_engine = alea.ScalarPrng.init(0x3274);
@@ -33358,9 +33510,9 @@ test "vector table exponential has stable snapshots" {
 
     var invalid_f64_engine = alea.ScalarPrng.init(0x3299);
     var invalid_f64_control = alea.ScalarPrng.init(0x3299);
-    try std.testing.expectError(error.InvalidParameter, vectorExponentialTableF64CheckedFrom(&invalid_f64_engine, @Vector(4, f64), 0));
+    try std.testing.expectError(error.InvalidParameter, vectorExponentialTableF64CheckedFrom(&invalid_f64_engine, @Vector(4, f64), -0.0));
     var invalid_f64_out: [1]@Vector(4, f64) = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialTableF64CheckedFrom(&invalid_f64_engine, @Vector(4, f64), &invalid_f64_out, 0));
+    try std.testing.expectError(error.InvalidParameter, fillVectorExponentialTableF64CheckedFrom(&invalid_f64_engine, @Vector(4, f64), &invalid_f64_out, -0.0));
     try std.testing.expectEqual(invalid_f64_control.next(), invalid_f64_engine.next());
 
     var empty_f32_engine = alea.ScalarPrng.init(0x329a);
@@ -35163,7 +35315,7 @@ test "non-uniform samplers can be reused with sample iterators" {
 
     try std.testing.expectError(error.InvalidParameter, Normal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, Normal(f64).initMeanCv(0, -1));
-    try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(0));
+    try std.testing.expectError(error.InvalidParameter, Exponential(f64).init(-0.0));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).init(0, -1));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(-1, 0.5));
     try std.testing.expectError(error.InvalidParameter, LogNormal(f64).initMeanCv(1, -0.5));

@@ -34,7 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m1142-parameterized-f64x4-vector-fill.md
+compare/results/s4-m1143-zero-rate-exponential.md
 `1`
 Alea local rand/rand_distr status (2026-07-09)
 "schema_version"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-09)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1142-parameterized-f64x4-vector-fill.md"
+"compare/results/s4-m1143-zero-rate-exponential.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -93,3 +93,5 @@ S4-M1140 remains active after S4-M1139 fixes roadmapcheck evidence mapping in `c
 S4-M1141 remains active after S4-M1140 refreshes rand-status in `compare/results/s4-m1140-post-s4-m1139-rand-status-refresh.md`.
 S4-M1142 remains active after S4-M1141 extends f64x4 facade standard-vector fills in `compare/results/s4-m1141-f64x4-facade-standard-vector-fill.md`.
 S4-M1143 remains active after S4-M1142 specializes parameterized f64x4 vector fills in `compare/results/s4-m1142-parameterized-f64x4-vector-fill.md`.
+
+S4-M1144 remains active after S4-M1143 aligns zero-rate exponential semantics in `compare/results/s4-m1143-zero-rate-exponential.md`.

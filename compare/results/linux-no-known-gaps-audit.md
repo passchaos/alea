@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1142 bar is S4-M1143: exact/default dense SIMD research,
+The active post-S4-M1143 bar is S4-M1144: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6043,3 +6043,5 @@ S4-M1140 refreshes current status after the S4-M1139 evidence-map fix (`compare/
 S4-M1141 extends f64x4 standard vector fill specializations to facade standard-parameter workflows (`compare/results/s4-m1141-f64x4-facade-standard-vector-fill.md`): facade standard-normal, standard-exponential, standard-parameter normal, and rate-one exponential f64x4 fills now reuse specialized standard fill paths while preserving stream shape. This is a narrow exact/default call-shape closure, not whole-goal completion.
 
 S4-M1142 specializes parameterized f64x4 vector fills (`compare/results/s4-m1142-parameterized-f64x4-vector-fill.md`): non-standard normal and finite-rate exponential f64x4 fills now reuse the exact f64 ziggurat draw shape plus vector affine/rate transforms while preserving scalar stream shape. This is a narrow exact/default call-shape closure, not whole-goal completion.
+
+S4-M1143 aligns zero-rate exponential semantics with local `rand_distr::Exp::new(0.0)` (`compare/results/s4-m1143-zero-rate-exponential.md`): positive zero rate now returns/fills infinity without consuming randomness across scalar/vector/top-level/checked/reusable exponential helpers, while negative zero, negative rates, and NaN remain invalid. This is a local `rand_distr` compatibility closure, not whole-goal completion.
