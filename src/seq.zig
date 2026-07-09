@@ -9606,7 +9606,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
-            self.table.fillFrom(rng, dest);
+            self.table.fill(rng, dest);
         }
 
         pub fn fillIndicesCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {

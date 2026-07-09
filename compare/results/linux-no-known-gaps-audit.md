@@ -5589,3 +5589,9 @@ S4-M1065 routes sequence-layer reusable WeightedChoice index fills directly
 `seq.WeightedChoice(T).fillIndices` now calls the AliasTable fill facade directly
 instead of routing through `fillIndicesFrom`. This improves seq WeightedChoice
 index-fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1066 routes sequence-layer reusable WeightedChoice checked index fills
+directly (`compare/results/s4-m1066-seq-weightedchoice-checked-index-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fillIndicesChecked` now calls the AliasTable fill facade
+directly instead of routing through `fillFrom` with facade RNG. This improves seq
+WeightedChoice checked index-fill facade ergonomics but does not resolve S4-M11.
