@@ -5886,3 +5886,9 @@ directly (`compare/results/s4-m1111-ascii-string-facade-direct.md`):
 `ascii.string` now calls facade `Alphanumeric.alloc` directly instead of routing
 through `stringFrom`. This improves top-level ASCII string facade ergonomics but
 does not resolve S4-M11.
+
+S4-M1112 routes top-level ASCII allocation-returning sample strings directly
+(`compare/results/s4-m1112-ascii-sample-string-facade-direct.md`):
+`ascii.sampleString` now calls facade `Alphanumeric.sampleString` directly
+instead of routing through `sampleStringFrom`. This improves top-level ASCII
+sampleString facade ergonomics but does not resolve S4-M11.

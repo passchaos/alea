@@ -657,7 +657,7 @@ pub fn stringFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]
 }
 
 pub fn sampleString(allocator: std.mem.Allocator, rng: Rng, len: usize) ![]u8 {
-    return sampleStringFrom(allocator, rng, len);
+    return Alphanumeric.sampleString(allocator, rng, len);
 }
 
 pub fn sampleStringFrom(allocator: std.mem.Allocator, source: anytype, len: usize) ![]u8 {
