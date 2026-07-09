@@ -2907,6 +2907,7 @@ pub inline fn exponentialFastFrom(source: anytype, comptime T: type, rate: T) T 
     comptime requireFloat(T);
     std.debug.assert(rate > 0 and (std.math.isFinite(rate) or rate == std.math.inf(T)));
     if (rate == std.math.inf(T)) return 0;
+    if (rate == 1) return standardExponentialFastFrom(source, T);
     return standardExponentialFastFrom(source, T) / rate;
 }
 
@@ -7370,6 +7371,24 @@ test "invalid facade scalar helpers do not consume random stream" {
 
     try std.testing.expectError(error.InvalidParameter, rng.exponentialChecked(f64, 0));
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "rate-one scalar exponential matches standard stream shape" {
+    const alea = @import("root.zig");
+    var exponential_engine = alea.ScalarPrng.init(0x5150_e1a5);
+    var standard_engine = alea.ScalarPrng.init(0x5150_e1a5);
+
+    try std.testing.expectEqual(
+        standardExponentialFastFrom(&standard_engine, f64),
+        exponentialFastFrom(&exponential_engine, f64, 1),
+    );
+    try std.testing.expectEqual(standard_engine.next(), exponential_engine.next());
+
+    try std.testing.expectEqual(
+        standardExponentialFastFrom(&standard_engine, f32),
+        exponentialFastFrom(&exponential_engine, f32, 1),
+    );
+    try std.testing.expectEqual(standard_engine.next(), exponential_engine.next());
 }
 
 test "degenerate exponential helpers do not consume random stream" {
