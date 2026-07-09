@@ -27,9 +27,9 @@ local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
 `zig build validate-local` passes, S4-M438/S4-M449 keep the S4-M11 evidence chain
 visible, S4-M1123 records direct Wasmtime 31.0.0 execution of the accepted
 profile long sweep, S4-M1124 restores the post-S4-M11 `validate-all` aggregate,
-and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
+and S4-M1125 refreshes the status snapshots after that restoration. S4-M1126 adds fresh f32x8 dense SIMD probe evidence, and S4-M1127 closes a checksum-preserving f64x4 standard-normal direct-source fill optimization, and S4-M1128 closes the matching narrow standard-exponential direct-source fill call-shape improvement, and S4-M1129 refreshes current status after those closures, and S4-M1130 refreshes full `validate-all` evidence, and S4-M1131 refreshes current status after that validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
 kernels are still not known to beat scalar lane-fill, and the roadmap has raised
-the next product bar to S4-M1132. Therefore do not call
+the next product bar to S4-M1133. Therefore do not call
 `update_goal(status=complete)`.
 
 ## Prompt-to-Artifact Checklist
@@ -1171,7 +1171,8 @@ the next product bar to S4-M1132. Therefore do not call
 | S4-M1129 post-S4-M1128 rand-status refresh | `tools/rand_status.zig`, `compare/results/s4-m1129-post-s4-m1128-rand-status-refresh.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: status tooling and snapshots now report S4-M1127/S4-M1128 closure and point at S4-M1130. |
 | S4-M1130 post-S4-M1129 validate-all refresh | `compare/results/s4-m1130-post-s4-m1129-validate-all.md`, `zig build validate-all` | Closed for the current bar: full validate-all passed after S4-M1127/S4-M1128 code changes and S4-M1129 status synchronization. |
 | S4-M1131 post-S4-M1130 rand-status refresh | `tools/rand_status.zig`, `compare/results/s4-m1131-post-s4-m1130-rand-status-refresh.md`, `compare/results/s4-m420-current-rand-status.md` | Closed for the current bar: status tooling now reports S4-M1130 validate-all closure and points at S4-M1132. |
-| S4-M1132 next post-S4-M1131 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1131 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
+| S4-M1132 f32x8 direct-source probe refresh | `compare/results/s4-m1132-f32x8-direct-source-probe.md`, `bench/vector.zig` | Closed for the current bar as refreshed negative evidence: checksum-preserving f32x8 candidates still do not beat direct exact/default baselines. |
+| S4-M1133 next post-S4-M1132 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1132 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1195,7 +1196,8 @@ S4-M1127 lands a direct-source f64x4 standard-normal fill specialization and
 S4-M1128 lands the adjacent direct-source f64x4 standard-exponential fill
 specialization, and S4-M1129 refreshes status after those direct-fill closures, and S4-M1130
 refreshes full validate-all evidence, and S4-M1131 refreshes status after that
-validation, so the next active product bar is S4-M1132.
+validation, and S4-M1132 records refreshed f32x8 direct-source negative evidence,
+so the next active product bar is S4-M1133.
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
@@ -4471,12 +4473,12 @@ records fresh f32x8 dense SIMD probe evidence, and S4-M1127 lands a
 checksum-preserving f64x4 standard-normal direct fill specialization and S4-M1128
 lands the adjacent standard-exponential direct fill specialization, and S4-M1129
 refreshes status after those closures, and S4-M1130 refreshes full validate-all
-evidence, and S4-M1131 refreshes status after that validation, so the next active
-product bar is S4-M1132.
+evidence, and S4-M1131 refreshes status after that validation, and S4-M1132 records refreshed
+f32x8 direct-source negative evidence, so the next active product bar is S4-M1133.
 
 ## Required Next Work Before Completion
 
-The goal remains active under the new S4-M1132 bar until at least one of these
+The goal remains active under the new S4-M1133 bar until at least one of these
 happens:
 
 - a default/exact-compatible dense SIMD normal/exponential candidate beats

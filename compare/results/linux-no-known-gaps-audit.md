@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1131 bar is S4-M1132: exact/default dense SIMD research,
+The active post-S4-M1132 bar is S4-M1133: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6021,3 +6021,5 @@ validate-all` passed with `profilelongcheck ok` and exit code 0. This is broad
 validation evidence, not whole-goal completion; S4-M1131 remains active.
 
 S4-M1131 refreshes current status after the S4-M1130 validate-all evidence (`compare/results/s4-m1131-post-s4-m1130-rand-status-refresh.md`): `rand-status` now includes S4-M1130 as closed for the current bar and points to S4-M1132. This is status synchronization, not whole-goal completion.
+
+S4-M1132 refreshes f32x8 direct-source vectorbench evidence (`compare/results/s4-m1132-f32x8-direct-source-probe.md`): checksum-preserving f32x8 flat-slice/repair candidates still trail direct exact/default baselines, while faster table/approx-log rows keep different output mappings. This is useful negative evidence, not whole-goal completion; S4-M1133 remains active.
