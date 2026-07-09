@@ -2639,11 +2639,15 @@ pub fn fillUnicodeScalarRangeAtMost(self: Rng, dest: []u21, min: u21, at_most: u
 }
 
 pub fn fillUnicodeScalarRangeLessThanChecked(self: Rng, dest: []u21, min: u21, less_than: u21) Error!void {
-    return fillUnicodeScalarRangeLessThanCheckedFrom(self, dest, min, less_than);
+    if (dest.len == 0) return;
+    _ = try unicodeScalarExclusiveRange(min, less_than);
+    self.fillUnicodeScalarRangeLessThan(dest, min, less_than);
 }
 
 pub fn fillUnicodeScalarRangeAtMostChecked(self: Rng, dest: []u21, min: u21, at_most: u21) Error!void {
-    return fillUnicodeScalarRangeAtMostCheckedFrom(self, dest, min, at_most);
+    if (dest.len == 0) return;
+    _ = try unicodeScalarInclusiveRange(min, at_most);
+    self.fillUnicodeScalarRangeAtMost(dest, min, at_most);
 }
 
 pub fn unicodeScalarBatch(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u21 {
@@ -5807,6 +5811,26 @@ test "unicode scalar range helpers preserve checked stream shape" {
         at_most_fill_rng.fillUnicodeScalarRangeAtMost(&at_most_fill_facade_buf, 0x41, 0x5A);
         try std.testing.expectEqualSlices(u21, &at_most_fill_direct_buf, &at_most_fill_facade_buf);
         try std.testing.expectEqual(at_most_fill_direct.next(), at_most_fill_facade.next());
+
+        var less_checked_fill_direct = Engine.init(0x5150_98a7);
+        var less_checked_fill_facade = Engine.init(0x5150_98a7);
+        const less_checked_fill_rng = Rng.init(&less_checked_fill_facade);
+        var less_checked_fill_direct_buf: [16]u21 = undefined;
+        var less_checked_fill_facade_buf: [16]u21 = undefined;
+        try fillUnicodeScalarRangeLessThanCheckedFrom(&less_checked_fill_direct, &less_checked_fill_direct_buf, 0xD7F0, 0xE010);
+        try less_checked_fill_rng.fillUnicodeScalarRangeLessThanChecked(&less_checked_fill_facade_buf, 0xD7F0, 0xE010);
+        try std.testing.expectEqualSlices(u21, &less_checked_fill_direct_buf, &less_checked_fill_facade_buf);
+        try std.testing.expectEqual(less_checked_fill_direct.next(), less_checked_fill_facade.next());
+
+        var at_most_checked_fill_direct = Engine.init(0x5150_98a8);
+        var at_most_checked_fill_facade = Engine.init(0x5150_98a8);
+        const at_most_checked_fill_rng = Rng.init(&at_most_checked_fill_facade);
+        var at_most_checked_fill_direct_buf: [16]u21 = undefined;
+        var at_most_checked_fill_facade_buf: [16]u21 = undefined;
+        try fillUnicodeScalarRangeAtMostCheckedFrom(&at_most_checked_fill_direct, &at_most_checked_fill_direct_buf, 0x41, 0x5A);
+        try at_most_checked_fill_rng.fillUnicodeScalarRangeAtMostChecked(&at_most_checked_fill_facade_buf, 0x41, 0x5A);
+        try std.testing.expectEqualSlices(u21, &at_most_checked_fill_direct_buf, &at_most_checked_fill_facade_buf);
+        try std.testing.expectEqual(at_most_checked_fill_direct.next(), at_most_checked_fill_facade.next());
 
         var unchecked = Engine.init(0x5150_98a0);
         var checked = Engine.init(0x5150_98a0);
