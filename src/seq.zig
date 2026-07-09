@@ -9285,7 +9285,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
 
         pub fn sampleValueChecked(self: Self, rng: Rng) Error!T {
             if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
-            return self.items[self.table.sampleCheckedFrom(rng) catch unreachable];
+            return self.items[self.table.sampleChecked(rng) catch unreachable];
         }
 
         pub fn sampleValueCheckedFrom(self: Self, source: anytype) Error!T {

@@ -5576,3 +5576,10 @@ directly (`compare/results/s4-m1063-seq-weightedchoice-checked-u32-index-sample-
 facade sample directly instead of routing through `sampleU32CheckedFrom`. This
 improves seq WeightedChoice checked u32 index-sample facade ergonomics but does
 not resolve S4-M11.
+
+S4-M1064 routes sequence-layer reusable WeightedChoice checked value samples
+directly (`compare/results/s4-m1064-seq-weightedchoice-checked-value-sample-facade-direct.md`):
+`seq.WeightedChoice(T).sampleValueChecked` now calls the AliasTable checked
+facade sample directly instead of routing through `sampleCheckedFrom`. This
+improves seq WeightedChoice checked value-sample facade ergonomics but does not
+resolve S4-M11.
