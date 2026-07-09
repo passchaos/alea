@@ -5477,3 +5477,9 @@ directly (`compare/results/s4-m1048-native-exp2-log-normal-facade-direct.md`):
 / `fill` now call native-exp2 log-normal facade helpers directly instead of
 routing through `sampleFrom` / `fillFrom` wrappers. This improves native-exp2
 LogNormal facade ergonomics but does not resolve S4-M11.
+
+S4-M1049 routes reusable generic VectorLogNormal facade helpers directly
+(`compare/results/s4-m1049-vector-log-normal-facade-direct.md`):
+`VectorLogNormal.sample` / `fill` now call vector log-normal facade helpers
+directly instead of routing through `sampleFrom` / `fillFrom` wrappers. This
+improves generic VectorLogNormal facade ergonomics but does not resolve S4-M11.

@@ -8071,7 +8071,7 @@ pub fn VectorLogNormal(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            return vectorLogNormal(rng, VectorType, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -8079,7 +8079,7 @@ pub fn VectorLogNormal(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            fillVectorLogNormal(rng, VectorType, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
