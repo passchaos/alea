@@ -2,6 +2,11 @@ const std = @import("std");
 const Rng = @import("rng.zig");
 const distributions = @import("distributions.zig");
 
+fn oversizedU32LenForTest() usize {
+    if (comptime @bitSizeOf(usize) <= 32) return std.math.maxInt(usize);
+    return @intCast(@as(u64, std.math.maxInt(u32)) + 1);
+}
+
 pub const SizeHint = struct {
     lower: usize,
     upper: ?usize,
@@ -11032,7 +11037,7 @@ test "index vec conversion supports native backing" {
     try std.testing.expectEqualSlices(u32, &.{ 5, 8, 13 }, owned_u32);
 
     if (comptime @bitSizeOf(usize) > 32) {
-        var too_large_backing = [_]usize{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
+        var too_large_backing = [_]usize{ 1, oversizedU32LenForTest() };
         const too_large = IndexVec{ .usize = &too_large_backing };
         var too_large_out: [2]u32 = .{ 77, 88 };
         try std.testing.expectError(error.InvalidParameter, too_large.copyIntoU32(&too_large_out));
@@ -11205,7 +11210,7 @@ test "index vec consuming owned conversions transfer or narrow backing" {
     if (comptime @bitSizeOf(usize) > 32) {
         const too_large_backing = try std.testing.allocator.alloc(usize, 2);
         defer std.testing.allocator.free(too_large_backing);
-        too_large_backing[0..2].* = .{ 1, @as(usize, std.math.maxInt(u32)) + 1 };
+        too_large_backing[0..2].* = .{ 1, oversizedU32LenForTest() };
         const too_large_vec = IndexVec{ .usize = too_large_backing };
         var too_large_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
         try std.testing.expectError(error.InvalidParameter, too_large_vec.intoOwnedU32Slice(too_large_alloc.allocator()));
@@ -11262,7 +11267,7 @@ test "index vec maps sampled indexes to slice items" {
     try std.testing.expectEqualStrings("cat", compact_values.next().?);
     try std.testing.expectEqualStrings("dog", compact_values.next().?);
     if (comptime @bitSizeOf(usize) > 32) {
-        const oversized_item_len = @as(usize, std.math.maxInt(u32)) + 1;
+        const oversized_item_len = oversizedU32LenForTest();
         try std.testing.expectEqual(@as(?usize, null), compact.indexOf(oversized_item_len));
         try std.testing.expect(!compact.contains(oversized_item_len));
         try compact.validateItems(oversized_item_len);
@@ -17003,9 +17008,9 @@ test "index-weighted weightedIndexByIndex preserves stream shape and invalid pat
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ArrayByIndexCheckedFrom(&invalid_engine, f64, 3, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     if (comptime @bitSizeOf(usize) > 32) {
-        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndexFrom(&invalid_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndexFrom(&invalid_engine, u32, oversizedU32LenForTest(), IndexWeight.single));
         try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndexFrom(&invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndexFrom(&invalid_engine, u32, 3, oversizedU32LenForTest(), IndexWeight.single));
         try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     }
 }
@@ -17158,7 +17163,7 @@ test "index-weighted fillWeightedIndexByIndex preserves stream shape and invalid
     try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32ByIndexCheckedFrom(&invalid_engine, f64, &bad_indexes_u32, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     if (comptime @bitSizeOf(usize) > 32) {
-        try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndexFrom(&invalid_engine, u32, &optional_zero_u32, oversizedU32LenForTest(), IndexWeight.single));
         try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     }
 }
@@ -17309,9 +17314,9 @@ test "index-weighted weightedIndexBatchByIndex preserves stream shape and invali
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, f64, 3, 8, IndexWeight.invalid));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     if (comptime @bitSizeOf(usize) > 32) {
-        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexFrom(std.testing.allocator, &invalid_engine, u32, 3, oversizedU32LenForTest(), IndexWeight.single));
         try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexCheckedFrom(std.testing.allocator, &invalid_engine, u32, 3, oversizedU32LenForTest(), IndexWeight.single));
         try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     }
 
@@ -20811,8 +20816,9 @@ test "zero-length choice fills do not consume random stream" {
 }
 
 test "Choice owned u32 indices reject oversized population before allocation" {
+    if (comptime @bitSizeOf(usize) <= 32) return;
     const alea = @import("root.zig");
-    const oversized_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const oversized_len = oversizedU32LenForTest();
     const oversized_items = @as([*]const u8, @ptrFromInt(0x1000))[0..oversized_len];
     const choice = Choice(u8).init(oversized_items).?;
 
@@ -20831,8 +20837,9 @@ test "Choice owned u32 indices reject oversized population before allocation" {
 }
 
 test "WeightedChoice owned u32 indices reject oversized population before allocation" {
+    if (comptime @bitSizeOf(usize) <= 32) return;
     const alea = @import("root.zig");
-    const oversized_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const oversized_len = oversizedU32LenForTest();
     const oversized_items = @as([*]const u8, @ptrFromInt(0x1000))[0..oversized_len];
     var choice = WeightedChoice(u8, u32){
         .items = oversized_items,
@@ -22588,9 +22595,9 @@ test "index-weighted no-replacement samples support length weight functions" {
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesByIndexIntoCheckedFrom(&no_consume_engine, u32, 8, single_into[0..2], single_keys[0..2], IndexWeight.sparse));
     try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     if (comptime @bitSizeOf(usize) > 32) {
-        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoFrom(&no_consume_engine, u32, @as(usize, std.math.maxInt(u32)) + 1, single_u32_into[0..1], single_u32_keys[0..1], IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoFrom(&no_consume_engine, u32, oversizedU32LenForTest(), single_u32_into[0..1], single_u32_keys[0..1], IndexWeight.single));
         try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
-        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexFrom(&no_consume_engine, u32, 1, @as(usize, std.math.maxInt(u32)) + 1, IndexWeight.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexFrom(&no_consume_engine, u32, 1, oversizedU32LenForTest(), IndexWeight.single));
         try std.testing.expectEqual(no_consume_control.next(), no_consume_engine.next());
     }
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndicesByIndexFrom(std.testing.allocator, &no_consume_engine, f64, 8, 2, IndexWeight.invalid));

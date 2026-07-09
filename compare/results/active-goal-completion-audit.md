@@ -1162,7 +1162,8 @@ the next product bar to S4-M1124. Therefore do not call
 | S4-M1121 Rng checked fill Unicode scalar range facade direct paths | `src/rng.zig`, `compare/results/s4-m1121-rng-checked-fill-unicode-scalar-range-facade-direct.md` | Closed for the current bar: Rng checked Unicode scalar range fills now avoid From wrappers. |
 | S4-M1122 Rng Unicode scalar batch facade direct path | `src/rng.zig`, `compare/results/s4-m1122-rng-unicode-scalar-batch-facade-direct.md` | Closed for the current bar: Rng Unicode scalar batch now avoids From wrappers. |
 | S4-M1123 Wasmtime accepted profile runtime evidence | `compare/results/s4-m1123-wasmtime-profilelongcheck.md` | Closed for the current bar: direct Wasmtime profilecheck and profilelongcheck wasm execution passed. |
-| S4-M1124 next post-S4-M11 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M11 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
+| S4-M1124 wasm32 oversized-u32 test guard | `src/distributions.zig`, `src/root.zig`, `src/seq.zig`, `compare/results/s4-m1124-wasm32-oversized-u32-test-guard.md` | Closed for the current bar: post-S4-M11 `validate-all` is restored by guarding impossible oversized-u32 tests on 32-bit targets. |
+| S4-M1125 next post-S4-M11 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M1124 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1179,8 +1180,9 @@ S4-M11 is now closed for the current bar via its additional-runtime branch:
 31.0.0 execution of the accepted profile long sweep ending with
 `profilelongcheck ok`. This does not change exact/default vector normal and
 exponential defaults, which still use scalar ziggurat lane-fill until a future
-dense kernel wins in the real `vectorbench` slice-fill harness. The roadmap has
-therefore raised the next active product bar to S4-M1124.
+dense kernel wins in the real `vectorbench` slice-fill harness. The roadmap raised the next product bar to S4-M1124, which is now closed by
+portable oversized-u32 test guards and a passing `validate-all`; the next active
+product bar is S4-M1125.
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
@@ -4450,11 +4452,12 @@ native+WASI `profiletailcheck` tail gates, and S4-M8 is closed by native+WASI
 `profilelongcheck` execution, and S4-M11 is closed for the current bar by direct
 Wasmtime 31.0.0 accepted-profile long-sweep execution. Exact/default
 normal/exponential kernels still remain scalar ziggurat lane-fill, and no new
-local Rust core gap is known, so the next active product bar is S4-M1124.
+local Rust core gap is known. S4-M1124 restored the post-S4-M11 `validate-all`
+portability aggregate, so the next active product bar is S4-M1125.
 
 ## Required Next Work Before Completion
 
-The goal remains active under the new S4-M1124 bar until at least one of these
+The goal remains active under the new S4-M1125 bar until at least one of these
 happens:
 
 - a default/exact-compatible dense SIMD normal/exponential candidate beats

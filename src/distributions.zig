@@ -6,6 +6,11 @@ const ascii = @import("ascii.zig");
 const std_ziggurat = std.Random.ziggurat;
 const distributions_module = @This();
 
+fn oversizedU32LenForTest() usize {
+    if (comptime @bitSizeOf(usize) <= 32) return std.math.maxInt(usize);
+    return @intCast(@as(u64, std.math.maxInt(u32)) + 1);
+}
+
 const native_f32_norm_r: f32 = @floatCast(std_ziggurat.norm_r);
 
 fn valueTypeHasEmptyEnum(comptime T: type) bool {
@@ -23060,29 +23065,31 @@ test "alias table iterators produce repeated indices" {
     try std.testing.expectEqualSlices(u32, unchecked_indices_u32, checked_indices_u32);
     try std.testing.expectEqual(unchecked_indices_u32_engine.next(), checked_indices_u32_engine.next());
 
-    const huge_len = @as(usize, std.math.maxInt(u32)) + 1;
-    const huge_table = AliasTable(u32){
-        .prob = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
-        .prob_threshold = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
-        .alias = @as([*]usize, @ptrFromInt(0x3000))[0..huge_len],
-        .weight_values = @as([*]f64, @ptrFromInt(0x4000))[0..huge_len],
-        .total = 1,
-        .positive_count = 1,
-        .constant_index = 0,
-        .allocator = std.testing.allocator,
-    };
-    var huge_engine = alea.ScalarPrng.init(0x5150_a13a);
-    var huge_control = alea.ScalarPrng.init(0x5150_a13a);
-    try std.testing.expectError(error.InvalidParameter, huge_table.iterU32CheckedFrom(&huge_engine));
-    try std.testing.expectEqual(huge_control.next(), huge_engine.next());
-    var huge_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32From(huge_alloc.allocator(), &huge_engine, 1));
-    try std.testing.expect(!huge_alloc.has_induced_failure);
-    try std.testing.expectEqual(huge_control.next(), huge_engine.next());
-    var huge_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32CheckedFrom(huge_checked_alloc.allocator(), &huge_engine, 1));
-    try std.testing.expect(!huge_checked_alloc.has_induced_failure);
-    try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_len = oversizedU32LenForTest();
+        const huge_table = AliasTable(u32){
+            .prob = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
+            .prob_threshold = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
+            .alias = @as([*]usize, @ptrFromInt(0x3000))[0..huge_len],
+            .weight_values = @as([*]f64, @ptrFromInt(0x4000))[0..huge_len],
+            .total = 1,
+            .positive_count = 1,
+            .constant_index = 0,
+            .allocator = std.testing.allocator,
+        };
+        var huge_engine = alea.ScalarPrng.init(0x5150_a13a);
+        var huge_control = alea.ScalarPrng.init(0x5150_a13a);
+        try std.testing.expectError(error.InvalidParameter, huge_table.iterU32CheckedFrom(&huge_engine));
+        try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+        var huge_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32From(huge_alloc.allocator(), &huge_engine, 1));
+        try std.testing.expect(!huge_alloc.has_induced_failure);
+        try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+        var huge_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, huge_table.indicesU32CheckedFrom(huge_checked_alloc.allocator(), &huge_engine, 1));
+        try std.testing.expect(!huge_checked_alloc.has_induced_failure);
+        try std.testing.expectEqual(huge_control.next(), huge_engine.next());
+    }
 
     try table.update(&.{ 0, 0, 5, 0 });
     var single_engine = alea.ScalarPrng.init(0x5150_a131);
@@ -24757,50 +24764,52 @@ test "weighted tree iterators produce repeated indices" {
     try std.testing.expectError(error.InvalidWeight, invalid_int_tree.iterU32CheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
-    const huge_len = @as(usize, std.math.maxInt(u32)) + 1;
-    const huge_tree = WeightedTree(u32){
-        .subtotals = .{
-            .items = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
-            .capacity = huge_len,
-        },
-        .positive_count = 1,
-        .positive_index = 0,
-        .allocator = std.testing.allocator,
-    };
-    invalid_engine = alea.ScalarPrng.init(0x5150_d529);
-    invalid_control = alea.ScalarPrng.init(0x5150_d529);
-    try std.testing.expectError(error.InvalidParameter, huge_tree.iterU32CheckedFrom(&invalid_engine));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    var huge_tree_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, huge_tree.indicesU32From(huge_tree_alloc.allocator(), &invalid_engine, 1));
-    try std.testing.expect(!huge_tree_alloc.has_induced_failure);
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    var huge_tree_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, huge_tree.indicesU32CheckedFrom(huge_tree_checked_alloc.allocator(), &invalid_engine, 1));
-    try std.testing.expect(!huge_tree_checked_alloc.has_induced_failure);
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_len = oversizedU32LenForTest();
+        const huge_tree = WeightedTree(u32){
+            .subtotals = .{
+                .items = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
+                .capacity = huge_len,
+            },
+            .positive_count = 1,
+            .positive_index = 0,
+            .allocator = std.testing.allocator,
+        };
+        invalid_engine = alea.ScalarPrng.init(0x5150_d529);
+        invalid_control = alea.ScalarPrng.init(0x5150_d529);
+        try std.testing.expectError(error.InvalidParameter, huge_tree.iterU32CheckedFrom(&invalid_engine));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        var huge_tree_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, huge_tree.indicesU32From(huge_tree_alloc.allocator(), &invalid_engine, 1));
+        try std.testing.expect(!huge_tree_alloc.has_induced_failure);
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        var huge_tree_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, huge_tree.indicesU32CheckedFrom(huge_tree_checked_alloc.allocator(), &invalid_engine, 1));
+        try std.testing.expect(!huge_tree_checked_alloc.has_induced_failure);
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
-    const huge_int_tree = WeightedIntTree(u32){
-        .subtotals = .{
-            .items = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
-            .capacity = huge_len,
-        },
-        .positive_count = 1,
-        .positive_index = 0,
-        .allocator = std.testing.allocator,
-    };
-    invalid_engine = alea.ScalarPrng.init(0x5150_d52a);
-    invalid_control = alea.ScalarPrng.init(0x5150_d52a);
-    try std.testing.expectError(error.InvalidParameter, huge_int_tree.iterU32CheckedFrom(&invalid_engine));
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    var huge_int_tree_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, huge_int_tree.indicesU32From(huge_int_tree_alloc.allocator(), &invalid_engine, 1));
-    try std.testing.expect(!huge_int_tree_alloc.has_induced_failure);
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    var huge_int_tree_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, huge_int_tree.indicesU32CheckedFrom(huge_int_tree_checked_alloc.allocator(), &invalid_engine, 1));
-    try std.testing.expect(!huge_int_tree_checked_alloc.has_induced_failure);
-    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        const huge_int_tree = WeightedIntTree(u32){
+            .subtotals = .{
+                .items = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
+                .capacity = huge_len,
+            },
+            .positive_count = 1,
+            .positive_index = 0,
+            .allocator = std.testing.allocator,
+        };
+        invalid_engine = alea.ScalarPrng.init(0x5150_d52a);
+        invalid_control = alea.ScalarPrng.init(0x5150_d52a);
+        try std.testing.expectError(error.InvalidParameter, huge_int_tree.iterU32CheckedFrom(&invalid_engine));
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        var huge_int_tree_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, huge_int_tree.indicesU32From(huge_int_tree_alloc.allocator(), &invalid_engine, 1));
+        try std.testing.expect(!huge_int_tree_alloc.has_induced_failure);
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+        var huge_int_tree_checked_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, huge_int_tree.indicesU32CheckedFrom(huge_int_tree_checked_alloc.allocator(), &invalid_engine, 1));
+        try std.testing.expect(!huge_int_tree_checked_alloc.has_induced_failure);
+        try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+    }
 }
 
 test "weighted tree fixed index arrays mirror fills" {
@@ -37470,8 +37479,9 @@ test "distribution Choose sampler mirrors slice choices" {
 }
 
 test "distribution Choose owned u32 indices reject oversized population before allocation" {
+    if (comptime @bitSizeOf(usize) <= 32) return;
     const root = @import("root.zig");
-    const oversized_len = @as(usize, std.math.maxInt(u32)) + 1;
+    const oversized_len = oversizedU32LenForTest();
     const oversized_items = @as([*]const u8, @ptrFromInt(0x2000))[0..oversized_len];
     const choice = Choose(u8).new(oversized_items).?;
 

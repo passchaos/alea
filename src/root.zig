@@ -7,6 +7,11 @@
 
 const std = @import("std");
 
+fn oversizedU32LenForTest() usize {
+    if (comptime @bitSizeOf(usize) <= 32) return std.math.maxInt(usize);
+    return @intCast(@as(u64, std.math.maxInt(u32)) + 1);
+}
+
 pub const Rng = @import("rng.zig");
 pub const Seed = @import("seed.zig");
 pub const distributions = @import("distributions.zig");
@@ -6785,6 +6790,7 @@ test "root random helpers use explicit system entropy" {
 }
 
 test "root random helpers validate deterministic cases before entropy" {
+    if (comptime @bitSizeOf(usize) <= 32) return;
     @setEvalBranchQuota(4000);
     const failing = std.Io.failing;
     const EmptyEnum = enum {};
@@ -8169,7 +8175,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?u32, 1), try weightedIndexU32ByIndex(f64, failing, 3, RootByIndexWeights.single));
     try std.testing.expectEqual(@as(u32, 1), try weightedIndexU32ByIndexChecked(f64, failing, 3, RootByIndexWeights.single));
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ByIndexChecked(f64, failing, 3, RootByIndexWeights.invalid));
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndex(f64, failing, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ByIndex(f64, failing, oversizedU32LenForTest(), RootByIndexWeights.single));
+    }
     const empty_weighted_indices_by_index = try sampleWeightedIndicesByIndex(f64, failing, std.testing.allocator, 3, 0, RootByIndexWeights.invalid);
     defer std.testing.allocator.free(empty_weighted_indices_by_index);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_indices_by_index.len);
@@ -8190,8 +8198,10 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_indices_u32_by_index = try sampleWeightedIndicesU32ByIndex(f64, failing, std.testing.allocator, 3, 0, RootByIndexWeights.invalid);
     defer std.testing.allocator.free(empty_weighted_indices_u32_by_index);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_indices_u32_by_index.len);
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndex(f64, failing, std.testing.allocator, @as(usize, std.math.maxInt(u32)) + 1, 1, RootByIndexWeights.single));
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexChecked(f64, failing, std.testing.allocator, @as(usize, std.math.maxInt(u32)) + 1, 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndex(f64, failing, std.testing.allocator, oversizedU32LenForTest(), 1, RootByIndexWeights.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexChecked(f64, failing, std.testing.allocator, oversizedU32LenForTest(), 1, RootByIndexWeights.single));
+    }
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesU32ByIndex(f64, failing, std.testing.allocator, 0, 1, RootByIndexWeights.single));
     const zero_weighted_indices_u32_by_index = try sampleWeightedIndicesU32ByIndex(f64, failing, std.testing.allocator, 3, 2, RootByIndexWeights.zero);
     defer std.testing.allocator.free(zero_weighted_indices_u32_by_index);
@@ -8256,8 +8266,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesU32ByIndexInto(f64, failing, 3, &weighted_indices_u32_by_index_bad_scratch, &weighted_indices_by_index_short_keys, RootByIndexWeights.weight));
     try std.testing.expectError(error.LengthMismatch, sampleWeightedIndicesU32ByIndexIntoChecked(f64, failing, 3, &weighted_indices_u32_by_index_bad_scratch, &weighted_indices_by_index_short_keys, RootByIndexWeights.weight));
     var weighted_indices_u32_by_index_one: [1]u32 = undefined;
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexInto(f64, failing, @as(usize, std.math.maxInt(u32)) + 1, &weighted_indices_u32_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoChecked(f64, failing, @as(usize, std.math.maxInt(u32)) + 1, &weighted_indices_u32_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexInto(f64, failing, oversizedU32LenForTest(), &weighted_indices_u32_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoChecked(f64, failing, oversizedU32LenForTest(), &weighted_indices_u32_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
+    }
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesU32ByIndexInto(f64, failing, 0, &weighted_indices_u32_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByIndexIntoChecked(f64, failing, 0, &weighted_indices_u32_by_index_one, &weighted_indices_by_index_one_key, RootByIndexWeights.single));
     var weighted_indices_u32_by_index_zero: [2]u32 = undefined;
@@ -8282,8 +8294,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexArrayByIndexChecked(f64, failing, 2, 3, RootByIndexWeights.invalid));
     try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedIndexArrayU32ByIndex(f64, failing, 0, 3, RootByIndexWeights.invalid)).?.len);
     try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedIndexArrayU32ByIndexChecked(f64, failing, 0, 3, RootByIndexWeights.invalid)).len);
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndex(f64, failing, 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexChecked(f64, failing, 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndex(f64, failing, 1, oversizedU32LenForTest(), RootByIndexWeights.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexChecked(f64, failing, 1, oversizedU32LenForTest(), RootByIndexWeights.single));
+    }
     try std.testing.expectEqual(@as(?[2]u32, null), try sampleWeightedIndexArrayU32ByIndex(f64, failing, 2, 3, RootByIndexWeights.zero));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByIndexChecked(f64, failing, 2, 3, RootByIndexWeights.zero));
     try std.testing.expectEqualSlices(u32, &.{1}, &(try sampleWeightedIndexArrayU32ByIndex(f64, failing, 1, 3, RootByIndexWeights.single)).?);
@@ -8337,9 +8351,11 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_by_indices_u32_nr = try sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 0, RootItemWeights.invalid);
     defer std.testing.allocator.free(empty_weighted_by_indices_u32_nr);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_by_indices_u32_nr.len);
-    const huge_weighted_by_sample_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0 .. @as(usize, std.math.maxInt(u32)) + 1];
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, huge_weighted_by_sample_items, 1, RootItemWeights.single));
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, huge_weighted_by_sample_items, 1, RootItemWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_weighted_by_sample_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0..oversizedU32LenForTest()];
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, huge_weighted_by_sample_items, 1, RootItemWeights.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndicesU32ByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, huge_weighted_by_sample_items, 1, RootItemWeights.single));
+    }
     try std.testing.expectError(error.EmptyInput, sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, &.{}, 1, RootItemWeights.single));
     const zero_weighted_by_indices_u32_nr = try sampleWeightedIndicesU32By(RootItemWeights.Entry, f64, failing, std.testing.allocator, &weighted_by_items, 2, RootItemWeights.zero);
     defer std.testing.allocator.free(zero_weighted_by_indices_u32_nr);
@@ -8384,8 +8400,11 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidWeight, sampleWeightedIndexArrayByChecked(RootItemWeights.Entry, f64, failing, 2, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedIndexArrayU32By(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).?.len);
     try std.testing.expectEqual(@as(usize, 0), (try sampleWeightedIndexArrayU32ByChecked(RootItemWeights.Entry, f64, failing, 0, &weighted_by_items, RootItemWeights.invalid)).len);
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32By(RootItemWeights.Entry, f64, failing, 1, huge_weighted_by_sample_items, RootItemWeights.single));
-    try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByChecked(RootItemWeights.Entry, f64, failing, 1, huge_weighted_by_sample_items, RootItemWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_weighted_by_sample_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0..oversizedU32LenForTest()];
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32By(RootItemWeights.Entry, f64, failing, 1, huge_weighted_by_sample_items, RootItemWeights.single));
+        try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByChecked(RootItemWeights.Entry, f64, failing, 1, huge_weighted_by_sample_items, RootItemWeights.single));
+    }
     try std.testing.expectEqual(@as(?[2]u32, null), try sampleWeightedIndexArrayU32By(RootItemWeights.Entry, f64, failing, 2, &weighted_by_items, RootItemWeights.zero));
     try std.testing.expectError(error.InvalidParameter, sampleWeightedIndexArrayU32ByChecked(RootItemWeights.Entry, f64, failing, 2, &weighted_by_items, RootItemWeights.zero));
     try std.testing.expectEqualSlices(u32, &.{1}, &(try sampleWeightedIndexArrayU32By(RootItemWeights.Entry, f64, failing, 1, &weighted_by_items, RootItemWeights.single)).?);
@@ -8622,8 +8641,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqual(@as(?u32, 1), try weightedIndexU32By(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.single));
     try std.testing.expectEqual(@as(u32, 1), try weightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.single));
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.invalid));
-    const huge_weighted_by_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0 .. @as(usize, std.math.maxInt(u32)) + 1];
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32By(RootItemWeights.Entry, f64, failing, huge_weighted_by_items, RootItemWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_weighted_by_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0..oversizedU32LenForTest()];
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32By(RootItemWeights.Entry, f64, failing, huge_weighted_by_items, RootItemWeights.single));
+    }
     var weighted_by_empty_fill: [0]?usize = .{};
     try fillWeightedIndexBy(RootItemWeights.Entry, f64, failing, &weighted_by_empty_fill, &weighted_by_items, RootItemWeights.invalid);
     var weighted_by_empty_checked_fill: [0]usize = .{};
@@ -8654,10 +8675,13 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, &weighted_u32_by_checked_fill);
     try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32By(RootItemWeights.Entry, f64, failing, &weighted_u32_by_zero_fill, &weighted_by_items, RootItemWeights.invalid));
     try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_u32_by_checked_fill, &weighted_by_items, RootItemWeights.invalid));
-    var weighted_u32_by_oversized: [1]?u32 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32By(RootItemWeights.Entry, f64, failing, &weighted_u32_by_oversized, huge_weighted_by_items, RootItemWeights.single));
-    var weighted_u32_by_checked_oversized: [1]u32 = undefined;
-    try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_u32_by_checked_oversized, huge_weighted_by_items, RootItemWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_weighted_by_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0..oversizedU32LenForTest()];
+        var weighted_u32_by_oversized: [1]?u32 = undefined;
+        try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32By(RootItemWeights.Entry, f64, failing, &weighted_u32_by_oversized, huge_weighted_by_items, RootItemWeights.single));
+        var weighted_u32_by_checked_oversized: [1]u32 = undefined;
+        try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByChecked(RootItemWeights.Entry, f64, failing, &weighted_u32_by_checked_oversized, huge_weighted_by_items, RootItemWeights.single));
+    }
     const empty_weighted_by_batch = try weightedIndexBatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 0, &weighted_by_items, RootItemWeights.invalid);
     defer std.testing.allocator.free(empty_weighted_by_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_by_batch.len);
@@ -8688,12 +8712,15 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_weighted_u32_by_checked_batch = try weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 0, &weighted_by_items, RootItemWeights.invalid);
     defer std.testing.allocator.free(empty_weighted_u32_by_checked_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_weighted_u32_by_checked_batch.len);
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, huge_weighted_by_items, RootItemWeights.single));
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, huge_weighted_by_items, RootItemWeights.single));
-    var weighted_u32_by_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, weighted_u32_by_oversized_alloc.allocator(), 1, huge_weighted_by_items, RootItemWeights.single));
-    var weighted_u32_by_checked_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, weighted_u32_by_checked_oversized_alloc.allocator(), 1, huge_weighted_by_items, RootItemWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_weighted_by_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0..oversizedU32LenForTest()];
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, huge_weighted_by_items, RootItemWeights.single));
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, std.testing.allocator, 1, huge_weighted_by_items, RootItemWeights.single));
+        var weighted_u32_by_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, weighted_u32_by_oversized_alloc.allocator(), 1, huge_weighted_by_items, RootItemWeights.single));
+        var weighted_u32_by_checked_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByChecked(RootItemWeights.Entry, f64, failing, weighted_u32_by_checked_oversized_alloc.allocator(), 1, huge_weighted_by_items, RootItemWeights.single));
+    }
     const zero_weighted_u32_by_batch = try weightedIndexU32BatchBy(RootItemWeights.Entry, f64, failing, std.testing.allocator, 3, &weighted_by_items, RootItemWeights.zero);
     defer std.testing.allocator.free(zero_weighted_u32_by_batch);
     try std.testing.expectEqualSlices(?u32, &.{ null, null, null }, zero_weighted_u32_by_batch);
@@ -8727,7 +8754,10 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, &(try weightedIndexU32ArrayBy(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)).?);
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, &(try weightedIndexU32ArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.single)));
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ArrayByChecked(RootItemWeights.Entry, f64, failing, 3, &weighted_by_items, RootItemWeights.invalid));
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayBy(RootItemWeights.Entry, f64, failing, 3, huge_weighted_by_items, RootItemWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        const huge_weighted_by_items = @as([*]const RootItemWeights.Entry, @ptrFromInt(0x1000))[0..oversizedU32LenForTest()];
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayBy(RootItemWeights.Entry, f64, failing, 3, huge_weighted_by_items, RootItemWeights.single));
+    }
     try std.testing.expectEqual(@as(?RootItemWeights.Entry, null), try chooseWeightedBy(RootItemWeights.Entry, f64, failing, &.{}, RootItemWeights.single));
     try std.testing.expectEqual(@as(?RootItemWeights.Entry, null), try chooseWeightedBy(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.zero));
     try std.testing.expectError(error.EmptyInput, chooseWeightedByChecked(RootItemWeights.Entry, f64, failing, &weighted_by_items, RootItemWeights.zero));
@@ -9245,7 +9275,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try fillWeightedIndexU32ByIndexChecked(f64, failing, &by_index_u32_checked, 3, RootByIndexWeights.single);
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, &by_index_u32_checked);
     try std.testing.expectError(error.InvalidWeight, fillWeightedIndexU32ByIndex(f64, failing, &by_index_u32_zero, 3, RootByIndexWeights.invalid));
-    try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndex(f64, failing, &by_index_u32_zero, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, fillWeightedIndexU32ByIndex(f64, failing, &by_index_u32_zero, oversizedU32LenForTest(), RootByIndexWeights.single));
+    }
     const empty_by_index_batch = try weightedIndexBatchByIndex(f64, failing, std.testing.allocator, 0, 3, RootByIndexWeights.invalid);
     defer std.testing.allocator.free(empty_by_index_batch);
     try std.testing.expectEqual(@as(usize, 0), empty_by_index_batch.len);
@@ -9275,12 +9307,14 @@ test "root random helpers validate deterministic cases before entropy" {
     const empty_by_index_u32_batch_checked = try weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 0, 3, RootByIndexWeights.invalid);
     defer std.testing.allocator.free(empty_by_index_u32_batch_checked);
     try std.testing.expectEqual(@as(usize, 0), empty_by_index_u32_batch_checked.len);
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
-    var by_index_u32_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, by_index_u32_oversized_alloc.allocator(), 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
-    var by_index_u32_checked_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexChecked(f64, failing, by_index_u32_checked_oversized_alloc.allocator(), 1, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 1, oversizedU32LenForTest(), RootByIndexWeights.single));
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexChecked(f64, failing, std.testing.allocator, 1, oversizedU32LenForTest(), RootByIndexWeights.single));
+        var by_index_u32_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, by_index_u32_oversized_alloc.allocator(), 1, oversizedU32LenForTest(), RootByIndexWeights.single));
+        var by_index_u32_checked_oversized_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndexChecked(f64, failing, by_index_u32_checked_oversized_alloc.allocator(), 1, oversizedU32LenForTest(), RootByIndexWeights.single));
+    }
     const by_index_u32_zero_batch = try weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, 3, RootByIndexWeights.zero);
     defer std.testing.allocator.free(by_index_u32_zero_batch);
     try std.testing.expectEqualSlices(?u32, &.{ null, null, null }, by_index_u32_zero_batch);
@@ -9299,7 +9333,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndex(f64, failing, by_index_u32_invalid_alloc.allocator(), 3, 3, RootByIndexWeights.invalid));
     var by_index_u32_checked_invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32BatchByIndexChecked(f64, failing, by_index_u32_checked_invalid_alloc.allocator(), 3, 3, RootByIndexWeights.invalid));
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32BatchByIndex(f64, failing, std.testing.allocator, 3, oversizedU32LenForTest(), RootByIndexWeights.single));
+    }
     try std.testing.expectEqual(@as(usize, 0), (try weightedIndexArrayByIndex(f64, failing, 0, 3, RootByIndexWeights.invalid)).?.len);
     try std.testing.expectEqual(@as(usize, 0), (try weightedIndexArrayByIndexChecked(f64, failing, 0, 3, RootByIndexWeights.invalid)).len);
     try std.testing.expectEqual(@as(?[3]usize, null), try weightedIndexArrayByIndex(f64, failing, 3, 3, RootByIndexWeights.zero));
@@ -9314,7 +9350,9 @@ test "root random helpers validate deterministic cases before entropy" {
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, &(try weightedIndexU32ArrayByIndex(f64, failing, 3, 3, RootByIndexWeights.single)).?);
     try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1 }, &(try weightedIndexU32ArrayByIndexChecked(f64, failing, 3, 3, RootByIndexWeights.single)));
     try std.testing.expectError(error.InvalidWeight, weightedIndexU32ArrayByIndexChecked(f64, failing, 3, 3, RootByIndexWeights.invalid));
-    try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndex(f64, failing, 3, @as(usize, std.math.maxInt(u32)) + 1, RootByIndexWeights.single));
+    if (comptime @bitSizeOf(usize) > 32) {
+        try std.testing.expectError(error.InvalidParameter, weightedIndexU32ArrayByIndex(f64, failing, 3, oversizedU32LenForTest(), RootByIndexWeights.single));
+    }
     try std.testing.expectEqual(@as(?u32, null), try weightedIndexU32(failing, &empty_weights));
     try std.testing.expectEqual(@as(?u32, null), try weightedIndexU32Checked(failing, &empty_weights));
     var empty_weighted_u32_fill: [3]?u32 = undefined;

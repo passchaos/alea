@@ -5972,3 +5972,12 @@ profile smoke and long-sweep wasm artifacts, and the long run ended with
 scalar ziggurat lane-fill; this resolves S4-M11's additional-runtime branch and
 raises the next product bar to S4-M1124 rather than completing the long-term
 objective.
+
+
+S4-M1124 restores post-S4-M11 portability validation
+(`compare/results/s4-m1124-wasm32-oversized-u32-test-guard.md`): oversized-u32
+prevalidation tests now skip impossible >u32 population cases on 32-bit `usize`
+targets while still running the 64-bit checks on native Linux. `zig build
+crosscheck` and `zig build validate-all` pass again. This closes the current
+post-S4-M11 validation bar and raises the next product bar to S4-M1125; it is not
+whole-goal completion.

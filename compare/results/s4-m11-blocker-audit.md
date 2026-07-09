@@ -74,3 +74,4 @@ architecture execution, and keep local `rand` / `rand_distr` audits current.
 Do not call `update_goal(status=complete)` from this audit: S4-M11 is resolved
 for the current milestone only, while the product goal deliberately keeps
 raising the bar.
+S4-M1125 post-S4-M11 next product bar remains active after S4-M1124 restores validate-all.
