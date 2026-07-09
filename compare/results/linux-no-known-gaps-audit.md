@@ -5774,3 +5774,9 @@ S4-M1093 routes distribution-layer reusable Choose index fills directly
 `distributions.Choose(T).fillIndices` now generates indexes through facade `Rng`
 directly instead of routing through `fillIndicesFrom`. This improves distribution
 Choose index-fill facade ergonomics but does not resolve S4-M11.
+
+S4-M1094 routes reusable ASCII Charset byte fills directly
+(`compare/results/s4-m1094-ascii-charset-fill-facade-direct.md`):
+`ascii.Charset.fill` now samples charset indexes through facade `Rng` directly
+instead of routing through `fillFrom`. This improves ASCII Charset fill facade
+ergonomics but does not resolve S4-M11.

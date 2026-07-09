@@ -152,7 +152,19 @@ pub const Charset = struct {
     }
 
     pub fn fill(self: Charset, rng: Rng, out: []u8) void {
-        self.fillFrom(rng, out);
+        if (self.bytes.len == 1) {
+            @memset(out, self.bytes[0]);
+            return;
+        }
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const byte_count: u64 = @intCast(self.bytes.len);
+            for (out) |*byte| {
+                const index = Rng.uintLessThanFrom(rng, u64, byte_count);
+                byte.* = self.bytes[@intCast(index)];
+            }
+            return;
+        }
+        for (out) |*byte| byte.* = self.bytes[Rng.uintLessThanFrom(rng, usize, self.bytes.len)];
     }
 
     pub fn fillChecked(self: Charset, rng: Rng, out: []u8) error{EmptyCharset}!void {
