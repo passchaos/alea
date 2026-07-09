@@ -5555,3 +5555,10 @@ S4-M1060 routes sequence-layer reusable WeightedChoice value fills directly
 indexes into value output instead of routing through `fillValuesFrom`. This
 improves seq WeightedChoice value-fill facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1061 routes sequence-layer reusable WeightedChoice checked value fills
+directly (`compare/results/s4-m1061-seq-weightedchoice-checked-value-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fillValuesChecked` now maps direct facade-sampled
+alias-table indexes into value output instead of using the direct-source sample
+wrapper. This improves seq WeightedChoice checked value-fill facade ergonomics
+but does not resolve S4-M11.
