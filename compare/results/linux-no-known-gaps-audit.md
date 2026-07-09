@@ -5523,3 +5523,9 @@ S4-M1055 routes reusable AliasTable facade fills directly
 now samples cached alias-table indexes directly through facade `Rng` instead of
 routing through `fillFrom`. This improves AliasTable fill facade ergonomics but
 does not resolve S4-M11.
+
+S4-M1056 routes sequence-layer reusable Choice pointer fills directly
+(`compare/results/s4-m1056-seq-choice-pointer-fill-facade-direct.md`):
+`seq.Choice(T).fill` now maps direct facade-generated indexes into item storage
+instead of routing through `fillFrom`. This improves seq Choice pointer-fill
+facade ergonomics but does not resolve S4-M11.

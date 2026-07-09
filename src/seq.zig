@@ -8512,7 +8512,14 @@ pub fn Choice(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []*const T) void {
-            self.fillFrom(rng, dest);
+            if (dest.len == 0) return;
+            const items = self.items;
+            if (items.len == 1) {
+                @memset(dest, &items[0]);
+                return;
+            }
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = &items[Rng.uintLessThanFrom(rng, usize, item_len)];
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []*const T) void {
