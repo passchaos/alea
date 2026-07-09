@@ -1150,6 +1150,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1152", .path = "compare/results/s4-m1152-beta-infinity.md" },
     .{ .milestone = "S4-M1153", .path = "compare/results/s4-m1153-triangular-nonfinite.md" },
     .{ .milestone = "S4-M1154", .path = "compare/results/s4-m1154-pert-infinite-shape.md" },
+    .{ .milestone = "S4-M1155", .path = "compare/results/s4-m1155-poisson-max-lambda.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1157,7 +1158,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M1155",
+    "S4-M1156",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1182,7 +1183,7 @@ const blocker_tokens = [_][]const u8{
     "zig build rand-status-json",
     "zig build rand-status-self-test",
     "zig build rand-status-schema-version",
-    "compare/results/s4-m1154-pert-infinite-shape.md",
+    "compare/results/s4-m1155-poisson-max-lambda.md",
     "`1`",
     "Alea local rand/rand_distr status (2026-07-10)",
     "\"schema_version\"",
@@ -1195,7 +1196,7 @@ const blocker_tokens = [_][]const u8{
     "\"local_rand_status\"",
     "\"blocker_audit\"",
     "\"latest_validate_local_evidence\"",
-    "\"compare/results/s4-m1154-pert-infinite-shape.md\"",
+    "\"compare/results/s4-m1155-poisson-max-lambda.md\"",
     "rand-status self-test ok",
     "rand_distr standard-normal",
     "five passing Rust parser tests",
@@ -1208,7 +1209,7 @@ const blocker_tokens = [_][]const u8{
     "compare/results/s4-m1123-wasmtime-profilelongcheck.md",
     "No new unblocked public-surface or local comparison-benchmark gap",
     "Do not call `update_goal(status=complete)`",
-    "S4-M1155",
+    "S4-M1156",
 };
 
 const active_completion_tokens = [_][]const u8{
@@ -1222,7 +1223,7 @@ const active_completion_tokens = [_][]const u8{
     "S4-M1123 records direct Wasmtime",
     "S4-M11 is closed for the current bar",
     "exact/default-compatible dense SIMD normal/exponential",
-    "S4-M1155",
+    "S4-M1156",
     "Therefore do not call",
     "## Required Next Work Before Completion",
     "a default/exact-compatible dense SIMD normal/exponential candidate beats",
@@ -1324,7 +1325,7 @@ const current_rand_status_tokens = [_][]const u8{
     "\"s4_m11_blocked\": false",
     "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
     "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
-    "\"latest_validate_local_evidence\": \"compare/results/s4-m1154-pert-infinite-shape.md\"",
+    "\"latest_validate_local_evidence\": \"compare/results/s4-m1155-poisson-max-lambda.md\"",
     "surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137",
     "surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30",
     "surfacecheck local rand_distr: files=34 expected-tokens=64 source-tokens=178",
@@ -1352,7 +1353,7 @@ const rand_status_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --help",
     "--schema-version prints the stable JSON schema version",
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1154 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1155 follow-ups closed for current bar",
 };
 
 const rand_status_direct_matrix_tokens = [_][]const u8{
@@ -1366,7 +1367,7 @@ const rand_status_direct_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --schema-version",
     "$ zig build rand-status -- --self-test",
     "rand-status self-test ok",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1154 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1155 follow-ups closed for current bar",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -1472,12 +1473,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1155 | Next post-S4-M1154 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1155 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1156 | Next post-S4-M1155 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1156 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1155 next post-S4-M1154 product bar") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1155 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1156 next post-S4-M1155 product bar") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1156 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

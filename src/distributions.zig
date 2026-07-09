@@ -8563,8 +8563,14 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
     return dist.sample(rng);
 }
 
+const poissonMaxLambda: f64 = 1.844e19;
+
+fn poissonParametersValid(lambda: f64) bool {
+    return lambda >= 0 and std.math.isFinite(lambda) and lambda <= poissonMaxLambda;
+}
+
 pub fn poissonFrom(source: anytype, lambda: f64) u64 {
-    std.debug.assert(lambda >= 0 and std.math.isFinite(lambda));
+    std.debug.assert(poissonParametersValid(lambda));
     if (lambda == 0) return 0;
 
     if (lambda < 12) {
@@ -8652,7 +8658,7 @@ pub const Poisson = struct {
     method: PoissonMethod,
 
     pub fn init(lambda: f64) Error!Poisson {
-        if (!(lambda >= 0) or !std.math.isFinite(lambda)) return error.InvalidParameter;
+        if (!poissonParametersValid(lambda)) return error.InvalidParameter;
         if (lambda == 0) return .{ .method = .zero };
         if (lambda < 12) return .{ .method = .{ .product = @exp(-lambda) } };
         return .{ .method = .{ .ahrens_dieter = PoissonAhrensDieter.init(lambda) } };
@@ -33257,6 +33263,40 @@ test "degenerate discrete distribution helpers do not consume random stream" {
     vector_zeta_sampler.fillFrom(&engine, &vector_f64_buf);
     for (vector_f64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "poisson max lambda guard matches local rand_distr" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x9015_1155);
+    var control = alea.ScalarPrng.init(0x9015_1155);
+    const rng = Rng.init(&engine);
+
+    const too_large = poissonMaxLambda + 1.0e16;
+    try std.testing.expectError(error.InvalidParameter, poissonChecked(rng, too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, poissonCheckedFrom(&engine, too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, Poisson.init(too_large));
+    try std.testing.expectError(error.InvalidParameter, vectorPoissonChecked(rng, @Vector(4, u64), too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, vectorPoissonCheckedFrom(&engine, @Vector(4, u64), too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, VectorPoisson(@Vector(4, u64)).init(too_large));
+
+    var scalar_buf: [4]u64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillPoissonChecked(rng, &scalar_buf, too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, fillPoissonCheckedFrom(&engine, &scalar_buf, too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var vector_buf: [2]@Vector(4, u64) = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillVectorPoissonChecked(rng, @Vector(4, u64), &vector_buf, too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, fillVectorPoissonCheckedFrom(&engine, @Vector(4, u64), &vector_buf, too_large));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    _ = try Poisson.init(poissonMaxLambda);
+    _ = try VectorPoisson(@Vector(4, u64)).init(poissonMaxLambda);
 }
 
 test "invalid poisson ahrens-dieter helper does not consume random stream" {
