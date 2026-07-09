@@ -5470,3 +5470,10 @@ S4-M1047 routes reusable LogNormalDlsymExp facade helpers directly
 facade `Rng` directly instead of routing through `sampleFrom` / `fillFrom`
 wrappers. This improves LogNormalDlsymExp facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1048 routes reusable scalar/vector native-exp2-f32 LogNormal facade helpers
+directly (`compare/results/s4-m1048-native-exp2-log-normal-facade-direct.md`):
+`LogNormalNativeExp2F32.sample` / `fill` and `VectorLogNormalNativeExp2F32.sample`
+/ `fill` now call native-exp2 log-normal facade helpers directly instead of
+routing through `sampleFrom` / `fillFrom` wrappers. This improves native-exp2
+LogNormal facade ergonomics but does not resolve S4-M11.

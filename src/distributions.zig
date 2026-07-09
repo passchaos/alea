@@ -7940,7 +7940,7 @@ pub const LogNormalNativeExp2F32 = struct {
     }
 
     pub fn sample(self: Self, rng: Rng) f32 {
-        return self.sampleFrom(rng);
+        return logNormalNativeExp2F32(rng, self.mean, self.stddev);
     }
 
     pub fn sampleFrom(self: Self, source: anytype) f32 {
@@ -7948,7 +7948,7 @@ pub const LogNormalNativeExp2F32 = struct {
     }
 
     pub fn fill(self: Self, rng: Rng, dest: []f32) void {
-        self.fillFrom(rng, dest);
+        fillLogNormalNativeExp2F32(rng, dest, self.mean, self.stddev);
     }
 
     pub fn fillFrom(self: Self, source: anytype, dest: []f32) void {
@@ -8032,7 +8032,7 @@ pub fn VectorLogNormalNativeExp2F32(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            return self.sampleFrom(rng);
+            return vectorLogNormalNativeExp2F32(rng, VectorType, self.mean, self.stddev);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
@@ -8040,7 +8040,7 @@ pub fn VectorLogNormalNativeExp2F32(comptime VectorType: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            self.fillFrom(rng, dest);
+            fillVectorLogNormalNativeExp2F32(rng, VectorType, dest, self.mean, self.stddev);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
