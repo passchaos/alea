@@ -2,8 +2,8 @@
 
 ## Gap
 
-After S4-M1145 aligned unrestricted normal/log-normal log-space mean semantics
-with local `rand_distr::Normal::new` and `LogNormal::new`, the documented direct
+After S4-M1146 aligned mean/CV edge semantics with local
+`rand_distr::Normal::from_mean_cv` and `LogNormal::from_mean_cv`, the documented direct
 argument forms for `rand-status` needed a fresh recorded run matching the
 updated status JSON and self-test output.
 
@@ -26,14 +26,14 @@ $ zig build rand-status -- --json
   "rust_comparison": "parser tests and rand-bench-smoke pass",
   "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1145 follow-ups closed for current bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1146 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M1146 post-S4-M1145 next product bar",
+  "remaining_blocker": "S4-M1147 post-S4-M1146 next product bar",
   "s4_m11_blocked": false,
   "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1145-nonfinite-normal-mean.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1146-mean-cv-edge.md"
 }
 $ zig build rand-status -- --schema-version
 1
@@ -56,6 +56,6 @@ $ git diff --check
 
 S4-M455 is refreshed for the current bar: the documented direct `rand-status`
 argument forms pass and report that the S4-M11 runtime branch and
-S4-M1124/S4-M1127-S4-M1145 follow-ups are closed for the current bar while
-S4-M1146 is the next post-S4-M1145 product bar. This is tooling validation
+S4-M1124/S4-M1127-S4-M1146 follow-ups are closed for the current bar while
+S4-M1147 is the next post-S4-M1146 product bar. This is tooling validation
 evidence only; it is not whole-goal completion evidence.

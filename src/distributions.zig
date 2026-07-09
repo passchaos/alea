@@ -5410,7 +5410,7 @@ pub fn Normal(comptime T: type) type {
         pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
             comptime requireFloat(T);
             if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
-            return Self.init(mean, mean * coefficient_of_variation);
+            return .{ .mean = mean, .stddev = mean * coefficient_of_variation };
         }
 
         pub fn fromMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
@@ -5471,21 +5471,36 @@ pub fn Normal(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            return rng.normal(T, self.mean, self.stddev);
+            return normalSamplerSampleFrom(rng, T, self.mean, self.stddev);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            return Rng.normalFastFrom(source, T, self.mean, self.stddev);
+            return normalSamplerSampleFrom(source, T, self.mean, self.stddev);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            rng.fillNormal(T, dest, self.mean, self.stddev);
+            fillNormalSamplerFrom(rng, T, dest, self.mean, self.stddev);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            Rng.fillNormalFrom(source, T, dest, self.mean, self.stddev);
+            fillNormalSamplerFrom(source, T, dest, self.mean, self.stddev);
         }
     };
+}
+
+fn normalSamplerSampleFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+    comptime requireFloat(T);
+    if (std.math.isFinite(stddev)) return Rng.normalFastFrom(source, T, mean, stddev);
+    return mean + stddev * Rng.standardNormalFastFrom(source, T);
+}
+
+fn fillNormalSamplerFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    comptime requireFloat(T);
+    if (std.math.isFinite(stddev)) {
+        Rng.fillNormalFrom(source, T, dest, mean, stddev);
+        return;
+    }
+    for (dest) |*item| item.* = mean + stddev * Rng.standardNormalFastFrom(source, T);
 }
 
 pub const NormalNativeF32 = struct {
@@ -7365,14 +7380,10 @@ pub fn LogNormal(comptime T: type) type {
         pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
             comptime requireFloat(T);
             if (coefficient_of_variation == 0) {
-                if (mean == 0) {
-                    return .{ .normal_sampler = .{ .mean = -std.math.inf(T), .stddev = 0 } };
-                }
-                if (!(mean > 0) or !std.math.isFinite(mean)) return error.InvalidParameter;
                 return .{ .normal_sampler = try Normal(T).init(@log(mean), 0) };
             }
-            if (!(mean > 0) or !std.math.isFinite(mean)) return error.InvalidParameter;
-            if (!(coefficient_of_variation >= 0) or !std.math.isFinite(coefficient_of_variation)) return error.InvalidParameter;
+            if (!(mean > 0)) return error.InvalidParameter;
+            if (!(coefficient_of_variation >= 0)) return error.InvalidParameter;
 
             const variance_ratio = coefficient_of_variation * coefficient_of_variation;
             const stddev = @sqrt(std.math.log1p(variance_ratio));
@@ -34026,6 +34037,29 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.2), normal_cv_sampler.coefficientOfVariationValue().?, 1e-15);
     try std.testing.expect((try Normal(f64).init(0, 0)).coefficientOfVariationValue() == null);
 
+    var inf_zero_cv_engine = alea.ScalarPrng.init(0x5d_c60);
+    var inf_zero_cv_manual_engine = alea.ScalarPrng.init(0x5d_c60);
+    const inf_zero_cv_sampler = try Normal(f64).initMeanCv(std.math.inf(f64), 0);
+    try std.testing.expectEqual(std.math.inf(f64), inf_zero_cv_sampler.meanValue());
+    try std.testing.expect(std.math.isNan(inf_zero_cv_sampler.stddevValue()));
+    const inf_zero_cv_z = Rng.standardNormalFastFrom(&inf_zero_cv_manual_engine, f64);
+    const inf_zero_cv_expected = inf_zero_cv_sampler.fromZScore(inf_zero_cv_z);
+    try std.testing.expect(std.math.isNan(inf_zero_cv_expected));
+    try std.testing.expect(std.math.isNan(inf_zero_cv_sampler.sampleFrom(&inf_zero_cv_engine)));
+    try std.testing.expectEqual(inf_zero_cv_manual_engine.next(), inf_zero_cv_engine.next());
+
+    var nan_mean_cv_engine = alea.ScalarPrng.init(0x5d_c61);
+    var nan_mean_cv_manual_engine = alea.ScalarPrng.init(0x5d_c61);
+    const nan_mean_cv_sampler = try Normal(f32).fromMeanCv(std.math.nan(f32), 0.5);
+    try std.testing.expect(std.math.isNan(nan_mean_cv_sampler.meanValue()));
+    try std.testing.expect(std.math.isNan(nan_mean_cv_sampler.stddevValue()));
+    var nan_mean_cv_fill: [3]f32 = undefined;
+    nan_mean_cv_sampler.fillFrom(&nan_mean_cv_engine, &nan_mean_cv_fill);
+    for (nan_mean_cv_fill) |value| try std.testing.expect(std.math.isNan(value));
+    for (0..nan_mean_cv_fill.len) |_| _ = Rng.standardNormalFastFrom(&nan_mean_cv_manual_engine, f32);
+    try std.testing.expectEqual(nan_mean_cv_manual_engine.next(), nan_mean_cv_engine.next());
+    try std.testing.expectError(error.InvalidParameter, Normal(f64).fromMeanCv(1, std.math.inf(f64)));
+
     var exponentials = rng.sampleIter(f64, try Exponential(f64).init(2));
     try std.testing.expect(exponentials.next().? >= 0);
     const exponential_sampler = try Exponential(f64).init(2);
@@ -34181,6 +34215,25 @@ test "non-uniform samplers can be reused with sample iterators" {
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.modeValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.minValue(), 1e-14);
     try std.testing.expectApproxEqAbs(@as(f64, 2), log_normal_positive_degenerate.maxValue().?, 1e-14);
+
+    var log_normal_negative_zero_cv_engine = alea.ScalarPrng.init(0x1064_c70);
+    var log_normal_negative_zero_cv_control = alea.ScalarPrng.init(0x1064_c70);
+    var log_normal_negative_zero_cv = try LogNormal(f64).initMeanCv(-2, 0);
+    try std.testing.expect(std.math.isNan(log_normal_negative_zero_cv.logMeanValue()));
+    try std.testing.expectEqual(@as(f64, 0), log_normal_negative_zero_cv.logStddevValue());
+    try std.testing.expect(std.math.isNan(log_normal_negative_zero_cv.sampleFrom(&log_normal_negative_zero_cv_engine)));
+    try std.testing.expectEqual(log_normal_negative_zero_cv_control.next(), log_normal_negative_zero_cv_engine.next());
+
+    var log_normal_inf_cv_engine = alea.ScalarPrng.init(0x1064_c71);
+    var log_normal_inf_cv_manual_engine = alea.ScalarPrng.init(0x1064_c71);
+    var log_normal_inf_cv = try LogNormal(f64).initMeanCv(std.math.inf(f64), 0.5);
+    try std.testing.expectEqual(std.math.inf(f64), log_normal_inf_cv.logMeanValue());
+    try std.testing.expect(std.math.isFinite(log_normal_inf_cv.logStddevValue()));
+    try std.testing.expectEqual(std.math.inf(f64), log_normal_inf_cv.sampleFrom(&log_normal_inf_cv_engine));
+    _ = Rng.standardNormalFastFrom(&log_normal_inf_cv_manual_engine, f64);
+    try std.testing.expectEqual(log_normal_inf_cv_manual_engine.next(), log_normal_inf_cv_engine.next());
+    try std.testing.expectError(error.InvalidParameter, LogNormal(f64).fromMeanCv(1, std.math.inf(f64)));
+
     log_normal_mean_cv_sampler.fillFrom(&direct_engine, &direct_log_normal_buf);
     for (direct_log_normal_buf) |value| try std.testing.expect(value > 0);
     try std.testing.expect(try logNormalCheckedFrom(&direct_engine, f64, 0, 0.25) > 0);

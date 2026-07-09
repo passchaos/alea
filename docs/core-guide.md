@@ -396,7 +396,9 @@ constructors; PERT keeps the local `Pert::new(min, max)` builder shape via
 `Pert(T).new(min, max).withShape(...).withMode(...)` / `.withMean(...)`.
 `Normal(T).initMeanCv` and
 `LogNormal(T).initMeanCv` cover coefficient-of-variation parameterization
-without requiring users to hand-convert to log-space parameters; both samplers
+without requiring users to hand-convert to log-space parameters. The exact
+normal-family mean/CV constructors follow local `rand_distr::from_mean_cv` edge
+semantics for unrestricted normal means and the log-normal zero-CV branch; both samplers
 also expose local `rand_distr::from_mean_cv`-style `fromMeanCv` aliases and
 z-score conversion helpers for correlated draws. `Normal(T)` keeps public
 `mean` / `stddev` fields and Zig-native `meanValue` / `stddevValue` accessors,
