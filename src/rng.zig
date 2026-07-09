@@ -2605,11 +2605,13 @@ pub fn unicodeScalarRangeAtMost(self: Rng, min: u21, at_most: u21) u21 {
 }
 
 pub fn unicodeScalarRangeLessThanChecked(self: Rng, min: u21, less_than: u21) Error!u21 {
-    return unicodeScalarRangeLessThanCheckedFrom(self, min, less_than);
+    _ = try unicodeScalarExclusiveRange(min, less_than);
+    return self.unicodeScalarRangeLessThan(min, less_than);
 }
 
 pub fn unicodeScalarRangeAtMostChecked(self: Rng, min: u21, at_most: u21) Error!u21 {
-    return unicodeScalarRangeAtMostCheckedFrom(self, min, at_most);
+    _ = try unicodeScalarInclusiveRange(min, at_most);
+    return self.unicodeScalarRangeAtMost(min, at_most);
 }
 
 pub fn fillUnicodeScalar(self: Rng, dest: []u21) void {
@@ -5747,6 +5749,24 @@ test "unicode scalar range helpers preserve checked stream shape" {
             at_most_scalar_rng.unicodeScalarRangeAtMost(0x41, 0x5A),
         );
         try std.testing.expectEqual(at_most_scalar_direct.next(), at_most_scalar_facade.next());
+
+        var less_checked_direct = Engine.init(0x5150_989f);
+        var less_checked_facade = Engine.init(0x5150_989f);
+        const less_checked_rng = Rng.init(&less_checked_facade);
+        try std.testing.expectEqual(
+            try unicodeScalarRangeLessThanCheckedFrom(&less_checked_direct, 0xD7F0, 0xE010),
+            try less_checked_rng.unicodeScalarRangeLessThanChecked(0xD7F0, 0xE010),
+        );
+        try std.testing.expectEqual(less_checked_direct.next(), less_checked_facade.next());
+
+        var at_most_checked_direct = Engine.init(0x5150_989c);
+        var at_most_checked_facade = Engine.init(0x5150_989c);
+        const at_most_checked_rng = Rng.init(&at_most_checked_facade);
+        try std.testing.expectEqual(
+            try unicodeScalarRangeAtMostCheckedFrom(&at_most_checked_direct, 0x41, 0x5A),
+            try at_most_checked_rng.unicodeScalarRangeAtMostChecked(0x41, 0x5A),
+        );
+        try std.testing.expectEqual(at_most_checked_direct.next(), at_most_checked_facade.next());
 
         var unchecked = Engine.init(0x5150_98a0);
         var checked = Engine.init(0x5150_98a0);
