@@ -5728,3 +5728,10 @@ S4-M1086 routes top-level sequence reservoirSamplePtrsChecked directly
 `reservoirSamplePtrsCheckedFrom`. This improves sequence checked
 allocation-returning reservoir pointer facade ergonomics but does not resolve
 S4-M11.
+
+S4-M1087 routes top-level sequence reservoirSampleMutPtrsInto directly
+(`compare/results/s4-m1087-seq-reservoir-mut-ptrs-into-facade-direct.md`):
+`seq.reservoirSampleMutPtrsInto` now validates and performs the mutable-pointer
+reservoir replacement loop through facade `Rng` directly instead of routing
+through `reservoirSampleMutPtrsIntoFrom`. This improves sequence caller-owned
+mutable reservoir pointer facade ergonomics but does not resolve S4-M11.
