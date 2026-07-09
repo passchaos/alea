@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1160-hypergeometric-large-population.md
 compare/results/s4-m1159-nig-alpha-infinity.md
 `1`
 Alea local rand/rand_distr status (2026-07-10)
@@ -47,7 +48,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1159-nig-alpha-infinity.md"
+"compare/results/s4-m1160-hypergeometric-large-population.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -125,4 +126,6 @@ S4-M1158 remains active after S4-M1157 aligns InverseGaussian infinity semantics
 
 S4-M1159 remains active after S4-M1158 aligns SkewNormal unrestricted-location semantics in `compare/results/s4-m1158-skew-normal-location.md`.
 
-S4-M1160 remains active after S4-M1159 aligns NormalInverseGaussian alpha-infinity semantics in `compare/results/s4-m1159-nig-alpha-infinity.md`.
+S4-M1160 is closed after aligning Hypergeometric large-population semantics in `compare/results/s4-m1160-hypergeometric-large-population.md`.
+
+S4-M1161 remains active after S4-M1160 aligns Hypergeometric large-population semantics in `compare/results/s4-m1160-hypergeometric-large-population.md`.

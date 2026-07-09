@@ -2812,7 +2812,7 @@ pub const Hypergeometric = struct {
             self.constant = min;
             return self;
         }
-        if (HypergeometricInverseTransform.init(population, successes, draws)) |method| {
+        if (try HypergeometricInverseTransform.init(population, successes, draws)) |method| {
             self.method = .inverse_transform;
             self.inverse_transform = method;
         } else if (HypergeometricRejectionAcceptance.init(population, successes, draws)) |method| {
@@ -3133,12 +3133,12 @@ const HypergeometricInverseTransform = struct {
     n1: u64,
     n2: u64,
     k: u64,
-    offset_x: i64,
+    offset_x: u64,
     sign_x: i64,
     initial_p: f64,
-    initial_x: i64,
+    initial_x: u64,
 
-    fn init(population: u64, successes: u64, draws: u64) ?HypergeometricInverseTransform {
+    fn init(population: u64, successes: u64, draws: u64) Error!?HypergeometricInverseTransform {
         const params = HypergeometricReducedParams.init(population, successes, draws);
         const mode = hypergeometricMode(population, params.n1, params.k);
         const lower_bound = @max(@as(f64, 0), @as(f64, @floatFromInt(params.k)) - @as(f64, @floatFromInt(params.n2)));
@@ -3146,12 +3146,12 @@ const HypergeometricInverseTransform = struct {
 
         const initial_p, const initial_x = if (params.k < params.n2) .{
             fractionOfProductsOfFactorials(.{ params.n2, population - params.k }, .{ population, params.n2 - params.k }),
-            @as(i64, 0),
+            @as(u64, 0),
         } else .{
             fractionOfProductsOfFactorials(.{ params.n1, params.k }, .{ population, params.k - params.n2 }),
-            @as(i64, @intCast(params.k - params.n2)),
+            params.k - params.n2,
         };
-        if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return null;
+        if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return error.InvalidParameter;
 
         return .{
             .n1 = params.n1,
@@ -3168,19 +3168,19 @@ const HypergeometricInverseTransform = struct {
         var p = self.initial_p;
         var x = self.initial_x;
         var u = Rng.floatFrom(source, f64);
-        const k_i: i64 = @intCast(self.k);
-        const n1_i: i64 = @intCast(self.n1);
-        const n2_i: i64 = @intCast(self.n2);
 
-        while (u > p and x < k_i) {
+        while (u > p and x < self.k and x < self.n1) {
             u -= p;
-            p *= @as(f64, @floatFromInt(n1_i - x)) * @as(f64, @floatFromInt(k_i - x));
-            p /= @as(f64, @floatFromInt(x + 1)) * @as(f64, @floatFromInt(n2_i - k_i + 1 + x));
+            const denominator_tail = if (self.k <= self.n2)
+                self.n2 - self.k + 1 + x
+            else
+                x - (self.k - self.n2) + 1;
+            p *= @as(f64, @floatFromInt(self.n1 - x)) * @as(f64, @floatFromInt(self.k - x));
+            p /= @as(f64, @floatFromInt(x + 1)) * @as(f64, @floatFromInt(denominator_tail));
             x += 1;
         }
 
-        const result = self.offset_x + self.sign_x * x;
-        return @intCast(result);
+        return if (self.sign_x > 0) self.offset_x + x else self.offset_x - x;
     }
 };
 
@@ -3188,7 +3188,7 @@ const HypergeometricRejectionAcceptance = struct {
     n1: u64,
     n2: u64,
     k: u64,
-    offset_x: i64,
+    offset_x: u64,
     sign_x: i64,
     m: f64,
     a: f64,
@@ -3337,8 +3337,8 @@ const HypergeometricRejectionAcceptance = struct {
     }
 
     fn finish(self: *const HypergeometricRejectionAcceptance, y: f64) u64 {
-        const x: i64 = @intFromFloat(y);
-        return @intCast(self.offset_x + self.sign_x * x);
+        const x: u64 = @intFromFloat(y);
+        return if (self.sign_x > 0) self.offset_x + x else self.offset_x - x;
     }
 };
 
@@ -3346,20 +3346,24 @@ const HypergeometricReducedParams = struct {
     n1: u64,
     n2: u64,
     k: u64,
-    offset_x: i64,
+    offset_x: u64,
     sign_x: i64,
 
     fn init(population: u64, successes: u64, draws: u64) HypergeometricReducedParams {
         const failures = population - successes;
         var sign_x: i64 = 1;
-        var offset_x: i64 = 0;
+        var offset_x: u64 = 0;
         const n1, const n2 = if (successes > failures) blk: {
             sign_x = -1;
-            offset_x = @intCast(draws);
+            offset_x = draws;
             break :blk .{ failures, successes };
         } else .{ successes, failures };
         const k = if (draws <= population / 2) draws else blk: {
-            offset_x += @as(i64, @intCast(n1)) * sign_x;
+            if (sign_x > 0) {
+                offset_x += n1;
+            } else {
+                offset_x -= n1;
+            }
             sign_x *= -1;
             break :blk population - draws;
         };
@@ -3368,8 +3372,8 @@ const HypergeometricReducedParams = struct {
 };
 
 fn hypergeometricMode(population: u64, n1: u64, k: u64) f64 {
-    return @floor(@as(f64, @floatFromInt(k + 1)) *
-        @as(f64, @floatFromInt(n1 + 1)) / @as(f64, @floatFromInt(population + 2)));
+    return @floor((@as(f64, @floatFromInt(k)) + 1.0) *
+        (@as(f64, @floatFromInt(n1)) + 1.0) / (@as(f64, @floatFromInt(population)) + 2.0));
 }
 
 fn lnOfFactorial(v: f64) f64 {
@@ -37149,6 +37153,54 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     try std.testing.expectError(error.InvalidProbability, NegativeBinomial.init(1, 0));
     try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(10, 11, 1));
     try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(10, 1, 11));
+}
+
+test "hypergeometric large-population HIN overflow matches local rand_distr" {
+    const alea = @import("root.zig");
+    const population: u64 = 9_000_000_000_000_000_000;
+
+    const accepted = try Hypergeometric.init(population, 1, 100);
+    try std.testing.expectEqual(HypergeometricMethodTag.inverse_transform, accepted.method);
+    try std.testing.expectEqual(@as(u64, 0), accepted.minValue());
+    try std.testing.expectEqual(@as(u64, 1), accepted.maxValue());
+
+    const max_population = try Hypergeometric.init(std.math.maxInt(u64), 1, 1);
+    try std.testing.expectEqual(HypergeometricMethodTag.inverse_transform, max_population.method);
+    try std.testing.expectEqual(@as(u64, 0), max_population.minValue());
+    try std.testing.expectEqual(@as(u64, 1), max_population.maxValue());
+    var max_population_engine = alea.ScalarPrng.init(0x1160_00ff);
+    try std.testing.expect(max_population.sampleFrom(&max_population_engine) <= 1);
+
+    try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(population, 100, 100));
+    try std.testing.expectError(error.InvalidParameter, VectorHypergeometric(@Vector(4, u64)).init(population, 100, 100));
+
+    var scalar_engine = alea.ScalarPrng.init(0x1160_0001);
+    var scalar_control = alea.ScalarPrng.init(0x1160_0001);
+    try std.testing.expectError(error.InvalidParameter, hypergeometricCheckedFrom(&scalar_engine, population, 100, 100));
+    try std.testing.expectEqual(scalar_control.next(), scalar_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x1160_0002);
+    var fill_control = alea.ScalarPrng.init(0x1160_0002);
+    var buf = [_]u64{ 7, 8, 9 };
+    try std.testing.expectError(error.InvalidParameter, fillHypergeometricCheckedFrom(&fill_engine, &buf, population, 100, 100));
+    try std.testing.expectEqualSlices(u64, &.{ 7, 8, 9 }, &buf);
+    try std.testing.expectEqual(fill_control.next(), fill_engine.next());
+
+    var vector_engine = alea.ScalarPrng.init(0x1160_0003);
+    var vector_control = alea.ScalarPrng.init(0x1160_0003);
+    try std.testing.expectError(error.InvalidParameter, vectorHypergeometricCheckedFrom(&vector_engine, @Vector(4, u64), population, 100, 100));
+    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+
+    var vector_fill_engine = alea.ScalarPrng.init(0x1160_0004);
+    var vector_fill_control = alea.ScalarPrng.init(0x1160_0004);
+    var vector_buf = [_]@Vector(4, u64){
+        @as(@Vector(4, u64), @splat(11)),
+        @as(@Vector(4, u64), @splat(12)),
+    };
+    try std.testing.expectError(error.InvalidParameter, fillVectorHypergeometricCheckedFrom(&vector_fill_engine, @Vector(4, u64), &vector_buf, population, 100, 100));
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(11)), vector_buf[0]);
+    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(12)), vector_buf[1]);
+    try std.testing.expectEqual(vector_fill_control.next(), vector_fill_engine.next());
 }
 
 test "large binomial sampler has plausible moments" {
