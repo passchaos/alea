@@ -930,7 +930,16 @@ pub fn Choose(comptime T: type) type {
         }
 
         pub fn fillValues(self: Self, rng: Rng, dest: []T) void {
-            self.fillValuesFrom(rng, dest);
+            if (dest.len == 0) return;
+            if (comptime valueTypeHasEmptyEnum(T)) return;
+            const items = self.items;
+            std.debug.assert(items.len > 0);
+            if (items.len == 1) {
+                @memset(dest, items[0]);
+                return;
+            }
+            const item_len = items.len;
+            for (dest) |*slot| slot.* = items[Rng.uintLessThanFrom(rng, usize, item_len)];
         }
 
         pub fn fillValuesFrom(self: Self, source: anytype, dest: []T) void {
