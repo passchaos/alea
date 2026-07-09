@@ -7646,7 +7646,14 @@ pub fn LogNormalLibmvec(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
-            return self.sampleFrom(rng);
+            if (self.log_stddev == 0) return libmvecScalarExp(T, self.log_mean);
+            if (self.index == buffer_len) {
+                self.refill(rng, self.buffer[0..]);
+                self.index = 0;
+            }
+            const value = self.buffer[self.index];
+            self.index += 1;
+            return value;
         }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
@@ -7661,7 +7668,28 @@ pub fn LogNormalLibmvec(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
-            self.fillFrom(rng, dest);
+            if (self.log_stddev == 0) {
+                @memset(dest, libmvecScalarExp(T, self.log_mean));
+                return;
+            }
+            var written: usize = 0;
+            if (self.index < buffer_len) {
+                const buffered_count = buffer_len - self.index;
+                const n = @min(dest.len, buffered_count);
+                @memcpy(dest[0..n], self.buffer[self.index..][0..n]);
+                self.index += n;
+                written += n;
+            }
+            while (written + buffer_len <= dest.len) : (written += buffer_len) {
+                self.refill(rng, dest[written..][0..buffer_len]);
+            }
+            if (written < dest.len) {
+                self.refill(rng, self.buffer[0..]);
+                self.index = 0;
+                const n = dest.len - written;
+                @memcpy(dest[written..], self.buffer[0..n]);
+                self.index = n;
+            }
         }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {

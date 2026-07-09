@@ -5456,3 +5456,10 @@ directly (`compare/results/s4-m1045-native-f32-log-normal-facade-direct.md`):
 `fill` now call native-f32 log-normal facade helpers directly instead of routing
 through `sampleFrom` / `fillFrom` wrappers. This improves native-f32 LogNormal
 facade ergonomics but does not resolve S4-M11.
+
+S4-M1046 routes reusable LogNormalLibmvec facade helpers directly
+(`compare/results/s4-m1046-log-normal-libmvec-facade-direct.md`):
+`LogNormalLibmvec.sample` / `fill` now refill through the loaded-libmvec path from
+facade `Rng` directly instead of routing through `sampleFrom` / `fillFrom`
+wrappers. This improves LogNormalLibmvec facade ergonomics but does not resolve
+S4-M11.
