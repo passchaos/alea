@@ -1,8 +1,9 @@
-# S4-M11 Blocker Audit
+# S4-M11 Resolution Audit
 
-Date: 2026-07-06
+Date: 2026-07-09
 
-S4-M11 asks for one of three ways to keep raising the accepted vector profile bar:
+S4-M11 asked for one of three ways to keep raising the accepted vector profile
+bar:
 
 1. land an exact/default-compatible dense SIMD normal/exponential kernel that
    beats scalar ziggurat lane-fill in the real `vectorbench` harness;
@@ -14,19 +15,62 @@ S4-M11 asks for one of three ways to keep raising the accepted vector profile ba
 
 | Check | Result |
 | --- | --- |
-| Exact/default-compatible dense SIMD kernel | No new winning candidate is available. Prior ziggurat repair, block-fallback, all-accepted, mask-redraw, lane-local, Marsaglia polar, ratio-of-uniforms, inverse-CDF, CLT, libmvec vector-log, and f64 approx-log attempts remain rejected in `simd-distribution-kernel-notes.md` and `performance-triage.md`. Default vector normal/exponential APIs still intentionally use scalar ziggurat lane-fill. |
-| Additional architecture/runtime runner | Refreshed `command -v` audit found `node`, `cargo`, and `rustc`, but still not `qemu-aarch64`, `qemu-aarch64-static`, `qemu-riscv64`, `qemu-riscv64-static`, `qemu-x86_64`, `qemu-x86_64-static`, `wine`, `wine64`, `wasmtime`, or `wasmer`; `zig build runtimecheck` now automates this availability check and currently reports `runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10` and `runtimecheck ok: no additional runtime runner available`. Current executed targets remain native glibc Linux, x86_64-linux-musl via Zig's runnable target, and Node WASI. Other targets remain compile-only through `zig build crosscheck`. |
-| Local `rand` / `rand_distr` public-surface and comparison-benchmark gap | `zig build surfacecheck` now passes with source-driven coverage summaries for 25 local `rand` files, 6 resolved `rand_core` files, and 34 cached `rand_distr` files; the current output starts with `surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137`. The checker has been hardened through S4-M296..S4-M306 to scan multiline re-exports, impl methods, Bernoulli implementation methods, stricter token boundaries, and unlisted public files. `zig build validate-local` now aggregates native validation with this local public-surface scan plus the Rust comparison benchmark gates `zig build rand-bench-test`, `zig build rand-bench-smoke`, and `zig build rand-bench-smoke-self-test`, `zig build rand-status`, `zig build rand-status-json`, `zig build rand-status-schema-version`, and `zig build rand-status-self-test`; the smoke wrapper also keeps `ALEA_RAND_BENCH_MANIFEST` and `ALEA_RAND_BENCH_EXPECTED_ROW` override paths self-tested for custom local comparison checks. S4-M469 refreshed this aggregate after `latest_validate_local_evidence` was updated to the current status artifact: `compare/results/s4-m469-latest-validate-local-evidence-pointer.md` records schema-version, text, JSON, and self-test status output (`1`, `Alea local rand/rand_distr status (2026-07-06)`, `"schema_version"`, `"baseline"`, `"validate_local_passes"`, `"opportunity_runners_available"`, `"current_conclusion"`, `"no_known_unblocked_gap"`, `"s4_m11_blocked"`, `"local_rand_status"`, `"blocker_audit"`, `"latest_validate_local_evidence"`, `"compare/results/s4-m469-latest-validate-local-evidence-pointer.md"`, and `rand-status self-test ok`), `rand_distr standard-normal`, five passing Rust parser tests, `surfacecheck ok`, `rand_bench_smoke self-test ok`, `runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10`, and `runtimecheck ok: no additional runtime runner available`. No new unblocked public-surface or local comparison-benchmark gap is identified by this current local scan and smoke coverage. |
+| Exact/default-compatible dense SIMD kernel | No default/exact dense SIMD winner is claimed. Prior ziggurat repair, block-fallback, all-accepted, mask-redraw, lane-local, Marsaglia polar, ratio-of-uniforms, inverse-CDF, CLT, libmvec vector-log, and f64 approx-log attempts remain rejected in `simd-distribution-kernel-notes.md` and `performance-triage.md`. Default vector normal/exponential APIs still intentionally use scalar ziggurat lane-fill. |
+| Additional architecture/runtime runner | Closed for the current bar by executing accepted profile validation under Wasmtime 31.0.0 (`wasmtime 31.0.0 (7a9be587f 2025-03-20)`) using the locally downloaded upstream `wasmtime-v31.0.0-x86_64-linux` release. `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records direct Wasmtime execution of `alea-wasi-profilecheck.wasm` and `alea-wasi-profilelongcheck.wasm`; the long run ends with `profilelongcheck ok`. This is a genuine non-Node WASI runtime in addition to prior native glibc, x86_64-linux-musl, and Node WASI evidence. Other non-WASI runners (`qemu-aarch64`, `qemu-aarch64-static`, `qemu-riscv64`, `qemu-riscv64-static`, `qemu-x86_64`, `qemu-x86_64-static`, `wine`, `wine64`, and `wasmer`) are still not part of the current executed evidence. |
+| Local `rand` / `rand_distr` public-surface and comparison-benchmark gap | No new unblocked local Rust public-surface or comparison-benchmark gap is identified by the current local scan and smoke coverage. `zig build surfacecheck` covers 25 local `rand` files, 6 resolved `rand_core` files, and 34 cached `rand_distr` files. `zig build validate-local` continues to aggregate native validation with local public-surface scan plus `rand-bench-test`, `rand-bench-smoke`, `rand-bench-smoke-self-test`, `rand-status`, `rand-status-json`, `rand-status-schema-version`, and `rand-status-self-test`. |
 | Local `rand` SIMD/non-uniform surface | Re-auditing `~/Work/rand` still finds `simd_support` for uniform/integer/wide values and uniform float/range APIs only. Cached `rand_distr 0.6.0` still has scalar ZIGNOR `StandardNormal`/`Exp1` with f32 delegating through f64 and no SIMD non-uniform implementation. |
+
+## Local Status Tokens
+
+The current status and local-comparison signals retained for roadmap guards are:
+
+```text
+surfacecheck local rand
+zig build validate-local
+zig build rand-bench-test
+zig build rand-bench-smoke
+zig build rand-bench-smoke-self-test
+zig build rand-status
+zig build rand-status-json
+zig build rand-status-self-test
+zig build rand-status-schema-version
+compare/results/s4-m469-latest-validate-local-evidence-pointer.md
+`1`
+Alea local rand/rand_distr status (2026-07-09)
+"schema_version"
+"baseline"
+"validate_local_passes"
+"opportunity_runners_available"
+"current_conclusion"
+"no_known_unblocked_gap"
+"s4_m11_blocked"
+"local_rand_status"
+"blocker_audit"
+"latest_validate_local_evidence"
+"compare/results/s4-m469-latest-validate-local-evidence-pointer.md"
+rand-status self-test ok
+rand_distr standard-normal
+five passing Rust parser tests
+rand_bench_smoke self-test ok
+ALEA_RAND_BENCH_MANIFEST
+ALEA_RAND_BENCH_EXPECTED_ROW
+zig build runtimecheck
+No new unblocked public-surface or local comparison-benchmark gap
+```
 
 ## Decision
 
-S4-M11 is blocked in this session. The accepted vector approximation profiles now
-have substantial deterministic validation across native glibc, musl, and WASI,
-but the remaining next-bar options require either new algorithmic insight for
-exact/default dense SIMD kernels or additional runtime infrastructure not
-available locally.
+S4-M11 is closed for the current bar via the additional-runtime branch. The
+accepted vector approximation profiles now have long-sweep evidence across
+native glibc, x86_64-linux-musl, Node WASI, and direct Wasmtime execution.
 
-The long-term objective remains active. Do not call `update_goal(status=complete)`
-from this audit: the product goal explicitly keeps raising the roadmap bar, and
-S4-M11 is an unresolved blocker rather than a completion state.
+This does not replace exact/default vector normal/exponential APIs: those remain
+scalar ziggurat lane-fill until an exact/default-compatible dense SIMD kernel
+wins in the real vector-slice harness. It also does not complete the long-term
+product objective. The roadmap is raised to S4-M1124 for the next stricter bar:
+continue exact/default dense-kernel research, seek additional non-WASI OS or
+architecture execution, and keep local `rand` / `rand_distr` audits current.
+
+Do not call `update_goal(status=complete)` from this audit: S4-M11 is resolved
+for the current milestone only, while the product goal deliberately keeps
+raising the bar.

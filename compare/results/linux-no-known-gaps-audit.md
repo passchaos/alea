@@ -10,11 +10,13 @@ functionality gaps in Alea's current local Linux parity stage. S4-M4 performance
 follow-up is closed for the current bar: LogNormal performance is covered by
 explicit opt-ins while exact defaults remain a stable-output tradeoff. The S4-M5 policy bar is closed by `s4-m5-approximation-policy.md`, the S4-M6 hardening bar is closed by `2026-07-04-s4-m6-profilecheck.md`, the
 S4-M7 tail bar is closed by `2026-07-04-s4-m7-profiletailcheck.md`, the S4-M8
-stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 long-sweep bar is closed by `2026-07-04-s4-m9-profilelongcheck.md`, and
-S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`; the
-active S4-M11 watch item is blocked on an exact/default-compatible dense SIMD
-winner, a newly available architecture/runtime runner, or a newly found local
-Rust core gap.
+stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 long-sweep bar is closed by `2026-07-04-s4-m9-profilelongcheck.md`,
+S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
+S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
+long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
+The active post-S4-M11 bar is S4-M1124: exact/default dense SIMD research,
+additional non-WASI OS/architecture execution, broader validation, or new local
+Rust gap audits.
 
 ## Scope
 
@@ -5960,3 +5962,13 @@ S4-M1122 routes allocation-returning `Rng` Unicode scalar batches directly
 `fillUnicodeScalar` directly instead of routing through `unicodeScalarBatchFrom`.
 This improves Unicode scalar batch facade ergonomics but does not resolve
 S4-M11.
+
+
+S4-M1123 closes S4-M11 for the current bar via direct Wasmtime runtime evidence
+(`compare/results/s4-m1123-wasmtime-profilelongcheck.md`): Wasmtime 31.0.0
+(`wasmtime 31.0.0 (7a9be587f 2025-03-20)`) directly executed the accepted
+profile smoke and long-sweep wasm artifacts, and the long run ended with
+`profilelongcheck ok`. Exact/default vector normal/exponential APIs still use
+scalar ziggurat lane-fill; this resolves S4-M11's additional-runtime branch and
+raises the next product bar to S4-M1124 rather than completing the long-term
+objective.

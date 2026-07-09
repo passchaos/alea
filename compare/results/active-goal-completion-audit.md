@@ -1,6 +1,6 @@
 # Active Goal Completion Audit
 
-Date: 2026-07-06
+Date: 2026-07-09
 
 Active objective: keep working toward Alea's project mission until the goal is
 actually achieved. In concrete terms for the current thread, this means driving
@@ -21,14 +21,14 @@ gaps versus the locally available Rust `rand` / `rand_distr` evidence; local
 Linux comparison, validation, and status evidence must be current; and any next
 raised roadmap bar must be closed before the active goal can be marked complete.
 
-Current evidence is not sufficient for completion. S4-M420 records the current
+Current evidence is still not sufficient for whole-goal completion. S4-M420 records the current
 local `rand` / `rand_distr` status snapshot, S4-M450/S4-M455 record the
 `rand-status` command matrices, S4-M437/S4-M448 record recent
-`zig build validate-local` passes, and S4-M438/S4-M449 keep the S4-M11 blocker
-audit synchronized with those status signals. However, S4-M11 remains
-unresolved: no exact/default-compatible dense SIMD normal/exponential winner is
-known, no new genuine runtime/architecture runner is available, and no new local
-Rust core gap is currently identified. Therefore do not call
+`zig build validate-local` passes, S4-M438/S4-M449 keep the S4-M11 evidence chain
+visible, and S4-M1123 records direct Wasmtime 31.0.0 execution of the accepted
+profile long sweep. S4-M11 is closed for the current bar via that additional-runtime branch. However, exact/default-compatible dense SIMD normal/exponential
+kernels are still not known to beat scalar lane-fill, and the roadmap has raised
+the next product bar to S4-M1124. Therefore do not call
 `update_goal(status=complete)`.
 
 ## Prompt-to-Artifact Checklist
@@ -49,7 +49,7 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M8 multi-seed/profile stress | `compare/results/2026-07-04-s4-m8-profilestresscheck.md`, `tools/profilestresscheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-stress`, `zig build -Doptimize=ReleaseFast wasi-profilestresscheck` | Closed for the current bar: accepted profiles now have deterministic 8-seed stress gates on native Linux and WASI. |
 | S4-M9 longer stress sweep | `compare/results/2026-07-04-s4-m9-profilelongcheck.md`, `tools/profilelongcheck.zig`, `zig build -Doptimize=ReleaseFast profilecheck-long`, `zig build -Doptimize=ReleaseFast wasi-profilelongcheck` | Closed for the current long-sweep bar: accepted profiles now have 8Mi-lane/profile long stress gates on native Linux and WASI. |
 | S4-M10 additional non-WASI runtime | `compare/results/2026-07-04-s4-m10-profilelong-musl.md`, `zig build -Dtarget=x86_64-linux-musl -Doptimize=ReleaseFast profilecheck-long` | Closed for the current bar: accepted profiles execute the long sweep on x86_64-linux-musl in addition to native glibc and WASI. |
-| S4-M11 exact/default dense-kernel breakthrough or new external gap | `compare/results/s4-m11-blocker-audit.md`, `core-rand-coverage.md`, future dense SIMD evidence, future architecture/runtime reports, future local Rust audits | Blocked in this session; no exact/default-compatible dense SIMD winner is known, no additional runtime runner is installed, and no new local Rust core gap has been identified. |
+| S4-M11 exact/default dense-kernel breakthrough or new external gap | `compare/results/s4-m11-blocker-audit.md`, `compare/results/s4-m1123-wasmtime-profilelongcheck.md`, `core-rand-coverage.md` | Closed for the current bar via the additional-runtime branch: direct Wasmtime 31.0.0 execution of the accepted profile long sweep passed with `profilelongcheck ok`; exact/default vector kernels remain scalar lane-fill. |
 | S4-M12 accepted vector profile adoption example | `examples/vector_profiles.zig`, `zig build run-vector-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m12-vector-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default vectors versus explicit `Table`/`ApproxLog` opt-ins. |
 | S4-M13 LogNormal opt-in adoption example | `examples/lognormal_profiles.zig`, `zig build run-lognormal-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m13-lognormal-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default, buffered, native/exp2, and platform libc-backed LogNormal profiles. |
 | S4-M14 NativeF32 profile adoption example | `examples/native_f32_profiles.zig`, `zig build run-native-f32-profiles`, `docs/core-guide.md`, `docs/api-reference.md`, `compare/results/s4-m14-native-f32-profile-example.md` | Closed for the current bar: a runnable example demonstrates exact/default f32 outputs versus `NativeF32` scalar/vector profiles. |
@@ -1161,7 +1161,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1120 Rng fill Unicode scalar range facade direct paths | `src/rng.zig`, `compare/results/s4-m1120-rng-fill-unicode-scalar-range-facade-direct.md` | Closed for the current bar: Rng Unicode scalar range fills now avoid From wrappers. |
 | S4-M1121 Rng checked fill Unicode scalar range facade direct paths | `src/rng.zig`, `compare/results/s4-m1121-rng-checked-fill-unicode-scalar-range-facade-direct.md` | Closed for the current bar: Rng checked Unicode scalar range fills now avoid From wrappers. |
 | S4-M1122 Rng Unicode scalar batch facade direct path | `src/rng.zig`, `compare/results/s4-m1122-rng-unicode-scalar-batch-facade-direct.md` | Closed for the current bar: Rng Unicode scalar batch now avoids From wrappers. |
-| S4-M1123 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1123 Wasmtime accepted profile runtime evidence | `compare/results/s4-m1123-wasmtime-profilelongcheck.md` | Closed for the current bar: direct Wasmtime profilecheck and profilelongcheck wasm execution passed. |
+| S4-M1124 next post-S4-M11 product bar | `core-rand-coverage.md`, future audits | Not complete; S4-M11 is closed for the current bar, but the next stricter product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -1173,15 +1174,13 @@ profiles are accepted as the explicit throughput-first dense vector surface for
 callers who choose approximation/output-mapping contracts, while exact/default
 APIs remain scalar ziggurat lane-fill.
 
-The next unresolved blocked milestone remains S4-M11:
-
-1. Accepted approximation profiles have native glibc, x86_64-linux-musl, and WASI
-   long-sweep evidence, but no exact/default-compatible dense SIMD
-   normal/exponential kernel has beaten scalar ziggurat lane-fill in the real
-   `vectorbench` slice-fill harness.
-2. No additional architecture/runtime runner is installed here (`qemu-*`,
-   `wine*`, `wasmtime`, and `wasmer` are absent), and no new local `rand` /
-   `rand_distr` core gap has been identified.
+S4-M11 is now closed for the current bar via its additional-runtime branch:
+`compare/results/s4-m1123-wasmtime-profilelongcheck.md` records direct Wasmtime
+31.0.0 execution of the accepted profile long sweep ending with
+`profilelongcheck ok`. This does not change exact/default vector normal and
+exponential defaults, which still use scalar ziggurat lane-fill until a future
+dense kernel wins in the real `vectorbench` slice-fill harness. The roadmap has
+therefore raised the next active product bar to S4-M1124.
 
 S4-M12 through S4-M14 are closed as unblocked adoption/documentation
 improvements, S4-M15 adds an examples validation gate, S4-M16 adds weighted
@@ -4448,17 +4447,23 @@ S4-M6 is closed by native+WASI `profilecheck` hardening, S4-M7 is closed by
 native+WASI `profiletailcheck` tail gates, and S4-M8 is closed by native+WASI
 `profilestresscheck` multi-seed gates, and S4-M9 is closed by native+WASI
 `profilelongcheck` long stress gates, and S4-M10 is closed by x86_64-linux-musl
-`profilelongcheck` execution. S4-M11 remains unresolved because exact/default
-normal/exponential kernels remain scalar ziggurat lane-fill, no further executed
-architecture/runtime is available, and no new local Rust core gap is known.
+`profilelongcheck` execution, and S4-M11 is closed for the current bar by direct
+Wasmtime 31.0.0 accepted-profile long-sweep execution. Exact/default
+normal/exponential kernels still remain scalar ziggurat lane-fill, and no new
+local Rust core gap is known, so the next active product bar is S4-M1124.
 
 ## Required Next Work Before Completion
 
-The goal remains active until at least one of these happens:
+The goal remains active under the new S4-M1124 bar until at least one of these
+happens:
 
 - a default/exact-compatible dense SIMD normal/exponential candidate beats
   scalar lane-fill in the real vector-slice harness while preserving or
   deliberately versioning rejected-lane stream shape;
-- or a later roadmap audit raises/reshapes the bar again with explicit rationale.
+- another non-WASI OS/architecture runtime executes the accepted profile long
+  sweep or stronger validation;
+- a local `rand` / `rand_distr` audit finds and closes a new core RNG gap;
+- or a later roadmap audit raises/reshapes the bar again with explicit
+  rationale.
 
 Until then, do not call `update_goal(status=complete)`.

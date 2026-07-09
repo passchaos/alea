@@ -2,9 +2,10 @@
 
 ## Gap
 
-After S4-M431..S4-M449 expanded `rand-status` with JSON, schema-version,
-self-test, help, and status evidence synchronization, the lightweight command
-matrix needed a fresh recorded run.
+After S4-M11 was closed for the current bar by S4-M1123 Wasmtime profile-long
+runtime evidence, the lightweight `rand-status` command matrix needed a fresh
+recorded run showing the new current-bar conclusion while keeping the stable JSON
+schema shape.
 
 ## Validation
 
@@ -12,19 +13,20 @@ Observed command matrix:
 
 ```text
 $ zig build rand-status
-Alea local rand/rand_distr status (2026-07-06)
+Alea local rand/rand_distr status (2026-07-09)
 - Baseline: ~/Work/rand plus cached rand_distr 0.6.0
 - Latest gate: zig build validate-local passes
 - Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests
 - Rust comparison: parser tests and rand-bench-smoke pass
-- Runtime runners: node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available
-- Current conclusion: no known unblocked local Rust core RNG gap
-- Remaining blocker: S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap
+- Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded
+- Current conclusion: S4-M11 runtime branch closed for current bar
+- Local Rust gap: no known unblocked local Rust core RNG gap
+- Next bar: S4-M1124 post-S4-M11 exact/default dense SIMD, broader runtime, or new local Rust gap
 - Details: compare/results/s4-m420-current-rand-status.md
 $ zig build rand-status-json
 {
   "schema_version": 1,
-  "date": "2026-07-06",
+  "date": "2026-07-09",
   "baseline": {
     "rand": "~/Work/rand",
     "rand_distr": "cached rand_distr 0.6.0"
@@ -33,13 +35,16 @@ $ zig build rand-status-json
   "validate_local_passes": true,
   "public_surface": "surfacecheck ok for rand/rand_core/rand_distr manifests",
   "rust_comparison": "parser tests and rand-bench-smoke pass",
-  "runtime_runners": "node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available",
+  "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "no known unblocked local Rust core RNG gap",
+  "current_conclusion": "S4-M11 runtime branch closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap",
-  "s4_m11_blocked": true,
-  "details": "compare/results/s4-m420-current-rand-status.md"
+  "remaining_blocker": "S4-M1124 post-S4-M11 next product bar",
+  "s4_m11_blocked": false,
+  "details": "compare/results/s4-m420-current-rand-status.md",
+  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
+  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
+  "latest_validate_local_evidence": "compare/results/s4-m469-latest-validate-local-evidence-pointer.md"
 }
 $ zig build rand-status-schema-version
 1
@@ -68,6 +73,7 @@ $ git diff --check
 
 ## Result
 
-S4-M450 is closed for the current bar: all `rand-status` command modes pass in a
-fresh lightweight run. This is tooling validation evidence only; it does not
-resolve S4-M11 and is not whole-goal completion evidence.
+S4-M450 is refreshed for the current bar: all `rand-status` command modes pass
+and report that the S4-M11 runtime branch is closed for the current bar while
+S4-M1124 is the next post-S4-M11 product bar. This is tooling validation evidence
+only; it is not whole-goal completion evidence.

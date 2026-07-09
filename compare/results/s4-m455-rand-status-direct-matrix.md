@@ -2,10 +2,9 @@
 
 ## Gap
 
-S4-M450 recorded the dedicated `rand-status*` build steps plus direct `--help`.
-README, the core guide, and the API reference also document direct argument forms
-through `zig build rand-status -- --json`, `--schema-version`, and `--self-test`.
-Those direct forms needed their own recorded and guarded evidence.
+After S4-M11 was closed for the current bar by direct Wasmtime runtime evidence,
+the documented direct argument forms for `rand-status` needed a fresh recorded
+run matching the updated status JSON and self-test output.
 
 ## Validation
 
@@ -15,7 +14,7 @@ Observed direct command matrix:
 $ zig build rand-status -- --json
 {
   "schema_version": 1,
-  "date": "2026-07-06",
+  "date": "2026-07-09",
   "baseline": {
     "rand": "~/Work/rand",
     "rand_distr": "cached rand_distr 0.6.0"
@@ -24,13 +23,16 @@ $ zig build rand-status -- --json
   "validate_local_passes": true,
   "public_surface": "surfacecheck ok for rand/rand_core/rand_distr manifests",
   "rust_comparison": "parser tests and rand-bench-smoke pass",
-  "runtime_runners": "node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available",
+  "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "no known unblocked local Rust core RNG gap",
+  "current_conclusion": "S4-M11 runtime branch closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap",
-  "s4_m11_blocked": true,
-  "details": "compare/results/s4-m420-current-rand-status.md"
+  "remaining_blocker": "S4-M1124 post-S4-M11 next product bar",
+  "s4_m11_blocked": false,
+  "details": "compare/results/s4-m420-current-rand-status.md",
+  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
+  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
+  "latest_validate_local_evidence": "compare/results/s4-m469-latest-validate-local-evidence-pointer.md"
 }
 $ zig build rand-status -- --schema-version
 1
@@ -51,7 +53,7 @@ $ git diff --check
 
 ## Result
 
-S4-M455 is closed for the current bar: the documented direct `rand-status`
-argument forms pass in a fresh lightweight run. This is tooling validation
-evidence only; it does not resolve S4-M11 and is not whole-goal completion
-evidence.
+S4-M455 is refreshed for the current bar: the documented direct `rand-status`
+argument forms pass and report that the S4-M11 runtime branch is closed for the
+current bar while S4-M1124 is the next post-S4-M11 product bar. This is tooling
+validation evidence only; it is not whole-goal completion evidence.

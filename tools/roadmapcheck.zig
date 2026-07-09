@@ -1118,6 +1118,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1120", .path = "compare/results/s4-m1120-rng-fill-unicode-scalar-range-facade-direct.md" },
     .{ .milestone = "S4-M1121", .path = "compare/results/s4-m1121-rng-checked-fill-unicode-scalar-range-facade-direct.md" },
     .{ .milestone = "S4-M1122", .path = "compare/results/s4-m1122-rng-unicode-scalar-batch-facade-direct.md" },
+    .{ .milestone = "S4-M1123", .path = "compare/results/s4-m1123-wasmtime-profilelongcheck.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1125,7 +1126,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M1123",
+    "S4-M1124",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1152,7 +1153,7 @@ const blocker_tokens = [_][]const u8{
     "zig build rand-status-schema-version",
     "compare/results/s4-m469-latest-validate-local-evidence-pointer.md",
     "`1`",
-    "Alea local rand/rand_distr status (2026-07-06)",
+    "Alea local rand/rand_distr status (2026-07-09)",
     "\"schema_version\"",
     "\"baseline\"",
     "\"validate_local_passes\"",
@@ -1171,31 +1172,32 @@ const blocker_tokens = [_][]const u8{
     "ALEA_RAND_BENCH_MANIFEST",
     "ALEA_RAND_BENCH_EXPECTED_ROW",
     "zig build runtimecheck",
-    "runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10",
-    "runtimecheck ok: no additional runtime runner available",
+    "wasmtime 31.0.0 (7a9be587f 2025-03-20)",
+    "profilelongcheck ok",
+    "compare/results/s4-m1123-wasmtime-profilelongcheck.md",
     "No new unblocked public-surface or local comparison-benchmark gap",
     "Do not call `update_goal(status=complete)`",
+    "S4-M1124",
 };
 
 const active_completion_tokens = [_][]const u8{
     "## Current Completion Audit Refresh",
     "Objective restated as concrete deliverables",
     "Linux comparison, validation, and status evidence must be current",
-    "Current evidence is not sufficient for completion",
+    "Current evidence is still not sufficient",
     "S4-M420 records the current",
     "S4-M450/S4-M455 record the",
     "S4-M437/S4-M448 record recent",
-    "S4-M438/S4-M449 keep the S4-M11 blocker",
-    "S4-M11 remains",
-    "no exact/default-compatible dense SIMD normal/exponential winner is",
-    "no new genuine runtime/architecture runner is available",
-    "no new local",
+    "S4-M1123 records direct Wasmtime",
+    "S4-M11 is closed for the current bar",
+    "exact/default-compatible dense SIMD normal/exponential",
+    "S4-M1124",
     "Therefore do not call",
     "## Required Next Work Before Completion",
     "a default/exact-compatible dense SIMD normal/exponential candidate beats",
     "scalar lane-fill in the real vector-slice harness",
-    "preserving or",
-    "deliberately versioning rejected-lane stream shape",
+    "another non-WASI OS/architecture runtime executes",
+    "a local `rand` / `rand_distr` audit finds",
     "a later roadmap audit raises/reshapes the bar again",
     "Until then, do not call `update_goal(status=complete)`",
 };
@@ -1288,7 +1290,7 @@ const current_rand_status_tokens = [_][]const u8{
     "\"validate_local_passes\": true",
     "\"opportunity_runners_available\": false",
     "\"no_known_unblocked_gap\": true",
-    "\"s4_m11_blocked\": true",
+    "\"s4_m11_blocked\": false",
     "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
     "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
     "\"latest_validate_local_evidence\": \"compare/results/s4-m469-latest-validate-local-evidence-pointer.md\"",
@@ -1296,29 +1298,30 @@ const current_rand_status_tokens = [_][]const u8{
     "surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30",
     "surfacecheck local rand_distr: files=34 expected-tokens=64 source-tokens=178",
     "rand_bench_smoke self-test ok",
-    "runtimecheck summary: required found=3 missing=0; opportunities found=0 missing=10",
-    "runtimecheck ok: no additional runtime runner available",
-    "S4-M11 remains blocked",
+    "wasmtime 31.0.0 (7a9be587f 2025-03-20)",
+    "profilelongcheck ok",
+    "compare/results/s4-m1123-wasmtime-profilelongcheck.md",
+    "S4-M11 is closed for the current bar",
     "no known unblocked core RNG gap versus locally available `rand` / `rand_distr`",
 };
 
 const rand_status_matrix_tokens = [_][]const u8{
     "# S4-M450 `rand-status` Command Matrix Refresh",
     "$ zig build rand-status",
-    "Alea local rand/rand_distr status (2026-07-06)",
+    "Alea local rand/rand_distr status (2026-07-09)",
     "$ zig build rand-status-json",
     "\"schema_version\": 1",
     "\"validate_local_passes\": true",
     "\"opportunity_runners_available\": false",
     "\"no_known_unblocked_gap\": true",
-    "\"s4_m11_blocked\": true",
+    "\"s4_m11_blocked\": false",
     "$ zig build rand-status-schema-version",
     "$ zig build rand-status-self-test",
     "rand-status self-test ok",
     "$ zig build rand-status -- --help",
     "--schema-version prints the stable JSON schema version",
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
-    "S4-M11 and is not whole-goal completion evidence",
+    "S4-M11 runtime branch closed for current bar",
 };
 
 const rand_status_direct_matrix_tokens = [_][]const u8{
@@ -1328,11 +1331,11 @@ const rand_status_direct_matrix_tokens = [_][]const u8{
     "\"validate_local_passes\": true",
     "\"opportunity_runners_available\": false",
     "\"no_known_unblocked_gap\": true",
-    "\"s4_m11_blocked\": true",
+    "\"s4_m11_blocked\": false",
     "$ zig build rand-status -- --schema-version",
     "$ zig build rand-status -- --self-test",
     "rand-status self-test ok",
-    "does not resolve S4-M11",
+    "S4-M11 runtime branch closed for current bar",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -1438,16 +1441,16 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1123 | Next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1123 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1124 | Next post-S4-M11 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1124 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1123 next unblocked product gap") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1123 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1124 next post-S4-M11 product bar") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1124 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "S4-M11 remains unresolved") == null) {
-        try stderr.print("roadmapcheck: active audit must keep S4-M11 unresolved statement\n", .{});
+    if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {
+        try stderr.print("roadmapcheck: active audit must keep S4-M11 current-bar closure statement\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, build, "doccheck_step.dependOn(roadmapcheck_step)") == null) {

@@ -228,7 +228,7 @@ const rand_status_source_tokens = [_][]const u8{
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
     "--definitely-bad",
     "rand-status self-test ok",
-    "Alea local rand/rand_distr status (2026-07-06)",
+    "Alea local rand/rand_distr status (2026-07-09)",
     "\"baseline\"",
     "\"schema_version\"",
     "\"validate_local_passes\"",
@@ -246,9 +246,9 @@ const rand_status_source_tokens = [_][]const u8{
     "Latest gate: zig build validate-local passes",
     "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
     "Rust comparison: parser tests and rand-bench-smoke pass",
-    "Runtime runners: node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available",
-    "Current conclusion: no known unblocked local Rust core RNG gap",
-    "Remaining blocker: S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap",
+    "Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
+    "Current conclusion: S4-M11 runtime branch closed for current bar",
+    "Next bar: S4-M1124 post-S4-M11 exact/default dense SIMD, broader runtime, or new local Rust gap",
     "Details: compare/results/s4-m420-current-rand-status.md",
 };
 

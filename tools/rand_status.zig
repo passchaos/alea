@@ -80,6 +80,7 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
     if (!hasAll(text, &.{
         "Alea local rand/rand_distr status",
         "~/Work/rand",
+        "S4-M11 runtime branch closed for current bar",
         "no known unblocked local Rust core RNG gap",
         "S4-M11",
         "compare/results/s4-m420-current-rand-status.md",
@@ -95,10 +96,10 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
         "\"rand\": \"~/Work/rand\"",
         "\"validate_local_passes\": true",
         "\"opportunity_runners_available\": false",
-        "\"current_conclusion\": \"no known unblocked local Rust core RNG gap\"",
+        "\"current_conclusion\": \"S4-M11 runtime branch closed for current bar\"",
         "\"no_known_unblocked_gap\": true",
-        "\"remaining_blocker\": \"S4-M11",
-        "\"s4_m11_blocked\": true",
+        "\"remaining_blocker\": \"S4-M1124",
+        "\"s4_m11_blocked\": false",
         "\"details\": \"compare/results/s4-m420-current-rand-status.md\"",
         "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
         "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
@@ -139,14 +140,15 @@ fn hasAll(haystack: []const u8, needles: []const []const u8) bool {
 
 fn printStatus(stdout: *std.Io.Writer) !void {
     try stdout.print(
-        \\Alea local rand/rand_distr status (2026-07-06)
+        \\Alea local rand/rand_distr status (2026-07-09)
         \\- Baseline: ~/Work/rand plus cached rand_distr 0.6.0
         \\- Latest gate: zig build validate-local passes
         \\- Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests
         \\- Rust comparison: parser tests and rand-bench-smoke pass
-        \\- Runtime runners: node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available
-        \\- Current conclusion: no known unblocked local Rust core RNG gap
-        \\- Remaining blocker: S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap
+        \\- Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded
+        \\- Current conclusion: S4-M11 runtime branch closed for current bar
+        \\- Local Rust gap: no known unblocked local Rust core RNG gap
+        \\- Next bar: S4-M1124 post-S4-M11 exact/default dense SIMD, broader runtime, or new local Rust gap
         \\- Details: compare/results/s4-m420-current-rand-status.md
         \\
     , .{});
@@ -160,7 +162,7 @@ fn printJson(stdout: *std.Io.Writer) !void {
     try stdout.writeAll(
         \\{
         \\  "schema_version": 1,
-        \\  "date": "2026-07-06",
+        \\  "date": "2026-07-09",
         \\  "baseline": {
         \\    "rand": "~/Work/rand",
         \\    "rand_distr": "cached rand_distr 0.6.0"
@@ -169,12 +171,12 @@ fn printJson(stdout: *std.Io.Writer) !void {
         \\  "validate_local_passes": true,
         \\  "public_surface": "surfacecheck ok for rand/rand_core/rand_distr manifests",
         \\  "rust_comparison": "parser tests and rand-bench-smoke pass",
-        \\  "runtime_runners": "node/cargo/rustc found; qemu/wine/wasmtime/wasmer not available",
+        \\  "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
         \\  "opportunity_runners_available": false,
-        \\  "current_conclusion": "no known unblocked local Rust core RNG gap",
+        \\  "current_conclusion": "S4-M11 runtime branch closed for current bar",
         \\  "no_known_unblocked_gap": true,
-        \\  "remaining_blocker": "S4-M11 exact/default dense SIMD winner, new runtime, or new local Rust gap",
-        \\  "s4_m11_blocked": true,
+        \\  "remaining_blocker": "S4-M1124 post-S4-M11 next product bar",
+        \\  "s4_m11_blocked": false,
         \\  "details": "compare/results/s4-m420-current-rand-status.md",
         \\  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
         \\  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
@@ -196,6 +198,7 @@ test "status output keeps key local rand comparison tokens" {
     try std.testing.expect(std.mem.indexOf(u8, out, "zig build validate-local passes") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "surfacecheck ok") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "rand-bench-smoke pass") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "S4-M11 runtime branch closed for current bar") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "no known unblocked local Rust core RNG gap") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "S4-M11") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "compare/results/s4-m420-current-rand-status.md") != null);
@@ -213,10 +216,10 @@ test "json output keeps stable machine-readable status keys" {
     try std.testing.expect(std.mem.indexOf(u8, out, "\"rand_distr\": \"cached rand_distr 0.6.0\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"validate_local_passes\": true") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"opportunity_runners_available\": false") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"current_conclusion\": \"no known unblocked local Rust core RNG gap\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"current_conclusion\": \"S4-M11 runtime branch closed for current bar\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"no_known_unblocked_gap\": true") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"remaining_blocker\": \"S4-M11") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"s4_m11_blocked\": true") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"remaining_blocker\": \"S4-M1124") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"s4_m11_blocked\": false") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"details\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"") != null);
