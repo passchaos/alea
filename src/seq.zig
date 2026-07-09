@@ -9895,7 +9895,8 @@ pub fn PartialShuffleTailSplit(comptime T: type) type {
 }
 
 pub fn partialShuffleSplit(rng: Rng, comptime T: type, items: []T, amount: usize) PartialShuffleSplit(T) {
-    return partialShuffleSplitFrom(rng, T, items, amount);
+    const selected = partialShuffle(rng, T, items, amount);
+    return .{ .selected = selected, .rest = items[selected.len..] };
 }
 
 pub fn partialShuffleSplitChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error!PartialShuffleSplit(T) {
