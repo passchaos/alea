@@ -34,7 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
-compare/results/s4-m1150-cauchy-nonfinite.md
+compare/results/s4-m1151-pareto-weibull-infinite-scale.md
 `1`
 Alea local rand/rand_distr status (2026-07-10)
 "schema_version"
@@ -47,7 +47,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1150-cauchy-nonfinite.md"
+"compare/results/s4-m1151-pareto-weibull-infinite-scale.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -108,3 +108,5 @@ S4-M1149 remains active after S4-M1148 aligns FisherF infinity semantics in `com
 S4-M1150 remains active after S4-M1149 aligns StudentT infinity semantics in `compare/results/s4-m1149-student-t-infinity.md`.
 
 S4-M1151 remains active after S4-M1150 aligns Cauchy non-finite parameter semantics in `compare/results/s4-m1150-cauchy-nonfinite.md`.
+
+S4-M1152 remains active after S4-M1151 aligns Pareto/Weibull infinite-scale semantics in `compare/results/s4-m1151-pareto-weibull-infinite-scale.md`.

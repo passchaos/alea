@@ -14925,7 +14925,7 @@ pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, sh
 
 fn paretoParametersValid(comptime T: type, scale: T, shape: T) bool {
     return scale >= 0 and shape > 0 and
-        std.math.isFinite(scale) and
+        (std.math.isFinite(scale) or scale == std.math.inf(T)) and
         (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
@@ -15214,7 +15214,7 @@ pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, s
 
 fn weibullParametersValid(comptime T: type, scale: T, shape: T) bool {
     return scale >= 0 and shape > 0 and
-        std.math.isFinite(scale) and
+        (std.math.isFinite(scale) or scale == std.math.inf(T)) and
         (std.math.isFinite(shape) or shape == std.math.inf(T));
 }
 
@@ -27299,6 +27299,232 @@ test "degenerate pert helpers do not consume random stream" {
     infinite_shape_vector.fillFrom(&engine, &vector_buf);
     for (vector_buf) |sample| try std.testing.expectEqual(vector_mode_splat, sample);
     try std.testing.expectEqual(control.next(), engine.next());
+}
+
+
+test "infinite-scale pareto and weibull helpers preserve transform stream shape" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d157);
+    var control = alea.ScalarPrng.init(0x5150_d157);
+    const rng = Rng.init(&engine);
+    const control_rng = Rng.init(&control);
+
+    const inf = std.math.inf(f64);
+    const shape: f64 = 2.5;
+    var scalar_buf: [5]f64 = undefined;
+    var control_buf: [5]f64 = undefined;
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    const inf_vec: @Vector(4, f64) = @splat(inf);
+
+    const Reference = struct {
+        fn consumeScalar(source: anytype, comptime T: type) void {
+            _ = Rng.floatOpenFrom(source, T);
+        }
+
+        fn consumeFill(source: anytype, comptime T: type, dest: []T) void {
+            Rng.fillOpenFrom(source, T, dest);
+        }
+
+        fn consumeVector(source: anytype, comptime VectorType: type) void {
+            _ = Rng.vectorOpenFrom(source, VectorType);
+        }
+
+        fn consumeVectorFill(source: anytype, comptime VectorType: type, count: usize) void {
+            for (0..count) |_| consumeVector(source, VectorType);
+        }
+    };
+
+    try std.testing.expectEqual(inf, pareto(rng, f64, inf, shape));
+    Reference.consumeScalar(control_rng, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf, paretoFrom(&engine, f64, inf, shape));
+    Reference.consumeScalar(&control, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf, try paretoChecked(rng, f64, inf, shape));
+    Reference.consumeScalar(control_rng, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf, try paretoCheckedFrom(&engine, f64, inf, shape));
+    Reference.consumeScalar(&control, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillPareto(rng, f64, &scalar_buf, inf, shape);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(control_rng, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillParetoFrom(&engine, f64, &scalar_buf, inf, shape);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(&control, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillParetoChecked(rng, f64, &scalar_buf, inf, shape);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(control_rng, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try fillParetoCheckedFrom(&engine, f64, &scalar_buf, inf, shape);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(&control, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const pareto_sampler = try Pareto(f64).init(inf, shape);
+    try std.testing.expectEqual(inf, pareto_sampler.scaleValue());
+    try std.testing.expectEqual(shape, pareto_sampler.shapeValue());
+    try std.testing.expectEqual(inf, pareto_sampler.expectedValue().?);
+    try std.testing.expectEqual(inf, pareto_sampler.varianceValue().?);
+    try std.testing.expectEqual(inf, pareto_sampler.medianValue());
+    try std.testing.expectEqual(inf, pareto_sampler.modeValue());
+    try std.testing.expectEqual(inf, pareto_sampler.minValue());
+    try std.testing.expect(pareto_sampler.maxValue() == null);
+    try std.testing.expectEqual(inf, pareto_sampler.sample(rng));
+    Reference.consumeScalar(control_rng, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf, pareto_sampler.sampleFrom(&engine));
+    Reference.consumeScalar(&control, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    pareto_sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(control_rng, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    pareto_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(&control, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf_vec, vectorPareto(rng, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(control_rng, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, vectorParetoFrom(&engine, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(&control, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, try vectorParetoChecked(rng, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(control_rng, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, try vectorParetoCheckedFrom(&engine, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(&control, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorPareto(rng, @Vector(4, f64), &vector_buf, inf, shape);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    fillVectorParetoFrom(&engine, @Vector(4, f64), &vector_buf, inf, shape);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_pareto_sampler = try VectorPareto(@Vector(4, f64)).init(inf, shape);
+    try std.testing.expectEqual(inf_vec, vector_pareto_sampler.sample(rng));
+    Reference.consumeVector(control_rng, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, vector_pareto_sampler.sampleFrom(&engine));
+    Reference.consumeVector(&control, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_pareto_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_pareto_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf, weibull(rng, f64, inf, shape));
+    Reference.consumeScalar(control_rng, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf, weibullFrom(&engine, f64, inf, shape));
+    Reference.consumeScalar(&control, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf, try weibullChecked(rng, f64, inf, shape));
+    Reference.consumeScalar(control_rng, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf, try weibullCheckedFrom(&engine, f64, inf, shape));
+    Reference.consumeScalar(&control, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillWeibull(rng, f64, &scalar_buf, inf, shape);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(control_rng, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    fillWeibullFrom(&engine, f64, &scalar_buf, inf, shape);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(&control, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const weibull_sampler = try Weibull(f64).init(inf, shape);
+    try std.testing.expectEqual(inf, weibull_sampler.scaleValue());
+    try std.testing.expectEqual(shape, weibull_sampler.shapeValue());
+    try std.testing.expectEqual(inf, weibull_sampler.expectedValue());
+    try std.testing.expectEqual(inf, weibull_sampler.varianceValue());
+    try std.testing.expectEqual(inf, weibull_sampler.medianValue());
+    try std.testing.expectEqual(inf, weibull_sampler.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), weibull_sampler.minValue());
+    try std.testing.expect(weibull_sampler.maxValue() == null);
+    try std.testing.expectEqual(inf, weibull_sampler.sample(rng));
+    Reference.consumeScalar(control_rng, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf, weibull_sampler.sampleFrom(&engine));
+    Reference.consumeScalar(&control, f64);
+    try std.testing.expectEqual(control.next(), engine.next());
+    weibull_sampler.fill(rng, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(control_rng, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+    weibull_sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| try std.testing.expectEqual(inf, sample);
+    Reference.consumeFill(&control, f64, &control_buf);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectEqual(inf_vec, vectorWeibull(rng, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(control_rng, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, vectorWeibullFrom(&engine, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(&control, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, try vectorWeibullChecked(rng, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(control_rng, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, try vectorWeibullCheckedFrom(&engine, @Vector(4, f64), inf, shape));
+    Reference.consumeVector(&control, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    fillVectorWeibull(rng, @Vector(4, f64), &vector_buf, inf, shape);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    fillVectorWeibullFrom(&engine, @Vector(4, f64), &vector_buf, inf, shape);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    const vector_weibull_sampler = try VectorWeibull(@Vector(4, f64)).init(inf, shape);
+    try std.testing.expectEqual(inf_vec, vector_weibull_sampler.sample(rng));
+    Reference.consumeVector(control_rng, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectEqual(inf_vec, vector_weibull_sampler.sampleFrom(&engine));
+    Reference.consumeVector(&control, @Vector(4, f64));
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_weibull_sampler.fill(rng, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(control_rng, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+    vector_weibull_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| try std.testing.expectEqual(inf_vec, sample);
+    Reference.consumeVectorFill(&control, @Vector(4, f64), vector_buf.len);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    try std.testing.expectError(error.InvalidParameter, paretoCheckedFrom(&engine, f64, std.math.nan(f64), shape));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, weibullCheckedFrom(&engine, f64, std.math.nan(f64), shape));
+    try std.testing.expectEqual(control.next(), engine.next());
+    try std.testing.expectError(error.InvalidParameter, VectorPareto(@Vector(4, f64)).init(std.math.nan(f64), shape));
+    try std.testing.expectError(error.InvalidParameter, VectorWeibull(@Vector(4, f64)).init(std.math.nan(f64), shape));
 }
 
 test "degenerate inverse-gaussian helpers do not consume random stream" {

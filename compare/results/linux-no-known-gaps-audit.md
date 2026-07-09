@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1150 bar is S4-M1151: exact/default dense SIMD research,
+The active post-S4-M1151 bar is S4-M1152: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6059,3 +6059,5 @@ S4-M1148 aligns FisherF infinite-degree semantics with local `rand_distr::Fisher
 S4-M1149 aligns StudentT infinite-degree semantics with local `rand_distr::StudentT::new` (`compare/results/s4-m1149-student-t-infinity.md`): infinite dof is accepted, produces NaN, and preserves the underlying StandardNormal plus ChiSquared/Gamma draw shape. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1150 aligns Cauchy non-finite parameter semantics with local `rand_distr::Cauchy::new` (`compare/results/s4-m1150-cauchy-nonfinite.md`): unrestricted medians and infinite positive scale are accepted while negative/NaN scale remains invalid, with Alea zero-scale point-mass behavior retained as a documented extension. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1151 aligns Pareto/Weibull infinite-scale semantics with local `rand_distr::Pareto::new` and `Weibull::new` (`compare/results/s4-m1151-pareto-weibull-infinite-scale.md`): infinite positive scale is accepted, finite-shape paths preserve transform draw shape before producing infinity, and existing Alea zero-scale/infinite-shape point-mass extensions remain documented. This is a local `rand_distr` compatibility closure, not whole-goal completion.
