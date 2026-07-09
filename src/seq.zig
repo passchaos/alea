@@ -10007,7 +10007,8 @@ pub fn reservoirSamplePtrs(allocator: std.mem.Allocator, rng: Rng, comptime T: t
 }
 
 pub fn reservoirSamplePtrsChecked(allocator: std.mem.Allocator, rng: Rng, comptime T: type, items: []const T, amount: usize) ![]*const T {
-    return reservoirSamplePtrsCheckedFrom(allocator, rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    return reservoirSamplePtrs(allocator, rng, T, items, amount);
 }
 
 pub fn reservoirSamplePtrsCheckedFrom(allocator: std.mem.Allocator, source: anytype, comptime T: type, items: []const T, amount: usize) ![]*const T {

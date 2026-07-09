@@ -1124,7 +1124,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1083 Seq reservoirSampleChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1083-seq-reservoir-sample-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked reservoirSample facade now avoids From wrappers. |
 | S4-M1084 Seq reservoirSamplePtrsInto facade direct path | `src/seq.zig`, `compare/results/s4-m1084-seq-reservoir-ptrs-into-facade-direct.md` | Closed for the current bar: top-level sequence reservoirSamplePtrsInto facade now avoids From wrappers. |
 | S4-M1085 Seq reservoirSamplePtrs facade direct path | `src/seq.zig`, `compare/results/s4-m1085-seq-reservoir-ptrs-facade-direct.md` | Closed for the current bar: top-level sequence reservoirSamplePtrs facade now avoids From wrappers. |
-| S4-M1086 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1086 Seq reservoirSamplePtrsChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1086-seq-reservoir-ptrs-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked reservoirSamplePtrs facade now avoids From wrappers. |
+| S4-M1087 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4179,6 +4180,12 @@ S4-M1085 additionally routes top-level sequence reservoirSamplePtrs through
 direct facade allocation plus reservoirSamplePtrsInto filling, preserving stream
 shape, allocation ownership, empty-output behavior, and pointer identity while
 avoiding `reservoirSamplePtrsFrom` wrapper aliases; it is reliability/ergonomics
+work and does not resolve S4-M11 or complete the long-term objective.
+S4-M1086 additionally routes top-level sequence reservoirSamplePtrsChecked
+through validation plus the direct facade reservoirSamplePtrs path, preserving
+stream shape, invalid-count no-consume validation, allocation ownership,
+empty-output behavior, and pointer identity while avoiding
+`reservoirSamplePtrsCheckedFrom` wrapper aliases; it is reliability/ergonomics
 work and does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
