@@ -2,8 +2,8 @@
 
 ## Gap
 
-After S4-M1151 aligned Pareto/Weibull infinite-scale semantics with local
-`rand_distr::Pareto::new` and `Weibull::new`, the documented direct argument forms for
+After S4-M1152 aligned Beta infinite-shape semantics with local
+`rand_distr::Beta::new`, the documented direct argument forms for
 `rand-status` needed a fresh recorded run matching the updated status JSON and
 self-test output.
 
@@ -26,14 +26,14 @@ $ zig build rand-status -- --json
   "rust_comparison": "parser tests and rand-bench-smoke pass",
   "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1151 follow-ups closed for current bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1152 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M1152 post-S4-M1151 next product bar",
+  "remaining_blocker": "S4-M1153 post-S4-M1152 next product bar",
   "s4_m11_blocked": false,
   "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1151-pareto-weibull-infinite-scale.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1152-beta-infinity.md"
 }
 $ zig build rand-status -- --schema-version
 1
@@ -56,6 +56,6 @@ $ git diff --check
 
 S4-M455 is refreshed for the current bar: the documented direct `rand-status`
 argument forms pass and report that the S4-M11 runtime branch and
-S4-M1124/S4-M1127-S4-M1151 follow-ups are closed for the current bar while
-S4-M1152 is the next post-S4-M1151 product bar. This is tooling validation
+S4-M1124/S4-M1127-S4-M1152 follow-ups are closed for the current bar while
+S4-M1153 is the next post-S4-M1152 product bar. This is tooling validation
 evidence only; it is not whole-goal completion evidence.
