@@ -1103,7 +1103,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1062 Seq WeightedChoice checked index sample facade direct path | `src/seq.zig`, `compare/results/s4-m1062-seq-weightedchoice-checked-index-sample-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice checked index sample now avoids From wrappers. |
 | S4-M1063 Seq WeightedChoice checked u32 index sample facade direct path | `src/seq.zig`, `compare/results/s4-m1063-seq-weightedchoice-checked-u32-index-sample-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice checked u32 index sample now avoids From wrappers. |
 | S4-M1064 Seq WeightedChoice checked value sample facade direct path | `src/seq.zig`, `compare/results/s4-m1064-seq-weightedchoice-checked-value-sample-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice checked value sample now avoids From wrappers. |
-| S4-M1065 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1065 Seq WeightedChoice index fill facade direct path | `src/seq.zig`, `compare/results/s4-m1065-seq-weightedchoice-index-fill-facade-direct.md` | Closed for the current bar: sequence-layer reusable WeightedChoice index fill now avoids From wrappers. |
+| S4-M1066 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4050,6 +4051,11 @@ sampling through the AliasTable checked facade sample directly, preserving strea
 shape, empty-enum validation, and single-positive behavior while avoiding
 `sampleCheckedFrom` wrapper aliases; it is reliability/ergonomics work and does
 not resolve S4-M11 or complete the long-term objective.
+S4-M1065 additionally routes sequence-layer reusable WeightedChoice index fills
+through the AliasTable fill facade directly, preserving stream shape,
+empty-output behavior, and single-positive behavior while avoiding
+`fillIndicesFrom` wrapper aliases; it is reliability/ergonomics work and does not
+resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic

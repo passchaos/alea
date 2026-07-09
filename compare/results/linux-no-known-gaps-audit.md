@@ -5583,3 +5583,9 @@ directly (`compare/results/s4-m1064-seq-weightedchoice-checked-value-sample-faca
 facade sample directly instead of routing through `sampleCheckedFrom`. This
 improves seq WeightedChoice checked value-sample facade ergonomics but does not
 resolve S4-M11.
+
+S4-M1065 routes sequence-layer reusable WeightedChoice index fills directly
+(`compare/results/s4-m1065-seq-weightedchoice-index-fill-facade-direct.md`):
+`seq.WeightedChoice(T).fillIndices` now calls the AliasTable fill facade directly
+instead of routing through `fillIndicesFrom`. This improves seq WeightedChoice
+index-fill facade ergonomics but does not resolve S4-M11.

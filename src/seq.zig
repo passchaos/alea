@@ -9598,7 +9598,7 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         }
 
         pub fn fillIndices(self: Self, rng: Rng, dest: []usize) void {
-            self.fillIndicesFrom(rng, dest);
+            self.table.fill(rng, dest);
         }
 
         pub fn fillIndicesFrom(self: Self, source: anytype, dest: []usize) void {
