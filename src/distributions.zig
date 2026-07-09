@@ -18805,7 +18805,7 @@ pub fn Dirichlet(comptime T: type) type {
                 if (!(a > 0)) return error.InvalidParameter;
                 if (a == std.math.inf(T)) {
                     infinite_count += 1;
-                } else if (!std.math.isFinite(a)) return error.InvalidParameter;
+                } else if (!std.math.isFinite(a) or !std.math.isNormal(a)) return error.InvalidParameter;
             }
             if (infinite_count > 1) return error.InvalidParameter;
             return .{ .alpha = alpha };
@@ -37530,6 +37530,26 @@ test "dirichlet sampler returns simplex vectors" {
         for (many_samples[offset..][0..3]) |value| stack_total += value;
         try std.testing.expectApproxEqAbs(@as(f64, 1.0), stack_total, 1e-12);
     }
+}
+
+test "dirichlet subnormal alpha rejection matches local rand_distr" {
+    const min_normal = std.math.floatMin(f64);
+    const true_min = std.math.floatTrueMin(f64);
+
+    try std.testing.expectError(error.InvalidParameter, Dirichlet(f64).init(&.{ true_min, 1.0 }));
+    try std.testing.expectError(error.InvalidParameter, Dirichlet(f64).init(&.{ min_normal / 2.0, 1.0 }));
+    try std.testing.expectError(error.InvalidParameter, multi.Dirichlet(f64).init(&.{ true_min, 1.0 }));
+
+    const min_normal_dist = try Dirichlet(f64).init(&.{ min_normal, 1.0 });
+    try std.testing.expectEqual(@as(usize, 2), min_normal_dist.dimensionValue());
+    try std.testing.expectEqual(min_normal, try min_normal_dist.alphaAt(0));
+
+    const one_dimensional_extension = try Dirichlet(f64).init(&.{min_normal});
+    try std.testing.expectEqual(@as(usize, 1), one_dimensional_extension.dimensionValue());
+    try std.testing.expectEqual(@as(f64, 1), try one_dimensional_extension.meanAt(0));
+
+    const vertex_extension = try Dirichlet(f64).init(&.{ 2.0, std.math.inf(f64), 3.0 });
+    try std.testing.expectEqual(@as(f64, 1), try vertex_extension.meanAt(1));
 }
 
 test "multivariate samplers preserve direct stream shape" {

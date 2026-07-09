@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1160 bar is S4-M1161: exact/default dense SIMD research,
+The active post-S4-M1161 bar is S4-M1162: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6078,3 +6078,5 @@ S4-M1158 aligns SkewNormal unrestricted-location semantics with local `rand_dist
 S4-M1159 aligns NormalInverseGaussian alpha-infinity semantics with local `rand_distr::NormalInverseGaussian::new` (`compare/results/s4-m1159-nig-alpha-infinity.md`): scalar/vector checked and reusable helpers now reject `alpha == +inf` and other non-finite parameters without consuming randomness, while very large finite-alpha construction remains accepted. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1160 aligns Hypergeometric large-population semantics with local `rand_distr::Hypergeometric::new` (`compare/results/s4-m1160-hypergeometric-large-population.md`): HIN inverse-transform setup now rejects underflowed/non-finite initial probabilities without consuming randomness, while accepted sparse huge-population cases remain constructible and mode/sample internals avoid `u64` extreme overflow. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1161 aligns Dirichlet subnormal-alpha semantics with local `rand_distr::multi::Dirichlet::new` (`compare/results/s4-m1161-dirichlet-subnormal-alpha.md`): reusable `Dirichlet(T)` and `multi.Dirichlet(T)` now reject finite positive subnormal alpha values while retaining Alea's documented one-dimensional and single-infinite-alpha vertex point-mass extensions. This is a local `rand_distr` compatibility closure, not whole-goal completion.
