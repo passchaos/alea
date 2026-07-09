@@ -123,7 +123,13 @@ pub const Charset = struct {
     }
 
     pub fn sample(self: Charset, rng: Rng) u8 {
-        return self.sampleFrom(rng);
+        if (self.bytes.len == 1) return self.bytes[0];
+        if (comptime @bitSizeOf(usize) <= 64) {
+            const byte_count: u64 = @intCast(self.bytes.len);
+            const index = Rng.uintLessThanFrom(rng, u64, byte_count);
+            return self.bytes[@intCast(index)];
+        }
+        return self.bytes[Rng.uintLessThanFrom(rng, usize, self.bytes.len)];
     }
 
     pub fn sampleChecked(self: Charset, rng: Rng) error{EmptyCharset}!u8 {
