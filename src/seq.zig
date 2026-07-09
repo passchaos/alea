@@ -9952,7 +9952,8 @@ pub fn partialShuffleTailSplit(rng: Rng, comptime T: type, items: []T, amount: u
 }
 
 pub fn partialShuffleTailSplitChecked(rng: Rng, comptime T: type, items: []T, amount: usize) Error!PartialShuffleTailSplit(T) {
-    return partialShuffleTailSplitCheckedFrom(rng, T, items, amount);
+    if (amount > items.len) return error.InvalidParameter;
+    return partialShuffleTailSplit(rng, T, items, amount);
 }
 
 pub fn partialShuffleTailSplitCheckedFrom(source: anytype, comptime T: type, items: []T, amount: usize) Error!PartialShuffleTailSplit(T) {
