@@ -85,3 +85,4 @@ S4-M1132 remains active after S4-M1131 refreshes rand-status in `compare/results
 S4-M1133 remains active after S4-M1132 refreshes f32x8 direct-source evidence in `compare/results/s4-m1132-f32x8-direct-source-probe.md`.
 S4-M1134 remains active after S4-M1133 closes rate-one vector exponential delegation in `compare/results/s4-m1133-vector-exponential-rate-one-delegate.md`.
 S4-M1135 remains active after S4-M1134 closes single-vector rate-one exponential delegation in `compare/results/s4-m1134-single-vector-exponential-rate-one-delegate.md`.
+S4-M1136 remains active after S4-M1135 closes scalar rate-one exponential fill delegation in `compare/results/s4-m1135-scalar-exponential-rate-one-fill.md`.

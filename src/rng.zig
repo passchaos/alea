@@ -1459,6 +1459,10 @@ pub fn fillExponentialFrom(source: anytype, comptime T: type, dest: []T, rate: T
         @memset(dest, 0);
         return;
     }
+    if (rate == 1) {
+        fillStandardExponentialFrom(source, T, dest);
+        return;
+    }
     for (dest) |*item| item.* = exponentialFastFrom(source, T, rate);
 }
 

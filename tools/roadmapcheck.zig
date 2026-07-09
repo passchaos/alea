@@ -1130,6 +1130,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1132", .path = "compare/results/s4-m1132-f32x8-direct-source-probe.md" },
     .{ .milestone = "S4-M1133", .path = "compare/results/s4-m1133-vector-exponential-rate-one-delegate.md" },
     .{ .milestone = "S4-M1134", .path = "compare/results/s4-m1134-single-vector-exponential-rate-one-delegate.md" },
+    .{ .milestone = "S4-M1135", .path = "compare/results/s4-m1135-scalar-exponential-rate-one-fill.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1137,7 +1138,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M1135",
+    "S4-M1136",
     "zig build validate-local",
     "No proxy signal is accepted as whole-goal completion",
 };
@@ -1188,7 +1189,7 @@ const blocker_tokens = [_][]const u8{
     "compare/results/s4-m1123-wasmtime-profilelongcheck.md",
     "No new unblocked public-surface or local comparison-benchmark gap",
     "Do not call `update_goal(status=complete)`",
-    "S4-M1135",
+    "S4-M1136",
 };
 
 const active_completion_tokens = [_][]const u8{
@@ -1202,7 +1203,7 @@ const active_completion_tokens = [_][]const u8{
     "S4-M1123 records direct Wasmtime",
     "S4-M11 is closed for the current bar",
     "exact/default-compatible dense SIMD normal/exponential",
-    "S4-M1135",
+    "S4-M1136",
     "Therefore do not call",
     "## Required Next Work Before Completion",
     "a default/exact-compatible dense SIMD normal/exponential candidate beats",
@@ -1452,12 +1453,12 @@ pub fn main(init: std.process.Init) !void {
     try checkManifestTokens(stderr, "rand-status command matrix", rand_status_matrix, rand_status_matrix_tokens[0..], &missing);
     try checkManifestTokens(stderr, "direct rand-status command matrix", rand_status_direct_matrix, rand_status_direct_matrix_tokens[0..], &missing);
 
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1135 | Next post-S4-M1134 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1135 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1136 | Next post-S4-M1135 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1136 next-gap row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1135 next post-S4-M1134 product bar") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1135 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1136 next post-S4-M1135 product bar") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1136 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {
