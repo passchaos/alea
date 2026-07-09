@@ -10033,7 +10033,16 @@ pub fn reservoirSampleMutPtrsFrom(allocator: std.mem.Allocator, source: anytype,
 }
 
 pub fn reservoirSampleInto(rng: Rng, comptime T: type, items: []const T, out: []T) Error!void {
-    return reservoirSampleIntoFrom(rng, T, items, out);
+    if (out.len > items.len) return error.InvalidParameter;
+    if (out.len == 0) return;
+    if (comptime valueTypeHasEmptyEnum(T)) return error.EmptyInput;
+
+    @memcpy(out, items[0..out.len]);
+    var i = out.len;
+    while (i < items.len) : (i += 1) {
+        const j = rng.uintAtMost(usize, i);
+        if (j < out.len) out[j] = items[i];
+    }
 }
 
 pub fn reservoirSampleIntoFrom(source: anytype, comptime T: type, items: []const T, out: []T) Error!void {

@@ -5685,3 +5685,10 @@ S4-M1080 routes top-level sequence partialShuffleTailSplitChecked directly
 `partialShuffleTailSplit` directly instead of routing through
 `partialShuffleTailSplitCheckedFrom`. This improves sequence checked tail partial
 shuffle split facade ergonomics but does not resolve S4-M11.
+
+S4-M1081 routes top-level sequence reservoirSampleInto directly
+(`compare/results/s4-m1081-seq-reservoir-sample-into-facade-direct.md`):
+`seq.reservoirSampleInto` now validates and performs the reservoir replacement
+loop through facade `Rng` directly instead of routing through
+`reservoirSampleIntoFrom`. This improves sequence caller-owned reservoir facade
+ergonomics but does not resolve S4-M11.

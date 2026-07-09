@@ -1119,7 +1119,8 @@ Rust core gap is currently identified. Therefore do not call
 | S4-M1078 Seq partialShuffleTailChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1078-seq-partial-shuffle-tail-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffleTail facade now avoids From wrappers. |
 | S4-M1079 Seq partialShuffleTailSplit facade direct path | `src/seq.zig`, `compare/results/s4-m1079-seq-partial-shuffle-tail-split-facade-direct.md` | Closed for the current bar: top-level sequence partialShuffleTailSplit facade now avoids From wrappers. |
 | S4-M1080 Seq partialShuffleTailSplitChecked facade direct path | `src/seq.zig`, `compare/results/s4-m1080-seq-partial-shuffle-tail-split-checked-facade-direct.md` | Closed for the current bar: top-level sequence checked partialShuffleTailSplit facade now avoids From wrappers. |
-| S4-M1081 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
+| S4-M1081 Seq reservoirSampleInto facade direct path | `src/seq.zig`, `compare/results/s4-m1081-seq-reservoir-sample-into-facade-direct.md` | Closed for the current bar: top-level sequence reservoirSampleInto facade now avoids From wrappers. |
+| S4-M1082 next unblocked product gap | `core-rand-coverage.md`, future audits | Not complete; S4-M11 remains blocked and the next independent product improvement has not yet been selected. |
 | No proxy signal is accepted as whole-goal completion | `zig build validate-all` plus roadmap/audit files | Validation passes are necessary but not sufficient; blocker audits still show missing performance requirements. |
 
 ## Current Non-Completion Evidence
@@ -4149,6 +4150,11 @@ selected-tail/rest-prefix partitioning, and zero-count behavior while avoiding
 `partialShuffleTailSplitCheckedFrom` wrapper aliases; it is
 reliability/ergonomics work and does not resolve S4-M11 or complete the
 long-term objective.
+S4-M1081 additionally routes top-level sequence reservoirSampleInto through a
+direct facade reservoir loop, preserving stream shape, invalid-count no-consume
+validation, empty-output behavior, and empty-value validation while avoiding
+`reservoirSampleIntoFrom` wrapper aliases; it is reliability/ergonomics work and
+does not resolve S4-M11 or complete the long-term objective.
 
 All other recently found S4-M4 side gaps have either been closed or narrowed by
 checked-in evidence, including Hypergeometric H2PE coverage, static/dynamic
