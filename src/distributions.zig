@@ -7877,7 +7877,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
             self.index = buffer_len;
         }
 
-       pub fn sample(self: *Self, rng: Rng) T {
+        pub fn sample(self: *Self, rng: Rng) T {
             if (self.log_stddev == 0) return dlsymExpValue(T, self.exp_fn, self.log_mean);
             if (self.index == buffer_len) {
                 self.refill(rng, self.buffer[0..]);
@@ -7886,7 +7886,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
             const value = self.buffer[self.index];
             self.index += 1;
             return value;
-       }
+        }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
             if (self.log_stddev == 0) return dlsymExpValue(T, self.exp_fn, self.log_mean);
@@ -7899,7 +7899,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
             return value;
         }
 
-       pub fn fill(self: *Self, rng: Rng, dest: []T) void {
+        pub fn fill(self: *Self, rng: Rng, dest: []T) void {
             if (self.log_stddev == 0) {
                 @memset(dest, dlsymExpValue(T, self.exp_fn, self.log_mean));
                 return;
@@ -7922,7 +7922,7 @@ pub fn LogNormalDlsymExp(comptime T: type, comptime buffer_len: usize) type {
                 @memcpy(dest[written..], self.buffer[0..n]);
                 self.index = n;
             }
-       }
+        }
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
             if (self.log_stddev == 0) {
@@ -17721,7 +17721,6 @@ pub fn VectorUnitBall(comptime VectorType: type) type {
     };
 }
 
-
 fn inverseGaussianParametersValid(comptime T: type, mean: T, shape: T) bool {
     return mean >= 0 and
         (std.math.isFinite(mean) or mean == std.math.inf(T)) and
@@ -20260,6 +20259,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         const Self = @This();
 
         subtotals: std.ArrayList(f64),
+        typed_weight_values: std.ArrayList(Weight),
         positive_count: usize = 0,
         positive_index: ?usize = null,
         allocator: std.mem.Allocator,
@@ -20308,6 +20308,51 @@ pub fn WeightedTree(comptime Weight: type) type {
             pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
                 try writer.print(
                     "WeightedTree.WeightIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
+            }
+        };
+
+        pub const TypedWeightIterator = struct {
+            const Iterator = @This();
+
+            tree: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?Weight {
+                const value = self.tree.typedWeight(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.tree.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []Weight) usize {
+                const count = @min(dest.len, self.remaining());
+                if (count == 0) return 0;
+                @memcpy(dest[0..count], self.tree.typed_weight_values.items[self.index..][0..count]);
+                self.index += count;
+                return count;
+            }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "WeightedTree.TypedWeightIterator{{ .index = {}, .remaining = {} }}",
                     .{ self.index, self.remaining() },
                 );
             }
@@ -20363,12 +20408,15 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn init(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
             var subtotals = try std.ArrayList(f64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
+            var typed_weight_values = try std.ArrayList(Weight).initCapacity(allocator, input_weights.len);
+            errdefer typed_weight_values.deinit(allocator);
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
             for (input_weights, 0..) |input_weight, index| {
                 const value = try weightToF64(input_weight);
                 try subtotals.append(allocator, value);
+                try typed_weight_values.append(allocator, input_weight);
                 if (value > 0) {
                     positive_count += 1;
                     if (positive_index == null) positive_index = index;
@@ -20378,6 +20426,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
             return .{
                 .subtotals = subtotals,
+                .typed_weight_values = typed_weight_values,
                 .positive_count = positive_count,
                 .positive_index = positive_index,
                 .allocator = allocator,
@@ -20391,6 +20440,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn initEmpty(allocator: std.mem.Allocator) Self {
             return .{
                 .subtotals = std.ArrayList(f64).empty,
+                .typed_weight_values = std.ArrayList(Weight).empty,
                 .positive_count = 0,
                 .positive_index = null,
                 .allocator = allocator,
@@ -20408,13 +20458,17 @@ pub fn WeightedTree(comptime Weight: type) type {
         ) !Self {
             var subtotals = try std.ArrayList(f64).initCapacity(allocator, length);
             errdefer subtotals.deinit(allocator);
+            var typed_weight_values = try std.ArrayList(Weight).initCapacity(allocator, length);
+            errdefer typed_weight_values.deinit(allocator);
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
             var index: usize = 0;
             while (index < length) : (index += 1) {
-                const value = try weightToF64(weightFn(index));
+                const input_weight = weightFn(index);
+                const value = try weightToF64(input_weight);
                 try subtotals.append(allocator, value);
+                try typed_weight_values.append(allocator, input_weight);
                 if (value > 0) {
                     positive_count += 1;
                     if (positive_index == null) positive_index = index;
@@ -20424,6 +20478,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
             return .{
                 .subtotals = subtotals,
+                .typed_weight_values = typed_weight_values,
                 .positive_count = positive_count,
                 .positive_index = positive_index,
                 .allocator = allocator,
@@ -20438,12 +20493,16 @@ pub fn WeightedTree(comptime Weight: type) type {
         ) !Self {
             var subtotals = try std.ArrayList(f64).initCapacity(allocator, items.len);
             errdefer subtotals.deinit(allocator);
+            var typed_weight_values = try std.ArrayList(Weight).initCapacity(allocator, items.len);
+            errdefer typed_weight_values.deinit(allocator);
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
             for (items, 0..) |*item, index| {
-                const value = try weightToF64(weightFn(item));
+                const input_weight = weightFn(item);
+                const value = try weightToF64(input_weight);
                 try subtotals.append(allocator, value);
+                try typed_weight_values.append(allocator, input_weight);
                 if (value > 0) {
                     positive_count += 1;
                     if (positive_index == null) positive_index = index;
@@ -20453,6 +20512,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
             return .{
                 .subtotals = subtotals,
+                .typed_weight_values = typed_weight_values,
                 .positive_count = positive_count,
                 .positive_index = positive_index,
                 .allocator = allocator,
@@ -20461,13 +20521,17 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn deinit(self: *Self) void {
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = undefined;
         }
 
         pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
             const items = try allocator.dupe(f64, self.subtotals.items);
+            errdefer allocator.free(items);
+            const typed_items = try allocator.dupe(Weight, self.typed_weight_values.items);
             return .{
                 .subtotals = .{ .items = items, .capacity = items.len },
+                .typed_weight_values = .{ .items = typed_items, .capacity = typed_items.len },
                 .positive_count = self.positive_count,
                 .positive_index = self.positive_index,
                 .allocator = allocator,
@@ -20477,18 +20541,20 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn eql(self: Self, other: Self) bool {
             return self.positive_count == other.positive_count and
                 self.positive_index == other.positive_index and
-                std.mem.eql(f64, self.subtotals.items, other.subtotals.items);
+                std.mem.eql(f64, self.subtotals.items, other.subtotals.items) and
+                std.mem.eql(Weight, self.typed_weight_values.items, other.typed_weight_values.items);
         }
 
         pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
             try writer.print(
-                "WeightedTree{{ .len = {}, .total = {d}, .positive_count = {}, .positive_index = {?}, .subtotals = {any} }}",
+                "WeightedTree{{ .len = {}, .total = {d}, .positive_count = {}, .positive_index = {?}, .subtotals = {any}, .typed_weight_values = {any} }}",
                 .{
                     self.len(),
                     self.totalWeight(),
                     self.positive_count,
                     self.positive_index,
                     self.subtotals.items,
+                    self.typed_weight_values.items,
                 },
             );
         }
@@ -20535,8 +20601,37 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.weightAt(index) catch null;
         }
 
+        pub fn typedWeightAt(self: Self, index: usize) Error!Weight {
+            if (index >= self.typed_weight_values.items.len) return error.InvalidParameter;
+            return self.typed_weight_values.items[index];
+        }
+
+        pub fn typedWeight(self: Self, index: usize) ?Weight {
+            return self.typedWeightAt(index) catch null;
+        }
+
+        pub fn weightValueAt(self: Self, index: usize) Error!Weight {
+            return self.typedWeightAt(index);
+        }
+
+        pub fn weightValue(self: Self, index: usize) ?Weight {
+            return self.typedWeight(index);
+        }
+
+        pub fn getValue(self: Self, index: usize) Error!Weight {
+            return self.typedWeightAt(index);
+        }
+
         pub fn weightIter(self: Self) WeightIterator {
             return .{ .tree = self };
+        }
+
+        pub fn typedWeightIter(self: Self) TypedWeightIterator {
+            return .{ .tree = self };
+        }
+
+        pub fn weightValueIter(self: Self) TypedWeightIterator {
+            return self.typedWeightIter();
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -20566,6 +20661,26 @@ pub fn WeightedTree(comptime Weight: type) type {
             for (out, 0..) |*slot, index| slot.* = try self.get(index);
         }
 
+        pub fn typedWeights(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            const out = try allocator.alloc(Weight, self.len());
+            errdefer allocator.free(out);
+            try self.typedWeightsInto(out);
+            return out;
+        }
+
+        pub fn typedWeightsInto(self: Self, out: []Weight) Error!void {
+            if (out.len != self.len()) return error.InvalidLength;
+            @memcpy(out, self.typed_weight_values.items);
+        }
+
+        pub fn weightsValue(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            return self.typedWeights(allocator);
+        }
+
+        pub fn weightsValueInto(self: Self, out: []Weight) Error!void {
+            try self.typedWeightsInto(out);
+        }
+
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
             const out = try allocator.alloc(f64, self.len());
             errdefer allocator.free(out);
@@ -20586,6 +20701,8 @@ pub fn WeightedTree(comptime Weight: type) type {
             const next_total = self.totalWeight() + value;
             if (!std.math.isFinite(next_total)) return error.InvalidWeight;
 
+            try self.typed_weight_values.append(self.allocator, input_weight);
+            errdefer _ = self.typed_weight_values.pop();
             try self.subtotals.append(self.allocator, value);
             var index = self.subtotals.items.len - 1;
             while (index != 0) {
@@ -20604,6 +20721,7 @@ pub fn WeightedTree(comptime Weight: type) type {
             const index = self.subtotals.items.len - 1;
             const current_weight = self.get(index) catch unreachable;
             _ = self.subtotals.pop();
+            _ = self.typed_weight_values.pop();
 
             var parent_index = index;
             while (parent_index != 0) {
@@ -20621,6 +20739,17 @@ pub fn WeightedTree(comptime Weight: type) type {
             return current_weight;
         }
 
+        pub fn popValue(self: *Self) ?Weight {
+            if (self.subtotals.items.len == 0) return null;
+            const current_typed_weight = self.typed_weight_values.items[self.subtotals.items.len - 1];
+            _ = self.pop();
+            return current_typed_weight;
+        }
+
+        pub fn typedPop(self: *Self) ?Weight {
+            return self.popValue();
+        }
+
         pub fn update(self: *Self, index: usize, input_weight: Weight) !void {
             if (index >= self.subtotals.items.len) return error.InvalidParameter;
 
@@ -20636,6 +20765,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 if (cursor == 0) break;
                 cursor = (cursor - 1) / 2;
             }
+            self.typed_weight_values.items[index] = input_weight;
             self.updatePositiveState(index, old, value);
         }
 
@@ -20662,6 +20792,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 const delta = value - old;
                 if (delta < 0) {
                     self.applyDelta(item.index, delta);
+                    self.typed_weight_values.items[item.index] = item.weight;
                     self.updatePositiveState(item.index, old, value);
                 }
             }
@@ -20671,6 +20802,7 @@ pub fn WeightedTree(comptime Weight: type) type {
                 const delta = value - old;
                 if (delta >= 0) {
                     self.applyDelta(item.index, delta);
+                    self.typed_weight_values.items[item.index] = item.weight;
                     self.updatePositiveState(item.index, old, value);
                 }
             }
@@ -20684,12 +20816,14 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (input_weights.len != self.len()) return error.InvalidParameter;
             const next = try Self.init(self.allocator, input_weights);
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = next;
         }
 
         pub fn updateAllByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
             const next = try Self.initByIndex(self.allocator, self.len(), weightFn);
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = next;
         }
 
@@ -20702,6 +20836,7 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (items.len != self.len()) return error.InvalidParameter;
             const next = try Self.initBy(self.allocator, T, items, weightFn);
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = next;
         }
 
@@ -21296,6 +21431,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         const Self = @This();
 
         subtotals: std.ArrayList(u64),
+        typed_weight_values: std.ArrayList(Weight),
         positive_count: usize = 0,
         positive_index: ?usize = null,
         allocator: std.mem.Allocator,
@@ -21344,6 +21480,51 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
                 try writer.print(
                     "WeightedIntTree.WeightIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
+            }
+        };
+
+        pub const TypedWeightIterator = struct {
+            const Iterator = @This();
+
+            tree: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?Weight {
+                const value = self.tree.typedWeight(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.tree.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []Weight) usize {
+                const count = @min(dest.len, self.remaining());
+                if (count == 0) return 0;
+                @memcpy(dest[0..count], self.tree.typed_weight_values.items[self.index..][0..count]);
+                self.index += count;
+                return count;
+            }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "WeightedIntTree.TypedWeightIterator{{ .index = {}, .remaining = {} }}",
                     .{ self.index, self.remaining() },
                 );
             }
@@ -21401,12 +21582,15 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             comptime requireUnsignedWeight(Weight);
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, input_weights.len);
             errdefer subtotals.deinit(allocator);
+            var typed_weight_values = try std.ArrayList(Weight).initCapacity(allocator, input_weights.len);
+            errdefer typed_weight_values.deinit(allocator);
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
             for (input_weights, 0..) |input_weight, index| {
                 const value = try weightToU64(input_weight);
                 try subtotals.append(allocator, value);
+                try typed_weight_values.append(allocator, input_weight);
                 if (value > 0) {
                     positive_count += 1;
                     if (positive_index == null) positive_index = index;
@@ -21416,6 +21600,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
             return .{
                 .subtotals = subtotals,
+                .typed_weight_values = typed_weight_values,
                 .positive_count = positive_count,
                 .positive_index = positive_index,
                 .allocator = allocator,
@@ -21430,6 +21615,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             comptime requireUnsignedWeight(Weight);
             return .{
                 .subtotals = std.ArrayList(u64).empty,
+                .typed_weight_values = std.ArrayList(Weight).empty,
                 .positive_count = 0,
                 .positive_index = null,
                 .allocator = allocator,
@@ -21448,13 +21634,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             comptime requireUnsignedWeight(Weight);
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, length);
             errdefer subtotals.deinit(allocator);
+            var typed_weight_values = try std.ArrayList(Weight).initCapacity(allocator, length);
+            errdefer typed_weight_values.deinit(allocator);
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
             var index: usize = 0;
             while (index < length) : (index += 1) {
-                const value = try weightToU64(weightFn(index));
+                const input_weight = weightFn(index);
+                const value = try weightToU64(input_weight);
                 try subtotals.append(allocator, value);
+                try typed_weight_values.append(allocator, input_weight);
                 if (value > 0) {
                     positive_count += 1;
                     if (positive_index == null) positive_index = index;
@@ -21464,6 +21654,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
             return .{
                 .subtotals = subtotals,
+                .typed_weight_values = typed_weight_values,
                 .positive_count = positive_count,
                 .positive_index = positive_index,
                 .allocator = allocator,
@@ -21479,12 +21670,16 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             comptime requireUnsignedWeight(Weight);
             var subtotals = try std.ArrayList(u64).initCapacity(allocator, items.len);
             errdefer subtotals.deinit(allocator);
+            var typed_weight_values = try std.ArrayList(Weight).initCapacity(allocator, items.len);
+            errdefer typed_weight_values.deinit(allocator);
 
             var positive_count: usize = 0;
             var positive_index: ?usize = null;
             for (items, 0..) |*item, index| {
-                const value = try weightToU64(weightFn(item));
+                const input_weight = weightFn(item);
+                const value = try weightToU64(input_weight);
                 try subtotals.append(allocator, value);
+                try typed_weight_values.append(allocator, input_weight);
                 if (value > 0) {
                     positive_count += 1;
                     if (positive_index == null) positive_index = index;
@@ -21494,6 +21689,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
             return .{
                 .subtotals = subtotals,
+                .typed_weight_values = typed_weight_values,
                 .positive_count = positive_count,
                 .positive_index = positive_index,
                 .allocator = allocator,
@@ -21502,13 +21698,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn deinit(self: *Self) void {
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = undefined;
         }
 
         pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
             const items = try allocator.dupe(u64, self.subtotals.items);
+            errdefer allocator.free(items);
+            const typed_items = try allocator.dupe(Weight, self.typed_weight_values.items);
             return .{
                 .subtotals = .{ .items = items, .capacity = items.len },
+                .typed_weight_values = .{ .items = typed_items, .capacity = typed_items.len },
                 .positive_count = self.positive_count,
                 .positive_index = self.positive_index,
                 .allocator = allocator,
@@ -21518,18 +21718,20 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn eql(self: Self, other: Self) bool {
             return self.positive_count == other.positive_count and
                 self.positive_index == other.positive_index and
-                std.mem.eql(u64, self.subtotals.items, other.subtotals.items);
+                std.mem.eql(u64, self.subtotals.items, other.subtotals.items) and
+                std.mem.eql(Weight, self.typed_weight_values.items, other.typed_weight_values.items);
         }
 
         pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
             try writer.print(
-                "WeightedIntTree{{ .len = {}, .total = {}, .positive_count = {}, .positive_index = {?}, .subtotals = {any} }}",
+                "WeightedIntTree{{ .len = {}, .total = {}, .positive_count = {}, .positive_index = {?}, .subtotals = {any}, .typed_weight_values = {any} }}",
                 .{
                     self.len(),
                     self.totalWeight(),
                     self.positive_count,
                     self.positive_index,
                     self.subtotals.items,
+                    self.typed_weight_values.items,
                 },
             );
         }
@@ -21575,8 +21777,37 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.weightAt(index) catch null;
         }
 
+        pub fn typedWeightAt(self: Self, index: usize) Error!Weight {
+            if (index >= self.typed_weight_values.items.len) return error.InvalidParameter;
+            return self.typed_weight_values.items[index];
+        }
+
+        pub fn typedWeight(self: Self, index: usize) ?Weight {
+            return self.typedWeightAt(index) catch null;
+        }
+
+        pub fn weightValueAt(self: Self, index: usize) Error!Weight {
+            return self.typedWeightAt(index);
+        }
+
+        pub fn weightValue(self: Self, index: usize) ?Weight {
+            return self.typedWeight(index);
+        }
+
+        pub fn getValue(self: Self, index: usize) Error!Weight {
+            return self.typedWeightAt(index);
+        }
+
         pub fn weightIter(self: Self) WeightIterator {
             return .{ .tree = self };
+        }
+
+        pub fn typedWeightIter(self: Self) TypedWeightIterator {
+            return .{ .tree = self };
+        }
+
+        pub fn weightValueIter(self: Self) TypedWeightIterator {
+            return self.typedWeightIter();
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -21606,6 +21837,26 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             for (out, 0..) |*slot, index| slot.* = try self.get(index);
         }
 
+        pub fn typedWeights(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            const out = try allocator.alloc(Weight, self.len());
+            errdefer allocator.free(out);
+            try self.typedWeightsInto(out);
+            return out;
+        }
+
+        pub fn typedWeightsInto(self: Self, out: []Weight) Error!void {
+            if (out.len != self.len()) return error.InvalidLength;
+            @memcpy(out, self.typed_weight_values.items);
+        }
+
+        pub fn weightsValue(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            return self.typedWeights(allocator);
+        }
+
+        pub fn weightsValueInto(self: Self, out: []Weight) Error!void {
+            try self.typedWeightsInto(out);
+        }
+
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
             const out = try allocator.alloc(f64, self.len());
             errdefer allocator.free(out);
@@ -21626,6 +21877,8 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             const value = try weightToU64(input_weight);
             const next_total = std.math.add(u64, self.totalWeight(), value) catch return error.Overflow;
 
+            try self.typed_weight_values.append(self.allocator, input_weight);
+            errdefer _ = self.typed_weight_values.pop();
             try self.subtotals.append(self.allocator, value);
             var index = self.subtotals.items.len - 1;
             while (index != 0) {
@@ -21645,6 +21898,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             const index = self.subtotals.items.len - 1;
             const current_weight = self.get(index) catch unreachable;
             _ = self.subtotals.pop();
+            _ = self.typed_weight_values.pop();
 
             var parent_index = index;
             while (parent_index != 0) {
@@ -21660,6 +21914,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 }
             }
             return current_weight;
+        }
+
+        pub fn popValue(self: *Self) ?Weight {
+            if (self.subtotals.items.len == 0) return null;
+            const current_typed_weight = self.typed_weight_values.items[self.subtotals.items.len - 1];
+            _ = self.pop();
+            return current_typed_weight;
+        }
+
+        pub fn typedPop(self: *Self) ?Weight {
+            return self.popValue();
         }
 
         pub fn update(self: *Self, index: usize, input_weight: Weight) !void {
@@ -21684,6 +21949,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                     cursor = (cursor - 1) / 2;
                 }
             }
+            self.typed_weight_values.items[index] = input_weight;
             self.updatePositiveState(index, old, value);
         }
 
@@ -21713,6 +21979,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 const old = self.get(item.index) catch unreachable;
                 if (value < old) {
                     self.applyDeltaSub(item.index, old - value);
+                    self.typed_weight_values.items[item.index] = item.weight;
                     self.updatePositiveState(item.index, old, value);
                 }
             }
@@ -21721,6 +21988,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 const old = self.get(item.index) catch unreachable;
                 if (value >= old) {
                     self.applyDeltaAdd(item.index, value - old);
+                    self.typed_weight_values.items[item.index] = item.weight;
                     self.updatePositiveState(item.index, old, value);
                 }
             }
@@ -21734,12 +22002,14 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (input_weights.len != self.len()) return error.InvalidParameter;
             const next = try Self.init(self.allocator, input_weights);
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = next;
         }
 
         pub fn updateAllByIndex(self: *Self, comptime weightFn: fn (usize) Weight) !void {
             const next = try Self.initByIndex(self.allocator, self.len(), weightFn);
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = next;
         }
 
@@ -21752,6 +22022,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (items.len != self.len()) return error.InvalidParameter;
             const next = try Self.initBy(self.allocator, T, items, weightFn);
             self.subtotals.deinit(self.allocator);
+            self.typed_weight_values.deinit(self.allocator);
             self.* = next;
         }
 
@@ -24902,6 +25173,7 @@ test "weighted tree supports dynamic updates" {
     var nonfinite_total_items = [_]f64{std.math.inf(f64)};
     const nonfinite_total_tree = WeightedTree(f64){
         .subtotals = .{ .items = nonfinite_total_items[0..], .capacity = nonfinite_total_items.len },
+        .typed_weight_values = .{ .items = nonfinite_total_items[0..], .capacity = nonfinite_total_items.len },
         .positive_count = 1,
         .positive_index = 0,
         .allocator = std.testing.allocator,
@@ -24909,6 +25181,72 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectError(error.InvalidWeight, nonfinite_total_tree.sampleChecked(rng));
     var nonfinite_out: [1]usize = undefined;
     try std.testing.expectError(error.InvalidWeight, nonfinite_total_tree.fillChecked(rng, &nonfinite_out));
+}
+
+test "weighted tree typed diagnostics preserve original weights" {
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+
+    try std.testing.expectEqual(@as(u32, 5), try tree.typedWeightAt(2));
+    try std.testing.expectEqual(@as(?u32, 5), tree.typedWeight(2));
+    try std.testing.expectEqual(@as(u32, 5), try tree.weightValueAt(2));
+    try std.testing.expectEqual(@as(?u32, 5), tree.weightValue(2));
+    try std.testing.expectEqual(@as(u32, 5), try tree.getValue(2));
+    try std.testing.expectEqual(@as(?u32, null), tree.weightValue(4));
+    try std.testing.expectError(error.InvalidParameter, tree.weightValueAt(4));
+
+    var typed: [4]u32 = undefined;
+    try tree.typedWeightsInto(&typed);
+    try std.testing.expectEqualSlices(u32, &.{ 1, 0, 5, 3 }, &typed);
+    var values: [4]u32 = undefined;
+    try tree.weightsValueInto(&values);
+    try std.testing.expectEqualSlices(u32, &typed, &values);
+    var wrong_len: [3]u32 = undefined;
+    try std.testing.expectError(error.InvalidLength, tree.typedWeightsInto(&wrong_len));
+    try std.testing.expectError(error.InvalidLength, tree.weightsValueInto(&wrong_len));
+
+    const owned_typed = try tree.typedWeights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_typed);
+    try std.testing.expectEqualSlices(u32, &typed, owned_typed);
+    const owned_values = try tree.weightsValue(std.testing.allocator);
+    defer std.testing.allocator.free(owned_values);
+    try std.testing.expectEqualSlices(u32, &typed, owned_values);
+
+    var iter = tree.typedWeightIter();
+    try std.testing.expectEqual(@as(usize, 4), iter.len());
+    const hint = iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 4), hint.lower);
+    try std.testing.expectEqual(@as(?usize, 4), hint.upper);
+    try std.testing.expectEqual(@as(?u32, 1), iter.next());
+    const cloned = iter.clone();
+    try std.testing.expectEqual(@as(?u32, 0), iter.next());
+    var cloned_mut = cloned;
+    var iter_out: [3]u32 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), cloned_mut.fill(&iter_out));
+    try std.testing.expectEqualSlices(u32, &.{ 0, 5, 3 }, &iter_out);
+
+    var value_iter = tree.weightValueIter();
+    var value_iter_out: [4]u32 = undefined;
+    try std.testing.expectEqual(@as(usize, 4), value_iter.fill(&value_iter_out));
+    try std.testing.expectEqualSlices(u32, &typed, &value_iter_out);
+
+    try tree.update(1, 7);
+    try std.testing.expectEqual(@as(u32, 7), try tree.weightValueAt(1));
+    try tree.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try tree.weightsValueInto(&values);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 7, 5, 4 }, &values);
+
+    try tree.updateAll(&.{ 2, 3, 0, 8 });
+    try tree.typedWeightsInto(&typed);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 3, 0, 8 }, &typed);
+
+    try tree.push(11);
+    try std.testing.expectEqual(@as(u32, 11), try tree.weightValueAt(4));
+    try std.testing.expectEqual(@as(?u32, 11), tree.popValue());
+    try std.testing.expectEqual(@as(usize, 4), tree.len());
 }
 
 test "weighted tree updateMany applies ordered partial updates atomically" {
@@ -25807,6 +26145,10 @@ test "weighted tree iterators produce repeated indices" {
                 .items = @as([*]f64, @ptrFromInt(0x1000))[0..huge_len],
                 .capacity = huge_len,
             },
+            .typed_weight_values = .{
+                .items = @as([*]u32, @ptrFromInt(0x3000))[0..huge_len],
+                .capacity = huge_len,
+            },
             .positive_count = 1,
             .positive_index = 0,
             .allocator = std.testing.allocator,
@@ -25827,6 +26169,10 @@ test "weighted tree iterators produce repeated indices" {
         const huge_int_tree = WeightedIntTree(u32){
             .subtotals = .{
                 .items = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
+                .capacity = huge_len,
+            },
+            .typed_weight_values = .{
+                .items = @as([*]u32, @ptrFromInt(0x4000))[0..huge_len],
                 .capacity = huge_len,
             },
             .positive_count = 1,
@@ -26194,6 +26540,56 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectError(error.InvalidWeight, wide_tree.push(too_large_u128));
     try std.testing.expectError(error.InvalidWeight, wide_tree.update(0, too_large_u128));
     try std.testing.expectEqual(@as(u64, 1), wide_tree.totalWeight());
+}
+
+test "weighted int tree typed diagnostics preserve original weight type" {
+    var tree = try WeightedIntTree(u128).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+
+    try std.testing.expectEqual(@as(u128, 5), try tree.typedWeightAt(2));
+    try std.testing.expectEqual(@as(?u128, 5), tree.typedWeight(2));
+    try std.testing.expectEqual(@as(u128, 5), try tree.weightValueAt(2));
+    try std.testing.expectEqual(@as(?u128, 5), tree.weightValue(2));
+    try std.testing.expectEqual(@as(u128, 5), try tree.getValue(2));
+    try std.testing.expectEqual(@as(?u128, null), tree.weightValue(4));
+
+    var typed: [4]u128 = undefined;
+    try tree.typedWeightsInto(&typed);
+    try std.testing.expectEqualSlices(u128, &.{ 1, 0, 5, 3 }, &typed);
+    var value_out: [4]u128 = undefined;
+    try tree.weightsValueInto(&value_out);
+    try std.testing.expectEqualSlices(u128, &typed, &value_out);
+    var wrong_len: [3]u128 = undefined;
+    try std.testing.expectError(error.InvalidLength, tree.typedWeightsInto(&wrong_len));
+    try std.testing.expectError(error.InvalidLength, tree.weightsValueInto(&wrong_len));
+
+    const owned_typed = try tree.typedWeights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_typed);
+    try std.testing.expectEqualSlices(u128, &typed, owned_typed);
+
+    var iter = tree.typedWeightIter();
+    try std.testing.expectEqual(@as(?u128, 1), iter.next());
+    var iter_out: [3]u128 = undefined;
+    try std.testing.expectEqual(@as(usize, 3), iter.fill(&iter_out));
+    try std.testing.expectEqualSlices(u128, &.{ 0, 5, 3 }, &iter_out);
+
+    try tree.update(1, 7);
+    try std.testing.expectEqual(@as(u128, 7), try tree.weightValueAt(1));
+    try tree.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try tree.weightsValueInto(&value_out);
+    try std.testing.expectEqualSlices(u128, &.{ 0, 7, 5, 4 }, &value_out);
+
+    try tree.updateAll(&.{ 2, 3, 0, 8 });
+    try tree.typedWeightsInto(&typed);
+    try std.testing.expectEqualSlices(u128, &.{ 2, 3, 0, 8 }, &typed);
+
+    try tree.push(11);
+    try std.testing.expectEqual(@as(u128, 11), try tree.weightValueAt(4));
+    try std.testing.expectEqual(@as(?u128, 11), tree.popValue());
+    try std.testing.expectEqual(@as(usize, 4), tree.len());
 }
 
 test "weighted int tree updateMany applies ordered partial updates atomically" {
@@ -28639,7 +29035,6 @@ test "degenerate inverse-gaussian helpers do not consume random stream" {
     try std.testing.expectEqual(control.next(), engine.next());
 }
 
-
 test "inverse-gaussian infinity semantics matches local rand_distr" {
     const alea = @import("root.zig");
     var engine = alea.ScalarPrng.init(0x9015_1157);
@@ -28816,7 +29211,6 @@ test "normal-inverse-gaussian infinity rejection matches local rand_distr" {
     try std.testing.expect(max_sampler.gammaValue() >= std.math.floatMax(f64) or std.math.isInf(max_sampler.gammaValue()));
     try std.testing.expectEqual(@as(f64, 0), max_sampler.varianceValue());
 }
-
 
 test "skew-normal unrestricted location matches local rand_distr" {
     const alea = @import("root.zig");
@@ -34300,7 +34694,6 @@ test "degenerate discrete distribution helpers do not consume random stream" {
     for (vector_f64_buf) |sample| try std.testing.expectEqual(@as(@Vector(4, f64), @splat(1)), sample);
     try std.testing.expectEqual(control.next(), engine.next());
 }
-
 
 test "geometric failures zero probability matches local rand_distr" {
     const alea = @import("root.zig");

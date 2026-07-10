@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1186 bar is S4-M1187: exact/default dense SIMD research,
+The active post-S4-M1187 bar is S4-M1188: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6129,4 +6129,6 @@ S4-M1184 refreshes full portability-sensitive validation after S4-M1183 (`compar
 
 S4-M1185 refreshes dense SIMD vectorbench evidence (`compare/results/s4-m1185-dense-simd-probe-refresh.md`): focused f32x8/f64x4 standard and parameterized normal/exponential rows still do not identify a checksum-preserving exact/default dense SIMD replacement for scalar lane-fill; table/approx-log rows remain explicit opt-ins. This is research evidence, not whole-goal completion.
 
-S4-M1186 refreshes local comparison validation after S4-M1185 (`compare/results/s4-m1186-post-s4-m1185-validate-local.md`): `zig build validate-local` passes with native validation, local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, and current status output. This is validation evidence, not whole-goal completion; S4-M1187 remains active.
+S4-M1186 refreshes local comparison validation after S4-M1185 (`compare/results/s4-m1186-post-s4-m1185-validate-local.md`): `zig build validate-local` passes with native validation, local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, and current status output. This is validation evidence, not whole-goal completion.
+
+S4-M1187 adds dynamic weighted-tree typed diagnostics (`compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md`): `WeightedTree(Weight)` and `WeightedIntTree(Weight)` now preserve typed weights across construction, update, push/pop, clone/equality, and expose typed single/bulk/pop/iterator diagnostics matching local Rust dynamic weighted `get` workflows. This is local Rust diagnostics ergonomics evidence, not whole-goal completion; S4-M1188 remains active.

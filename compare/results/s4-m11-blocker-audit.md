@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md
 compare/results/s4-m1186-post-s4-m1185-validate-local.md
 compare/results/s4-m1185-dense-simd-probe-refresh.md
 compare/results/s4-m1184-post-s4-m1183-validate-all.md
@@ -74,6 +75,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md"
 "compare/results/s4-m1186-post-s4-m1185-validate-local.md"
 "compare/results/s4-m1185-dense-simd-probe-refresh.md"
 "compare/results/s4-m1184-post-s4-m1183-validate-all.md"
@@ -229,4 +231,6 @@ S4-M1185 is closed after refreshing dense SIMD vectorbench evidence in `compare/
 
 S4-M1186 is closed after refreshing validate-local evidence in `compare/results/s4-m1186-post-s4-m1185-validate-local.md`.
 
-S4-M1187 remains active after S4-M1186 refreshes validate-local evidence in `compare/results/s4-m1186-post-s4-m1185-validate-local.md`.
+S4-M1187 is closed after adding dynamic weighted-tree typed diagnostics in `compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md`.
+
+S4-M1188 remains active after S4-M1187 adds dynamic weighted-tree typed diagnostics in `compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md`.
