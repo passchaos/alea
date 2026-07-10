@@ -791,7 +791,7 @@ Use:
   Rust-discoverable alias for ordered partial `updateMany`, and `updateAt`
   refreshes one weight while preserving failed-update table safety, `initByIndex` /
   `updateByIndex` construct and refresh static alias tables from index-weight
-  functions, while `initBy` / `updateBy` do the same from item weight accessors; `clone` / `eql` provide explicit Zig-native equivalents for Rust-style clone/equality workflows
+  functions, while `initBy` / `updateBy` do the same from item weight accessors; `clone` / `eql` provide explicit Zig-native equivalents for Rust-style clone/equality workflows, and `format` supports `std.Io.Writer.print("{f}", .{sampler})` debug snapshots
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
   and sampling workloads with weights accumulated as `f64`, including
   `initBy` / `updateAllBy` from item weight accessors,
@@ -808,7 +808,7 @@ Use:
   repeated draws; `indexArray` / `indexArrayU32` variants return fixed-size
   repeated index arrays; `sampleIndex` / `fillIndices` aliases are available
   for users discovering dynamic trees from `WeightedChoice` index naming; use
-  `iter` / `iterU32` for repeated with-replacement index streams; `clone` / `eql` mirror local Rust `Clone` / `PartialEq` workflows without tying the API to Rust traits
+  `iter` / `iterU32` for repeated with-replacement index streams; `clone` / `eql` mirror local Rust `Clone` / `PartialEq` workflows without tying the API to Rust traits, and `format` supports Zig-native `{f}` debug snapshots analogous to local Rust `Debug` output
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters, including `updateWeights` /
   `updateMany`,
@@ -821,7 +821,7 @@ Use:
   `indexArrayU32` provides fixed-size compact index arrays, `sampleIndex` /
   `fillIndices` aliases mirror `WeightedChoice`, `iter` / `iterU32` provide
   repeated index streams, and zero-length checked fills return before validating
-  totals; `clone` / `eql` mirror generic dynamic-tree clone/equality workflows)
+  totals; `clone` / `eql` mirror generic dynamic-tree clone/equality workflows, and `format` supports Zig-native `{f}` debug snapshots)
 Run `zig build run-weighted-sampling` for a runnable comparison of one-shot
 weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
 and weighted no-replacement helpers.

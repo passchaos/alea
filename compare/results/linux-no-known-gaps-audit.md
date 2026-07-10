@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1167 bar is S4-M1168: exact/default dense SIMD research,
+The active post-S4-M1168 bar is S4-M1169: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6092,3 +6092,5 @@ S4-M1165 aligns WeightedIntTree integer total-overflow diagnostics with local `r
 S4-M1166 refreshes full portability-sensitive validation after S4-M1165 (`compare/results/s4-m1166-post-s4-m1165-validate-all.md`): `zig build validate-all` passes with native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending in `profilelongcheck ok`. This is validation evidence, not whole-goal completion.
 
 S4-M1167 adds weighted sampler clone/equality helpers (`compare/results/s4-m1167-weighted-sampler-clone-eql.md`): `AliasTable(Weight)` / `WeightedIndex(Weight)`, `WeightedTree(Weight)`, and `WeightedIntTree(Weight)` now expose Zig-native `clone` / `eql` helpers matching local Rust weighted sampler `Clone` / `PartialEq` workflows. This is a local Rust ergonomics closure, not whole-goal completion.
+
+S4-M1168 adds weighted sampler format helpers (`compare/results/s4-m1168-weighted-sampler-format.md`): `AliasTable(Weight)` / `WeightedIndex(Weight)`, `WeightedTree(Weight)`, and `WeightedIntTree(Weight)` now expose Zig-native `{f}` formatter output matching local Rust weighted sampler `Debug` workflows. This is a local Rust diagnostics ergonomics closure, not whole-goal completion.

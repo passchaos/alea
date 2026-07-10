@@ -19350,6 +19350,22 @@ pub fn AliasTable(comptime Weight: type) type {
                 std.mem.eql(f64, self.weight_values, other.weight_values);
         }
 
+        pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+            try writer.print(
+                "AliasTable{{ .len = {}, .total = {d}, .positive_count = {}, .constant_index = {?}, .prob = {any}, .prob_threshold = {any}, .alias = {any}, .weight_values = {any} }}",
+                .{
+                    self.len(),
+                    self.total,
+                    self.positive_count,
+                    self.constant_index,
+                    self.prob,
+                    self.prob_threshold,
+                    self.alias,
+                    self.weight_values,
+                },
+            );
+        }
+
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.prob.len) return error.InvalidParameter;
 
@@ -20256,6 +20272,19 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.positive_count == other.positive_count and
                 self.positive_index == other.positive_index and
                 std.mem.eql(f64, self.subtotals.items, other.subtotals.items);
+        }
+
+        pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+            try writer.print(
+                "WeightedTree{{ .len = {}, .total = {d}, .positive_count = {}, .positive_index = {?}, .subtotals = {any} }}",
+                .{
+                    self.len(),
+                    self.totalWeight(),
+                    self.positive_count,
+                    self.positive_index,
+                    self.subtotals.items,
+                },
+            );
         }
 
         pub fn len(self: Self) usize {
@@ -21236,6 +21265,19 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.positive_count == other.positive_count and
                 self.positive_index == other.positive_index and
                 std.mem.eql(u64, self.subtotals.items, other.subtotals.items);
+        }
+
+        pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+            try writer.print(
+                "WeightedIntTree{{ .len = {}, .total = {}, .positive_count = {}, .positive_index = {?}, .subtotals = {any} }}",
+                .{
+                    self.len(),
+                    self.totalWeight(),
+                    self.positive_count,
+                    self.positive_index,
+                    self.subtotals.items,
+                },
+            );
         }
 
         pub fn len(self: Self) usize {
@@ -23164,6 +23206,45 @@ test "weighted samplers clone and equality mirror local Rust derives" {
     defer empty_int_tree_clone.deinit();
     try std.testing.expect(empty_int_tree.eql(empty_int_tree_clone));
     try std.testing.expect(empty_int_tree_clone.isEmpty());
+}
+
+test "weighted samplers format expose local Rust debug-style state" {
+    var alias = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer alias.deinit();
+    var alias_buf: [2048]u8 = undefined;
+    var alias_writer = std.Io.Writer.fixed(&alias_buf);
+    try alias_writer.print("{f}", .{alias});
+    const alias_out = std.Io.Writer.buffered(&alias_writer);
+    try std.testing.expect(std.mem.indexOf(u8, alias_out, "AliasTable{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, alias_out, ".len = 4") != null);
+    try std.testing.expect(std.mem.indexOf(u8, alias_out, ".total = 9") != null);
+    try std.testing.expect(std.mem.indexOf(u8, alias_out, ".positive_count = 3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, alias_out, ".prob_threshold =") != null);
+    try std.testing.expect(std.mem.indexOf(u8, alias_out, ".weight_values =") != null);
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+    var tree_buf: [1024]u8 = undefined;
+    var tree_writer = std.Io.Writer.fixed(&tree_buf);
+    try tree_writer.print("{f}", .{tree});
+    const tree_out = std.Io.Writer.buffered(&tree_writer);
+    try std.testing.expect(std.mem.indexOf(u8, tree_out, "WeightedTree{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, tree_out, ".len = 4") != null);
+    try std.testing.expect(std.mem.indexOf(u8, tree_out, ".total = 9") != null);
+    try std.testing.expect(std.mem.indexOf(u8, tree_out, ".positive_count = 3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, tree_out, ".subtotals =") != null);
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer int_tree.deinit();
+    var int_tree_buf: [1024]u8 = undefined;
+    var int_tree_writer = std.Io.Writer.fixed(&int_tree_buf);
+    try int_tree_writer.print("{f}", .{int_tree});
+    const int_tree_out = std.Io.Writer.buffered(&int_tree_writer);
+    try std.testing.expect(std.mem.indexOf(u8, int_tree_out, "WeightedIntTree{") != null);
+    try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".len = 4") != null);
+    try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".total = 9") != null);
+    try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".positive_count = 3") != null);
+    try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".subtotals =") != null);
 }
 
 test "alias table samples valid indexes" {
