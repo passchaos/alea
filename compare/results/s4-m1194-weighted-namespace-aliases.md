@@ -50,6 +50,20 @@ toolingcheck ok
 $ git diff --check
 (no output)
 
+
+$ zig build validate-all
+roadmapcheck ok
+apicheck ok
+toolingcheck ok
+readmecheck ok
+examplecheck ok
+statcheck ok
+distcheck ok
+profilecheck ok
+profiletailcheck ok
+profilestresscheck ok
+profilelongcheck ok
+
 $ zig build validate-local
 rand_distr standard-normal: 42.8 M samples/s checksum=-3.640
 rand_distr standard-normal f32: 38.7 M samples/s checksum=-3.640
