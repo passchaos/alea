@@ -93,6 +93,7 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1201 refreshes f32x8 standard normal/exponential vectorbench evidence;
 - S4-M1202 refreshes f64x4 standard normal/exponential vectorbench evidence;
 - S4-M1203 refreshes parameterized f32x8/f64x4 normal/exponential vectorbench evidence;
+- S4-M1205 refreshes the local `validate-local` aggregate after the vectorbench status drift repair;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
