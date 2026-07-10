@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1196 bar is S4-M1197: exact/default dense SIMD research,
+The active post-S4-M1197 bar is S4-M1198: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6149,4 +6149,6 @@ S4-M1194 adds weighted namespace aliases (`compare/results/s4-m1194-weighted-nam
 
 S4-M1195 adds root/prelude weighted sampler aliases (`compare/results/s4-m1195-root-weighted-sampler-aliases.md`): root and prelude now expose `WeightedIndex`, `WeightedAliasIndex`, `WeightedTreeIndex`, and `WeightedIntTreeIndex` for direct local Rust `rand` / `rand_distr` weighted sampler discovery. This is local Rust public-surface ergonomics evidence, not whole-goal completion.
 
-S4-M1196 refreshes weighted manifest root-alias evidence (`compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md`): the local `rand` public-surface manifest now cites root/prelude `WeightedIndex` and weighted sampler aliases in the weighted sampler row. This is audit evidence, not whole-goal completion; S4-M1197 remains active.
+S4-M1196 refreshes weighted manifest root-alias evidence (`compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md`): the local `rand` public-surface manifest now cites root/prelude `WeightedIndex` and weighted sampler aliases in the weighted sampler row. This is audit evidence, not whole-goal completion; S4-M1197 was the next raised product bar and is now closed by the Poisson max-lambda public-constant evidence below.
+
+S4-M1197 exposes Poisson max-lambda public constants (`compare/results/s4-m1197-poisson-max-lambda-constants.md`): Alea now publishes the local `rand_distr::Poisson::MAX_LAMBDA` threshold as top-level, sampler, and vector diagnostics. This is local Rust public-surface evidence, not whole-goal completion; S4-M1198 remains active.

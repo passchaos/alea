@@ -8593,7 +8593,8 @@ pub fn poisson(rng: Rng, lambda: f64) u64 {
     return dist.sample(rng);
 }
 
-const poissonMaxLambda: f64 = 1.844e19;
+pub const poisson_max_lambda: f64 = 1.844e19;
+pub const poissonMaxLambda = poisson_max_lambda;
 
 fn poissonParametersValid(lambda: f64) bool {
     return lambda >= 0 and std.math.isFinite(lambda) and lambda <= poissonMaxLambda;
@@ -8685,6 +8686,9 @@ pub fn fillVectorPoissonCheckedFrom(source: anytype, comptime VectorType: type, 
 }
 
 pub const Poisson = struct {
+    pub const max_lambda = poisson_max_lambda;
+    pub const MAX_LAMBDA = poisson_max_lambda;
+
     method: PoissonMethod,
 
     pub fn init(lambda: f64) Error!Poisson {
@@ -8772,6 +8776,9 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         const Self = @This();
 
         sampler: Poisson,
+
+        pub const max_lambda = Poisson.max_lambda;
+        pub const MAX_LAMBDA = Poisson.MAX_LAMBDA;
 
         pub fn init(lambda: f64) Error!Self {
             return .{ .sampler = try Poisson.init(lambda) };
@@ -34871,6 +34878,20 @@ test "poisson max lambda guard matches local rand_distr" {
 
     _ = try Poisson.init(poissonMaxLambda);
     _ = try VectorPoisson(@Vector(4, u64)).init(poissonMaxLambda);
+}
+
+test "poisson max lambda constants mirror local rand_distr" {
+    const alea = @import("root.zig");
+
+    try std.testing.expectEqual(@as(f64, 1.844e19), poisson_max_lambda);
+    try std.testing.expectEqual(poisson_max_lambda, poissonMaxLambda);
+    try std.testing.expectEqual(poisson_max_lambda, Poisson.max_lambda);
+    try std.testing.expectEqual(poisson_max_lambda, Poisson.MAX_LAMBDA);
+    try std.testing.expectEqual(Poisson.max_lambda, VectorPoisson(@Vector(4, u64)).max_lambda);
+    try std.testing.expectEqual(Poisson.MAX_LAMBDA, VectorPoisson(@Vector(4, u64)).MAX_LAMBDA);
+    try std.testing.expectEqual(Poisson.max_lambda, alea.distributions.poisson_max_lambda);
+    try std.testing.expectEqual(Poisson.max_lambda, alea.distributions.Poisson.max_lambda);
+    try std.testing.expectEqual(Poisson.MAX_LAMBDA, alea.distributions.Poisson.MAX_LAMBDA);
 }
 
 test "invalid poisson ahrens-dieter helper does not consume random stream" {

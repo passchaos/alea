@@ -541,7 +541,10 @@ self-forking.
 
 ## Distributions
 
-- Error types/aliases: `Error`, `UniformError`, `BernoulliError`,
+- Constants and error types/aliases: `poisson_max_lambda`, `poissonMaxLambda`,
+  `Poisson.max_lambda`, `Poisson.MAX_LAMBDA`,
+  `VectorPoisson(VectorType).max_lambda`, `VectorPoisson(VectorType).MAX_LAMBDA`,
+  `Error`, `UniformError`, `BernoulliError`,
   `WeightedError`, `WeightError`, `weighted.Error`,
   `weighted.WeightedError`, `weighted.WeightError`, `slice.Empty`,
   `NormalError`, `ExpError`, `GammaError`, `BetaError`, `BinomialError`,
@@ -1770,6 +1773,8 @@ Reusable samplers:
 - `Poisson`
 - `Poisson.init`
 - `Poisson.new`
+- `Poisson.max_lambda`
+- `Poisson.MAX_LAMBDA`
 - `Poisson.lambdaValue`
 - `Poisson.expectedValue`
 - `Poisson.varianceValue`
@@ -1781,6 +1786,8 @@ Reusable samplers:
 - `Poisson.fillFrom`
 - `VectorPoisson(VectorType)`
 - `VectorPoisson(VectorType).init`
+- `VectorPoisson(VectorType).max_lambda`
+- `VectorPoisson(VectorType).MAX_LAMBDA`
 - `VectorPoisson(VectorType).lambdaValue`
 - `VectorPoisson(VectorType).expectedValue`
 - `VectorPoisson(VectorType).varianceValue`

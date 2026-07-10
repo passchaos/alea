@@ -260,8 +260,10 @@ Run `zig build run-discrete-distributions` for a runnable comparison of
 Bernoulli (`new` / `newRatio` / `fromRatio` aliases plus `init` /
 `initRatio`, Rust-discoverable `p()` probability lookup, and the
 `BernoulliError` invalid-probability error type), Binomial,
-NegativeBinomial, Poisson, Geometric trial/failure counts, Hypergeometric, and
-vector discrete samplers.
+NegativeBinomial, Poisson (including the local `rand_distr::Poisson::MAX_LAMBDA`
+threshold exposed as `poisson_max_lambda`, `poissonMaxLambda`,
+`Poisson.max_lambda`, and `Poisson.MAX_LAMBDA`), Geometric trial/failure
+counts, Hypergeometric, and vector discrete samplers.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same
