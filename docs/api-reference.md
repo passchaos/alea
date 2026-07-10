@@ -2973,6 +2973,8 @@ Dynamic weighted helpers:
 - `WeightedTree.U32IndexIterator.nextValue`
 - `WeightedTree.U32IndexIterator.fill`
 - `WeightedTree.totalWeight`
+- `WeightedTree.typedTotalWeight`
+- `WeightedTree.totalWeightValue`
 - `WeightedTree.weights`
 - `WeightedTree.weightsInto`
 - `WeightedTree.typedWeights`
@@ -3111,6 +3113,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.U32IndexIterator.nextValue`
 - `WeightedIntTree.U32IndexIterator.fill`
 - `WeightedIntTree.totalWeight`
+- `WeightedIntTree.typedTotalWeight`
+- `WeightedIntTree.totalWeightValue`
 - `WeightedIntTree.weights`
 - `WeightedIntTree.weightsInto`
 - `WeightedIntTree.typedWeights`

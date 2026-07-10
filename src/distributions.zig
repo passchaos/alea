@@ -20575,6 +20575,22 @@ pub fn WeightedTree(comptime Weight: type) type {
             return if (self.subtotals.items.len == 0) 0 else self.subtotals.items[0];
         }
 
+        pub fn typedTotalWeight(self: Self) Error!Weight {
+            var total: Weight = 0;
+            for (self.typed_weight_values.items) |value| {
+                total = switch (@typeInfo(Weight)) {
+                    .int => std.math.add(Weight, total, value) catch return error.Overflow,
+                    .float => total + value,
+                    else => @compileError("weighted tree weights must be numeric"),
+                };
+            }
+            return total;
+        }
+
+        pub fn totalWeightValue(self: Self) Error!Weight {
+            return self.typedTotalWeight();
+        }
+
         pub fn isValid(self: Self) bool {
             const total = self.totalWeight();
             return total > 0 and std.math.isFinite(total);
@@ -21750,6 +21766,18 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn totalWeight(self: Self) u64 {
             return if (self.subtotals.items.len == 0) 0 else self.subtotals.items[0];
+        }
+
+        pub fn typedTotalWeight(self: Self) Error!Weight {
+            var total: Weight = 0;
+            for (self.typed_weight_values.items) |value| {
+                total = std.math.add(Weight, total, value) catch return error.Overflow;
+            }
+            return total;
+        }
+
+        pub fn totalWeightValue(self: Self) Error!Weight {
+            return self.typedTotalWeight();
         }
 
         pub fn isValid(self: Self) bool {
@@ -25187,6 +25215,8 @@ test "weighted tree typed diagnostics preserve original weights" {
     var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
     defer tree.deinit();
 
+    try std.testing.expectEqual(@as(u32, 9), try tree.typedTotalWeight());
+    try std.testing.expectEqual(@as(u32, 9), try tree.totalWeightValue());
     try std.testing.expectEqual(@as(u32, 5), try tree.typedWeightAt(2));
     try std.testing.expectEqual(@as(?u32, 5), tree.typedWeight(2));
     try std.testing.expectEqual(@as(u32, 5), try tree.weightValueAt(2));
@@ -25231,6 +25261,7 @@ test "weighted tree typed diagnostics preserve original weights" {
     try std.testing.expectEqualSlices(u32, &typed, &value_iter_out);
 
     try tree.update(1, 7);
+    try std.testing.expectEqual(@as(u32, 16), try tree.typedTotalWeight());
     try std.testing.expectEqual(@as(u32, 7), try tree.weightValueAt(1));
     try tree.updateMany(&.{
         .{ .index = 0, .weight = 0 },
@@ -25238,15 +25269,24 @@ test "weighted tree typed diagnostics preserve original weights" {
     });
     try tree.weightsValueInto(&values);
     try std.testing.expectEqualSlices(u32, &.{ 0, 7, 5, 4 }, &values);
+    try std.testing.expectEqual(@as(u32, 16), try tree.totalWeightValue());
 
     try tree.updateAll(&.{ 2, 3, 0, 8 });
     try tree.typedWeightsInto(&typed);
     try std.testing.expectEqualSlices(u32, &.{ 2, 3, 0, 8 }, &typed);
+    try std.testing.expectEqual(@as(u32, 13), try tree.typedTotalWeight());
 
     try tree.push(11);
+    try std.testing.expectEqual(@as(u32, 24), try tree.totalWeightValue());
     try std.testing.expectEqual(@as(u32, 11), try tree.weightValueAt(4));
     try std.testing.expectEqual(@as(?u32, 11), tree.popValue());
     try std.testing.expectEqual(@as(usize, 4), tree.len());
+    try std.testing.expectEqual(@as(u32, 13), try tree.typedTotalWeight());
+
+    var overflow_tree = try WeightedTree(u8).init(std.testing.allocator, &.{ 200, 100 });
+    defer overflow_tree.deinit();
+    try std.testing.expectError(error.Overflow, overflow_tree.typedTotalWeight());
+    try std.testing.expectError(error.Overflow, overflow_tree.totalWeightValue());
 }
 
 test "weighted tree updateMany applies ordered partial updates atomically" {
@@ -26546,6 +26586,8 @@ test "weighted int tree typed diagnostics preserve original weight type" {
     var tree = try WeightedIntTree(u128).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
     defer tree.deinit();
 
+    try std.testing.expectEqual(@as(u128, 9), try tree.typedTotalWeight());
+    try std.testing.expectEqual(@as(u128, 9), try tree.totalWeightValue());
     try std.testing.expectEqual(@as(u128, 5), try tree.typedWeightAt(2));
     try std.testing.expectEqual(@as(?u128, 5), tree.typedWeight(2));
     try std.testing.expectEqual(@as(u128, 5), try tree.weightValueAt(2));
@@ -26574,6 +26616,7 @@ test "weighted int tree typed diagnostics preserve original weight type" {
     try std.testing.expectEqualSlices(u128, &.{ 0, 5, 3 }, &iter_out);
 
     try tree.update(1, 7);
+    try std.testing.expectEqual(@as(u128, 16), try tree.typedTotalWeight());
     try std.testing.expectEqual(@as(u128, 7), try tree.weightValueAt(1));
     try tree.updateMany(&.{
         .{ .index = 0, .weight = 0 },
@@ -26581,15 +26624,24 @@ test "weighted int tree typed diagnostics preserve original weight type" {
     });
     try tree.weightsValueInto(&value_out);
     try std.testing.expectEqualSlices(u128, &.{ 0, 7, 5, 4 }, &value_out);
+    try std.testing.expectEqual(@as(u128, 16), try tree.totalWeightValue());
 
     try tree.updateAll(&.{ 2, 3, 0, 8 });
     try tree.typedWeightsInto(&typed);
     try std.testing.expectEqualSlices(u128, &.{ 2, 3, 0, 8 }, &typed);
+    try std.testing.expectEqual(@as(u128, 13), try tree.typedTotalWeight());
 
     try tree.push(11);
+    try std.testing.expectEqual(@as(u128, 24), try tree.totalWeightValue());
     try std.testing.expectEqual(@as(u128, 11), try tree.weightValueAt(4));
     try std.testing.expectEqual(@as(?u128, 11), tree.popValue());
     try std.testing.expectEqual(@as(usize, 4), tree.len());
+    try std.testing.expectEqual(@as(u128, 13), try tree.typedTotalWeight());
+
+    var overflow_tree = try WeightedIntTree(u8).init(std.testing.allocator, &.{ 200, 100 });
+    defer overflow_tree.deinit();
+    try std.testing.expectError(error.Overflow, overflow_tree.typedTotalWeight());
+    try std.testing.expectError(error.Overflow, overflow_tree.totalWeightValue());
 }
 
 test "weighted int tree updateMany applies ordered partial updates atomically" {
