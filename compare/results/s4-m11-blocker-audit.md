@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1190-post-s4-m1189-validate-all.md
 compare/results/s4-m1189-dynamic-tree-typed-total.md
 compare/results/s4-m1188-post-s4-m1187-validate-all.md
 compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md
@@ -77,6 +78,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1190-post-s4-m1189-validate-all.md"
 "compare/results/s4-m1189-dynamic-tree-typed-total.md"
 "compare/results/s4-m1188-post-s4-m1187-validate-all.md"
 "compare/results/s4-m1187-dynamic-tree-typed-diagnostics.md"
@@ -241,4 +243,6 @@ S4-M1188 is closed after refreshing full validate-all evidence in `compare/resul
 
 S4-M1189 is closed after adding dynamic weighted-tree typed total diagnostics in `compare/results/s4-m1189-dynamic-tree-typed-total.md`.
 
-S4-M1190 remains active after S4-M1189 adds dynamic weighted-tree typed total diagnostics in `compare/results/s4-m1189-dynamic-tree-typed-total.md`.
+S4-M1190 is closed after refreshing full validate-all evidence in `compare/results/s4-m1190-post-s4-m1189-validate-all.md`.
+
+S4-M1191 remains active after S4-M1190 refreshes full validate-all evidence in `compare/results/s4-m1190-post-s4-m1189-validate-all.md`.
