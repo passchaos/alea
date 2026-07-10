@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1174-weighted-error-message.md
 compare/results/s4-m1173-post-s4-m1172-validate-all.md
 compare/results/s4-m1172-weighted-iterator-clone-format.md
 compare/results/s4-m1171-post-s4-m1170-validate-all.md
@@ -61,6 +62,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1174-weighted-error-message.md"
 "compare/results/s4-m1173-post-s4-m1172-validate-all.md"
 "compare/results/s4-m1172-weighted-iterator-clone-format.md"
 "compare/results/s4-m1171-post-s4-m1170-validate-all.md"
@@ -177,4 +179,6 @@ S4-M1172 is closed after adding weighted iterator clone/format helpers in `compa
 
 S4-M1173 is closed after refreshing validate-all evidence in `compare/results/s4-m1173-post-s4-m1172-validate-all.md`.
 
-S4-M1174 remains active after S4-M1173 refreshes validate-all evidence in `compare/results/s4-m1173-post-s4-m1172-validate-all.md`.
+S4-M1174 is closed after adding weighted error message helpers in `compare/results/s4-m1174-weighted-error-message.md`.
+
+S4-M1175 remains active after S4-M1174 adds weighted error message helpers in `compare/results/s4-m1174-weighted-error-message.md`.

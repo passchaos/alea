@@ -779,7 +779,8 @@ Use:
   Rust `rand::distr::weighted::WeightedIndex` naming, and
   `distributions.weighted.WeightedIndex` / `distributions.weighted.Error` /
   `distributions.weighted.WeightError` mirror the local Rust
-  `rand::distr::weighted::*` module path), including
+  `rand::distr::weighted::*` module path), and `weightedErrorMessage` /
+  `weighted.errorMessage` mirror local Rust weighted `Display` diagnostics, including
   Rust-discoverable `new`, `len`, `numChoices`, `positiveCount`, `totalWeight`, and allocation-returning or caller-buffer
   optional `weight` / `probability`, lazy `weightIter` / `probabilityIter` size hints plus iterator `clone` / `{f}` format diagnostics, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population

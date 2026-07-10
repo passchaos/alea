@@ -2714,9 +2714,11 @@ Alias helpers:
 - `aliasTable(T)`
 - `WeightedIndex(Weight)`
 - `weighted`
+- `weightedErrorMessage`
 - `weighted.Error`
 - `weighted.WeightedError`
 - `weighted.WeightError`
+- `weighted.errorMessage`
 - `weighted.WeightedIndex(Weight)`
 - `AliasTable.init`
 - `AliasTable.new`

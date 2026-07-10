@@ -195,10 +195,24 @@ pub const WeibullError = Error;
 pub const ZetaError = Error;
 pub const ZipfError = Error;
 
+pub fn weightedErrorMessage(err: WeightedError) []const u8 {
+    return switch (err) {
+        error.InvalidInput => "Weights sequence is empty/too long/unordered",
+        error.InvalidWeight => "A weight is negative, too large or not a valid number",
+        error.InsufficientNonZero => "Not enough weights > zero",
+        error.Overflow => "Overflow when summing weights",
+        else => @errorName(err),
+    };
+}
+
 pub const weighted = struct {
     pub const Error = distributions_module.Error;
     pub const WeightedError = distributions_module.WeightedError;
     pub const WeightError = distributions_module.WeightError;
+
+    pub fn errorMessage(err: distributions_module.WeightedError) []const u8 {
+        return distributions_module.weightedErrorMessage(err);
+    }
 
     pub fn WeightedIndex(comptime Weight: type) type {
         return distributions_module.WeightedIndex(Weight);
@@ -38990,6 +39004,16 @@ test "distribution weight error aliases mirror Error" {
     try std.testing.expectError(error.InvalidInput, AliasTable(u32).new(std.testing.allocator, &.{}));
     try std.testing.expectError(error.InsufficientNonZero, WeightedIndex(u32).new(std.testing.allocator, &.{ 0, 0 }));
     try std.testing.expectError(error.InvalidWeight, WeightedIndex(f64).new(std.testing.allocator, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+}
+
+test "weighted error messages mirror local Rust Display diagnostics" {
+    try std.testing.expectEqualStrings("Weights sequence is empty/too long/unordered", weightedErrorMessage(error.InvalidInput));
+    try std.testing.expectEqualStrings("A weight is negative, too large or not a valid number", weightedErrorMessage(error.InvalidWeight));
+    try std.testing.expectEqualStrings("Not enough weights > zero", weightedErrorMessage(error.InsufficientNonZero));
+    try std.testing.expectEqualStrings("Overflow when summing weights", weightedErrorMessage(error.Overflow));
+    try std.testing.expectEqualStrings(@errorName(error.InvalidParameter), weightedErrorMessage(error.InvalidParameter));
+
+    try std.testing.expectEqualStrings(weightedErrorMessage(error.InvalidWeight), weighted.errorMessage(error.InvalidWeight));
 }
 
 test "distribution ascii aliases mirror ascii namespace" {
