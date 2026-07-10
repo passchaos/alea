@@ -9156,6 +9156,14 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.table.totalWeight();
         }
 
+        pub fn typedTotalWeight(self: Self) Weight {
+            return self.table.typedTotalWeight();
+        }
+
+        pub fn totalWeightValue(self: Self) Weight {
+            return self.table.totalWeightValue();
+        }
+
         pub fn constantIndex(self: Self) ?usize {
             return self.table.constantIndex();
         }
@@ -9171,6 +9179,23 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
         pub fn weightsInto(self: Self, out: []f64) Error!void {
             if (out.len != self.items.len) return error.LengthMismatch;
             self.table.weightsInto(out) catch unreachable;
+        }
+
+        pub fn typedWeights(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            return self.table.typedWeights(allocator);
+        }
+
+        pub fn typedWeightsInto(self: Self, out: []Weight) Error!void {
+            if (out.len != self.items.len) return error.LengthMismatch;
+            self.table.typedWeightsInto(out) catch unreachable;
+        }
+
+        pub fn weightsValue(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            return self.typedWeights(allocator);
+        }
+
+        pub fn weightsValueInto(self: Self, out: []Weight) Error!void {
+            try self.typedWeightsInto(out);
         }
 
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -9192,8 +9217,33 @@ pub fn WeightedChoice(comptime T: type, comptime Weight: type) type {
             return self.table.weight(index) orelse unreachable;
         }
 
+        pub fn typedWeightAt(self: Self, index: usize) Error!Weight {
+            if (index >= self.items.len) return error.InvalidParameter;
+            return self.table.typedWeightAt(index) catch unreachable;
+        }
+
+        pub fn typedWeight(self: Self, index: usize) ?Weight {
+            return self.typedWeightAt(index) catch null;
+        }
+
+        pub fn weightValueAt(self: Self, index: usize) Error!Weight {
+            return self.typedWeightAt(index);
+        }
+
+        pub fn weightValue(self: Self, index: usize) ?Weight {
+            return self.typedWeight(index);
+        }
+
         pub fn weightIter(self: Self) Table.WeightIterator {
             return self.table.weightIter();
+        }
+
+        pub fn typedWeightIter(self: Self) Table.TypedWeightIterator {
+            return self.table.typedWeightIter();
+        }
+
+        pub fn weightValueIter(self: Self) Table.TypedWeightIterator {
+            return self.typedWeightIter();
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -21754,6 +21804,75 @@ test "weighted choice sampler maps alias indexes to items" {
     var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
     try std.testing.expectError(error.OutOfMemory, choice.weights(failing.allocator()));
     try std.testing.expect(failing.has_induced_failure);
+}
+
+test "WeightedChoice typed weight diagnostics preserve original weight type" {
+    const labels = [_][]const u8{ "red", "green", "blue", "gold" };
+
+    var choice = try WeightedChoice([]const u8, u32).init(std.testing.allocator, &labels, &.{ 2, 0, 5, 3 });
+    defer choice.deinit();
+
+    try std.testing.expectApproxEqAbs(@as(f64, 10), choice.totalWeight(), 1e-12);
+    try std.testing.expectEqual(@as(u32, 10), choice.typedTotalWeight());
+    try std.testing.expectEqual(@as(u32, 10), choice.totalWeightValue());
+    try std.testing.expectEqual(@as(u32, 5), try choice.typedWeightAt(2));
+    try std.testing.expectEqual(@as(?u32, 5), choice.typedWeight(2));
+    try std.testing.expectEqual(@as(u32, 5), try choice.weightValueAt(2));
+    try std.testing.expectEqual(@as(?u32, 5), choice.weightValue(2));
+    try std.testing.expectEqual(@as(?u32, null), choice.weightValue(labels.len));
+    try std.testing.expectError(error.InvalidParameter, choice.weightValueAt(labels.len));
+
+    var typed_out: [4]u32 = undefined;
+    try choice.typedWeightsInto(&typed_out);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 0, 5, 3 }, &typed_out);
+    var value_out: [4]u32 = undefined;
+    try choice.weightsValueInto(&value_out);
+    try std.testing.expectEqualSlices(u32, &typed_out, &value_out);
+    var wrong_len: [3]u32 = undefined;
+    try std.testing.expectError(error.LengthMismatch, choice.typedWeightsInto(&wrong_len));
+    try std.testing.expectError(error.LengthMismatch, choice.weightsValueInto(&wrong_len));
+
+    const owned_typed = try choice.typedWeights(std.testing.allocator);
+    defer std.testing.allocator.free(owned_typed);
+    try std.testing.expectEqualSlices(u32, &typed_out, owned_typed);
+    const owned_value = try choice.weightsValue(std.testing.allocator);
+    defer std.testing.allocator.free(owned_value);
+    try std.testing.expectEqualSlices(u32, &typed_out, owned_value);
+
+    var typed_iter = choice.typedWeightIter();
+    try std.testing.expectEqual(@as(usize, 4), typed_iter.len());
+    const hint = typed_iter.sizeHint();
+    try std.testing.expectEqual(@as(usize, 4), hint.lower);
+    try std.testing.expectEqual(@as(?usize, 4), hint.upper);
+    try std.testing.expectEqual(@as(?u32, 2), typed_iter.next());
+    const cloned_iter = typed_iter.clone();
+    try std.testing.expectEqual(@as(?u32, 0), typed_iter.next());
+    var cloned_fill: [3]u32 = undefined;
+    var cloned_mut = cloned_iter;
+    try std.testing.expectEqual(@as(usize, 3), cloned_mut.fill(&cloned_fill));
+    try std.testing.expectEqualSlices(u32, &.{ 0, 5, 3 }, &cloned_fill);
+
+    var value_iter = choice.weightValueIter();
+    var iter_out: [4]u32 = undefined;
+    try std.testing.expectEqual(@as(usize, 4), value_iter.fill(&iter_out));
+    try std.testing.expectEqualSlices(u32, &typed_out, &iter_out);
+
+    try choice.updateAt(1, 7);
+    try std.testing.expectEqual(@as(u32, 17), choice.totalWeightValue());
+    try std.testing.expectEqual(@as(u32, 7), try choice.weightValueAt(1));
+
+    try choice.updateMany(&.{
+        .{ .index = 0, .weight = 0 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try choice.weightsValueInto(&value_out);
+    try std.testing.expectEqualSlices(u32, &.{ 0, 7, 5, 4 }, &value_out);
+    try std.testing.expectEqual(@as(u32, 16), choice.typedTotalWeight());
+
+    try choice.update(&.{ 1, 1, 1, 1 });
+    try choice.typedWeightsInto(&typed_out);
+    try std.testing.expectEqualSlices(u32, &.{ 1, 1, 1, 1 }, &typed_out);
+    try std.testing.expectEqual(@as(u32, 4), choice.totalWeightValue());
 }
 
 test "weighted choice updateAt refreshes one weight and preserves table on errors" {

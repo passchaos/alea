@@ -760,8 +760,8 @@ Use:
   fixed-size `Choice.indexArrayFrom` / `indexArrayU32From`, and
   repeated `Choice.indexIterFrom` / `indexIterU32From` index streams,
   `WeightedChoice.new`, `WeightedChoice.updateMany` / `updateAt`, `WeightedChoice.initBy` / `updateBy`, `WeightedChoice.initByIndex` / `updateByIndex`,
-  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight`, `WeightedChoice.positiveCount`, `WeightedChoice.constantIndex`, `WeightedChoice.item` / `itemAt` / `get`, and
-  optional `WeightedChoice.weight` / `probability`, lazy `WeightedChoice.weightIter` / `probabilityIter` size hints, `WeightedChoice.weightAt` / `weightsInto`, `WeightedChoice.sampleIndexFrom` /
+  `WeightedChoice.iterFrom`, `WeightedChoice.totalWeight` plus typed `typedTotalWeight` / `totalWeightValue`, `WeightedChoice.positiveCount`, `WeightedChoice.constantIndex`, `WeightedChoice.item` / `itemAt` / `get`, and
+  optional `WeightedChoice.weight` / typed `weightValue` / `probability`, lazy `WeightedChoice.weightIter` / typed `weightValueIter` / `probabilityIter` size hints, `WeightedChoice.weightAt` / `weightsInto` plus typed `typedWeights` / `weightsValue`, `WeightedChoice.sampleIndexFrom` /
   `sampleIndexU32From`, `WeightedChoice.fillValuesFrom` / `fillFrom`,
   `WeightedChoice.valuesFrom` / `ptrsFrom`, fixed-size
   `WeightedChoice.valueArrayFrom` / `ptrArrayFrom`, and
