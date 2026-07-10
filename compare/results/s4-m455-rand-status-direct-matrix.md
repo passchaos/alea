@@ -2,7 +2,7 @@
 
 ## Gap
 
-After S4-M1192 repaired rand-status post-bar drift, the documented direct argument forms for
+After S4-M1193 refreshed validate-local after rand-status post-bar repairs, the documented direct argument forms for
 `rand-status` needed a fresh recorded run matching the updated status JSON and
 self-test output.
 
@@ -25,14 +25,14 @@ $ zig build rand-status -- --json
   "rust_comparison": "parser tests and rand-bench-smoke pass",
   "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1192 follow-ups closed for current bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1193 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M1193 post-S4-M1192 next product bar",
+  "remaining_blocker": "S4-M1194 post-S4-M1193 next product bar",
   "s4_m11_blocked": false,
   "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1192-rand-status-post-bar-drift.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1193-post-s4-m1192-validate-local.md"
 }
 $ zig build rand-status -- --schema-version
 1
@@ -55,6 +55,6 @@ $ git diff --check
 
 S4-M455 is refreshed for the current bar: the documented direct `rand-status`
 argument forms pass and report that the S4-M11 runtime branch and
-S4-M1124/S4-M1127-S4-M1192 follow-ups are closed for the current bar while
-S4-M1193 is the next post-S4-M1192 product bar. This is tooling validation
+S4-M1124/S4-M1127-S4-M1193 follow-ups are closed for the current bar while
+S4-M1194 is the next post-S4-M1193 product bar. This is tooling validation
 evidence only; it is not whole-goal completion evidence.

@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1193-post-s4-m1192-validate-local.md
 compare/results/s4-m1192-rand-status-post-bar-drift.md
 compare/results/s4-m1191-rand-status-post-bar-drift.md
 compare/results/s4-m1190-post-s4-m1189-validate-all.md
@@ -80,6 +81,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1193-post-s4-m1192-validate-local.md"
 "compare/results/s4-m1192-rand-status-post-bar-drift.md"
 "compare/results/s4-m1191-rand-status-post-bar-drift.md"
 "compare/results/s4-m1190-post-s4-m1189-validate-all.md"
@@ -253,4 +255,6 @@ S4-M1191 is closed after repairing rand-status post-bar drift in `compare/result
 
 S4-M1192 is closed after repairing follow-up rand-status post-bar drift in `compare/results/s4-m1192-rand-status-post-bar-drift.md`.
 
-S4-M1193 remains active after S4-M1192 repairs follow-up rand-status post-bar drift in `compare/results/s4-m1192-rand-status-post-bar-drift.md`.
+S4-M1193 is closed after refreshing validate-local evidence in `compare/results/s4-m1193-post-s4-m1192-validate-local.md`.
+
+S4-M1194 remains active after S4-M1193 refreshes validate-local evidence in `compare/results/s4-m1193-post-s4-m1192-validate-local.md`.
