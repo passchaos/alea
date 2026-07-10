@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1183 bar is S4-M1184: exact/default dense SIMD research,
+The active post-S4-M1184 bar is S4-M1185: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6123,4 +6123,6 @@ S4-M1181 refreshes full portability-sensitive validation after S4-M1180 (`compar
 
 S4-M1182 refreshes weighted public-surface manifests after the typed static weighted diagnostics closure (`compare/results/s4-m1182-weighted-manifest-refresh.md`): the local `rand` and `rand_distr` manifests now cite typed `WeightedIndex` / `AliasTable` weight, weights, total-weight, and typed iterator diagnostics. This is audit evidence, not whole-goal completion.
 
-S4-M1183 extends typed static weighted diagnostics through reusable item samplers (`compare/results/s4-m1183-weighted-choice-typed-diagnostics.md`): `seq.WeightedChoice(T, Weight)` now exposes typed total, single-weight, bulk-weight, and typed iterator diagnostics matching the underlying `AliasTable` / `WeightedIndex` accessors. This is a local Rust ergonomics closure, not whole-goal completion; S4-M1184 remains active.
+S4-M1183 extends typed static weighted diagnostics through reusable item samplers (`compare/results/s4-m1183-weighted-choice-typed-diagnostics.md`): `seq.WeightedChoice(T, Weight)` now exposes typed total, single-weight, bulk-weight, and typed iterator diagnostics matching the underlying `AliasTable` / `WeightedIndex` accessors. This is a local Rust ergonomics closure, not whole-goal completion.
+
+S4-M1184 refreshes full portability-sensitive validation after S4-M1183 (`compare/results/s4-m1184-post-s4-m1183-validate-all.md`): `zig build validate-all` passes with native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending in `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1185 remains active.
