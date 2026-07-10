@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1165 bar is S4-M1166: exact/default dense SIMD research,
+The active post-S4-M1166 bar is S4-M1167: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6088,3 +6088,5 @@ S4-M1163 aligns AliasTable per-weight maximum validation with local `rand_distr:
 S4-M1164 aligns WeightedTree zero-total checked sampling errors with local `rand_distr::weighted::WeightedTreeIndex::try_sample` (`compare/results/s4-m1164-weighted-tree-zero-total.md`): checked sampling-style `WeightedTree(Weight)` and `WeightedIntTree(Weight)` samples, fills, owned batches, fixed arrays, and iterators now return `InsufficientNonZero` for empty/all-zero trees while probability/export diagnostics and non-finite generic totals retain `InvalidWeight`. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1165 aligns WeightedIntTree integer total-overflow diagnostics with local `rand_distr::weighted::WeightedTreeIndex` (`compare/results/s4-m1165-weighted-int-tree-overflow.md`): otherwise representable unsigned integer weights whose accumulated subtotal overflows now return `Overflow` on construction/push/update paths, while wider-than-`u64` values remain `InvalidWeight`. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1166 refreshes full portability-sensitive validation after S4-M1165 (`compare/results/s4-m1166-post-s4-m1165-validate-all.md`): `zig build validate-all` passes with native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending in `profilelongcheck ok`. This is validation evidence, not whole-goal completion.
