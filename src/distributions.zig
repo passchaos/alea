@@ -11055,11 +11055,12 @@ pub fn Erlang(comptime T: type) type {
 pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     std.debug.assert(betaParametersValid(T, alpha, beta_param));
-    if (alpha == std.math.inf(T) or beta_param == std.math.inf(T)) return betaInfiniteFrom(rng, T, alpha, beta_param);
+    if (alpha == std.math.inf(T) or beta_param == std.math.inf(T)) return betaChengFrom(rng, T, alpha, beta_param);
     if (alpha == 1 and beta_param == 1) return rng.float(T);
     if (alpha == 2 and beta_param == 1) return @sqrt(rng.floatOpen(T));
     if (alpha == 1 and beta_param == 2) return 1 - @sqrt(rng.floatOpen(T));
     if (beta_param == 1) return std.math.pow(T, rng.floatOpen(T), 1 / alpha);
+    if (betaUsesCheng(T, alpha, beta_param)) return betaChengFrom(rng, T, alpha, beta_param);
     const x = gamma(rng, T, alpha, 1);
     const y = gamma(rng, T, beta_param, 1);
     return x / (x + y);
@@ -11078,13 +11079,14 @@ pub fn betaCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
 pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     comptime requireFloat(T);
     std.debug.assert(betaParametersValid(T, alpha, beta_param));
-    if (alpha == std.math.inf(T) or beta_param == std.math.inf(T)) return betaInfiniteFrom(source, T, alpha, beta_param);
+    if (alpha == std.math.inf(T) or beta_param == std.math.inf(T)) return betaChengFrom(source, T, alpha, beta_param);
 
     if (alpha == 1 and beta_param == 1) return Rng.floatFrom(source, T);
     if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
     if (alpha == 1 and beta_param == 2) return 1 - @sqrt(Rng.floatOpenFrom(source, T));
     if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
 
+    if (betaUsesCheng(T, alpha, beta_param)) return betaChengFrom(source, T, alpha, beta_param);
     const x = gammaFrom(source, T, alpha, 1);
     const y = gammaFrom(source, T, beta_param, 1);
     return x / (x + y);
@@ -11094,7 +11096,7 @@ pub fn fillBeta(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) 
     comptime requireFloat(T);
     std.debug.assert(betaParametersValid(T, alpha, beta_param));
     if (alpha == std.math.inf(T) or beta_param == std.math.inf(T)) {
-        for (dest) |*item| item.* = betaInfiniteFrom(rng, T, alpha, beta_param);
+        for (dest) |*item| item.* = betaChengFrom(rng, T, alpha, beta_param);
         return;
     }
     if (alpha == 1 and beta_param == 1) {
@@ -11117,6 +11119,10 @@ pub fn fillBeta(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) 
         for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
         return;
     }
+    if (betaUsesCheng(T, alpha, beta_param)) {
+        for (dest) |*item| item.* = betaChengFrom(rng, T, alpha, beta_param);
+        return;
+    }
     const sampler = Beta(T).init(alpha, beta_param) catch unreachable;
     sampler.fill(rng, dest);
 }
@@ -11125,7 +11131,7 @@ pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta
     comptime requireFloat(T);
     std.debug.assert(betaParametersValid(T, alpha, beta_param));
     if (alpha == std.math.inf(T) or beta_param == std.math.inf(T)) {
-        for (dest) |*item| item.* = betaInfiniteFrom(source, T, alpha, beta_param);
+        for (dest) |*item| item.* = betaChengFrom(source, T, alpha, beta_param);
         return;
     }
 
@@ -11149,6 +11155,10 @@ pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta
         for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
         return;
     }
+    if (betaUsesCheng(T, alpha, beta_param)) {
+        for (dest) |*item| item.* = betaChengFrom(source, T, alpha, beta_param);
+        return;
+    }
 
     const sampler = Beta(T).init(alpha, beta_param) catch unreachable;
     sampler.fillFrom(source, dest);
@@ -11160,7 +11170,11 @@ fn betaParametersValid(comptime T: type, alpha: T, beta_param: T) bool {
         (std.math.isFinite(beta_param) or beta_param == std.math.inf(T));
 }
 
-fn betaInfiniteFrom(source: anytype, comptime T: type, alpha_param: T, beta_param: T) T {
+fn betaUsesCheng(comptime T: type, alpha: T, beta_param: T) bool {
+    return alpha <= 0.1 or beta_param <= 0.1;
+}
+
+fn betaChengFrom(source: anytype, comptime T: type, alpha_param: T, beta_param: T) T {
     var a: T = undefined;
     var b: T = undefined;
     var switched_params: bool = undefined;
@@ -11449,13 +11463,14 @@ pub fn Beta(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             switch (self.method) {
-                .infinite => return betaInfiniteFrom(rng, T, self.alpha, self.beta_param),
+                .infinite => return betaChengFrom(rng, T, self.alpha, self.beta_param),
                 .uniform => return rng.float(T),
                 .sqrt_alpha => return @sqrt(rng.floatOpen(T)),
                 .sqrt_beta => return 1 - @sqrt(rng.floatOpen(T)),
                 .generic => {},
             }
 
+            if (betaUsesCheng(T, self.alpha, self.beta_param)) return betaChengFrom(rng, T, self.alpha, self.beta_param);
             const x = self.gamma_a.sample(rng);
             const y = self.gamma_b.sample(rng);
             return x / (x + y);
@@ -11463,13 +11478,14 @@ pub fn Beta(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             switch (self.method) {
-                .infinite => return betaInfiniteFrom(source, T, self.alpha, self.beta_param),
+                .infinite => return betaChengFrom(source, T, self.alpha, self.beta_param),
                 .uniform => return Rng.floatFrom(source, T),
                 .sqrt_alpha => return @sqrt(Rng.floatOpenFrom(source, T)),
                 .sqrt_beta => return 1 - @sqrt(Rng.floatOpenFrom(source, T)),
                 .generic => {},
             }
 
+            if (betaUsesCheng(T, self.alpha, self.beta_param)) return betaChengFrom(source, T, self.alpha, self.beta_param);
             const x = self.gamma_a.sampleFrom(source);
             const y = self.gamma_b.sampleFrom(source);
             return x / (x + y);
@@ -11478,7 +11494,7 @@ pub fn Beta(comptime T: type) type {
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
             switch (self.method) {
                 .infinite => {
-                    for (dest) |*item| item.* = betaInfiniteFrom(rng, T, self.alpha, self.beta_param);
+                    for (dest) |*item| item.* = betaChengFrom(rng, T, self.alpha, self.beta_param);
                     return;
                 },
                 .uniform => {
@@ -11498,6 +11514,10 @@ pub fn Beta(comptime T: type) type {
                 .generic => {},
             }
 
+            if (betaUsesCheng(T, self.alpha, self.beta_param)) {
+                for (dest) |*item| item.* = betaChengFrom(rng, T, self.alpha, self.beta_param);
+                return;
+            }
             for (dest) |*item| {
                 const x = self.gamma_a.sample(rng);
                 const y = self.gamma_b.sample(rng);
@@ -11508,7 +11528,7 @@ pub fn Beta(comptime T: type) type {
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
             switch (self.method) {
                 .infinite => {
-                    for (dest) |*item| item.* = betaInfiniteFrom(source, T, self.alpha, self.beta_param);
+                    for (dest) |*item| item.* = betaChengFrom(source, T, self.alpha, self.beta_param);
                     return;
                 },
                 .uniform => {
@@ -11528,6 +11548,10 @@ pub fn Beta(comptime T: type) type {
                 .generic => {},
             }
 
+            if (betaUsesCheng(T, self.alpha, self.beta_param)) {
+                for (dest) |*item| item.* = betaChengFrom(source, T, self.alpha, self.beta_param);
+                return;
+            }
             for (dest) |*item| {
                 const x = self.gamma_a.sampleFrom(source);
                 const y = self.gamma_b.sampleFrom(source);
@@ -18950,6 +18974,10 @@ pub fn Dirichlet(comptime T: type) type {
                 out[degenerate] = 1;
                 return;
             }
+            if (self.usesBetaStickBreaking()) {
+                self.sampleIntoBetaStickBreakingFrom(rng, out);
+                return;
+            }
             var total: T = 0;
             for (self.alpha, out) |a, *slot| {
                 const value = gammaFrom(rng, T, a, 1);
@@ -19027,6 +19055,10 @@ pub fn Dirichlet(comptime T: type) type {
                 out[degenerate] = 1;
                 return;
             }
+            if (self.usesBetaStickBreaking()) {
+                self.sampleIntoBetaStickBreakingFrom(source, out);
+                return;
+            }
             var total: T = 0;
             for (self.alpha, out) |a, *slot| {
                 const value = gammaFrom(source, T, a, 1);
@@ -19046,6 +19078,28 @@ pub fn Dirichlet(comptime T: type) type {
                 if (value == std.math.inf(T)) return index;
             }
             return null;
+        }
+
+        fn usesBetaStickBreaking(self: Self) bool {
+            for (self.alpha) |value| {
+                if (!(value <= 0.1)) return false;
+            }
+            return true;
+        }
+
+        fn sampleIntoBetaStickBreakingFrom(self: Self, source: anytype, out: []T) void {
+            var acc: T = 1;
+            var tail_sum: T = 0;
+            for (self.alpha[1..]) |value| tail_sum += value;
+
+            var index: usize = 0;
+            while (index + 1 < self.alpha.len) : (index += 1) {
+                const beta_sample = betaChengFrom(source, T, self.alpha[index], tail_sum);
+                out[index] = acc * beta_sample;
+                acc *= 1 - beta_sample;
+                if (index + 2 < self.alpha.len) tail_sum -= self.alpha[index + 1];
+            }
+            out[self.alpha.len - 1] = acc;
         }
     };
 }
@@ -26554,7 +26608,7 @@ test "infinite beta helpers preserve rand_distr-compatible stream shape" {
 
     const Reference = struct {
         fn consume(source: anytype, comptime T: type, alpha: T, beta_param: T) void {
-            _ = betaInfiniteFrom(source, T, alpha, beta_param);
+            _ = betaChengFrom(source, T, alpha, beta_param);
         }
 
         fn consumeMany(source: anytype, comptime T: type, alpha: T, beta_param: T, count: usize) void {
@@ -26701,6 +26755,51 @@ test "infinite beta helpers preserve rand_distr-compatible stream shape" {
     try std.testing.expectEqual(control.next(), engine.next());
     try std.testing.expectError(error.InvalidParameter, Beta(f64).init(std.math.nan(f64), 1));
     try std.testing.expectError(error.InvalidParameter, VectorBeta(@Vector(4, f64)).init(1, 0));
+}
+
+test "tiny-shape beta helpers avoid gamma-ratio NaN like local rand_distr" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_b37a);
+    const rng = Rng.init(&engine);
+
+    const tiny: f64 = 1e-10;
+    const min_normal = std.math.floatMin(f64);
+
+    const tiny_sample = betaFrom(&engine, f64, tiny, tiny);
+    try std.testing.expect(!std.math.isNan(tiny_sample));
+    try std.testing.expect(tiny_sample >= 0 and tiny_sample <= 1);
+
+    const min_sample = try betaChecked(rng, f64, min_normal, min_normal);
+    try std.testing.expect(!std.math.isNan(min_sample));
+    try std.testing.expect(min_sample >= 0 and min_sample <= 1);
+
+    const sampler = try Beta(f64).init(tiny, tiny);
+    try std.testing.expectEqual(tiny, sampler.alphaValue());
+    try std.testing.expectEqual(tiny, sampler.betaValue());
+    const reusable_sample = sampler.sampleFrom(&engine);
+    try std.testing.expect(!std.math.isNan(reusable_sample));
+    try std.testing.expect(reusable_sample >= 0 and reusable_sample <= 1);
+
+    var scalar_buf: [8]f64 = undefined;
+    sampler.fillFrom(&engine, &scalar_buf);
+    for (scalar_buf) |sample| {
+        try std.testing.expect(!std.math.isNan(sample));
+        try std.testing.expect(sample >= 0 and sample <= 1);
+    }
+
+    const vector_sampler = try VectorBeta(@Vector(4, f64)).init(tiny, tiny);
+    const vector_sample = vector_sampler.sampleFrom(&engine);
+    inline for (0..4) |lane| {
+        try std.testing.expect(!std.math.isNan(vector_sample[lane]));
+        try std.testing.expect(vector_sample[lane] >= 0 and vector_sample[lane] <= 1);
+    }
+
+    var vector_buf: [3]@Vector(4, f64) = undefined;
+    vector_sampler.fillFrom(&engine, &vector_buf);
+    for (vector_buf) |sample| inline for (0..4) |lane| {
+        try std.testing.expect(!std.math.isNan(sample[lane]));
+        try std.testing.expect(sample[lane] >= 0 and sample[lane] <= 1);
+    };
 }
 
 test "degenerate log-logistic helpers do not consume random stream" {
@@ -27344,7 +27443,7 @@ test "infinite-shape pert helpers preserve rand_distr-compatible stream shape" {
     const Reference = struct {
         fn consume(source: anytype, comptime T: type, min: T, mode: T, max: T) void {
             const range = max - min;
-            _ = betaInfiniteFrom(source, T, 1 + std.math.inf(T) * (mode - min) / range, 1 + std.math.inf(T) * (max - mode) / range);
+            _ = betaChengFrom(source, T, 1 + std.math.inf(T) * (mode - min) / range, 1 + std.math.inf(T) * (max - mode) / range);
         }
         fn consumeMany(source: anytype, comptime T: type, min: T, mode: T, max: T, count: usize) void {
             for (0..count) |_| consume(source, T, min, mode, max);
@@ -27439,7 +27538,7 @@ test "infinite-shape pert helpers preserve rand_distr-compatible stream shape" {
             const range = vector_max - vector_min;
             const alpha = 1 + std.math.inf(f32) * (vector_mode - vector_min) / range;
             const beta_param = 1 + std.math.inf(f32) * (vector_max - vector_mode) / range;
-            for (0..4) |_| _ = betaInfiniteFrom(source, f32, alpha, beta_param);
+            for (0..4) |_| _ = betaChengFrom(source, f32, alpha, beta_param);
         }
         fn consumeMany(source: anytype, count: usize) void {
             for (0..count) |_| consume(source);
@@ -37550,6 +37649,44 @@ test "dirichlet subnormal alpha rejection matches local rand_distr" {
 
     const vertex_extension = try Dirichlet(f64).init(&.{ 2.0, std.math.inf(f64), 3.0 });
     try std.testing.expectEqual(@as(f64, 1), try vertex_extension.meanAt(1));
+}
+
+test "tiny-shape dirichlet beta stick-breaking avoids gamma-ratio NaN like local rand_distr" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d162);
+
+    const Check = struct {
+        fn simplex(values: []const f64) !void {
+            var total: f64 = 0;
+            for (values) |value| {
+                try std.testing.expect(!std.math.isNan(value));
+                try std.testing.expect(value >= 0 and value <= 1);
+                total += value;
+            }
+            try std.testing.expectApproxEqAbs(@as(f64, 1), total, 1e-12);
+        }
+    };
+
+    const min_normal = std.math.floatMin(f64);
+    const min_normal_dirichlet = try Dirichlet(f64).init(&.{ min_normal, min_normal });
+    var min_normal_out: [2]f64 = undefined;
+    min_normal_dirichlet.sampleIntoFrom(&engine, &min_normal_out);
+    try Check.simplex(&min_normal_out);
+
+    const tiny_dirichlet = try Dirichlet(f64).init(&.{ 1e-10, 1e-10 });
+    var tiny_out: [2]f64 = undefined;
+    tiny_dirichlet.sampleIntoFrom(&engine, &tiny_out);
+    try Check.simplex(&tiny_out);
+
+    const tiny_three_dirichlet = try Dirichlet(f64).init(&.{ 0.01, 0.02, 0.03 });
+    var tiny_three_out: [3]f64 = undefined;
+    tiny_three_dirichlet.sampleIntoFrom(&engine, &tiny_three_out);
+    try Check.simplex(&tiny_three_out);
+
+    var many_tiny: [6]f64 = undefined;
+    tiny_three_dirichlet.sampleManyIntoFrom(&engine, &many_tiny);
+    try Check.simplex(many_tiny[0..3]);
+    try Check.simplex(many_tiny[3..6]);
 }
 
 test "multivariate samplers preserve direct stream shape" {

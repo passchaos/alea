@@ -77,7 +77,7 @@ toolkit functionality and reduce reliance on companion crates:
 
 | Alea distribution | Status |
 | --- | --- |
-| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors and local `rand_distr` infinite-shape endpoint/NaN stream-shape behavior |
+| Beta | Covered: `beta`, `Beta(T)`, including alpha/beta/moment/mode/support accessors, local `rand_distr` Cheng tiny-shape stability, and local `rand_distr` infinite-shape endpoint/NaN stream-shape behavior |
 | Triangular | Covered: `triangular`, `Triangular(T)`, including min/mode/max, moment/median accessors, collapsed range point masses, and local `rand_distr` non-finite ordered-bound NaN/stream-shape behavior |
 | Arcsine | Covered: `arcsine`, `Arcsine(T)`, including min/max/moment/median accessors and collapsed `min == max` point masses |
 | Cauchy | Covered: `cauchy`, `Cauchy(T)`, including median/mode/scale, undefined-moment, support accessors, collapsed `scale == 0` point masses, and local `rand_distr` non-finite median / infinite-scale acceptance |
@@ -93,7 +93,7 @@ toolkit functionality and reduce reliance on companion crates:
 | PowerFunction | Covered: `powerFunction`, `PowerFunction(T)`, including min/max/shape/moment/median accessors, collapsed `min == max` point masses, and infinite-shape upper-endpoint point masses |
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0`, infinite-shape point masses, and local `rand_distr` infinite-scale acceptance |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/median/mode/support accessors plus collapsed `scale == 0`, infinite-shape point masses, and local `rand_distr` infinite-scale acceptance |
-| Dirichlet | Covered: `Dirichlet(T)` and `multi.Dirichlet(T)` for local `rand_distr::multi::Dirichlet` discovery, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export, dimension/total-alpha accessors, local `rand_distr` subnormal-alpha rejection, one-dimensional point masses, and single-infinite-alpha vertex point masses |
+| Dirichlet | Covered: `Dirichlet(T)` and `multi.Dirichlet(T)` for local `rand_distr::multi::Dirichlet` discovery, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export, dimension/total-alpha accessors, local `rand_distr` subnormal-alpha rejection and all-small Beta stick-breaking stability, one-dimensional point masses, and single-infinite-alpha vertex point masses |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment/support accessors |
 
