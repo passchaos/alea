@@ -810,7 +810,7 @@ Use:
   repeated draws; `indexArray` / `indexArrayU32` variants return fixed-size
   repeated index arrays; `sampleIndex` / `fillIndices` aliases are available
   for users discovering dynamic trees from `WeightedChoice` index naming; use
-  `iter` / `iterU32` for repeated with-replacement index streams; `clone` / `eql` mirror local Rust `Clone` / `PartialEq` workflows without tying the API to Rust traits, and `format` supports Zig-native `{f}` debug snapshots analogous to local Rust `Debug` output
+  `iter` / `iterU32` for repeated with-replacement index streams; `trySample` / `trySampleFrom` mirror local Rust `try_sample` checked sampling naming, `clone` / `eql` mirror local Rust `Clone` / `PartialEq` workflows without tying the API to Rust traits, and `format` supports Zig-native `{f}` debug snapshots analogous to local Rust `Debug` output
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
   update/push/pop/sample throughput matters, including Rust-discoverable `new`, `initEmpty` / `default`
   empty constructors matching generic dynamic-tree default workflows, `updateWeights` /
@@ -824,7 +824,7 @@ Use:
   `indexArrayU32` provides fixed-size compact index arrays, `sampleIndex` /
   `fillIndices` aliases mirror `WeightedChoice`, `iter` / `iterU32` provide
   repeated index streams, and zero-length checked fills return before validating
-  totals; `clone` / `eql` mirror generic dynamic-tree clone/equality workflows, and `format` supports Zig-native `{f}` debug snapshots)
+  totals; `trySample` / `trySampleFrom` mirror generic dynamic-tree checked sampling workflows, `clone` / `eql` mirror generic dynamic-tree clone/equality workflows, and `format` supports Zig-native `{f}` debug snapshots)
 Run `zig build run-weighted-sampling` for a runnable comparison of one-shot
 weighted indexes, static alias tables, dynamic weighted trees, weighted choices,
 and weighted no-replacement helpers.

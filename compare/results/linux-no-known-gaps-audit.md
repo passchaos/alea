@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1169 bar is S4-M1170: exact/default dense SIMD research,
+The active post-S4-M1170 bar is S4-M1171: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6096,3 +6096,5 @@ S4-M1167 adds weighted sampler clone/equality helpers (`compare/results/s4-m1167
 S4-M1168 adds weighted sampler format helpers (`compare/results/s4-m1168-weighted-sampler-format.md`): `AliasTable(Weight)` / `WeightedIndex(Weight)`, `WeightedTree(Weight)`, and `WeightedIntTree(Weight)` now expose Zig-native `{f}` formatter output matching local Rust weighted sampler `Debug` workflows. This is a local Rust diagnostics ergonomics closure, not whole-goal completion.
 
 S4-M1169 adds weighted-tree constructor/default helpers (`compare/results/s4-m1169-weighted-tree-default.md`): `WeightedTree(Weight)` and `WeightedIntTree(Weight)` now expose Rust-discoverable `new` aliases plus Zig-native `initEmpty` / `default` empty constructors matching local `rand_distr::WeightedTreeIndex` `new` / `Default` workflows. This is a local Rust ergonomics closure, not whole-goal completion.
+
+S4-M1170 adds weighted-tree trySample aliases (`compare/results/s4-m1170-weighted-tree-try-sample.md`): `WeightedTree(Weight)` and `WeightedIntTree(Weight)` now expose Zig-native `trySample` / `trySampleFrom` aliases matching local `rand_distr::WeightedTreeIndex::try_sample` checked sampling naming while preserving invalid-path no-consume behavior. This is a local Rust ergonomics closure, not whole-goal completion.

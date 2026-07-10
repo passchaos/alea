@@ -2868,6 +2868,7 @@ Dynamic weighted helpers:
 - `WeightedTree.sampleU32`
 - `WeightedTree.sampleIndexU32`
 - `WeightedTree.sampleChecked`
+- `WeightedTree.trySample`
 - `WeightedTree.sampleIndexChecked`
 - `WeightedTree.sampleU32Checked`
 - `WeightedTree.sampleIndexU32Checked`
@@ -2876,6 +2877,7 @@ Dynamic weighted helpers:
 - `WeightedTree.sampleU32From`
 - `WeightedTree.sampleIndexU32From`
 - `WeightedTree.sampleCheckedFrom`
+- `WeightedTree.trySampleFrom`
 - `WeightedTree.sampleIndexCheckedFrom`
 - `WeightedTree.sampleU32CheckedFrom`
 - `WeightedTree.sampleIndexU32CheckedFrom`
@@ -2979,6 +2981,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.sampleU32`
 - `WeightedIntTree.sampleIndexU32`
 - `WeightedIntTree.sampleChecked`
+- `WeightedIntTree.trySample`
 - `WeightedIntTree.sampleIndexChecked`
 - `WeightedIntTree.sampleU32Checked`
 - `WeightedIntTree.sampleIndexU32Checked`
@@ -2987,6 +2990,7 @@ Dynamic weighted helpers:
 - `WeightedIntTree.sampleU32From`
 - `WeightedIntTree.sampleIndexU32From`
 - `WeightedIntTree.sampleCheckedFrom`
+- `WeightedIntTree.trySampleFrom`
 - `WeightedIntTree.sampleIndexCheckedFrom`
 - `WeightedIntTree.sampleU32CheckedFrom`
 - `WeightedIntTree.sampleIndexU32CheckedFrom`

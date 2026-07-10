@@ -20558,6 +20558,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             return self.sampleWithTotalFrom(rng, total);
         }
 
+        pub fn trySample(self: Self, rng: Rng) Error!usize {
+            return self.sampleChecked(rng);
+        }
+
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
             const total = self.totalWeight();
             try validateTreeSamplingTotal(total);
@@ -20934,6 +20938,10 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
+        }
+
+        pub fn trySampleFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleCheckedFrom(source);
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
@@ -21578,6 +21586,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             return self.sampleWithTotalFrom(rng, total);
         }
 
+        pub fn trySample(self: Self, rng: Rng) Error!usize {
+            return self.sampleChecked(rng);
+        }
+
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
             const total = self.totalWeight();
             if (total == 0) return error.InsufficientNonZero;
@@ -21954,6 +21966,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
+        }
+
+        pub fn trySampleFrom(self: Self, source: anytype) Error!usize {
+            return self.sampleCheckedFrom(source);
         }
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
@@ -23340,6 +23356,54 @@ test "weighted tree default constructors mirror local Rust default" {
     try std.testing.expectEqual(@as(?usize, 0), int_tree.constantIndex());
     try std.testing.expectEqual(@as(u64, 7), int_tree.totalWeight());
     try std.testing.expect(!int_tree.eql(default_int_tree));
+}
+
+test "weighted tree trySample aliases mirror local Rust try_sample" {
+    const alea = @import("root.zig");
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+    var try_engine = alea.DefaultPrng.init(0x7e57_1170);
+    var checked_engine = alea.DefaultPrng.init(0x7e57_1170);
+    try std.testing.expectEqual(try tree.sampleCheckedFrom(&checked_engine), try tree.trySampleFrom(&try_engine));
+    try std.testing.expectEqual(checked_engine.next(), try_engine.next());
+
+    var facade_try_engine = alea.DefaultPrng.init(0x7e57_1171);
+    var facade_checked_engine = alea.DefaultPrng.init(0x7e57_1171);
+    try std.testing.expectEqual(
+        try tree.sampleChecked(Rng.init(&facade_checked_engine)),
+        try tree.trySample(Rng.init(&facade_try_engine)),
+    );
+    try std.testing.expectEqual(facade_checked_engine.next(), facade_try_engine.next());
+
+    var empty_tree = WeightedTree(u32).default(std.testing.allocator);
+    defer empty_tree.deinit();
+    var invalid_engine = alea.DefaultPrng.init(0x7e57_1172);
+    var invalid_control = alea.DefaultPrng.init(0x7e57_1172);
+    try std.testing.expectError(error.InsufficientNonZero, empty_tree.trySampleFrom(&invalid_engine));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer int_tree.deinit();
+    var int_try_engine = alea.DefaultPrng.init(0x7e57_1173);
+    var int_checked_engine = alea.DefaultPrng.init(0x7e57_1173);
+    try std.testing.expectEqual(try int_tree.sampleCheckedFrom(&int_checked_engine), try int_tree.trySampleFrom(&int_try_engine));
+    try std.testing.expectEqual(int_checked_engine.next(), int_try_engine.next());
+
+    var int_facade_try_engine = alea.DefaultPrng.init(0x7e57_1174);
+    var int_facade_checked_engine = alea.DefaultPrng.init(0x7e57_1174);
+    try std.testing.expectEqual(
+        try int_tree.sampleChecked(Rng.init(&int_facade_checked_engine)),
+        try int_tree.trySample(Rng.init(&int_facade_try_engine)),
+    );
+    try std.testing.expectEqual(int_facade_checked_engine.next(), int_facade_try_engine.next());
+
+    var empty_int_tree = WeightedIntTree(u32).default(std.testing.allocator);
+    defer empty_int_tree.deinit();
+    var int_invalid_engine = alea.DefaultPrng.init(0x7e57_1175);
+    var int_invalid_control = alea.DefaultPrng.init(0x7e57_1175);
+    try std.testing.expectError(error.InsufficientNonZero, empty_int_tree.trySampleFrom(&int_invalid_engine));
+    try std.testing.expectEqual(int_invalid_control.next(), int_invalid_engine.next());
 }
 
 test "alias table samples valid indexes" {
