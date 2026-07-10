@@ -815,7 +815,7 @@ Use:
   `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
   `updateAllByIndex` from index-weight accessors; `numChoices` / `len`, `positiveCount`, `constantIndex`, `isValid`, optional `weight` / `probability`, lazy `weightIter` / `probabilityIter`, and checked `weightAt` / `probabilityAt` lookup mirrors generic trees, and weights wider than `u64` are
-  accepted only when each value fits the `u64` accumulator
+  accepted only when each value fits the `u64` accumulator; otherwise valid weights whose total overflows report `Overflow`
   (failed push/update operations preserve the previous tree totals, `sampleU32`
   / `fillU32` and `indicesU32` variants mirror compact index output,
   `indexArrayU32` provides fixed-size compact index arrays, `sampleIndex` /

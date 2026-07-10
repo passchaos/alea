@@ -21264,7 +21264,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn push(self: *Self, input_weight: Weight) !void {
             const value = try weightToU64(input_weight);
-            const next_total = std.math.add(u64, self.totalWeight(), value) catch return error.InvalidWeight;
+            const next_total = std.math.add(u64, self.totalWeight(), value) catch return error.Overflow;
 
             try self.subtotals.append(self.allocator, value);
             var index = self.subtotals.items.len - 1;
@@ -21308,7 +21308,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             const old = try self.get(index);
             if (value >= old) {
                 const delta = value - old;
-                _ = std.math.add(u64, self.totalWeight(), delta) catch return error.InvalidWeight;
+                _ = std.math.add(u64, self.totalWeight(), delta) catch return error.Overflow;
                 var cursor = index;
                 while (true) {
                     self.subtotals.items[cursor] += delta;
@@ -21341,7 +21341,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 const old = try self.get(item.index);
                 if (value >= old) {
                     const delta = value - old;
-                    next_total = std.math.add(u64, next_total, delta) catch return error.InvalidWeight;
+                    next_total = std.math.add(u64, next_total, delta) catch return error.Overflow;
                 } else {
                     next_total -= old - value;
                 }
@@ -21960,7 +21960,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             while (i > 1) {
                 i -= 1;
                 const parent = (i - 1) / 2;
-                subtotals[parent] = std.math.add(u64, subtotals[parent], subtotals[i]) catch return error.InvalidWeight;
+                subtotals[parent] = std.math.add(u64, subtotals[parent], subtotals[i]) catch return error.Overflow;
             }
         }
 
@@ -24026,7 +24026,7 @@ test "weighted tree init failures clean up" {
     try std.testing.expect(int_alloc_fail.has_induced_failure);
 
     var int_invalid = std.testing.FailingAllocator.init(std.testing.allocator, .{});
-    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).init(int_invalid.allocator(), &.{
+    try std.testing.expectError(error.Overflow, WeightedIntTree(u64).init(int_invalid.allocator(), &.{
         std.math.maxInt(u64),
         1,
     }));
@@ -24424,7 +24424,7 @@ test "weighted tree index accessor failures preserve trees" {
     };
 
     try std.testing.expectError(error.InvalidWeight, WeightedTree(f64).initByIndex(std.testing.allocator, 4, IndexWeight.genericInvalid));
-    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).initByIndex(std.testing.allocator, 2, IndexWeight.integerOverflow));
+    try std.testing.expectError(error.Overflow, WeightedIntTree(u64).initByIndex(std.testing.allocator, 2, IndexWeight.integerOverflow));
 
     var tree = try WeightedTree(f64).initByIndex(std.testing.allocator, 4, IndexWeight.generic);
     defer tree.deinit();
@@ -24444,7 +24444,7 @@ test "weighted tree index accessor failures preserve trees" {
     defer int_tree.deinit();
     var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ 0, 2 });
     defer overflow_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, overflow_tree.updateAllByIndex(IndexWeight.integerOverflow));
+    try std.testing.expectError(error.Overflow, overflow_tree.updateAllByIndex(IndexWeight.integerOverflow));
     try std.testing.expectEqual(@as(u64, 2), overflow_tree.totalWeight());
     try std.testing.expectEqual(@as(u64, 2), try overflow_tree.weightAt(1));
 
@@ -24564,7 +24564,7 @@ test "weighted tree item accessor failures preserve trees" {
     };
 
     try std.testing.expectError(error.InvalidWeight, WeightedTree(f64).initBy(std.testing.allocator, Entry, &entries, Entry.genericInvalid));
-    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).initBy(std.testing.allocator, Entry, entries[0..3], Entry.integerOverflow));
+    try std.testing.expectError(error.Overflow, WeightedIntTree(u64).initBy(std.testing.allocator, Entry, entries[0..3], Entry.integerOverflow));
 
     var tree = try WeightedTree(f64).initBy(std.testing.allocator, Entry, &entries, Entry.generic);
     defer tree.deinit();
@@ -24588,7 +24588,7 @@ test "weighted tree item accessor failures preserve trees" {
 
     var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ 0, 2, 0 });
     defer overflow_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, overflow_tree.updateAllBy(Entry, entries[0..3], Entry.integerOverflow));
+    try std.testing.expectError(error.Overflow, overflow_tree.updateAllBy(Entry, entries[0..3], Entry.integerOverflow));
     try std.testing.expectEqual(@as(u64, 2), overflow_tree.totalWeight());
 
     var failing_int = std.testing.FailingAllocator.init(std.testing.allocator, .{});
@@ -25490,15 +25490,15 @@ test "weighted int tree supports dynamic updates" {
 
     var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{std.math.maxInt(u64)});
     defer overflow_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, overflow_tree.push(1));
+    try std.testing.expectError(error.Overflow, overflow_tree.push(1));
     try std.testing.expectEqual(@as(u64, std.math.maxInt(u64)), overflow_tree.totalWeight());
 
     var update_overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ std.math.maxInt(u64), 0 });
     defer update_overflow_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, update_overflow_tree.update(1, 1));
+    try std.testing.expectError(error.Overflow, update_overflow_tree.update(1, 1));
     try std.testing.expectEqual(@as(u64, std.math.maxInt(u64)), update_overflow_tree.totalWeight());
 
-    try std.testing.expectError(error.InvalidWeight, WeightedIntTree(u64).init(std.testing.allocator, &.{
+    try std.testing.expectError(error.Overflow, WeightedIntTree(u64).init(std.testing.allocator, &.{
         std.math.maxInt(u64),
         1,
     }));
@@ -25559,7 +25559,7 @@ test "weighted int tree updateMany applies ordered partial updates atomically" {
 
     var overflow_tree = try WeightedIntTree(u64).init(std.testing.allocator, &.{ std.math.maxInt(u64), 0 });
     defer overflow_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, overflow_tree.updateMany(&.{.{ .index = 1, .weight = 1 }}));
+    try std.testing.expectError(error.Overflow, overflow_tree.updateMany(&.{.{ .index = 1, .weight = 1 }}));
     try std.testing.expectEqual(@as(u64, std.math.maxInt(u64)), overflow_tree.totalWeight());
 
     const too_large_u128 = @as(u128, std.math.maxInt(u64)) + 1;

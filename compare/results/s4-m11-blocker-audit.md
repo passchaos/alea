@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1165-weighted-int-tree-overflow.md
 compare/results/s4-m1164-weighted-tree-zero-total.md
 compare/results/s4-m1163-alias-table-max-weight.md
 compare/results/s4-m1162-beta-dirichlet-tiny-shape.md
@@ -52,6 +53,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1165-weighted-int-tree-overflow.md"
 "compare/results/s4-m1164-weighted-tree-zero-total.md"
 "compare/results/s4-m1163-alias-table-max-weight.md"
 rand-status self-test ok
@@ -141,4 +143,6 @@ S4-M1163 is closed after aligning AliasTable per-weight maximum semantics in `co
 
 S4-M1164 is closed after aligning WeightedTree zero-total checked sampling semantics in `compare/results/s4-m1164-weighted-tree-zero-total.md`.
 
-S4-M1165 remains active after S4-M1164 aligns WeightedTree zero-total checked sampling semantics in `compare/results/s4-m1164-weighted-tree-zero-total.md`.
+S4-M1165 is closed after aligning WeightedIntTree integer overflow semantics in `compare/results/s4-m1165-weighted-int-tree-overflow.md`.
+
+S4-M1166 remains active after S4-M1165 aligns WeightedIntTree integer overflow semantics in `compare/results/s4-m1165-weighted-int-tree-overflow.md`.
