@@ -19,7 +19,7 @@ command matrix evidence.
   `ChaCha20Rng`, `StepRng`
 - Aliases: `DefaultPrng`, `FastPrng`, `HashPrng`, `ReproduciblePrng`,
   `ScalarPrng`, `SecurePrng`, `ChaCha12Rng`, `StdRng`, `SmallRng`, `SysRng`,
-  `SysError`, `WeightError`, `IndexVec`
+  `SysError`, `WeightError`, `WeightedError`, `weightedErrorMessage`, `IndexVec`
 - `rngs` namespace aliases: `rngs.StdRng`, `rngs.SmallRng`, `rngs.SysRng`,
   `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
   `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
@@ -27,7 +27,7 @@ command matrix evidence.
 - `prelude` namespace aliases: `prelude.Rng`, `prelude.Seed`,
   `prelude.distributions`, `prelude.seq`, `prelude.ascii`, `prelude.StdRng`,
   `prelude.SmallRng`, `prelude.SysRng`, `prelude.SysError`,
-  `prelude.WeightError`
+  `prelude.WeightError`, `prelude.WeightedError`, `prelude.weightedErrorMessage`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
   `secureFromSeed`, `secure`, `secureBytes`, `sysRng`, `stepRng`, `constRng`,

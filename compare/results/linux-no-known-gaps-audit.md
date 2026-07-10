@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1175 bar is S4-M1176: exact/default dense SIMD research,
+The active post-S4-M1176 bar is S4-M1177: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6108,3 +6108,5 @@ S4-M1173 refreshes full portability-sensitive validation after S4-M1172 (`compar
 S4-M1174 adds weighted error message helpers (`compare/results/s4-m1174-weighted-error-message.md`): `weightedErrorMessage` and `weighted.errorMessage` now expose local Rust `rand::distr::weighted::Error` Display-style diagnostics while preserving Zig error sets. This is a local Rust diagnostics ergonomics closure, not whole-goal completion.
 
 S4-M1175 refreshes full portability-sensitive validation after S4-M1174 (`compare/results/s4-m1175-post-s4-m1174-validate-all.md`): `zig build validate-all` passes with native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending in `profilelongcheck ok`. This is validation evidence, not whole-goal completion.
+
+S4-M1176 adds root/prelude weighted error aliases (`compare/results/s4-m1176-root-weighted-error-aliases.md`): root and prelude now expose `WeightedError` and `weightedErrorMessage` for local Rust weighted diagnostics discovery workflows. This is a local Rust diagnostics ergonomics closure, not whole-goal completion.

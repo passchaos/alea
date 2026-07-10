@@ -22,6 +22,8 @@ pub const quality = @import("quality.zig");
 pub const SysRng = Rng.SysRng;
 pub const SysError = SysRng.Error;
 pub const WeightError = seq.WeightError;
+pub const WeightedError = distributions.WeightedError;
+pub const weightedErrorMessage = distributions.weightedErrorMessage;
 pub const IndexVec = seq.IndexVec;
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
@@ -70,6 +72,8 @@ pub const prelude = struct {
     pub const SysRng = @import("rng.zig").SysRng;
     pub const SysError = @import("rng.zig").SysRng.Error;
     pub const WeightError = @import("seq.zig").WeightError;
+    pub const WeightedError = @import("distributions.zig").WeightedError;
+    pub const weightedErrorMessage = @import("distributions.zig").weightedErrorMessage;
 };
 
 pub fn default(seed: u64) DefaultPrng {
@@ -5719,6 +5723,7 @@ test "root prelude namespace mirrors common aliases" {
         std.debug.assert(prelude.SysRng == SysRng);
         std.debug.assert(prelude.SysError == SysError);
         std.debug.assert(prelude.WeightError == WeightError);
+        std.debug.assert(prelude.WeightedError == WeightedError);
     }
 
     var prelude_std = prelude.StdRng.seedFromU64(0x5150_0280);
@@ -5850,6 +5855,13 @@ test "root sysRng exposes system entropy source" {
 test "root WeightError mirrors seq WeightError" {
     const weight_error: WeightError = error.InvalidWeight;
     try std.testing.expectEqual(@as(seq.WeightError, error.InvalidWeight), weight_error);
+}
+
+test "root weighted error aliases mirror distributions" {
+    const weighted_error: WeightedError = error.InvalidWeight;
+    try std.testing.expectEqual(@as(distributions.WeightedError, error.InvalidWeight), weighted_error);
+    try std.testing.expectEqualStrings(distributions.weightedErrorMessage(error.InvalidWeight), weightedErrorMessage(error.InvalidWeight));
+    try std.testing.expectEqualStrings(weightedErrorMessage(error.InvalidInput), prelude.weightedErrorMessage(error.InvalidInput));
 }
 
 test "root random helpers use explicit system entropy" {
