@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1216 bar is S4-M1217: exact/default dense SIMD research,
+The active post-S4-M1217 bar is S4-M1218: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6189,4 +6189,6 @@ S4-M1214 refreshes exponential vectorbench evidence (`compare/results/s4-m1214-e
 
 S4-M1215 refreshes local comparison validation after S4-M1214 (`compare/results/s4-m1215-post-s4-m1214-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, current status output, and focused profile/stat checks. This is validation evidence, not whole-goal completion; S4-M1216 was the next raised product bar and is now closed by the validate-all refresh below.
 
-S4-M1216 refreshes full validation after S4-M1215 (`compare/results/s4-m1216-post-s4-m1215-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1217 remains active.
+S4-M1216 refreshes full validation after S4-M1215 (`compare/results/s4-m1216-post-s4-m1215-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1217 was the next raised product bar and is now closed by the minimum vectorbench gate below.
+
+S4-M1217 refreshes the minimum real-harness dense-SIMD vectorbench gate (`compare/results/s4-m1217-minimum-vectorbench-gate.md`): the eight focused f32x8/f64x4 standard and parameterized normal/exponential rows still do not identify an exact/default-compatible dense SIMD replacement for scalar ziggurat lane-fill. Table-CDF and approx-log rows remain checksum/output-contract-changing opt-ins. This is dense-SIMD research evidence, not whole-goal completion; S4-M1218 remains active.
