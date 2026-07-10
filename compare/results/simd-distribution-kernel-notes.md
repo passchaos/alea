@@ -14,17 +14,20 @@ distribution kernel, but it is the default because it is fast, stable, and keeps
 the scalar draw/repair policy simple.
 
 Latest `vectorbench` evidence is tracked in `performance-triage.md` and
-`core-rand-coverage.md`. A refreshed 2026-07-03 focused run of the minimum
-real-harness set reports representative direct rows of roughly:
+`core-rand-coverage.md`. The S4-M1185 focused 2026-07-10 real-harness refresh
+reports representative direct rows of roughly:
 
-- normal f32x8 / f64x4 direct: about 477M / 454M lanes/s,
-- standard normal f32x8 / f64x4 direct: about 477M / 454M lanes/s,
-- exponential f32x8 / f64x4 direct: about 470M / 467M lanes/s,
-- standard exponential f32x8 / f64x4 direct: about 471M / 467M lanes/s.
+- normal f32x8 / f64x4 direct: about 466M / 485M lanes/s,
+- standard normal f32x8 / f64x4 direct: about 478M / 432M lanes/s,
+- exponential f32x8 / f64x4 direct: about 451M / 455M lanes/s,
+- standard exponential f32x8 / f64x4 direct: about 471M / 429M lanes/s.
 
-Same-run rejected candidates still trail: f32x8 repair/all-accepted/block-fallback
-rows remain below the direct rows, and f64x4 same-candidate/all-accepted/block
-fallback rows likewise remain below direct scalar lane-fill.
+Same-run exact/default f32x8 flat-slice and repair candidates still trail the
+direct rows. f64x4 local-scalar helper rows can move in isolated filters, but
+previous production-transfer attempts did not preserve that benchmark-local
+call-shape advantage, while block-fallback / approximate-log-low rows change
+checksums or output mappings. Table and approximate-log rows remain explicit
+throughput opt-ins, not default replacements.
 
 These rows are host/load sensitive, so production decisions should compare
 candidates in the same `vectorbench` run rather than against stale absolute
