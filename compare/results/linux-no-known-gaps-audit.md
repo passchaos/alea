@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1213 bar is S4-M1214: exact/default dense SIMD research,
+The active post-S4-M1214 bar is S4-M1215: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6183,4 +6183,6 @@ S4-M1211 refreshes local comparison validation after S4-M1210 (`compare/results/
 
 S4-M1212 refreshes full validation after S4-M1211 (`compare/results/s4-m1212-post-s4-m1211-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1213 was the next raised product bar and is now closed by the validate-all refresh below.
 
-S4-M1213 refreshes full validation after S4-M1212 (`compare/results/s4-m1213-post-s4-m1212-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1214 remains active.
+S4-M1213 refreshes full validation after S4-M1212 (`compare/results/s4-m1213-post-s4-m1212-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1214 was the next raised product bar and is now closed by the exponential vectorbench probe below.
+
+S4-M1214 refreshes exponential vectorbench evidence (`compare/results/s4-m1214-exponential-vectorbench-probe.md`): approx-log and table-CDF exponential rows beat exact/default direct ziggurat lane-fill, but their checksums differ and their output/distribution contracts are explicit opt-ins rather than default replacements. This is dense-SIMD research evidence, not whole-goal completion; S4-M1215 remains active.
