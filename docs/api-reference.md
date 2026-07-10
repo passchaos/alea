@@ -2817,6 +2817,8 @@ Alias helpers:
 - `AliasTable.U32IndexIterator.next`
 - `AliasTable.U32IndexIterator.nextValue`
 - `AliasTable.U32IndexIterator.fill`
+- `AliasTable.clone`
+- `AliasTable.eql`
 - `AliasTable.deinit`
 
 Dynamic weighted helpers:
@@ -2923,6 +2925,8 @@ Dynamic weighted helpers:
 - `WeightedTree.probabilities`
 - `WeightedTree.probabilitiesInto`
 - `WeightedTree.isValid`
+- `WeightedTree.clone`
+- `WeightedTree.eql`
 - `WeightedTree.deinit`
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
   update/push/pop/sample throughput is the priority.
@@ -3028,6 +3032,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.probabilities`
 - `WeightedIntTree.probabilitiesInto`
 - `WeightedIntTree.isValid`
+- `WeightedIntTree.clone`
+- `WeightedIntTree.eql`
 - `WeightedIntTree.deinit`
 
 ## Sequence Sampling

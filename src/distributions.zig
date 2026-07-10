@@ -19318,6 +19318,38 @@ pub fn AliasTable(comptime Weight: type) type {
             self.* = undefined;
         }
 
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const prob = try allocator.dupe(f64, self.prob);
+            errdefer allocator.free(prob);
+            const prob_threshold = try allocator.dupe(u64, self.prob_threshold);
+            errdefer allocator.free(prob_threshold);
+            const alias = try allocator.dupe(usize, self.alias);
+            errdefer allocator.free(alias);
+            const weight_values = try allocator.dupe(f64, self.weight_values);
+            errdefer allocator.free(weight_values);
+
+            return .{
+                .prob = prob,
+                .prob_threshold = prob_threshold,
+                .alias = alias,
+                .weight_values = weight_values,
+                .total = self.total,
+                .positive_count = self.positive_count,
+                .constant_index = self.constant_index,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn eql(self: Self, other: Self) bool {
+            return self.total == other.total and
+                self.positive_count == other.positive_count and
+                self.constant_index == other.constant_index and
+                std.mem.eql(f64, self.prob, other.prob) and
+                std.mem.eql(u64, self.prob_threshold, other.prob_threshold) and
+                std.mem.eql(usize, self.alias, other.alias) and
+                std.mem.eql(f64, self.weight_values, other.weight_values);
+        }
+
         pub fn update(self: *Self, input_weights: []const Weight) !void {
             if (input_weights.len != self.prob.len) return error.InvalidParameter;
 
@@ -20208,6 +20240,22 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn deinit(self: *Self) void {
             self.subtotals.deinit(self.allocator);
             self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const items = try allocator.dupe(f64, self.subtotals.items);
+            return .{
+                .subtotals = .{ .items = items, .capacity = items.len },
+                .positive_count = self.positive_count,
+                .positive_index = self.positive_index,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn eql(self: Self, other: Self) bool {
+            return self.positive_count == other.positive_count and
+                self.positive_index == other.positive_index and
+                std.mem.eql(f64, self.subtotals.items, other.subtotals.items);
         }
 
         pub fn len(self: Self) usize {
@@ -21172,6 +21220,22 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn deinit(self: *Self) void {
             self.subtotals.deinit(self.allocator);
             self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const items = try allocator.dupe(u64, self.subtotals.items);
+            return .{
+                .subtotals = .{ .items = items, .capacity = items.len },
+                .positive_count = self.positive_count,
+                .positive_index = self.positive_index,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn eql(self: Self, other: Self) bool {
+            return self.positive_count == other.positive_count and
+                self.positive_index == other.positive_index and
+                std.mem.eql(u64, self.subtotals.items, other.subtotals.items);
         }
 
         pub fn len(self: Self) usize {
@@ -23037,6 +23101,69 @@ test "alias table init allocation failure cleans up" {
         try std.testing.expectError(error.OutOfMemory, AliasTable(u32).init(failing.allocator(), &.{ 1, 2, 3 }));
         try std.testing.expect(failing.has_induced_failure);
     }
+}
+
+test "weighted samplers clone and equality mirror local Rust derives" {
+    var alias = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer alias.deinit();
+    var alias_clone = try alias.clone(std.testing.allocator);
+    defer alias_clone.deinit();
+    try std.testing.expect(alias.eql(alias_clone));
+    try std.testing.expect(alias_clone.eql(alias));
+    try alias_clone.updateAt(0, 9);
+    try std.testing.expect(!alias.eql(alias_clone));
+    try std.testing.expectApproxEqAbs(@as(f64, 5), try alias.weightAt(2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 17), alias_clone.totalWeight(), 1e-12);
+
+    for (0..4) |fail_index| {
+        var failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = fail_index });
+        try std.testing.expectError(error.OutOfMemory, alias.clone(failing.allocator()));
+        try std.testing.expect(failing.has_induced_failure);
+    }
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+    var tree_clone = try tree.clone(std.testing.allocator);
+    defer tree_clone.deinit();
+    try std.testing.expect(tree.eql(tree_clone));
+    try std.testing.expect(tree_clone.eql(tree));
+    try tree_clone.update(1, 7);
+    try std.testing.expect(!tree.eql(tree_clone));
+    try std.testing.expectApproxEqAbs(@as(f64, 9), tree.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 16), tree_clone.totalWeight(), 1e-12);
+
+    var tree_failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, tree.clone(tree_failing.allocator()));
+    try std.testing.expect(tree_failing.has_induced_failure);
+
+    var empty_tree = try WeightedTree(u32).init(std.testing.allocator, &.{});
+    defer empty_tree.deinit();
+    var empty_tree_clone = try empty_tree.clone(std.testing.allocator);
+    defer empty_tree_clone.deinit();
+    try std.testing.expect(empty_tree.eql(empty_tree_clone));
+    try std.testing.expect(empty_tree_clone.isEmpty());
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer int_tree.deinit();
+    var int_tree_clone = try int_tree.clone(std.testing.allocator);
+    defer int_tree_clone.deinit();
+    try std.testing.expect(int_tree.eql(int_tree_clone));
+    try std.testing.expect(int_tree_clone.eql(int_tree));
+    try int_tree_clone.update(1, 7);
+    try std.testing.expect(!int_tree.eql(int_tree_clone));
+    try std.testing.expectEqual(@as(u64, 9), int_tree.totalWeight());
+    try std.testing.expectEqual(@as(u64, 16), int_tree_clone.totalWeight());
+
+    var int_tree_failing = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, int_tree.clone(int_tree_failing.allocator()));
+    try std.testing.expect(int_tree_failing.has_induced_failure);
+
+    var empty_int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{});
+    defer empty_int_tree.deinit();
+    var empty_int_tree_clone = try empty_int_tree.clone(std.testing.allocator);
+    defer empty_int_tree_clone.deinit();
+    try std.testing.expect(empty_int_tree.eql(empty_int_tree_clone));
+    try std.testing.expect(empty_int_tree_clone.isEmpty());
 }
 
 test "alias table samples valid indexes" {
