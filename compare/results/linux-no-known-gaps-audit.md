@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1215 bar is S4-M1216: exact/default dense SIMD research,
+The active post-S4-M1216 bar is S4-M1217: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6187,4 +6187,6 @@ S4-M1213 refreshes full validation after S4-M1212 (`compare/results/s4-m1213-pos
 
 S4-M1214 refreshes exponential vectorbench evidence (`compare/results/s4-m1214-exponential-vectorbench-probe.md`): approx-log and table-CDF exponential rows beat exact/default direct ziggurat lane-fill, but their checksums differ and their output/distribution contracts are explicit opt-ins rather than default replacements. This is dense-SIMD research evidence, not whole-goal completion; S4-M1215 was the next raised product bar and is now closed by the validate-local refresh below.
 
-S4-M1215 refreshes local comparison validation after S4-M1214 (`compare/results/s4-m1215-post-s4-m1214-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, current status output, and focused profile/stat checks. This is validation evidence, not whole-goal completion; S4-M1216 remains active.
+S4-M1215 refreshes local comparison validation after S4-M1214 (`compare/results/s4-m1215-post-s4-m1214-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, current status output, and focused profile/stat checks. This is validation evidence, not whole-goal completion; S4-M1216 was the next raised product bar and is now closed by the validate-all refresh below.
+
+S4-M1216 refreshes full validation after S4-M1215 (`compare/results/s4-m1216-post-s4-m1215-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1217 remains active.

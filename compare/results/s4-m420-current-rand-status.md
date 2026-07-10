@@ -38,14 +38,44 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1213 refreshes the full `validate-all` aggregate after the S4-M1212 status update;
 - S4-M1214 refreshes focused exponential vectorbench evidence;
 - S4-M1215 refreshes the local `validate-local` aggregate after the exponential vectorbench probe;
+- S4-M1216 refreshes the full `validate-all` aggregate after the local comparison update;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1215 refreshed the local Linux `rand` / `rand_distr` comparison aggregate after
-S4-M1214. The retained status and local comparison evidence include:
+S4-M1216 refreshed the full portability-sensitive validation aggregate after
+S4-M1215. The retained status and validation evidence include:
 
 ```text
+$ zig build validate-all
+wasi sample.wasm --flag
+practrand self-test ok
+run_wasi_test self-test ok
+statcheck ok
+distcheck ok
+readmecheck ok
+roadmapcheck ok
+toolingcheck ok
+apicheck ok
+examplecheck ok
+profilecheck ok
+profiletailcheck ok
+profilestresscheck ok
+profilelongcheck ok
+
+$ zig build rand-status-json
+  "schema_version": 1,
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1216 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1217 post-S4-M1216 next product bar",
+  "validate_local_passes": true,
+  "opportunity_runners_available": false,
+  "no_known_unblocked_gap": true,
+  "s4_m11_blocked": false,
+  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
+  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
+  "latest_validate_local_evidence": "compare/results/s4-m1216-post-s4-m1215-validate-all.md"
+
+Retained latest local Rust comparison evidence:
 $ zig build validate-local
 practrand self-test ok
 rand_bench_smoke self-test ok
@@ -64,19 +94,6 @@ examplecheck ok
 statcheck ok
 distcheck ok
 profilecheck ok
-rand-status self-test ok
-
-$ zig build rand-status-json
-  "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1215 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1216 post-S4-M1215 next product bar",
-  "validate_local_passes": true,
-  "opportunity_runners_available": false,
-  "no_known_unblocked_gap": true,
-  "s4_m11_blocked": false,
-  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
-  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1215-post-s4-m1214-validate-local.md"
 
 Retained broader-runtime evidence:
 wasmtime 31.0.0 (7a9be587f 2025-03-20)
@@ -84,14 +101,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1215-post-s4-m1214-validate-local.md`
-records the latest local Rust comparison refresh. S4-M11 is closed for the current bar,
+Wasmtime profilelongcheck run. `compare/results/s4-m1216-post-s4-m1215-validate-all.md`
+records the latest full validation refresh. S4-M11 is closed for the current bar,
 but exact/default-compatible dense SIMD normal/exponential kernels are still not
 known to beat scalar lane-fill in the real vector-slice harness.
 
-## Current Post-S4-M1215 Bar
+## Current Post-S4-M1216 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1216: pursue
+The long-term product goal is not complete. The next bar is S4-M1217: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, or newly
 discovered local `rand` / `rand_distr` gaps.
@@ -100,4 +117,4 @@ discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1215 S4-M1216 bar remains the active follow-up.
+while the post-S4-M1216 S4-M1217 bar remains the active follow-up.
