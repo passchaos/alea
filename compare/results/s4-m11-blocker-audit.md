@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md
 compare/results/s4-m1195-root-weighted-sampler-aliases.md
 compare/results/s4-m1194-weighted-namespace-aliases.md
 compare/results/s4-m1193-post-s4-m1192-validate-local.md
@@ -83,6 +84,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md"
 "compare/results/s4-m1195-root-weighted-sampler-aliases.md"
 "compare/results/s4-m1194-weighted-namespace-aliases.md"
 "compare/results/s4-m1193-post-s4-m1192-validate-local.md"
@@ -265,4 +267,6 @@ S4-M1194 is closed after adding weighted namespace aliases in `compare/results/s
 
 S4-M1195 is closed after adding root/prelude weighted sampler aliases in `compare/results/s4-m1195-root-weighted-sampler-aliases.md`.
 
-S4-M1196 remains active after S4-M1195 adds root/prelude weighted sampler aliases in `compare/results/s4-m1195-root-weighted-sampler-aliases.md`.
+S4-M1196 is closed after refreshing weighted manifest root-alias evidence in `compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md`.
+
+S4-M1197 remains active after S4-M1196 refreshes weighted manifest root-alias evidence in `compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md`.
