@@ -19162,6 +19162,17 @@ pub fn AliasTable(comptime Weight: type) type {
                 self.index += count;
                 return count;
             }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "AliasTable.WeightIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
+            }
         };
 
         pub const ProbabilityIterator = struct {
@@ -19197,6 +19208,17 @@ pub fn AliasTable(comptime Weight: type) type {
                 }
                 self.index += count;
                 return count;
+            }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "AliasTable.ProbabilityIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
             }
         };
 
@@ -20133,6 +20155,17 @@ pub fn WeightedTree(comptime Weight: type) type {
                 self.index += count;
                 return count;
             }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "WeightedTree.WeightIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
+            }
         };
 
         pub const ProbabilityIterator = struct {
@@ -20168,6 +20201,17 @@ pub fn WeightedTree(comptime Weight: type) type {
                 for (dest[0..count], self.index..) |*slot, index| slot.* = (self.tree.get(index) catch unreachable) / total;
                 self.index += count;
                 return count;
+            }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "WeightedTree.ProbabilityIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
             }
         };
 
@@ -21147,6 +21191,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 self.index += count;
                 return count;
             }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "WeightedIntTree.WeightIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
+            }
         };
 
         pub const ProbabilityIterator = struct {
@@ -21183,6 +21238,17 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 for (dest[0..count], self.index..) |*slot, index| slot.* = @as(f64, @floatFromInt(self.tree.get(index) catch unreachable)) / total_float;
                 self.index += count;
                 return count;
+            }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "WeightedIntTree.ProbabilityIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
             }
         };
 
@@ -23404,6 +23470,71 @@ test "weighted tree trySample aliases mirror local Rust try_sample" {
     var int_invalid_control = alea.DefaultPrng.init(0x7e57_1175);
     try std.testing.expectError(error.InsufficientNonZero, empty_int_tree.trySampleFrom(&int_invalid_engine));
     try std.testing.expectEqual(int_invalid_control.next(), int_invalid_engine.next());
+}
+
+test "weighted iterator clone and format mirror local Rust iterator helpers" {
+    var alias = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer alias.deinit();
+
+    var alias_weights = alias.weightIter();
+    _ = alias_weights.next();
+    var alias_weights_clone = alias_weights.clone();
+    try std.testing.expectApproxEqAbs(@as(f64, 0), alias_weights.next().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), alias_weights_clone.next().?, 1e-12);
+    try std.testing.expectEqual(alias_weights.remaining(), alias_weights_clone.remaining());
+    var alias_weight_buf: [160]u8 = undefined;
+    var alias_weight_writer = std.Io.Writer.fixed(&alias_weight_buf);
+    try alias_weight_writer.print("{f}", .{alias_weights});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&alias_weight_writer), "AliasTable.WeightIterator") != null);
+
+    var alias_probs = alias.probabilityIter();
+    _ = alias_probs.next();
+    var alias_probs_clone = alias_probs.clone();
+    try std.testing.expectApproxEqAbs(alias_probs.next().?, alias_probs_clone.next().?, 1e-12);
+    var alias_prob_buf: [160]u8 = undefined;
+    var alias_prob_writer = std.Io.Writer.fixed(&alias_prob_buf);
+    try alias_prob_writer.print("{f}", .{alias_probs});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&alias_prob_writer), "AliasTable.ProbabilityIterator") != null);
+
+    var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+    var tree_weights = tree.weightIter();
+    _ = tree_weights.next();
+    var tree_weights_clone = tree_weights.clone();
+    try std.testing.expectApproxEqAbs(tree_weights.next().?, tree_weights_clone.next().?, 1e-12);
+    var tree_weight_buf: [160]u8 = undefined;
+    var tree_weight_writer = std.Io.Writer.fixed(&tree_weight_buf);
+    try tree_weight_writer.print("{f}", .{tree_weights});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&tree_weight_writer), "WeightedTree.WeightIterator") != null);
+
+    var tree_probs = tree.probabilityIter();
+    _ = tree_probs.next();
+    var tree_probs_clone = tree_probs.clone();
+    try std.testing.expectApproxEqAbs(tree_probs.next().?, tree_probs_clone.next().?, 1e-12);
+    var tree_prob_buf: [160]u8 = undefined;
+    var tree_prob_writer = std.Io.Writer.fixed(&tree_prob_buf);
+    try tree_prob_writer.print("{f}", .{tree_probs});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&tree_prob_writer), "WeightedTree.ProbabilityIterator") != null);
+
+    var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer int_tree.deinit();
+    var int_weights = int_tree.weightIter();
+    _ = int_weights.next();
+    var int_weights_clone = int_weights.clone();
+    try std.testing.expectEqual(int_weights.next().?, int_weights_clone.next().?);
+    var int_weight_buf: [160]u8 = undefined;
+    var int_weight_writer = std.Io.Writer.fixed(&int_weight_buf);
+    try int_weight_writer.print("{f}", .{int_weights});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&int_weight_writer), "WeightedIntTree.WeightIterator") != null);
+
+    var int_probs = int_tree.probabilityIter();
+    _ = int_probs.next();
+    var int_probs_clone = int_probs.clone();
+    try std.testing.expectApproxEqAbs(int_probs.next().?, int_probs_clone.next().?, 1e-12);
+    var int_prob_buf: [160]u8 = undefined;
+    var int_prob_writer = std.Io.Writer.fixed(&int_prob_buf);
+    try int_prob_writer.print("{f}", .{int_probs});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&int_prob_writer), "WeightedIntTree.ProbabilityIterator") != null);
 }
 
 test "alias table samples valid indexes" {

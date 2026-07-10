@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1171 bar is S4-M1172: exact/default dense SIMD research,
+The active post-S4-M1172 bar is S4-M1173: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6100,3 +6100,5 @@ S4-M1169 adds weighted-tree constructor/default helpers (`compare/results/s4-m11
 S4-M1170 adds weighted-tree trySample aliases (`compare/results/s4-m1170-weighted-tree-try-sample.md`): `WeightedTree(Weight)` and `WeightedIntTree(Weight)` now expose Zig-native `trySample` / `trySampleFrom` aliases matching local `rand_distr::WeightedTreeIndex::try_sample` checked sampling naming while preserving invalid-path no-consume behavior. This is a local Rust ergonomics closure, not whole-goal completion.
 
 S4-M1171 refreshes full portability-sensitive validation after S4-M1170 (`compare/results/s4-m1171-post-s4-m1170-validate-all.md`): `zig build validate-all` passes with native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending in `profilelongcheck ok`. This is validation evidence, not whole-goal completion.
+
+S4-M1172 adds weighted iterator clone/format helpers (`compare/results/s4-m1172-weighted-iterator-clone-format.md`): `AliasTable`, `WeightedTree`, and `WeightedIntTree` weight/probability iterators now expose Zig-native `clone` and `{f}` format helpers matching local Rust `WeightedIndexIter` clone/debug workflows. This is a local Rust ergonomics closure, not whole-goal completion.

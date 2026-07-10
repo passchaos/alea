@@ -2747,6 +2747,8 @@ Alias helpers:
 - `AliasTable.WeightIterator.len`
 - `AliasTable.WeightIterator.sizeHint`
 - `AliasTable.WeightIterator.fill`
+- `AliasTable.WeightIterator.clone`
+- `AliasTable.WeightIterator.format`
 - `AliasTable.probabilityAt`
 - `AliasTable.probability`
 - `AliasTable.probabilityIter`
@@ -2756,6 +2758,8 @@ Alias helpers:
 - `AliasTable.ProbabilityIterator.len`
 - `AliasTable.ProbabilityIterator.sizeHint`
 - `AliasTable.ProbabilityIterator.fill`
+- `AliasTable.ProbabilityIterator.clone`
+- `AliasTable.ProbabilityIterator.format`
 - `AliasTable.constantIndex`
 - `AliasTable.sample`
 - `AliasTable.sampleIndex`
@@ -2854,6 +2858,8 @@ Dynamic weighted helpers:
 - `WeightedTree.WeightIterator.len`
 - `WeightedTree.WeightIterator.sizeHint`
 - `WeightedTree.WeightIterator.fill`
+- `WeightedTree.WeightIterator.clone`
+- `WeightedTree.WeightIterator.format`
 - `WeightedTree.probabilityAt`
 - `WeightedTree.probability`
 - `WeightedTree.probabilityIter`
@@ -2863,6 +2869,8 @@ Dynamic weighted helpers:
 - `WeightedTree.ProbabilityIterator.len`
 - `WeightedTree.ProbabilityIterator.sizeHint`
 - `WeightedTree.ProbabilityIterator.fill`
+- `WeightedTree.ProbabilityIterator.clone`
+- `WeightedTree.ProbabilityIterator.format`
 - `WeightedTree.sample`
 - `WeightedTree.sampleIndex`
 - `WeightedTree.sampleU32`
@@ -2967,6 +2975,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.WeightIterator.len`
 - `WeightedIntTree.WeightIterator.sizeHint`
 - `WeightedIntTree.WeightIterator.fill`
+- `WeightedIntTree.WeightIterator.clone`
+- `WeightedIntTree.WeightIterator.format`
 - `WeightedIntTree.probabilityAt`
 - `WeightedIntTree.probability`
 - `WeightedIntTree.probabilityIter`
@@ -2976,6 +2986,8 @@ Dynamic weighted helpers:
 - `WeightedIntTree.ProbabilityIterator.len`
 - `WeightedIntTree.ProbabilityIterator.sizeHint`
 - `WeightedIntTree.ProbabilityIterator.fill`
+- `WeightedIntTree.ProbabilityIterator.clone`
+- `WeightedIntTree.ProbabilityIterator.format`
 - `WeightedIntTree.sample`
 - `WeightedIntTree.sampleIndex`
 - `WeightedIntTree.sampleU32`
