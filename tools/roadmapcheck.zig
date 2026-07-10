@@ -1201,6 +1201,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1203", .path = "compare/results/s4-m1203-parameterized-vectorbench-refresh.md" },
     .{ .milestone = "S4-M1204", .path = "compare/results/s4-m1204-vectorbench-status-drift.md" },
     .{ .milestone = "S4-M1205", .path = "compare/results/s4-m1205-post-s4-m1204-validate-local.md" },
+    .{ .milestone = "S4-M1206", .path = "compare/results/s4-m1206-roadmap-evidence-path-guard.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1208,7 +1209,8 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
-    "S4-M1206",
+    "S4-M1207",
+    "S4-M1207",
     "S4-M1206",
     "S4-M1205",
     "S4-M1204",
@@ -1283,7 +1285,8 @@ const blocker_tokens = [_][]const u8{
     "compare/results/s4-m1123-wasmtime-profilelongcheck.md",
     "No new unblocked public-surface or local comparison-benchmark gap",
     "Do not call `update_goal(status=complete)`",
-    "S4-M1206",
+    "S4-M1207",
+    "S4-M1207",
     "S4-M1206",
     "S4-M1205",
     "S4-M1204",
@@ -1470,7 +1473,7 @@ const rand_status_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --help",
     "--schema-version prints the stable JSON schema version",
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1205 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1206 follow-ups closed for current bar",
 };
 
 const rand_status_direct_matrix_tokens = [_][]const u8{
@@ -1484,7 +1487,7 @@ const rand_status_direct_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --schema-version",
     "$ zig build rand-status -- --self-test",
     "rand-status self-test ok",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1205 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1206 follow-ups closed for current bar",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -1531,6 +1534,7 @@ pub fn main(init: std.process.Init) !void {
             try stderr.print("roadmapcheck: missing evidence file {s}: {s}\n", .{ item.path, @errorName(err) });
             missing += 1;
         };
+        try checkEvidencePathMilestone(stderr, item.milestone, item.path, &missing);
         if (std.mem.indexOf(u8, roadmap, item.milestone) == null or
             std.mem.indexOf(u8, roadmap, item.path) == null)
         {
@@ -1758,8 +1762,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1205 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1206 | Next post-S4-M1205 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1206 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1206 | Roadmap evidence path guard") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1206 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1207 | Next post-S4-M1206 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1207 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
@@ -1930,8 +1938,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: active audit missing S4-M1205 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1206 next post-S4-M1205 product bar") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1206 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1206 roadmap evidence path guard") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1206 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "| S4-M1207 next post-S4-M1206 product bar") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1207 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {
@@ -1958,6 +1970,28 @@ pub fn main(init: std.process.Init) !void {
     try stdout.flush();
 }
 
+fn checkEvidencePathMilestone(
+    stderr: *std.Io.Writer,
+    milestone: []const u8,
+    path: []const u8,
+    missing: *usize,
+) !void {
+    var lower_buf: [64]u8 = undefined;
+    if (milestone.len > lower_buf.len) {
+        try stderr.print("roadmapcheck: milestone token too long `{s}\n", .{milestone});
+        missing.* += 1;
+        return;
+    }
+    const lowered = lower_buf[0..milestone.len];
+    for (milestone, 0..) |byte, index| {
+        lowered[index] = std.ascii.toLower(byte);
+    }
+    if (std.mem.indexOf(u8, path, lowered) == null) {
+        try stderr.print("roadmapcheck: evidence path `{s}` does not contain milestone `{s}\n", .{ path, lowered });
+        missing.* += 1;
+    }
+}
+
 fn readFile(io: std.Io, allocator: std.mem.Allocator, path: []const u8) ![]u8 {
     return std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .limited(8 * 1024 * 1024));
 }
@@ -1975,6 +2009,19 @@ fn checkManifestTokens(
             missing.* += 1;
         }
     }
+}
+
+test "evidence path guard requires lowercase milestone token" {
+    var out_buf: [256]u8 = undefined;
+    var stderr = std.Io.Writer.fixed(&out_buf);
+    var missing: usize = 0;
+
+    try checkEvidencePathMilestone(&stderr, "S4-M1206", "compare/results/s4-m1206-example.md", &missing);
+    try std.testing.expectEqual(@as(usize, 0), missing);
+
+    try checkEvidencePathMilestone(&stderr, "S4-M1206", "compare/results/s4-m1207-wrong.md", &missing);
+    try std.testing.expectEqual(@as(usize, 1), missing);
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&stderr), "s4-m1206") != null);
 }
 
 test "manifest token checker counts missing tokens" {

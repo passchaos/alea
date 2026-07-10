@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1205 bar is S4-M1206: exact/default dense SIMD research,
+The active post-S4-M1206 bar is S4-M1207: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6167,4 +6167,6 @@ S4-M1203 refreshes parameterized dense-SIMD vectorbench evidence (`compare/resul
 
 S4-M1204 repairs vectorbench status drift (`compare/results/s4-m1204-vectorbench-status-drift.md`): S4-M1202 and S4-M1203 audit/status mappings again point to their own evidence files, and roadmapcheck guards the vectorbench evidence chain. This is status/guard hygiene, not whole-goal completion; S4-M1205 was the next raised product bar and is now closed by the validate-local refresh below.
 
-S4-M1205 refreshes local comparison validation after S4-M1204 (`compare/results/s4-m1205-post-s4-m1204-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, and current status output. This is validation evidence, not whole-goal completion; S4-M1206 remains active.
+S4-M1205 refreshes local comparison validation after S4-M1204 (`compare/results/s4-m1205-post-s4-m1204-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, and current status output. This is validation evidence, not whole-goal completion; S4-M1206 was the next raised product bar and is now closed by the roadmap evidence-path guard below.
+
+S4-M1206 adds a roadmap evidence-path guard (`compare/results/s4-m1206-roadmap-evidence-path-guard.md`): roadmapcheck now rejects milestone/evidence path mismatches and the known S4-M1204/S4-M1205 drift is repaired. This is status/guard hygiene, not whole-goal completion; S4-M1207 remains active.
