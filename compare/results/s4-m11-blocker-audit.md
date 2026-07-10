@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1180-typed-static-weighted-diagnostics.md
 compare/results/s4-m1179-post-s4-m1178-validate-local.md
 compare/results/s4-m1178-weighted-manifest-refresh.md
 compare/results/s4-m1177-post-s4-m1176-validate-all.md
@@ -67,6 +68,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1180-typed-static-weighted-diagnostics.md"
 "compare/results/s4-m1179-post-s4-m1178-validate-local.md"
 "compare/results/s4-m1178-weighted-manifest-refresh.md"
 "compare/results/s4-m1177-post-s4-m1176-validate-all.md"
@@ -201,4 +203,6 @@ S4-M1178 is closed after refreshing weighted manifest coverage in `compare/resul
 
 S4-M1179 is closed after refreshing validate-local evidence in `compare/results/s4-m1179-post-s4-m1178-validate-local.md`.
 
-S4-M1180 remains active after S4-M1179 refreshes validate-local evidence in `compare/results/s4-m1179-post-s4-m1178-validate-local.md`.
+S4-M1180 is closed after adding typed static weighted diagnostics in `compare/results/s4-m1180-typed-static-weighted-diagnostics.md`.
+
+S4-M1181 remains active after S4-M1180 adds typed static weighted diagnostics in `compare/results/s4-m1180-typed-static-weighted-diagnostics.md`.

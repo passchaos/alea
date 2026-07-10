@@ -19134,6 +19134,7 @@ pub fn AliasTable(comptime Weight: type) type {
         prob_threshold: []u64,
         alias: []usize,
         weight_values: []f64,
+        typed_weight_values: []Weight,
         total: f64,
         positive_count: usize = 0,
         constant_index: ?usize = null,
@@ -19184,6 +19185,51 @@ pub fn AliasTable(comptime Weight: type) type {
             pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
                 try writer.print(
                     "AliasTable.WeightIterator{{ .index = {}, .remaining = {} }}",
+                    .{ self.index, self.remaining() },
+                );
+            }
+        };
+
+        pub const TypedWeightIterator = struct {
+            const Iterator = @This();
+
+            table: Self,
+            index: usize = 0,
+
+            pub fn next(self: *Iterator) ?Weight {
+                const value = self.table.typedWeight(self.index) orelse return null;
+                self.index += 1;
+                return value;
+            }
+
+            pub fn remaining(self: Iterator) usize {
+                return self.table.len() - self.index;
+            }
+
+            pub fn len(self: Iterator) usize {
+                return self.remaining();
+            }
+
+            pub fn sizeHint(self: Iterator) struct { lower: usize, upper: ?usize } {
+                const length = self.remaining();
+                return .{ .lower = length, .upper = length };
+            }
+
+            pub fn fill(self: *Iterator, dest: []Weight) usize {
+                const count = @min(dest.len, self.remaining());
+                if (count == 0) return 0;
+                @memcpy(dest[0..count], self.table.typed_weight_values[self.index..][0..count]);
+                self.index += count;
+                return count;
+            }
+
+            pub fn clone(self: Iterator) Iterator {
+                return self;
+            }
+
+            pub fn format(self: Iterator, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+                try writer.print(
+                    "AliasTable.TypedWeightIterator{{ .index = {}, .remaining = {} }}",
                     .{ self.index, self.remaining() },
                 );
             }
@@ -19255,6 +19301,8 @@ pub fn AliasTable(comptime Weight: type) type {
             errdefer allocator.free(alias);
             const weight_values = try allocator.alloc(f64, input_weights.len);
             errdefer allocator.free(weight_values);
+            const typed_weight_values = try allocator.alloc(Weight, input_weights.len);
+            errdefer allocator.free(typed_weight_values);
 
             var scaled = try allocator.alloc(f64, input_weights.len);
             defer allocator.free(scaled);
@@ -19269,7 +19317,9 @@ pub fn AliasTable(comptime Weight: type) type {
             for (input_weights, 0..) |input_weight, index| {
                 const value = try weightToF64(input_weight);
                 try validateAliasWeightSize(@TypeOf(input_weight), input_weight, input_weights.len);
+                const typed_value = try weightCastFromInput(input_weight);
                 weight_values[index] = value;
+                typed_weight_values[index] = typed_value;
                 total += value;
                 if (!std.math.isFinite(total)) return error.Overflow;
                 if (value > 0) {
@@ -19318,6 +19368,7 @@ pub fn AliasTable(comptime Weight: type) type {
                 .prob_threshold = prob_threshold,
                 .alias = alias,
                 .weight_values = weight_values,
+                .typed_weight_values = typed_weight_values,
                 .total = total,
                 .positive_count = positive_count,
                 .constant_index = if (positive_count == 1) positive_index else null,
@@ -19351,6 +19402,7 @@ pub fn AliasTable(comptime Weight: type) type {
             self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
             self.allocator.free(self.weight_values);
+            self.allocator.free(self.typed_weight_values);
             self.* = undefined;
         }
 
@@ -19363,12 +19415,15 @@ pub fn AliasTable(comptime Weight: type) type {
             errdefer allocator.free(alias);
             const weight_values = try allocator.dupe(f64, self.weight_values);
             errdefer allocator.free(weight_values);
+            const typed_weight_values = try allocator.dupe(Weight, self.typed_weight_values);
+            errdefer allocator.free(typed_weight_values);
 
             return .{
                 .prob = prob,
                 .prob_threshold = prob_threshold,
                 .alias = alias,
                 .weight_values = weight_values,
+                .typed_weight_values = typed_weight_values,
                 .total = self.total,
                 .positive_count = self.positive_count,
                 .constant_index = self.constant_index,
@@ -19383,12 +19438,13 @@ pub fn AliasTable(comptime Weight: type) type {
                 std.mem.eql(f64, self.prob, other.prob) and
                 std.mem.eql(u64, self.prob_threshold, other.prob_threshold) and
                 std.mem.eql(usize, self.alias, other.alias) and
-                std.mem.eql(f64, self.weight_values, other.weight_values);
+                std.mem.eql(f64, self.weight_values, other.weight_values) and
+                std.mem.eql(Weight, self.typed_weight_values, other.typed_weight_values);
         }
 
         pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
             try writer.print(
-                "AliasTable{{ .len = {}, .total = {d}, .positive_count = {}, .constant_index = {?}, .prob = {any}, .prob_threshold = {any}, .alias = {any}, .weight_values = {any} }}",
+                "AliasTable{{ .len = {}, .total = {d}, .positive_count = {}, .constant_index = {?}, .prob = {any}, .prob_threshold = {any}, .alias = {any}, .weight_values = {any}, .typed_weight_values = {any} }}",
                 .{
                     self.len(),
                     self.total,
@@ -19398,6 +19454,7 @@ pub fn AliasTable(comptime Weight: type) type {
                     self.prob_threshold,
                     self.alias,
                     self.weight_values,
+                    self.typed_weight_values,
                 },
             );
         }
@@ -19410,10 +19467,12 @@ pub fn AliasTable(comptime Weight: type) type {
             self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
             self.allocator.free(self.weight_values);
+            self.allocator.free(self.typed_weight_values);
             self.prob = next.prob;
             self.prob_threshold = next.prob_threshold;
             self.alias = next.alias;
             self.weight_values = next.weight_values;
+            self.typed_weight_values = next.typed_weight_values;
             self.total = next.total;
             self.positive_count = next.positive_count;
             self.constant_index = next.constant_index;
@@ -19425,19 +19484,21 @@ pub fn AliasTable(comptime Weight: type) type {
             try validateAliasWeightSize(Weight, input_weight, self.prob.len);
             const next_total = self.total - self.weight_values[index] + value;
             try validateStaticWeightTotal(next_total);
-            const input_weights = try self.allocator.dupe(f64, self.weight_values);
+            const input_weights = try self.allocator.dupe(Weight, self.typed_weight_values);
             defer self.allocator.free(input_weights);
-            input_weights[index] = value;
+            input_weights[index] = input_weight;
 
             const next = try initFromWeights(self.allocator, input_weights);
             self.allocator.free(self.prob);
             self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
             self.allocator.free(self.weight_values);
+            self.allocator.free(self.typed_weight_values);
             self.prob = next.prob;
             self.prob_threshold = next.prob_threshold;
             self.alias = next.alias;
             self.weight_values = next.weight_values;
+            self.typed_weight_values = next.typed_weight_values;
             self.total = next.total;
             self.positive_count = next.positive_count;
             self.constant_index = next.constant_index;
@@ -19460,19 +19521,21 @@ pub fn AliasTable(comptime Weight: type) type {
             }
             try validateStaticWeightTotal(next_total);
 
-            const input_weights = try self.allocator.dupe(f64, self.weight_values);
+            const input_weights = try self.allocator.dupe(Weight, self.typed_weight_values);
             defer self.allocator.free(input_weights);
-            for (updates) |item| input_weights[item.index] = try weightToF64(item.weight);
+            for (updates) |item| input_weights[item.index] = item.weight;
 
             const next = try initFromWeights(self.allocator, input_weights);
             self.allocator.free(self.prob);
             self.allocator.free(self.prob_threshold);
             self.allocator.free(self.alias);
             self.allocator.free(self.weight_values);
+            self.allocator.free(self.typed_weight_values);
             self.prob = next.prob;
             self.prob_threshold = next.prob_threshold;
             self.alias = next.alias;
             self.weight_values = next.weight_values;
+            self.typed_weight_values = next.typed_weight_values;
             self.total = next.total;
             self.positive_count = next.positive_count;
             self.constant_index = next.constant_index;
@@ -19516,6 +19579,16 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.total;
         }
 
+        pub fn typedTotalWeight(self: Self) Weight {
+            var total: Weight = 0;
+            for (self.typed_weight_values) |value| total += value;
+            return total;
+        }
+
+        pub fn totalWeightValue(self: Self) Weight {
+            return self.typedTotalWeight();
+        }
+
         pub fn positiveCount(self: Self) usize {
             return self.positive_count;
         }
@@ -19530,6 +19603,26 @@ pub fn AliasTable(comptime Weight: type) type {
         pub fn weightsInto(self: Self, out: []f64) Error!void {
             if (out.len != self.prob.len) return error.InvalidLength;
             @memcpy(out, self.weight_values);
+        }
+
+        pub fn typedWeights(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            const out = try allocator.alloc(Weight, self.prob.len);
+            errdefer allocator.free(out);
+            try self.typedWeightsInto(out);
+            return out;
+        }
+
+        pub fn typedWeightsInto(self: Self, out: []Weight) Error!void {
+            if (out.len != self.prob.len) return error.InvalidLength;
+            @memcpy(out, self.typed_weight_values);
+        }
+
+        pub fn weightsValue(self: Self, allocator: std.mem.Allocator) ![]Weight {
+            return self.typedWeights(allocator);
+        }
+
+        pub fn weightsValueInto(self: Self, out: []Weight) Error!void {
+            try self.typedWeightsInto(out);
         }
 
         pub fn probabilities(self: Self, allocator: std.mem.Allocator) ![]f64 {
@@ -19553,8 +19646,33 @@ pub fn AliasTable(comptime Weight: type) type {
             return self.weightAt(index) catch null;
         }
 
+        pub fn typedWeightAt(self: Self, index: usize) Error!Weight {
+            if (index >= self.prob.len) return error.InvalidParameter;
+            return self.typed_weight_values[index];
+        }
+
+        pub fn typedWeight(self: Self, index: usize) ?Weight {
+            return self.typedWeightAt(index) catch null;
+        }
+
+        pub fn weightValueAt(self: Self, index: usize) Error!Weight {
+            return self.typedWeightAt(index);
+        }
+
+        pub fn weightValue(self: Self, index: usize) ?Weight {
+            return self.typedWeight(index);
+        }
+
         pub fn weightIter(self: Self) WeightIterator {
             return .{ .table = self };
+        }
+
+        pub fn typedWeightIter(self: Self) TypedWeightIterator {
+            return .{ .table = self };
+        }
+
+        pub fn weightValueIter(self: Self) TypedWeightIterator {
+            return self.typedWeightIter();
         }
 
         pub fn probabilityAt(self: Self, index: usize) Error!f64 {
@@ -20085,6 +20203,19 @@ pub fn AliasTable(comptime Weight: type) type {
             };
             if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
             return value;
+        }
+
+        fn weightCastFromInput(input_weight: anytype) Error!Weight {
+            const value = try weightToF64(input_weight);
+            return switch (@typeInfo(Weight)) {
+                .int => switch (@typeInfo(@TypeOf(input_weight))) {
+                    .int => std.math.cast(Weight, input_weight) orelse return error.InvalidWeight,
+                    .float => @intFromFloat(value),
+                    else => @compileError("alias weights must be numeric"),
+                },
+                .float => @floatCast(value),
+                else => @compileError("alias weights must be numeric"),
+            };
         }
 
         fn validateAliasWeightSize(comptime InputWeight: type, input_weight: InputWeight, weight_count: usize) Error!void {
@@ -23551,6 +23682,45 @@ test "weighted iterator clone and format mirror local Rust iterator helpers" {
     try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&int_prob_writer), "WeightedIntTree.ProbabilityIterator") != null);
 }
 
+test "alias table typed weight diagnostics mirror Rust weighted index accessors" {
+    var table = try AliasTable(u32).init(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer table.deinit();
+
+    try std.testing.expectEqual(@as(u32, 9), table.totalWeightValue());
+    try std.testing.expectEqual(@as(u32, 5), try table.weightValueAt(2));
+    try std.testing.expectEqual(@as(?u32, 5), table.weightValue(2));
+    try std.testing.expectEqual(@as(?u32, null), table.weightValue(99));
+
+    const typed = try table.weightsValue(std.testing.allocator);
+    defer std.testing.allocator.free(typed);
+    try std.testing.expectEqualSlices(u32, &.{ 1, 0, 5, 3 }, typed);
+
+    var typed_into: [4]u32 = undefined;
+    try table.weightsValueInto(&typed_into);
+    try std.testing.expectEqualSlices(u32, &.{ 1, 0, 5, 3 }, &typed_into);
+    var typed_iter = table.weightValueIter();
+    var typed_iter_clone = typed_iter.clone();
+    try std.testing.expectEqual(@as(u32, 1), typed_iter.next().?);
+    try std.testing.expectEqual(@as(u32, 1), typed_iter_clone.next().?);
+    var typed_iter_buf: [160]u8 = undefined;
+    var typed_iter_writer = std.Io.Writer.fixed(&typed_iter_buf);
+    try typed_iter_writer.print("{f}", .{typed_iter});
+    try std.testing.expect(std.mem.indexOf(u8, std.Io.Writer.buffered(&typed_iter_writer), "AliasTable.TypedWeightIterator") != null);
+
+    try table.updateAt(1, 7);
+    try std.testing.expectEqual(@as(u32, 16), table.totalWeightValue());
+    try std.testing.expectEqual(@as(u32, 7), try table.weightValueAt(1));
+
+    try table.updateWeights(&.{
+        .{ .index = 0, .weight = 2 },
+        .{ .index = 3, .weight = 4 },
+    });
+    try std.testing.expectEqual(@as(u32, 18), table.totalWeightValue());
+    var updated: [4]u32 = undefined;
+    try table.weightsValueInto(&updated);
+    try std.testing.expectEqualSlices(u32, &.{ 2, 7, 5, 4 }, &updated);
+}
+
 test "alias table samples valid indexes" {
     const alea = @import("root.zig");
     var engine = alea.Wyhash64.init(44);
@@ -23925,6 +24095,7 @@ test "alias table iterators produce repeated indices" {
             .prob_threshold = @as([*]u64, @ptrFromInt(0x2000))[0..huge_len],
             .alias = @as([*]usize, @ptrFromInt(0x3000))[0..huge_len],
             .weight_values = @as([*]f64, @ptrFromInt(0x4000))[0..huge_len],
+            .typed_weight_values = @as([*]u32, @ptrFromInt(0x5000))[0..huge_len],
             .total = 1,
             .positive_count = 1,
             .constant_index = 0,

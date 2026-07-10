@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1179 bar is S4-M1180: exact/default dense SIMD research,
+The active post-S4-M1180 bar is S4-M1181: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6116,3 +6116,5 @@ S4-M1177 refreshes full portability-sensitive validation after S4-M1176 (`compar
 S4-M1178 refreshes weighted public-surface manifests (`compare/results/s4-m1178-weighted-manifest-refresh.md`): the local `rand` and `rand_distr` manifests now cite recent weighted iterator clone/format, weighted error message, and root/prelude weighted error alias closures. This is audit evidence, not whole-goal completion.
 
 S4-M1179 refreshes local comparison validation after S4-M1178 (`compare/results/s4-m1179-post-s4-m1178-validate-local.md`): `zig build validate-local` passes with native validation, local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, and current status output. This is validation evidence, not whole-goal completion.
+
+S4-M1180 adds typed static weighted diagnostics (`compare/results/s4-m1180-typed-static-weighted-diagnostics.md`): `AliasTable(Weight)` / `WeightedIndex(Weight)` now preserve typed weights and expose `weightValue*`, `weightsValue*`, `totalWeightValue`, and typed iterator helpers matching local Rust `WeightedIndex` typed accessor workflows. This is a local Rust diagnostics ergonomics closure, not whole-goal completion.

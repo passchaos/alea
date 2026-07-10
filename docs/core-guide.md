@@ -781,8 +781,8 @@ Use:
   `distributions.weighted.WeightError` mirror the local Rust
   `rand::distr::weighted::*` module path), and `weightedErrorMessage` /
   `weighted.errorMessage` mirror local Rust weighted `Display` diagnostics, including
-  Rust-discoverable `new`, `len`, `numChoices`, `positiveCount`, `totalWeight`, and allocation-returning or caller-buffer
-  optional `weight` / `probability`, lazy `weightIter` / `probabilityIter` size hints plus iterator `clone` / `{f}` format diagnostics, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
+  Rust-discoverable `new`, `len`, `numChoices`, `positiveCount`, `totalWeight`, typed `totalWeightValue`, and allocation-returning or caller-buffer
+  optional `weight` / `probability`, typed `weightValue` / `weightsValue`, lazy `weightIter` / typed `weightValueIter` / `probabilityIter` size hints plus iterator `clone` / `{f}` format diagnostics, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted
   sampler introspection; use `sampleU32` / `fillU32` variants when population
   indexes fit `u32` and compact output is desired, and `indices` /
   `indicesU32` variants for allocation-returning repeated draws; `indexArray`
