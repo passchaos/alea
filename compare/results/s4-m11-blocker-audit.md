@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1171-post-s4-m1170-validate-all.md
 compare/results/s4-m1170-weighted-tree-try-sample.md
 compare/results/s4-m1169-weighted-tree-default.md
 compare/results/s4-m1168-weighted-sampler-format.md
@@ -58,6 +59,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1171-post-s4-m1170-validate-all.md"
 "compare/results/s4-m1170-weighted-tree-try-sample.md"
 "compare/results/s4-m1169-weighted-tree-default.md"
 "compare/results/s4-m1168-weighted-sampler-format.md"
@@ -165,4 +167,6 @@ S4-M1169 is closed after adding weighted-tree constructor/default helpers in `co
 
 S4-M1170 is closed after adding weighted-tree trySample aliases in `compare/results/s4-m1170-weighted-tree-try-sample.md`.
 
-S4-M1171 remains active after S4-M1170 adds weighted-tree trySample aliases in `compare/results/s4-m1170-weighted-tree-try-sample.md`.
+S4-M1171 is closed after refreshing validate-all evidence in `compare/results/s4-m1171-post-s4-m1170-validate-all.md`.
+
+S4-M1172 remains active after S4-M1171 refreshes validate-all evidence in `compare/results/s4-m1171-post-s4-m1170-validate-all.md`.
