@@ -24,6 +24,10 @@ pub const SysError = SysRng.Error;
 pub const WeightError = seq.WeightError;
 pub const WeightedError = distributions.WeightedError;
 pub const weightedErrorMessage = distributions.weightedErrorMessage;
+pub const WeightedIndex = distributions.WeightedIndex;
+pub const WeightedAliasIndex = distributions.weighted.WeightedAliasIndex;
+pub const WeightedTreeIndex = distributions.weighted.WeightedTreeIndex;
+pub const WeightedIntTreeIndex = distributions.weighted.WeightedIntTreeIndex;
 pub const IndexVec = seq.IndexVec;
 
 pub const SplitMix64 = @import("engines/splitmix64.zig");
@@ -74,6 +78,10 @@ pub const prelude = struct {
     pub const WeightError = @import("seq.zig").WeightError;
     pub const WeightedError = @import("distributions.zig").WeightedError;
     pub const weightedErrorMessage = @import("distributions.zig").weightedErrorMessage;
+    pub const WeightedIndex = @import("distributions.zig").WeightedIndex;
+    pub const WeightedAliasIndex = @import("distributions.zig").weighted.WeightedAliasIndex;
+    pub const WeightedTreeIndex = @import("distributions.zig").weighted.WeightedTreeIndex;
+    pub const WeightedIntTreeIndex = @import("distributions.zig").weighted.WeightedIntTreeIndex;
 };
 
 pub fn default(seed: u64) DefaultPrng {
@@ -5862,6 +5870,24 @@ test "root weighted error aliases mirror distributions" {
     try std.testing.expectEqual(@as(distributions.WeightedError, error.InvalidWeight), weighted_error);
     try std.testing.expectEqualStrings(distributions.weightedErrorMessage(error.InvalidWeight), weightedErrorMessage(error.InvalidWeight));
     try std.testing.expectEqualStrings(weightedErrorMessage(error.InvalidInput), prelude.weightedErrorMessage(error.InvalidInput));
+}
+
+test "root weighted sampler aliases mirror distributions namespace" {
+    var alias = try WeightedAliasIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer alias.deinit();
+    try std.testing.expectEqual(@as(u32, 9), alias.totalWeightValue());
+
+    var prelude_alias = try prelude.WeightedAliasIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer prelude_alias.deinit();
+    try std.testing.expectEqual(@as(u32, 9), prelude_alias.totalWeightValue());
+
+    var tree = try WeightedTreeIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+    try std.testing.expectEqual(@as(u32, 9), try tree.totalWeightValue());
+
+    var int_tree = try prelude.WeightedIntTreeIndex(u128).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer int_tree.deinit();
+    try std.testing.expectEqual(@as(u128, 9), try int_tree.totalWeightValue());
 }
 
 test "root random helpers use explicit system entropy" {

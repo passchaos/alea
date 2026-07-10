@@ -43,7 +43,7 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
 - `prelude`: a Rust-discoverable convenience namespace for local
   `rand::prelude::*` comparisons, re-exporting Alea's common modules and
   aliases (`Rng`, `Seed`, `distributions`, `seq`, `ascii`, `StdRng`,
-  `SmallRng`, `SysRng`, `SysError`, `WeightError`, `WeightedError`, and `weightedErrorMessage`) without adding Rust
+  `SmallRng`, `SysRng`, `SysError`, `WeightError`, `WeightedError`, `weightedErrorMessage`, and weighted sampler aliases such as `WeightedAliasIndex` / `WeightedTreeIndex`) without adding Rust
   traits.
 - `StepRng`: deterministic arithmetic-sequence mock source for tests, byte
   stream adapters, and reproducibility examples; use `stepRng(initial,

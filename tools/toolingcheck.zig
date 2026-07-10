@@ -241,14 +241,14 @@ const rand_status_source_tokens = [_][]const u8{
     "\"blocker_audit\"",
     "compare/results/s4-m11-blocker-audit.md",
     "\"latest_validate_local_evidence\"",
-    "compare/results/s4-m1194-weighted-namespace-aliases.md",
+    "compare/results/s4-m1195-root-weighted-sampler-aliases.md",
     "Baseline: ~/Work/rand plus cached rand_distr 0.6.0",
     "Latest gate: zig build validate-local passes",
     "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
     "Rust comparison: parser tests and rand-bench-smoke pass",
     "Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
-    "Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1194 follow-ups closed for current bar",
-    "Next bar: S4-M1195 post-S4-M1194 exact/default dense SIMD, broader runtime, or new local Rust gap",
+    "Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1195 follow-ups closed for current bar",
+    "Next bar: S4-M1196 post-S4-M1195 exact/default dense SIMD, broader runtime, or new local Rust gap",
     "Details: compare/results/s4-m420-current-rand-status.md",
 };
 
