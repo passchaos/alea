@@ -30,13 +30,14 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1205 refreshes the local `validate-local` aggregate after the vectorbench status drift repair;
 - S4-M1206 adds a generic roadmap evidence-path guard after the latest status drift repair;
 - S4-M1207 refreshes the full `validate-all` aggregate after the roadmap evidence-path guard;
+- S4-M1208 refreshes the local `validate-local` aggregate after the full validation refresh;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1207 refreshed status output after running the full portability-sensitive
-validation aggregate following the S4-M1206 roadmap evidence-path guard. The
-retained status and local comparison evidence include:
+S4-M1208 refreshed status output after running the local Linux `rand` /
+`rand_distr` comparison aggregate following S4-M1207. The retained status and
+local comparison evidence include:
 
 ```text
 Retained validation:
@@ -57,26 +58,31 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1207 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1208 post-S4-M1207 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1208 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1209 post-S4-M1208 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1207-post-s4-m1206-validate-all.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1208-post-s4-m1207-validate-local.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
-rand_distr standard-normal: 41.7 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 38.8 M samples/s checksum=-3.640
+rand_distr standard-normal: 37.1 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 35.2 M samples/s checksum=-3.640
 surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137
 surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30
 surfacecheck local rand_distr: files=34 expected-tokens=72 source-tokens=185
 surfacecheck ok
 rand_bench_smoke self-test ok
 runtimecheck ok: no additional runtime runner available
+roadmapcheck ok
+toolingcheck ok
+readmecheck ok
+statcheck ok
+profilecheck ok
 
 Retained broader-runtime evidence:
 wasmtime 31.0.0 (7a9be587f 2025-03-20)
@@ -84,14 +90,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1207-post-s4-m1206-validate-all.md`
-records the latest full validation refresh. S4-M11 is closed for the current bar,
-but exact/default-compatible dense SIMD normal/exponential kernels are still not
-known to beat scalar lane-fill in the real vector-slice harness.
+Wasmtime profilelongcheck run. `compare/results/s4-m1208-post-s4-m1207-validate-local.md`
+records the latest local Rust comparison validation refresh. S4-M11 is closed for the current bar, but exact/default-compatible dense SIMD normal/exponential
+kernels are still not known to beat scalar lane-fill in the real vector-slice
+harness.
 
-## Current Post-S4-M1207 Bar
+## Current Post-S4-M1208 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1208: pursue
+The long-term product goal is not complete. The next bar is S4-M1209: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, or newly
 discovered local `rand` / `rand_distr` gaps.
@@ -100,4 +106,4 @@ discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1207 S4-M1208 bar remains the active follow-up.
+while the post-S4-M1208 S4-M1209 bar remains the active follow-up.

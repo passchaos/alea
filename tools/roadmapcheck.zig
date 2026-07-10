@@ -1203,6 +1203,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1205", .path = "compare/results/s4-m1205-post-s4-m1204-validate-local.md" },
     .{ .milestone = "S4-M1206", .path = "compare/results/s4-m1206-roadmap-evidence-path-guard.md" },
     .{ .milestone = "S4-M1207", .path = "compare/results/s4-m1207-post-s4-m1206-validate-all.md" },
+    .{ .milestone = "S4-M1208", .path = "compare/results/s4-m1208-post-s4-m1207-validate-local.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1210,6 +1211,8 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
+    "S4-M1209",
+    "S4-M1209",
     "S4-M1208",
     "S4-M1207",
     "S4-M1206",
@@ -1246,6 +1249,7 @@ const blocker_tokens = [_][]const u8{
     "zig build rand-status-json",
     "zig build rand-status-self-test",
     "zig build rand-status-schema-version",
+    "compare/results/s4-m1208-post-s4-m1207-validate-local.md",
     "compare/results/s4-m1207-post-s4-m1206-validate-all.md",
     "compare/results/s4-m1206-roadmap-evidence-path-guard.md",
     "compare/results/s4-m1205-post-s4-m1204-validate-local.md",
@@ -1276,6 +1280,7 @@ const blocker_tokens = [_][]const u8{
     "\"local_rand_status\"",
     "\"blocker_audit\"",
     "\"latest_validate_local_evidence\"",
+    "\"compare/results/s4-m1208-post-s4-m1207-validate-local.md\"",
     "\"compare/results/s4-m1207-post-s4-m1206-validate-all.md\"",
     "\"compare/results/s4-m1206-roadmap-evidence-path-guard.md\"",
     "\"compare/results/s4-m1205-post-s4-m1204-validate-local.md\"",
@@ -1327,14 +1332,17 @@ const active_completion_tokens = [_][]const u8{
     "S4-M1123 records direct Wasmtime",
     "S4-M11 is closed for the current bar",
     "exact/default-compatible dense SIMD normal/exponential",
+    "S4-M1209",
     "S4-M1208",
     "S4-M1207",
+    "compare/results/s4-m1208-post-s4-m1207-validate-local.md",
     "compare/results/s4-m1207-post-s4-m1206-validate-all.md",
     "compare/results/s4-m1206-roadmap-evidence-path-guard.md",
     "S4-M1202",
     "compare/results/s4-m1201-f32x8-vectorbench-refresh.md",
     "compare/results/s4-m1202-f64x4-vectorbench-refresh.md",
     "compare/results/s4-m1203-parameterized-vectorbench-refresh.md",
+    "S4-M1208 refreshes validate-local evidence",
     "S4-M1207 refreshes validate-all evidence",
     "S4-M1206 adds the roadmap evidence-path guard",
     "S4-M1205 refreshes validate-local evidence",
@@ -1470,7 +1478,7 @@ const current_rand_status_tokens = [_][]const u8{
     "\"s4_m11_blocked\": false",
     "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
     "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
-    "\"latest_validate_local_evidence\": \"compare/results/s4-m1207-post-s4-m1206-validate-all.md\"",
+    "\"latest_validate_local_evidence\": \"compare/results/s4-m1208-post-s4-m1207-validate-local.md\"",
     "surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137",
     "surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30",
     "surfacecheck local rand_distr: files=34 expected-tokens=72 source-tokens=185",
@@ -1498,7 +1506,7 @@ const rand_status_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --help",
     "--schema-version prints the stable JSON schema version",
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1207 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1208 follow-ups closed for current bar",
 };
 
 const rand_status_direct_matrix_tokens = [_][]const u8{
@@ -1512,7 +1520,7 @@ const rand_status_direct_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --schema-version",
     "$ zig build rand-status -- --self-test",
     "rand-status self-test ok",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1207 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1208 follow-ups closed for current bar",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -1795,8 +1803,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1207 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1208 | Next post-S4-M1207 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1208 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1208 | Post-S4-M1207 validate-local refresh") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1208 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1209 | Next post-S4-M1208 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1209 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
@@ -1975,8 +1987,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: active audit missing S4-M1207 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1208 next post-S4-M1207 product bar") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1208 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1208 post-S4-M1207 validate-local refresh") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1208 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "| S4-M1209 next post-S4-M1208 product bar") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1209 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {
