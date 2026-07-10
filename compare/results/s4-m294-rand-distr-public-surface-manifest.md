@@ -23,7 +23,7 @@ The scan focused on public declarations and root re-exports:
   `new(...)` constructors;
 - `multi/mod.rs` and `multi/dirichlet.rs`;
 - `weighted/mod.rs`, `weighted_alias.rs`, and `weighted_tree.rs`.
-- `ziggurat_tables.rs` for public implementation-table type names.
+- `ziggurat_tables.rs` for public implementation-table type, constant, and static table names.
 
 ## Root Distribution Re-Exports
 
@@ -57,7 +57,7 @@ The scan focused on public declarations and root re-exports:
 
 | Local `rand_distr` surface | Alea status |
 | --- | --- |
-| `ziggurat_tables::{ZIG_NORM_R, ZIG_EXP_R, ZigTable}` and private utility modules | Implementation scaffolding for Rust distributions. Alea has its own exact/default and opt-in vector/table profiles with documented validation; not a public Zig-native gap. |
+| `ziggurat_tables` public symbols (`ZigTable`, `ZIG_NORM_R`, `ZIG_NORM_X`, `ZIG_NORM_F`, `ZIG_EXP_R`, `ZIG_EXP_X`, and `ZIG_EXP_F`) and private utility modules | Implementation scaffolding for Rust distributions. Alea uses `std.Random.ziggurat` for exact/default ZIGNOR constants and exposes separate named table-quantile opt-in profiles with documented validation; these Rust implementation tables are not a public Zig-native workflow gap; see S4-M1199. |
 | `Distribution<T>` trait implementations across samplers | Rust trait integration. Alea uses concrete sampler methods plus `Rng.sample`, `sampleIter`, and fill/batch helpers; intentionally not copied. |
 | Serde/feature-gated derives and `num_traits` bounds | Rust ecosystem integration details; intentionally not copied. |
 

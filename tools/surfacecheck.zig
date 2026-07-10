@@ -236,6 +236,7 @@ const rand_distr_expected_tokens = [_][]const u8{
     "Pert",
     "PertBuilder",
     "Poisson",
+    "MAX_LAMBDA",
     "SkewNormal",
     "StudentT",
     "Triangular",
@@ -267,6 +268,13 @@ const rand_distr_expected_tokens = [_][]const u8{
     "WeightedTreeIndex",
     "is_valid",
     "AliasableWeight",
+    "ZigTable",
+    "ZIG_NORM_R",
+    "ZIG_NORM_X",
+    "ZIG_NORM_F",
+    "ZIG_EXP_R",
+    "ZIG_EXP_X",
+    "ZIG_EXP_F",
     "num_traits",
 };
 
@@ -644,7 +652,7 @@ fn extractPublicDeclName(trimmed: []const u8) ?[]const u8 {
         rest = std.mem.trimStart(u8, rest["unsafe ".len..], " \t");
     }
 
-    const prefixes = [_][]const u8{ "mod ", "fn ", "struct ", "enum ", "trait ", "type " };
+    const prefixes = [_][]const u8{ "mod ", "fn ", "struct ", "enum ", "trait ", "type ", "const ", "static " };
     inline for (prefixes) |prefix| {
         if (std.mem.startsWith(u8, rest, prefix)) {
             const name_start = prefix.len;
@@ -660,8 +668,11 @@ fn extractPublicFnName(trimmed: []const u8) ?[]const u8 {
     if (std.mem.startsWith(u8, rest, "inline ")) {
         rest = std.mem.trimStart(u8, rest["inline ".len..], " \t");
     }
-    if (std.mem.startsWith(u8, rest, "fn ")) {
-        return readIdent(rest["fn ".len..]);
+    const prefixes = [_][]const u8{ "fn ", "const ", "static " };
+    inline for (prefixes) |prefix| {
+        if (std.mem.startsWith(u8, rest, prefix)) {
+            return readIdent(rest[prefix.len..]);
+        }
     }
     return null;
 }
@@ -849,6 +860,12 @@ test "manifest token matching keeps non-identifier fallback for scoped phrases" 
     try std.testing.expect(manifestHasToken("covered by `slice::Choose` and aliases", "slice::Choose"));
     try std.testing.expect(manifestHasToken("`block::{Generator, BlockRng, reconstruct}`", "`block::{Generator"));
     try std.testing.expect(manifestHasToken("No new unblocked local Rust public-surface gap", "No new unblocked local Rust public-surface gap"));
+}
+
+test "public token extraction includes constants and statics" {
+    try std.testing.expectEqualStrings("ZIG_NORM_R", extractPublicDeclName("pub const ZIG_NORM_R: f64 = 3.654;").?);
+    try std.testing.expectEqualStrings("ZIG_NORM_X", extractPublicDeclName("pub static ZIG_NORM_X: [f64; 257] =").?);
+    try std.testing.expectEqualStrings("MAX_LAMBDA", extractPublicFnName("pub const MAX_LAMBDA: f64 = 1.844e19;").?);
 }
 
 test "public file guard helpers distinguish scanned ignored and public files" {
