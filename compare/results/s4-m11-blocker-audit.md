@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1198-post-s4-m1197-validate-all.md
 compare/results/s4-m1197-poisson-max-lambda-constants.md
 compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md
 compare/results/s4-m1195-root-weighted-sampler-aliases.md
@@ -85,6 +86,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1198-post-s4-m1197-validate-all.md"
 "compare/results/s4-m1197-poisson-max-lambda-constants.md"
 "compare/results/s4-m1196-weighted-manifest-root-alias-refresh.md"
 "compare/results/s4-m1195-root-weighted-sampler-aliases.md"
@@ -273,4 +275,6 @@ S4-M1196 is closed after refreshing weighted manifest root-alias evidence in `co
 
 S4-M1197 is closed after exposing Poisson max-lambda public constants in `compare/results/s4-m1197-poisson-max-lambda-constants.md`.
 
-S4-M1198 remains active after S4-M1197 exposes Poisson max-lambda public constants.
+S4-M1198 is closed after refreshing validate-all evidence in `compare/results/s4-m1198-post-s4-m1197-validate-all.md`.
+
+S4-M1199 remains active after S4-M1198 refreshes validate-all evidence.
