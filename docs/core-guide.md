@@ -777,9 +777,10 @@ Use:
 - `distributions.AliasTable` for O(1) repeated weighted index sampling
   (`distributions.WeightedIndex` is a Rust-discoverable alias matching local
   Rust `rand::distr::weighted::WeightedIndex` naming, and
-  `distributions.weighted.WeightedIndex` / `distributions.weighted.Error` /
-  `distributions.weighted.WeightError` mirror the local Rust
-  `rand::distr::weighted::*` module path), and `weightedErrorMessage` /
+  `distributions.weighted.WeightedIndex` / `WeightedAliasIndex`,
+  `distributions.weighted.WeightedTreeIndex` / `WeightedIntTreeIndex`, and
+  `distributions.weighted.Error` / `WeightError` mirror the local Rust
+  `rand::distr::weighted::*` and `rand_distr::weighted::*` module paths), and `weightedErrorMessage` /
   `weighted.errorMessage` mirror local Rust weighted `Display` diagnostics, including
   Rust-discoverable `new`, `len`, `numChoices`, `positiveCount`, `totalWeight`, typed `totalWeightValue`, and allocation-returning or caller-buffer
   optional `weight` / `probability`, typed `weightValue` / `weightsValue`, lazy `weightIter` / typed `weightValueIter` / `probabilityIter` size hints plus iterator `clone` / `{f}` format diagnostics, `weightAt` / `weights` reconstruction for diagnostics and parity with Rust weighted

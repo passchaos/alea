@@ -2720,6 +2720,9 @@ Alias helpers:
 - `weighted.WeightError`
 - `weighted.errorMessage`
 - `weighted.WeightedIndex(Weight)`
+- `weighted.WeightedAliasIndex(Weight)`
+- `weighted.WeightedTreeIndex(Weight)`
+- `weighted.WeightedIntTreeIndex(Weight)`
 - `AliasTable.init`
 - `AliasTable.new`
 - `AliasTable.initByIndex`

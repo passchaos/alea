@@ -217,6 +217,18 @@ pub const weighted = struct {
     pub fn WeightedIndex(comptime Weight: type) type {
         return distributions_module.WeightedIndex(Weight);
     }
+
+    pub fn WeightedAliasIndex(comptime Weight: type) type {
+        return distributions_module.AliasTable(Weight);
+    }
+
+    pub fn WeightedTreeIndex(comptime Weight: type) type {
+        return distributions_module.WeightedTree(Weight);
+    }
+
+    pub fn WeightedIntTreeIndex(comptime Weight: type) type {
+        return distributions_module.WeightedIntTree(Weight);
+    }
 };
 
 pub const multi = struct {
@@ -39711,6 +39723,23 @@ test "weighted namespace mirrors Rust weighted module discovery names" {
     var top_level_engine = root.DefaultPrng.init(0x51_4d_284);
     try std.testing.expectEqual(top_level_table.sampleFrom(&top_level_engine), namespace_table.sampleFrom(&namespace_engine));
     try std.testing.expectEqual(top_level_engine.next(), namespace_engine.next());
+}
+
+test "weighted namespace exposes rand_distr weighted sampler aliases" {
+    var alias = try weighted.WeightedAliasIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer alias.deinit();
+    try std.testing.expectEqual(@as(usize, 4), alias.numChoices());
+    try std.testing.expectEqual(@as(u32, 9), alias.totalWeightValue());
+
+    var tree = try weighted.WeightedTreeIndex(u32).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer tree.deinit();
+    try std.testing.expectEqual(@as(usize, 4), tree.numChoices());
+    try std.testing.expectEqual(@as(u32, 9), try tree.totalWeightValue());
+
+    var int_tree = try weighted.WeightedIntTreeIndex(u128).new(std.testing.allocator, &.{ 1, 0, 5, 3 });
+    defer int_tree.deinit();
+    try std.testing.expectEqual(@as(usize, 4), int_tree.numChoices());
+    try std.testing.expectEqual(@as(u128, 9), try int_tree.totalWeightValue());
 }
 
 test "UniformDuration sampler mirrors duration helpers" {
