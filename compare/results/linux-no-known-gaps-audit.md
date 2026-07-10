@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1201 bar is S4-M1202: exact/default dense SIMD research,
+The active post-S4-M1202 bar is S4-M1203: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6159,4 +6159,6 @@ S4-M1199 expands local `rand_distr` ziggurat table surface guards (`compare/resu
 
 S4-M1200 refreshes full validation after S4-M1199 (`compare/results/s4-m1200-post-s4-m1199-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1201 was the next raised product bar and is now closed by the f32x8 vectorbench refresh below.
 
-S4-M1201 refreshes f32x8 dense-SIMD vectorbench evidence (`compare/results/s4-m1201-f32x8-vectorbench-refresh.md`): exact/default checksum-preserving standard-normal and standard-exponential f32x8 candidates still trail direct scalar ziggurat lane-fill in the real vector-slice harness, while table/native/approx rows remain explicit opt-ins. This is research evidence, not whole-goal completion; S4-M1202 remains active.
+S4-M1201 refreshes f32x8 dense-SIMD vectorbench evidence (`compare/results/s4-m1201-f32x8-vectorbench-refresh.md`): exact/default checksum-preserving standard-normal and standard-exponential f32x8 candidates still trail direct scalar ziggurat lane-fill in the real vector-slice harness, while table/native/approx rows remain explicit opt-ins. This is research evidence, not whole-goal completion; S4-M1202 was the next raised product bar and is now closed by the f64x4 vectorbench refresh below.
+
+S4-M1202 refreshes f64x4 dense-SIMD vectorbench evidence (`compare/results/s4-m1202-f64x4-vectorbench-refresh.md`): focused standard-normal and standard-exponential f64x4 rows still show no exact/default production replacement for scalar ziggurat lane-fill; table/approx rows remain opt-in or benchmark-only. This is research evidence, not whole-goal completion; S4-M1203 remains active.

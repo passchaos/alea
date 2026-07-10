@@ -2,7 +2,7 @@
 
 ## Gap
 
-After S4-M1201 refreshed f32x8 vectorbench evidence, the documented direct argument forms for
+After S4-M1202 refreshed f64x4 vectorbench evidence, the documented direct argument forms for
 `rand-status` needed a fresh recorded run matching the updated status JSON and
 self-test output.
 
@@ -25,14 +25,14 @@ $ zig build rand-status -- --json
   "rust_comparison": "parser tests and rand-bench-smoke pass",
   "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1201 follow-ups closed for current bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1202 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
-  "remaining_blocker": "S4-M1202 post-S4-M1201 next product bar",
+  "remaining_blocker": "S4-M1203 post-S4-M1202 next product bar",
   "s4_m11_blocked": false,
   "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1201-f32x8-vectorbench-refresh.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1202-f64x4-vectorbench-refresh.md"
 }
 $ zig build rand-status -- --schema-version
 1

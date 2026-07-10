@@ -91,11 +91,12 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1199 expands the local `rand_distr` ziggurat table public-surface guard to public `const` / `static` table names;
 - S4-M1200 refreshes the full `validate-all` aggregate after that verifier change;
 - S4-M1201 refreshes f32x8 standard normal/exponential vectorbench evidence;
+- S4-M1202 refreshes f64x4 standard normal/exponential vectorbench evidence;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1201 refreshed status output after rerunning focused f32x8 standard normal/exponential vectorbench evidence.
+S4-M1202 refreshed status output after rerunning focused f64x4 standard normal/exponential vectorbench evidence.
 The retained status and local comparison evidence include:
 
 ```text
@@ -126,15 +127,15 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1201 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1202 post-S4-M1201 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1202 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1203 post-S4-M1202 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1201-f32x8-vectorbench-refresh.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1202-f64x4-vectorbench-refresh.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -184,7 +185,7 @@ validation with local `rand_distr::Poisson`, S4-M1156 aligns Geometric
 failure-count zero-probability behavior with local `rand_distr::Geometric`, S4-M1157 aligns
 InverseGaussian infinite-parameter sampling with local `rand_distr::InverseGaussian`, S4-M1158 aligns
 SkewNormal unrestricted-location behavior with local `rand_distr::SkewNormal`, and S4-M1159 aligns
-NormalInverseGaussian alpha-infinity rejection with local `rand_distr::NormalInverseGaussian`, S4-M1160 aligns Hypergeometric large-population HIN underflow rejection with local `rand_distr::Hypergeometric`, S4-M1161 aligns Dirichlet positive-subnormal alpha rejection with local `rand_distr::multi::Dirichlet`, S4-M1162 aligns Beta/Dirichlet tiny-shape sampling stability with local `rand_distr`, S4-M1163 aligns AliasTable per-weight maximum validation with local `rand_distr::WeightedAliasIndex`, S4-M1164 aligns WeightedTree zero-total checked sampling diagnostics with local `rand_distr::WeightedTreeIndex::try_sample`, S4-M1165 aligns WeightedIntTree integer overflow diagnostics with local `rand_distr::WeightedTreeIndex`, S4-M1166 refreshes the full validate-all aggregate, S4-M1167 adds weighted sampler clone/equality helpers, S4-M1168 adds weighted sampler format helpers, S4-M1169 adds weighted-tree constructor/default helpers, S4-M1170 adds weighted-tree trySample aliases, S4-M1171 refreshes the full validate-all aggregate, S4-M1172 adds weighted iterator clone/format helpers, S4-M1173 refreshes the full validate-all aggregate, S4-M1174 adds weighted error message helpers, S4-M1175 refreshes the full validate-all aggregate, S4-M1176 adds root/prelude weighted error aliases, S4-M1177 refreshes the full validate-all aggregate, S4-M1178 refreshes weighted manifest coverage, S4-M1179 refreshes validate-local evidence, S4-M1180 adds typed static weighted diagnostics, S4-M1181 refreshes validate-all evidence, S4-M1182 refreshes weighted public-surface manifests, S4-M1183 extends typed diagnostics through WeightedChoice, S4-M1184 refreshes validate-all evidence, S4-M1185 refreshes dense SIMD vectorbench evidence, S4-M1186 refreshes validate-local evidence, S4-M1187 adds dynamic weighted-tree typed diagnostics, S4-M1188 refreshes validate-all evidence after that change, S4-M1189 adds dynamic weighted-tree typed total diagnostics, S4-M1190 refreshes validate-all evidence after that change, S4-M1191 repairs rand-status post-bar drift, S4-M1192 repairs the follow-up post-bar drift, S4-M1193 refreshes validate-local after those repairs, S4-M1194 adds weighted namespace aliases, S4-M1195 adds root/prelude weighted sampler aliases, and S4-M1196 refreshes the weighted manifest root-alias evidence, and S4-M1197 exposes Poisson max-lambda public constants matching local `rand_distr::Poisson::MAX_LAMBDA`, and S4-M1198 refreshes validate-all evidence after that public API change, and S4-M1199 expands the local `rand_distr` ziggurat-table guard to public `const` / `static` names, and S4-M1200 refreshes validate-all evidence after that verifier change, and S4-M1201 refreshes f32x8 vectorbench evidence showing exact/default candidates still trail direct scalar lane-fill. The next bar is S4-M1202: pursue exact/default-compatible dense SIMD normal/exponential
+NormalInverseGaussian alpha-infinity rejection with local `rand_distr::NormalInverseGaussian`, S4-M1160 aligns Hypergeometric large-population HIN underflow rejection with local `rand_distr::Hypergeometric`, S4-M1161 aligns Dirichlet positive-subnormal alpha rejection with local `rand_distr::multi::Dirichlet`, S4-M1162 aligns Beta/Dirichlet tiny-shape sampling stability with local `rand_distr`, S4-M1163 aligns AliasTable per-weight maximum validation with local `rand_distr::WeightedAliasIndex`, S4-M1164 aligns WeightedTree zero-total checked sampling diagnostics with local `rand_distr::WeightedTreeIndex::try_sample`, S4-M1165 aligns WeightedIntTree integer overflow diagnostics with local `rand_distr::WeightedTreeIndex`, S4-M1166 refreshes the full validate-all aggregate, S4-M1167 adds weighted sampler clone/equality helpers, S4-M1168 adds weighted sampler format helpers, S4-M1169 adds weighted-tree constructor/default helpers, S4-M1170 adds weighted-tree trySample aliases, S4-M1171 refreshes the full validate-all aggregate, S4-M1172 adds weighted iterator clone/format helpers, S4-M1173 refreshes the full validate-all aggregate, S4-M1174 adds weighted error message helpers, S4-M1175 refreshes the full validate-all aggregate, S4-M1176 adds root/prelude weighted error aliases, S4-M1177 refreshes the full validate-all aggregate, S4-M1178 refreshes weighted manifest coverage, S4-M1179 refreshes validate-local evidence, S4-M1180 adds typed static weighted diagnostics, S4-M1181 refreshes validate-all evidence, S4-M1182 refreshes weighted public-surface manifests, S4-M1183 extends typed diagnostics through WeightedChoice, S4-M1184 refreshes validate-all evidence, S4-M1185 refreshes dense SIMD vectorbench evidence, S4-M1186 refreshes validate-local evidence, S4-M1187 adds dynamic weighted-tree typed diagnostics, S4-M1188 refreshes validate-all evidence after that change, S4-M1189 adds dynamic weighted-tree typed total diagnostics, S4-M1190 refreshes validate-all evidence after that change, S4-M1191 repairs rand-status post-bar drift, S4-M1192 repairs the follow-up post-bar drift, S4-M1193 refreshes validate-local after those repairs, S4-M1194 adds weighted namespace aliases, S4-M1195 adds root/prelude weighted sampler aliases, and S4-M1196 refreshes the weighted manifest root-alias evidence, and S4-M1197 exposes Poisson max-lambda public constants matching local `rand_distr::Poisson::MAX_LAMBDA`, and S4-M1198 refreshes validate-all evidence after that public API change, and S4-M1199 expands the local `rand_distr` ziggurat-table guard to public `const` / `static` names, and S4-M1200 refreshes validate-all evidence after that verifier change, and S4-M1202 refreshes f64x4 vectorbench evidence showing exact/default candidates still trail direct scalar lane-fill. The next bar is S4-M1202: pursue exact/default-compatible dense SIMD normal/exponential
 kernels, additional non-WASI OS/architecture execution, broader/longer
 validation, or newly discovered local `rand` / `rand_distr` gaps.
 
@@ -192,4 +193,4 @@ validation, or newly discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1201 S4-M1202 bar continues to block whole-goal completion.
+while the post-S4-M1202 S4-M1203 bar continues to block whole-goal completion.
