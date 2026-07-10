@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1191 bar is S4-M1192: exact/default dense SIMD research,
+The active post-S4-M1192 bar is S4-M1193: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6139,4 +6139,6 @@ S4-M1189 adds dynamic weighted-tree typed total diagnostics (`compare/results/s4
 
 S4-M1190 refreshes full portability-sensitive validation after S4-M1189 (`compare/results/s4-m1190-post-s4-m1189-validate-all.md`): `zig build validate-all` passes with native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending in `profilelongcheck ok`. This is validation evidence, not whole-goal completion.
 
-S4-M1191 repairs rand-status post-bar drift (`compare/results/s4-m1191-rand-status-post-bar-drift.md`): status JSON now reports `S4-M1191 post-S4-M1190 next product bar`, and roadmapcheck maps the S4-M1190 validation evidence to S4-M1190. This is status/tooling hygiene, not whole-goal completion; S4-M1192 remains active.
+S4-M1191 repairs rand-status post-bar drift (`compare/results/s4-m1191-rand-status-post-bar-drift.md`): status JSON now reports `S4-M1191 post-S4-M1190 next product bar`, and roadmapcheck maps the S4-M1190 validation evidence to S4-M1190. This is status/tooling hygiene, not whole-goal completion.
+
+S4-M1192 repairs the follow-up rand-status post-bar drift (`compare/results/s4-m1192-rand-status-post-bar-drift.md`): status JSON now advances to `S4-M1193 post-S4-M1192 next product bar` without self-reference. This is status/tooling hygiene, not whole-goal completion; S4-M1193 remains active.
