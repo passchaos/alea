@@ -92,11 +92,12 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1200 refreshes the full `validate-all` aggregate after that verifier change;
 - S4-M1201 refreshes f32x8 standard normal/exponential vectorbench evidence;
 - S4-M1202 refreshes f64x4 standard normal/exponential vectorbench evidence;
+- S4-M1203 refreshes parameterized f32x8/f64x4 normal/exponential vectorbench evidence;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1202 refreshed status output after rerunning focused f64x4 standard normal/exponential vectorbench evidence.
+S4-M1203 refreshed status output after rerunning parameterized f32x8/f64x4 normal/exponential vectorbench evidence.
 The retained status and local comparison evidence include:
 
 ```text
@@ -127,15 +128,15 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1202 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1203 post-S4-M1202 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1203 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1204 post-S4-M1203 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1202-f64x4-vectorbench-refresh.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1203-parameterized-vectorbench-refresh.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -193,4 +194,4 @@ validation, or newly discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1202 S4-M1203 bar continues to block whole-goal completion.
+while the post-S4-M1203 S4-M1204 bar continues to block whole-goal completion.
