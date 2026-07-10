@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1178-weighted-manifest-refresh.md
 compare/results/s4-m1177-post-s4-m1176-validate-all.md
 compare/results/s4-m1176-root-weighted-error-aliases.md
 compare/results/s4-m1175-post-s4-m1174-validate-all.md
@@ -65,6 +66,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1178-weighted-manifest-refresh.md"
 "compare/results/s4-m1177-post-s4-m1176-validate-all.md"
 "compare/results/s4-m1176-root-weighted-error-aliases.md"
 "compare/results/s4-m1175-post-s4-m1174-validate-all.md"
@@ -193,4 +195,6 @@ S4-M1176 is closed after adding root/prelude weighted error aliases in `compare/
 
 S4-M1177 is closed after refreshing validate-all evidence in `compare/results/s4-m1177-post-s4-m1176-validate-all.md`.
 
-S4-M1178 remains active after S4-M1177 refreshes validate-all evidence in `compare/results/s4-m1177-post-s4-m1176-validate-all.md`.
+S4-M1178 is closed after refreshing weighted manifest coverage in `compare/results/s4-m1178-weighted-manifest-refresh.md`.
+
+S4-M1179 remains active after S4-M1178 refreshes weighted manifest coverage in `compare/results/s4-m1178-weighted-manifest-refresh.md`.
