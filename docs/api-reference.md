@@ -2825,6 +2825,9 @@ Alias helpers:
 Dynamic weighted helpers:
 
 - `WeightedTree.init`
+- `WeightedTree.new`
+- `WeightedTree.initEmpty`
+- `WeightedTree.default`
 - `WeightedTree.initByIndex`
 - `WeightedTree.initBy`
 - `WeightedTree.len`
@@ -2933,6 +2936,9 @@ Dynamic weighted helpers:
 - Prefer `WeightedIntTree` when weights are unsigned integers and frequent
   update/push/pop/sample throughput is the priority.
 - `WeightedIntTree.init`
+- `WeightedIntTree.new`
+- `WeightedIntTree.initEmpty`
+- `WeightedIntTree.default`
 - `WeightedIntTree.initByIndex`
 - `WeightedIntTree.initBy`
 - `WeightedIntTree.len`

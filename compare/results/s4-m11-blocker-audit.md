@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1169-weighted-tree-default.md
 compare/results/s4-m1168-weighted-sampler-format.md
 compare/results/s4-m1167-weighted-sampler-clone-eql.md
 compare/results/s4-m1166-post-s4-m1165-validate-all.md
@@ -56,6 +57,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1169-weighted-tree-default.md"
 "compare/results/s4-m1168-weighted-sampler-format.md"
 "compare/results/s4-m1167-weighted-sampler-clone-eql.md"
 "compare/results/s4-m1166-post-s4-m1165-validate-all.md"
@@ -157,4 +159,6 @@ S4-M1167 is closed after adding weighted sampler clone/equality helpers in `comp
 
 S4-M1168 is closed after adding weighted sampler format helpers in `compare/results/s4-m1168-weighted-sampler-format.md`.
 
-S4-M1169 remains active after S4-M1168 adds weighted sampler format helpers in `compare/results/s4-m1168-weighted-sampler-format.md`.
+S4-M1169 is closed after adding weighted-tree constructor/default helpers in `compare/results/s4-m1169-weighted-tree-default.md`.
+
+S4-M1170 remains active after S4-M1169 adds weighted-tree constructor/default helpers in `compare/results/s4-m1169-weighted-tree-default.md`.

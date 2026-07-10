@@ -20195,6 +20195,23 @@ pub fn WeightedTree(comptime Weight: type) type {
             };
         }
 
+        pub fn new(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
+            return init(allocator, input_weights);
+        }
+
+        pub fn initEmpty(allocator: std.mem.Allocator) Self {
+            return .{
+                .subtotals = std.ArrayList(f64).empty,
+                .positive_count = 0,
+                .positive_index = null,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn default(allocator: std.mem.Allocator) Self {
+            return initEmpty(allocator);
+        }
+
         pub fn initByIndex(
             allocator: std.mem.Allocator,
             length: usize,
@@ -21024,9 +21041,9 @@ pub fn WeightedTree(comptime Weight: type) type {
             }
         }
 
-        fn updatePositiveState(self: *Self, index: usize, old: f64, new: f64) void {
+        fn updatePositiveState(self: *Self, index: usize, old: f64, new_value: f64) void {
             const old_positive = old > 0;
-            const new_positive = new > 0;
+            const new_positive = new_value > 0;
             if (!old_positive and new_positive) {
                 self.positive_count += 1;
                 if (self.positive_index == null) self.positive_index = index;
@@ -21184,6 +21201,24 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 .positive_index = positive_index,
                 .allocator = allocator,
             };
+        }
+
+        pub fn new(allocator: std.mem.Allocator, input_weights: []const Weight) !Self {
+            return init(allocator, input_weights);
+        }
+
+        pub fn initEmpty(allocator: std.mem.Allocator) Self {
+            comptime requireUnsignedWeight(Weight);
+            return .{
+                .subtotals = std.ArrayList(u64).empty,
+                .positive_count = 0,
+                .positive_index = null,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn default(allocator: std.mem.Allocator) Self {
+            return initEmpty(allocator);
         }
 
         pub fn initByIndex(
@@ -22035,9 +22070,9 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             }
         }
 
-        fn updatePositiveState(self: *Self, index: usize, old: u64, new: u64) void {
+        fn updatePositiveState(self: *Self, index: usize, old: u64, new_value: u64) void {
             const old_positive = old > 0;
-            const new_positive = new > 0;
+            const new_positive = new_value > 0;
             if (!old_positive and new_positive) {
                 self.positive_count += 1;
                 if (self.positive_index == null) self.positive_index = index;
@@ -23245,6 +23280,66 @@ test "weighted samplers format expose local Rust debug-style state" {
     try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".total = 9") != null);
     try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".positive_count = 3") != null);
     try std.testing.expect(std.mem.indexOf(u8, int_tree_out, ".subtotals =") != null);
+}
+
+test "weighted tree default constructors mirror local Rust default" {
+    var new_tree = try WeightedTree(u32).new(std.testing.allocator, &.{ 1, 0, 5 });
+    defer new_tree.deinit();
+    var init_nonempty_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 1, 0, 5 });
+    defer init_nonempty_tree.deinit();
+    try std.testing.expect(new_tree.eql(init_nonempty_tree));
+    try std.testing.expectApproxEqAbs(@as(f64, 6), new_tree.totalWeight(), 1e-12);
+
+    var tree = WeightedTree(u32).initEmpty(std.testing.allocator);
+    defer tree.deinit();
+    var default_tree = WeightedTree(u32).default(std.testing.allocator);
+    defer default_tree.deinit();
+    var init_tree = try WeightedTree(u32).init(std.testing.allocator, &.{});
+    defer init_tree.deinit();
+
+    try std.testing.expect(tree.eql(default_tree));
+    try std.testing.expect(tree.eql(init_tree));
+    try std.testing.expect(tree.isEmpty());
+    try std.testing.expect(!tree.isValid());
+    try std.testing.expectEqual(@as(usize, 0), tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), tree.totalWeight(), 1e-12);
+
+    try tree.push(7);
+    try std.testing.expect(!tree.isEmpty());
+    try std.testing.expect(tree.isValid());
+    try std.testing.expectEqual(@as(?usize, 0), tree.constantIndex());
+    try std.testing.expectApproxEqAbs(@as(f64, 7), tree.totalWeight(), 1e-12);
+    try std.testing.expect(!tree.eql(default_tree));
+
+    var new_int_tree = try WeightedIntTree(u32).new(std.testing.allocator, &.{ 1, 0, 5 });
+    defer new_int_tree.deinit();
+    var init_nonempty_int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 1, 0, 5 });
+    defer init_nonempty_int_tree.deinit();
+    try std.testing.expect(new_int_tree.eql(init_nonempty_int_tree));
+    try std.testing.expectEqual(@as(u64, 6), new_int_tree.totalWeight());
+
+    var int_tree = WeightedIntTree(u32).initEmpty(std.testing.allocator);
+    defer int_tree.deinit();
+    var default_int_tree = WeightedIntTree(u32).default(std.testing.allocator);
+    defer default_int_tree.deinit();
+    var init_int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{});
+    defer init_int_tree.deinit();
+
+    try std.testing.expect(int_tree.eql(default_int_tree));
+    try std.testing.expect(int_tree.eql(init_int_tree));
+    try std.testing.expect(int_tree.isEmpty());
+    try std.testing.expect(!int_tree.isValid());
+    try std.testing.expectEqual(@as(usize, 0), int_tree.positiveCount());
+    try std.testing.expectEqual(@as(?usize, null), int_tree.constantIndex());
+    try std.testing.expectEqual(@as(u64, 0), int_tree.totalWeight());
+
+    try int_tree.push(7);
+    try std.testing.expect(!int_tree.isEmpty());
+    try std.testing.expect(int_tree.isValid());
+    try std.testing.expectEqual(@as(?usize, 0), int_tree.constantIndex());
+    try std.testing.expectEqual(@as(u64, 7), int_tree.totalWeight());
+    try std.testing.expect(!int_tree.eql(default_int_tree));
 }
 
 test "alias table samples valid indexes" {

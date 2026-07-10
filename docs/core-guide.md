@@ -793,7 +793,9 @@ Use:
   `updateByIndex` construct and refresh static alias tables from index-weight
   functions, while `initBy` / `updateBy` do the same from item weight accessors; `clone` / `eql` provide explicit Zig-native equivalents for Rust-style clone/equality workflows, and `format` supports `std.Io.Writer.print("{f}", .{sampler})` debug snapshots
 - `distributions.WeightedTree` for O(log n) dynamic weight update, push, pop,
-  and sampling workloads with weights accumulated as `f64`, including
+  and sampling workloads with weights accumulated as `f64`, including Rust-discoverable `new`,
+  `initEmpty` / `default` empty constructors for local Rust `Default`-style
+  dynamic-tree workflows,
   `initBy` / `updateAllBy` from item weight accessors,
   `initByIndex` / `updateAllByIndex` from index-weight accessors,
   `updateWeights` / `updateMany` ordered partial updates, `numChoices` / `len` count diagnostics,
@@ -810,7 +812,8 @@ Use:
   for users discovering dynamic trees from `WeightedChoice` index naming; use
   `iter` / `iterU32` for repeated with-replacement index streams; `clone` / `eql` mirror local Rust `Clone` / `PartialEq` workflows without tying the API to Rust traits, and `format` supports Zig-native `{f}` debug snapshots analogous to local Rust `Debug` output
 - `distributions.WeightedIntTree` for unsigned integer weights when dynamic
-  update/push/pop/sample throughput matters, including `updateWeights` /
+  update/push/pop/sample throughput matters, including Rust-discoverable `new`, `initEmpty` / `default`
+  empty constructors matching generic dynamic-tree default workflows, `updateWeights` /
   `updateMany`,
   `initBy` /
   `updateAllBy` from item weight accessors and `initByIndex` /
