@@ -19232,6 +19232,7 @@ pub fn AliasTable(comptime Weight: type) type {
             var positive_count: usize = 0;
             for (input_weights, 0..) |input_weight, index| {
                 const value = try weightToF64(input_weight);
+                try validateAliasWeightSize(@TypeOf(input_weight), input_weight, input_weights.len);
                 weight_values[index] = value;
                 total += value;
                 if (!std.math.isFinite(total)) return error.Overflow;
@@ -19337,6 +19338,7 @@ pub fn AliasTable(comptime Weight: type) type {
         pub fn updateAt(self: *Self, index: usize, input_weight: Weight) !void {
             if (index >= self.prob.len) return error.InvalidParameter;
             const value = try weightToF64(input_weight);
+            try validateAliasWeightSize(Weight, input_weight, self.prob.len);
             const next_total = self.total - self.weight_values[index] + value;
             try validateStaticWeightTotal(next_total);
             const input_weights = try self.allocator.dupe(f64, self.weight_values);
@@ -19368,6 +19370,7 @@ pub fn AliasTable(comptime Weight: type) type {
                     if (previous >= item.index) return error.InvalidParameter;
                 }
                 const value = try weightToF64(item.weight);
+                try validateAliasWeightSize(Weight, item.weight, self.prob.len);
                 next_total = next_total - self.weight_values[item.index] + value;
                 previous_index = item.index;
             }
@@ -19998,6 +20001,24 @@ pub fn AliasTable(comptime Weight: type) type {
             };
             if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
             return value;
+        }
+
+        fn validateAliasWeightSize(comptime InputWeight: type, input_weight: InputWeight, weight_count: usize) Error!void {
+            switch (@typeInfo(InputWeight)) {
+                .float => {
+                    const max_weight = std.math.floatMax(InputWeight) / @as(InputWeight, @floatFromInt(weight_count));
+                    if (input_weight > max_weight) return error.InvalidWeight;
+                },
+                .int => {
+                    const len_as_weight = std.math.cast(InputWeight, weight_count) orelse {
+                        if (input_weight > 0) return error.InvalidWeight;
+                        return;
+                    };
+                    const max_weight = @divFloor(std.math.maxInt(InputWeight), len_as_weight);
+                    if (input_weight > max_weight) return error.InvalidWeight;
+                },
+                else => @compileError("alias weights must be numeric"),
+            }
         }
 
         fn validateStaticWeightTotal(total_weight: f64) Error!void {
@@ -23048,6 +23069,36 @@ test "alias table samples valid indexes" {
 
     try std.testing.expectError(error.InvalidInput, AliasTable(u32).init(std.testing.allocator, &.{}));
     try std.testing.expectError(error.InsufficientNonZero, AliasTable(u32).init(std.testing.allocator, &.{ 0, 0 }));
+}
+
+test "alias table per-weight maximum matches local rand_distr" {
+    const max_f64 = std.math.floatMax(f64);
+    const half_max_f64 = max_f64 / 2;
+
+    var single = try AliasTable(f64).init(std.testing.allocator, &.{max_f64});
+    defer single.deinit();
+    try std.testing.expectApproxEqAbs(max_f64, single.totalWeight(), max_f64 * 1e-12);
+    try std.testing.expectApproxEqAbs(max_f64, try single.weightAt(0), max_f64 * 1e-12);
+
+    var half_pair = try AliasTable(f64).init(std.testing.allocator, &.{ half_max_f64, half_max_f64 });
+    defer half_pair.deinit();
+    try std.testing.expectApproxEqAbs(max_f64, half_pair.totalWeight(), max_f64 * 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), try half_pair.probabilityAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), try half_pair.probabilityAt(1), 1e-12);
+
+    try std.testing.expectError(error.InvalidWeight, AliasTable(f64).init(std.testing.allocator, &.{ max_f64, 0 }));
+    try std.testing.expectError(error.InvalidWeight, AliasTable(f64).init(std.testing.allocator, &.{ max_f64 * 0.75, 1 }));
+    try std.testing.expectError(error.InvalidWeight, AliasTable(f32).init(std.testing.allocator, &.{ std.math.floatMax(f32), 0 }));
+    try std.testing.expectError(error.InvalidWeight, AliasTable(u32).init(std.testing.allocator, &.{ std.math.maxInt(u32), 0 }));
+
+    var table = try AliasTable(f64).init(std.testing.allocator, &.{ 1, 1 });
+    defer table.deinit();
+    try std.testing.expectError(error.InvalidWeight, table.updateAt(0, max_f64));
+    try std.testing.expectApproxEqAbs(@as(f64, 2), table.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try table.weightAt(0), 1e-12);
+    try std.testing.expectError(error.InvalidWeight, table.updateMany(&.{.{ .index = 1, .weight = max_f64 }}));
+    try std.testing.expectApproxEqAbs(@as(f64, 2), table.totalWeight(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try table.weightAt(1), 1e-12);
 }
 
 test "alias table u32 sampling helpers mirror usize helpers" {
@@ -38418,7 +38469,7 @@ test "distribution weight error aliases mirror Error" {
     try std.testing.expectEqual(@as(Error, error.Overflow), overflow);
     try std.testing.expectError(error.InvalidInput, AliasTable(u32).new(std.testing.allocator, &.{}));
     try std.testing.expectError(error.InsufficientNonZero, WeightedIndex(u32).new(std.testing.allocator, &.{ 0, 0 }));
-    try std.testing.expectError(error.Overflow, WeightedIndex(f64).new(std.testing.allocator, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
+    try std.testing.expectError(error.InvalidWeight, WeightedIndex(f64).new(std.testing.allocator, &.{ std.math.floatMax(f64), std.math.floatMax(f64) }));
 }
 
 test "distribution ascii aliases mirror ascii namespace" {

@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1163-alias-table-max-weight.md
 compare/results/s4-m1162-beta-dirichlet-tiny-shape.md
 compare/results/s4-m1161-dirichlet-subnormal-alpha.md
 compare/results/s4-m1160-hypergeometric-large-population.md
@@ -50,7 +51,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1162-beta-dirichlet-tiny-shape.md"
+"compare/results/s4-m1163-alias-table-max-weight.md"
 rand-status self-test ok
 rand_distr standard-normal
 five passing Rust parser tests
@@ -134,4 +135,6 @@ S4-M1161 is closed after aligning Dirichlet subnormal-alpha semantics in `compar
 
 S4-M1162 is closed after aligning Beta/Dirichlet tiny-shape semantics in `compare/results/s4-m1162-beta-dirichlet-tiny-shape.md`.
 
-S4-M1163 remains active after S4-M1162 aligns Beta/Dirichlet tiny-shape semantics in `compare/results/s4-m1162-beta-dirichlet-tiny-shape.md`.
+S4-M1163 is closed after aligning AliasTable per-weight maximum semantics in `compare/results/s4-m1163-alias-table-max-weight.md`.
+
+S4-M1164 remains active after S4-M1163 aligns AliasTable per-weight maximum semantics in `compare/results/s4-m1163-alias-table-max-weight.md`.
