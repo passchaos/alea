@@ -32,43 +32,45 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1207 refreshes the full `validate-all` aggregate after the roadmap evidence-path guard;
 - S4-M1208 refreshes the local `validate-local` aggregate after the full validation refresh;
 - S4-M1209 refreshes the full `validate-all` aggregate after the local comparison update;
+- S4-M1210 refreshes inverse-CDF tail vectorbench evidence after the full validation refresh;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1209 refreshed status output after running the full portability-sensitive
-validation aggregate following S4-M1208. The retained status and local comparison
-evidence include:
+S4-M1210 refreshed focused dense-SIMD normal research evidence after S4-M1209. The
+retained status and local comparison evidence include:
 
 ```text
-Retained validation:
-$ zig build validate-all
-wasi sample.wasm --flag
-practrand self-test ok
-run_wasi_test self-test ok
-statcheck ok
-distcheck ok
-readmecheck ok
-roadmapcheck ok
-toolingcheck ok
-apicheck ok
-examplecheck ok
-profilecheck ok
-profiletailcheck ok
-profilestresscheck ok
-profilelongcheck ok
+Retained vectorbench:
+$ zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 4194304 "StandardNormal f32x8 direct"
+alea fillVectorStandardNormal f32x8 direct: 446.5 M lanes/s checksum=1257.612
+
+$ zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 4194304 "StandardNormal f64x4 direct"
+alea fillVectorStandardNormal f64x4 direct: 397.5 M lanes/s checksum=-149.495
+
+$ zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 4194304 "fillVectorNormal f32x8 direct"
+alea fillVectorNormal f32x8 direct: 465.3 M lanes/s checksum=1257.612
+
+$ zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 4194304 "fillVectorNormal f64x4 direct"
+alea fillVectorNormal f64x4 direct: 385.3 M lanes/s checksum=-149.495
+
+$ zig build -Doptimize=ReleaseFast -Dcpu=native vectorbench -- 4194304 "inverse-cdf tail-only"
+alea fillVectorStandardNormal f32x8 inverse-cdf tail-only candidate: 212.0 M lanes/s checksum=-480.437
+alea fillVectorStandardNormal f64x4 inverse-cdf tail-only candidate: 278.7 M lanes/s checksum=13.189
+alea fillVectorNormal f32x8 inverse-cdf tail-only candidate: 364.9 M lanes/s checksum=-480.437
+alea fillVectorNormal f64x4 inverse-cdf tail-only candidate: 287.9 M lanes/s checksum=13.189
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1209 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1210 post-S4-M1209 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1210 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1211 post-S4-M1210 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1209-post-s4-m1208-validate-all.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1210-inverse-cdf-tail-probe.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -92,14 +94,13 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1209-post-s4-m1208-validate-all.md`
-records the latest full validation refresh. S4-M11 is closed for the current bar,
-but exact/default-compatible dense SIMD normal/exponential kernels are still not
-known to beat scalar lane-fill in the real vector-slice harness.
+Wasmtime profilelongcheck run. `compare/results/s4-m1210-inverse-cdf-tail-probe.md`
+records the latest dense-SIMD research refresh. S4-M11 is closed for the current bar, but exact/default-compatible dense SIMD normal/exponential kernels are still
+not known to beat scalar lane-fill in the real vector-slice harness.
 
-## Current Post-S4-M1209 Bar
+## Current Post-S4-M1210 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1210: pursue
+The long-term product goal is not complete. The next bar is S4-M1211: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, or newly
 discovered local `rand` / `rand_distr` gaps.
@@ -108,4 +109,4 @@ discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1209 S4-M1210 bar remains the active follow-up.
+while the post-S4-M1210 S4-M1211 bar remains the active follow-up.

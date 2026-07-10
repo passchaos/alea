@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1209 bar is S4-M1210: exact/default dense SIMD research,
+The active post-S4-M1210 bar is S4-M1211: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6175,4 +6175,6 @@ S4-M1207 refreshes full validation after S4-M1206 (`compare/results/s4-m1207-pos
 
 S4-M1208 refreshes local comparison validation after S4-M1207 (`compare/results/s4-m1208-post-s4-m1207-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, current status output, and focused profile/stat checks. This is validation evidence, not whole-goal completion; S4-M1209 was the next raised product bar and is now closed by the validate-all refresh below.
 
-S4-M1209 refreshes full validation after S4-M1208 (`compare/results/s4-m1209-post-s4-m1208-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1210 remains active.
+S4-M1209 refreshes full validation after S4-M1208 (`compare/results/s4-m1209-post-s4-m1208-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1210 was the next raised product bar and is now closed by the inverse-CDF tail probe below.
+
+S4-M1210 refreshes inverse-CDF tail vectorbench evidence (`compare/results/s4-m1210-inverse-cdf-tail-probe.md`): valid f32x8/f64x4 standard and parameterized inverse-CDF tail-only candidates still trail same-host exact/default direct ziggurat lane-fill baselines, while central-only/tail-zero probes remain invalid diagnostics. This is dense-SIMD research evidence, not whole-goal completion; S4-M1211 remains active.
