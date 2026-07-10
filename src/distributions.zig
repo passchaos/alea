@@ -20458,7 +20458,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(rng, total);
@@ -20466,7 +20466,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(rng, total);
@@ -20475,7 +20475,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(rng, total));
@@ -20484,7 +20484,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(rng, total));
@@ -20573,7 +20573,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) {
                 @memset(dest, self.positive_index.?);
                 return;
@@ -20584,7 +20584,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) {
                 @memset(dest, self.positive_index.?);
                 return;
@@ -20596,7 +20596,7 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
@@ -20608,7 +20608,7 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
@@ -20647,7 +20647,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(usize, amount);
             errdefer allocator.free(out);
             try self.fillChecked(rng, out);
@@ -20655,7 +20655,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(usize, amount);
             errdefer allocator.free(out);
             try self.fillCheckedFrom(source, out);
@@ -20680,7 +20680,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn indicesU32Checked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32Checked(rng, out);
@@ -20689,7 +20689,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -20753,12 +20753,12 @@ pub fn WeightedTree(comptime Weight: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return rng.sampleIter(usize, self);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return Rng.sampleIterFrom(source, usize, self);
         }
 
@@ -20772,13 +20772,13 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return .{ .source = rng, .tree = self };
         }
 
         pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return .{ .source = source, .tree = self };
         }
 
@@ -20810,7 +20810,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) {
                 @memset(dest, self.positive_index.?);
                 return;
@@ -20822,7 +20822,7 @@ pub fn WeightedTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
@@ -20836,7 +20836,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
@@ -20844,7 +20844,7 @@ pub fn WeightedTree(comptime Weight: type) type {
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
@@ -20853,7 +20853,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(source, total));
@@ -20862,7 +20862,7 @@ pub fn WeightedTree(comptime Weight: type) type {
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
+            try validateTreeSamplingTotal(total);
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(source, total));
@@ -20981,6 +20981,11 @@ pub fn WeightedTree(comptime Weight: type) type {
             };
             if (!(value >= 0) or !std.math.isFinite(value)) return error.InvalidWeight;
             return value;
+        }
+
+        fn validateTreeSamplingTotal(total: f64) Error!void {
+            if (total == 0) return error.InsufficientNonZero;
+            if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidWeight;
         }
 
         fn buildSubtotals(subtotals: []f64) Error!void {
@@ -21426,7 +21431,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn sampleChecked(self: Self, rng: Rng) Error!usize {
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(rng, total);
@@ -21434,7 +21439,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn sampleIndexChecked(self: Self, rng: Rng) Error!usize {
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(rng, total);
@@ -21443,7 +21448,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn sampleU32Checked(self: Self, rng: Rng) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(rng, total));
@@ -21452,7 +21457,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn sampleIndexU32Checked(self: Self, rng: Rng) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(rng, total));
@@ -21541,7 +21546,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn fillChecked(self: Self, rng: Rng, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) {
                 @memset(dest, self.positive_index.?);
                 return;
@@ -21552,7 +21557,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn fillIndicesChecked(self: Self, rng: Rng, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) {
                 @memset(dest, self.positive_index.?);
                 return;
@@ -21564,7 +21569,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
@@ -21576,7 +21581,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
@@ -21615,7 +21620,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesChecked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]usize {
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(usize, amount);
             errdefer allocator.free(out);
             try self.fillChecked(rng, out);
@@ -21623,7 +21628,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn indicesCheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]usize {
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(usize, amount);
             errdefer allocator.free(out);
             try self.fillCheckedFrom(source, out);
@@ -21648,7 +21653,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn indicesU32Checked(self: Self, allocator: std.mem.Allocator, rng: Rng, amount: usize) ![]u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32Checked(rng, out);
@@ -21657,7 +21662,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn indicesU32CheckedFrom(self: Self, allocator: std.mem.Allocator, source: anytype, amount: usize) ![]u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (amount != 0 and !self.isValid()) return error.InvalidWeight;
+            if (amount != 0) try validateTreeSamplingTotal(self.totalWeight());
             const out = try allocator.alloc(u32, amount);
             errdefer allocator.free(out);
             try self.fillU32CheckedFrom(source, out);
@@ -21721,12 +21726,12 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         }
 
         pub fn iterChecked(self: Self, rng: Rng) Error!Rng.SampleIterator(Self, usize) {
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return rng.sampleIter(usize, self);
         }
 
         pub fn iterCheckedFrom(self: Self, source: anytype) Error!Rng.SampleIteratorFrom(@TypeOf(source), Self, usize) {
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return Rng.sampleIterFrom(source, usize, self);
         }
 
@@ -21740,13 +21745,13 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn iterU32Checked(self: Self, rng: Rng) Error!U32IndexIterator(Rng) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return .{ .source = rng, .tree = self };
         }
 
         pub fn iterU32CheckedFrom(self: Self, source: anytype) Error!U32IndexIterator(@TypeOf(source)) {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
-            if (!self.isValid()) return error.InvalidWeight;
+            try validateTreeSamplingTotal(self.totalWeight());
             return .{ .source = source, .tree = self };
         }
 
@@ -21778,7 +21783,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn fillCheckedFrom(self: Self, source: anytype, dest: []usize) Error!void {
             if (dest.len == 0) return;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) {
                 @memset(dest, self.positive_index.?);
                 return;
@@ -21790,7 +21795,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
             if (dest.len == 0) return;
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) {
                 @memset(dest, @intCast(self.positive_index.?));
                 return;
@@ -21804,7 +21809,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn sampleCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
@@ -21812,7 +21817,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
 
         pub fn sampleIndexCheckedFrom(self: Self, source: anytype) Error!usize {
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return self.positive_index.?;
 
             return self.sampleWithTotalFrom(source, total);
@@ -21821,7 +21826,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn sampleU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(source, total));
@@ -21830,7 +21835,7 @@ pub fn WeightedIntTree(comptime Weight: type) type {
         pub fn sampleIndexU32CheckedFrom(self: Self, source: anytype) Error!u32 {
             if (self.len() > std.math.maxInt(u32)) return error.InvalidParameter;
             const total = self.totalWeight();
-            if (total == 0) return error.InvalidWeight;
+            if (total == 0) return error.InsufficientNonZero;
             if (self.positive_count == 1) return @intCast(self.positive_index.?);
 
             return @intCast(self.sampleWithTotalFrom(source, total));
@@ -21957,6 +21962,10 @@ pub fn WeightedIntTree(comptime Weight: type) type {
                 const parent = (i - 1) / 2;
                 subtotals[parent] = std.math.add(u64, subtotals[parent], subtotals[i]) catch return error.InvalidWeight;
             }
+        }
+
+        fn validateTreeSamplingTotal(total: u64) Error!void {
+            if (total == 0) return error.InsufficientNonZero;
         }
 
         fn weightToU64(input_weight: Weight) Error!u64 {
@@ -24113,7 +24122,7 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expect(!tree.isValid());
     try std.testing.expectEqual(@as(usize, 0), tree.positiveCount());
     try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
-    try std.testing.expectError(error.InvalidWeight, tree.sampleChecked(rng));
+    try std.testing.expectError(error.InsufficientNonZero, tree.sampleChecked(rng));
     try std.testing.expectError(error.InvalidWeight, tree.probabilityAt(0));
     try std.testing.expectError(error.InvalidWeight, tree.probabilitiesInto(&probabilities_buf));
 
@@ -24162,6 +24171,7 @@ test "weighted tree supports dynamic updates" {
     try std.testing.expectEqual(@as(?usize, null), empty_tree.constantIndex());
     try std.testing.expectEqual(@as(?f64, null), empty_tree.pop());
     try std.testing.expectError(error.InvalidParameter, empty_tree.update(0, 1));
+    try std.testing.expectError(error.InsufficientNonZero, empty_tree.sampleChecked(rng));
     try std.testing.expect(empty_tree.isEmpty());
     try empty_tree.push(6);
     try std.testing.expect(!empty_tree.isEmpty());
@@ -24205,6 +24215,17 @@ test "weighted tree supports dynamic updates" {
     try invalid_total_tree.update(0, 0);
     try std.testing.expectError(error.InvalidWeight, invalid_total_tree.update(0, std.math.inf(f64)));
     try std.testing.expectApproxEqAbs(@as(f64, 0), invalid_total_tree.totalWeight(), 1e-12);
+
+    var nonfinite_total_items = [_]f64{std.math.inf(f64)};
+    const nonfinite_total_tree = WeightedTree(f64){
+        .subtotals = .{ .items = nonfinite_total_items[0..], .capacity = nonfinite_total_items.len },
+        .positive_count = 1,
+        .positive_index = 0,
+        .allocator = std.testing.allocator,
+    };
+    try std.testing.expectError(error.InvalidWeight, nonfinite_total_tree.sampleChecked(rng));
+    var nonfinite_out: [1]usize = undefined;
+    try std.testing.expectError(error.InvalidWeight, nonfinite_total_tree.fillChecked(rng, &nonfinite_out));
 }
 
 test "weighted tree updateMany applies ordered partial updates atomically" {
@@ -24251,7 +24272,7 @@ test "weighted tree updateMany applies ordered partial updates atomically" {
     try std.testing.expectEqual(@as(usize, 0), tree.positiveCount());
     try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
     try std.testing.expectApproxEqAbs(@as(f64, 0), tree.totalWeight(), 1e-12);
-    try std.testing.expectError(error.InvalidWeight, tree.sampleCheckedFrom(&engine));
+    try std.testing.expectError(error.InsufficientNonZero, tree.sampleCheckedFrom(&engine));
 
     var float_tree = try WeightedTree(f64).init(std.testing.allocator, &.{ 1, 2, 3 });
     defer float_tree.deinit();
@@ -24639,8 +24660,8 @@ test "weighted tree u32 sampling helpers mirror usize helpers" {
 
     var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer invalid_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.sampleU32CheckedFrom(&single_engine));
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillU32CheckedFrom(&single_engine, u32_out[0..1]));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.sampleU32CheckedFrom(&single_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.fillU32CheckedFrom(&single_engine, u32_out[0..1]));
     var empty_u32: [0]u32 = .{};
     try invalid_tree.fillU32CheckedFrom(&single_engine, &empty_u32);
 
@@ -24699,8 +24720,8 @@ test "weighted tree u32 sampling helpers mirror usize helpers" {
 
     var invalid_int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer invalid_int_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.sampleU32CheckedFrom(&single_engine));
-    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.fillU32CheckedFrom(&single_engine, u32_out[0..1]));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_int_tree.sampleU32CheckedFrom(&single_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_int_tree.fillU32CheckedFrom(&single_engine, u32_out[0..1]));
     try invalid_int_tree.fillU32CheckedFrom(&single_engine, &empty_u32);
 }
 
@@ -24747,16 +24768,16 @@ test "weighted tree owned index batches mirror fills" {
 
     var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer invalid_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesCheckedFrom(std.testing.allocator, &batch_engine, 1));
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesU32CheckedFrom(std.testing.allocator, &batch_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.indicesCheckedFrom(std.testing.allocator, &batch_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.indicesU32CheckedFrom(std.testing.allocator, &batch_engine, 1));
     var invalid_engine = alea.ScalarPrng.init(0x5150_d5a0);
     var invalid_control = alea.ScalarPrng.init(0x5150_d5a0);
     var invalid_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesCheckedFrom(invalid_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.indicesCheckedFrom(invalid_alloc.allocator(), &invalid_engine, 1));
     try std.testing.expect(!invalid_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     var invalid_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.indicesU32CheckedFrom(invalid_u32_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.indicesU32CheckedFrom(invalid_u32_alloc.allocator(), &invalid_engine, 1));
     try std.testing.expect(!invalid_u32_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
@@ -24796,11 +24817,11 @@ test "weighted tree owned index batches mirror fills" {
     invalid_engine = alea.ScalarPrng.init(0x5150_d5a1);
     invalid_control = alea.ScalarPrng.init(0x5150_d5a1);
     var invalid_int_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.indicesCheckedFrom(invalid_int_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_int_tree.indicesCheckedFrom(invalid_int_alloc.allocator(), &invalid_engine, 1));
     try std.testing.expect(!invalid_int_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
     var invalid_int_u32_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
-    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.indicesU32CheckedFrom(invalid_int_u32_alloc.allocator(), &invalid_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_int_tree.indicesU32CheckedFrom(invalid_int_u32_alloc.allocator(), &invalid_engine, 1));
     try std.testing.expect(!invalid_int_u32_alloc.has_induced_failure);
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
@@ -24878,10 +24899,10 @@ test "weighted tree index aliases mirror sample helpers" {
 
     var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer invalid_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.sampleIndexCheckedFrom(&sample_engine));
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillIndicesCheckedFrom(&sample_engine, fill_out[0..1]));
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.sampleIndexU32CheckedFrom(&sample_engine));
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillIndicesU32CheckedFrom(&sample_engine, fill_u32[0..1]));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.sampleIndexCheckedFrom(&sample_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.fillIndicesCheckedFrom(&sample_engine, fill_out[0..1]));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.sampleIndexU32CheckedFrom(&sample_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.fillIndicesU32CheckedFrom(&sample_engine, fill_u32[0..1]));
 
     var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 2, 0, 0, 6 });
     defer int_tree.deinit();
@@ -25082,18 +25103,18 @@ test "weighted tree iterators produce repeated indices" {
     defer invalid_tree.deinit();
     var invalid_engine = alea.ScalarPrng.init(0x5150_d527);
     var invalid_control = alea.ScalarPrng.init(0x5150_d527);
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.iterCheckedFrom(&invalid_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.iterCheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.iterU32CheckedFrom(&invalid_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.iterU32CheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     var invalid_int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer invalid_int_tree.deinit();
     invalid_engine = alea.ScalarPrng.init(0x5150_d528);
     invalid_control = alea.ScalarPrng.init(0x5150_d528);
-    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.iterCheckedFrom(&invalid_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_int_tree.iterCheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
-    try std.testing.expectError(error.InvalidWeight, invalid_int_tree.iterU32CheckedFrom(&invalid_engine));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_int_tree.iterU32CheckedFrom(&invalid_engine));
     try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 
     if (comptime @bitSizeOf(usize) > 32) {
@@ -25207,8 +25228,8 @@ test "weighted tree fixed index arrays mirror fills" {
 
     var invalid_tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer invalid_tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.indexArrayCheckedFrom(&single_engine, 1));
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.indexArrayU32CheckedFrom(&single_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.indexArrayCheckedFrom(&single_engine, 1));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.indexArrayU32CheckedFrom(&single_engine, 1));
 }
 
 test "zero-length weighted tree fills do not validate or consume random stream" {
@@ -25228,7 +25249,7 @@ test "zero-length weighted tree fills do not validate or consume random stream" 
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one_buf: [1]usize = undefined;
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillCheckedFrom(&engine, &one_buf));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.fillCheckedFrom(&engine, &one_buf));
 }
 
 test "single-root weighted trees do not consume random stream" {
@@ -25396,7 +25417,7 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expect(!tree.isValid());
     try std.testing.expectEqual(@as(usize, 0), tree.positiveCount());
     try std.testing.expectEqual(@as(?usize, null), tree.constantIndex());
-    try std.testing.expectError(error.InvalidWeight, tree.sampleChecked(rng));
+    try std.testing.expectError(error.InsufficientNonZero, tree.sampleChecked(rng));
     try std.testing.expectError(error.InvalidWeight, tree.probabilityAt(0));
     try std.testing.expectError(error.InvalidWeight, tree.probabilitiesInto(&probabilities_buf));
 
@@ -25440,6 +25461,7 @@ test "weighted int tree supports dynamic updates" {
     try std.testing.expectEqual(@as(?usize, null), empty_tree.constantIndex());
     try std.testing.expectEqual(@as(?u64, null), empty_tree.pop());
     try std.testing.expectError(error.InvalidParameter, empty_tree.update(0, 1));
+    try std.testing.expectError(error.InsufficientNonZero, empty_tree.sampleChecked(rng));
     try std.testing.expect(empty_tree.isEmpty());
     try empty_tree.push(6);
     try std.testing.expect(!empty_tree.isEmpty());
@@ -25605,7 +25627,7 @@ test "zero-length weighted int tree fills do not validate or consume random stre
     try std.testing.expectEqual(control.next(), engine.next());
 
     var one_buf: [1]usize = undefined;
-    try std.testing.expectError(error.InvalidWeight, invalid_tree.fillCheckedFrom(&engine, &one_buf));
+    try std.testing.expectError(error.InsufficientNonZero, invalid_tree.fillCheckedFrom(&engine, &one_buf));
 }
 
 test "weighted reusable samplers preserve direct stream shape" {
@@ -25707,13 +25729,13 @@ test "invalid checked distribution helpers do not consume random stream" {
 
     var tree = try WeightedTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer tree.deinit();
-    try std.testing.expectError(error.InvalidWeight, tree.sampleCheckedFrom(&engine));
+    try std.testing.expectError(error.InsufficientNonZero, tree.sampleCheckedFrom(&engine));
     try std.testing.expectEqual(@as(u64, 0x1ad57bbf42203964), engine.next());
 
     var int_tree = try WeightedIntTree(u32).init(std.testing.allocator, &.{ 0, 0 });
     defer int_tree.deinit();
     var usize_buf: [4]usize = undefined;
-    try std.testing.expectError(error.InvalidWeight, int_tree.fillCheckedFrom(&engine, &usize_buf));
+    try std.testing.expectError(error.InsufficientNonZero, int_tree.fillCheckedFrom(&engine, &usize_buf));
     try std.testing.expectEqual(@as(u64, 0xc69be165851d8893), engine.next());
 }
 

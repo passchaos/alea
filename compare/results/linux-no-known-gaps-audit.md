@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1163 bar is S4-M1164: exact/default dense SIMD research,
+The active post-S4-M1164 bar is S4-M1165: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6084,3 +6084,5 @@ S4-M1161 aligns Dirichlet subnormal-alpha semantics with local `rand_distr::mult
 S4-M1162 aligns Beta/Dirichlet tiny-shape stability with local `rand_distr` (`compare/results/s4-m1162-beta-dirichlet-tiny-shape.md`): finite tiny-shape `Beta(T)` now uses Cheng BB/BC sampling instead of a Gamma ratio that can produce `0/0` NaN for tiny normal shapes, and all-small finite `Dirichlet(T)` / `multi.Dirichlet(T)` uses Beta stick-breaking like local `rand_distr::multi::Dirichlet`. This is a local `rand_distr` compatibility closure, not whole-goal completion.
 
 S4-M1163 aligns AliasTable per-weight maximum validation with local `rand_distr::weighted::WeightedAliasIndex::new` (`compare/results/s4-m1163-alias-table-max-weight.md`): `AliasTable(Weight)` / `WeightedIndex(Weight)` now reject individual weights greater than `maxInt/len` or `floatMax/len` before alias-table scaling, including `updateAt` and `updateMany`, while accepting valid max-boundary tables such as one max weight or two half-max weights. This is a local `rand_distr` compatibility closure, not whole-goal completion.
+
+S4-M1164 aligns WeightedTree zero-total checked sampling errors with local `rand_distr::weighted::WeightedTreeIndex::try_sample` (`compare/results/s4-m1164-weighted-tree-zero-total.md`): checked sampling-style `WeightedTree(Weight)` and `WeightedIntTree(Weight)` samples, fills, owned batches, fixed arrays, and iterators now return `InsufficientNonZero` for empty/all-zero trees while probability/export diagnostics and non-finite generic totals retain `InvalidWeight`. This is a local `rand_distr` compatibility closure, not whole-goal completion.
