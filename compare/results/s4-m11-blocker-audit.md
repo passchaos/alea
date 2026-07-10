@@ -34,7 +34,11 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1207-post-s4-m1206-validate-all.md
 compare/results/s4-m1206-roadmap-evidence-path-guard.md
+compare/results/s4-m1205-post-s4-m1204-validate-local.md
+compare/results/s4-m1204-vectorbench-status-drift.md
+compare/results/s4-m1203-parameterized-vectorbench-refresh.md
 compare/results/s4-m1202-f64x4-vectorbench-refresh.md
 compare/results/s4-m1201-f32x8-vectorbench-refresh.md
 compare/results/s4-m1200-post-s4-m1199-validate-all.md
@@ -91,7 +95,11 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1207-post-s4-m1206-validate-all.md"
 "compare/results/s4-m1206-roadmap-evidence-path-guard.md"
+"compare/results/s4-m1205-post-s4-m1204-validate-local.md"
+"compare/results/s4-m1204-vectorbench-status-drift.md"
+"compare/results/s4-m1203-parameterized-vectorbench-refresh.md"
 "compare/results/s4-m1202-f64x4-vectorbench-refresh.md"
 "compare/results/s4-m1201-f32x8-vectorbench-refresh.md"
 "compare/results/s4-m1200-post-s4-m1199-validate-all.md"
@@ -293,9 +301,9 @@ S4-M1200 is closed after refreshing validate-all evidence in `compare/results/s4
 
 S4-M1201 is closed after refreshing f32x8 vectorbench evidence in `compare/results/s4-m1201-f32x8-vectorbench-refresh.md`.
 
-S4-M1202 is closed after refreshing f64x4 vectorbench evidence in `compare/results/s4-m1206-roadmap-evidence-path-guard.md`.
+S4-M1202 is closed after refreshing f64x4 vectorbench evidence in `compare/results/s4-m1202-f64x4-vectorbench-refresh.md`.
 
-S4-M1203 is closed after refreshing parameterized vectorbench evidence in `compare/results/s4-m1206-roadmap-evidence-path-guard.md`.
+S4-M1203 is closed after refreshing parameterized vectorbench evidence in `compare/results/s4-m1203-parameterized-vectorbench-refresh.md`.
 
 S4-M1204 is closed after repairing vectorbench status drift in `compare/results/s4-m1204-vectorbench-status-drift.md`.
 
@@ -303,4 +311,6 @@ S4-M1205 is closed after refreshing validate-local evidence in `compare/results/
 
 S4-M1206 is closed after adding the roadmap evidence-path guard in `compare/results/s4-m1206-roadmap-evidence-path-guard.md`.
 
-S4-M1207 remains active after S4-M1206 adds the roadmap evidence-path guard.
+S4-M1207 is closed after refreshing validate-all evidence in `compare/results/s4-m1207-post-s4-m1206-validate-all.md`.
+
+S4-M1208 remains active after S4-M1207 refreshes full validation.
