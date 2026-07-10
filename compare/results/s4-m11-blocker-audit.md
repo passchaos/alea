@@ -34,6 +34,7 @@ zig build rand-status
 zig build rand-status-json
 zig build rand-status-self-test
 zig build rand-status-schema-version
+compare/results/s4-m1200-post-s4-m1199-validate-all.md
 compare/results/s4-m1199-ziggurat-table-surface-guard.md
 compare/results/s4-m1198-post-s4-m1197-validate-all.md
 compare/results/s4-m1197-poisson-max-lambda-constants.md
@@ -87,6 +88,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1200-post-s4-m1199-validate-all.md"
 "compare/results/s4-m1199-ziggurat-table-surface-guard.md"
 "compare/results/s4-m1198-post-s4-m1197-validate-all.md"
 "compare/results/s4-m1197-poisson-max-lambda-constants.md"
@@ -281,4 +283,6 @@ S4-M1198 is closed after refreshing validate-all evidence in `compare/results/s4
 
 S4-M1199 is closed after expanding ziggurat-table surface guards in `compare/results/s4-m1199-ziggurat-table-surface-guard.md`.
 
-S4-M1200 remains active after S4-M1199 refreshes ziggurat-table surface guards.
+S4-M1200 is closed after refreshing validate-all evidence in `compare/results/s4-m1200-post-s4-m1199-validate-all.md`.
+
+S4-M1201 remains active after S4-M1200 refreshes validate-all evidence.
