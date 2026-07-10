@@ -14,7 +14,7 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1200 bar is S4-M1201: exact/default dense SIMD research,
+The active post-S4-M1201 bar is S4-M1202: exact/default dense SIMD research,
 additional non-WASI OS/architecture execution, broader validation, or new local
 Rust gap audits.
 
@@ -6157,4 +6157,6 @@ S4-M1198 refreshes full validation after S4-M1197 (`compare/results/s4-m1198-pos
 
 S4-M1199 expands local `rand_distr` ziggurat table surface guards (`compare/results/s4-m1199-ziggurat-table-surface-guard.md`): the manifest now maps every public `ziggurat_tables.rs` type/const/static symbol and `surfacecheck` extracts public const/static declarations, with current local rand_distr counts at 72 expected / 185 source tokens. This is public-surface guard evidence, not whole-goal completion; S4-M1200 was the next raised product bar and is now closed by the validate-all refresh below.
 
-S4-M1200 refreshes full validation after S4-M1199 (`compare/results/s4-m1200-post-s4-m1199-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1201 remains active.
+S4-M1200 refreshes full validation after S4-M1199 (`compare/results/s4-m1200-post-s4-m1199-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1201 was the next raised product bar and is now closed by the f32x8 vectorbench refresh below.
+
+S4-M1201 refreshes f32x8 dense-SIMD vectorbench evidence (`compare/results/s4-m1201-f32x8-vectorbench-refresh.md`): exact/default checksum-preserving standard-normal and standard-exponential f32x8 candidates still trail direct scalar ziggurat lane-fill in the real vector-slice harness, while table/native/approx rows remain explicit opt-ins. This is research evidence, not whole-goal completion; S4-M1202 remains active.
