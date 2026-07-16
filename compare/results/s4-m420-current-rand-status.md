@@ -1,6 +1,6 @@
 # S4-M420 Current Local Rand Comparison Status
 
-Date: 2026-07-10
+Date: 2026-07-16
 
 ## Summary
 
@@ -42,7 +42,8 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1217 refreshes the minimum real-harness dense-SIMD vectorbench gate;
 - S4-M1218 refreshes the local `validate-local` aggregate after the vectorbench gate;
 - S4-M1219 refreshes the full `validate-all` aggregate after the local comparison update;
-- S4-M1220 adds full-covariance multivariate normal sampling and raises the next bar to S4-M1221;
+- S4-M1220 adds full-covariance multivariate normal sampling;
+- S4-M1221 corrects and optimizes small-dimension multivariate-normal throughput and raises the next bar to S4-M1222;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
@@ -66,15 +67,15 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1220 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1221 post-S4-M1220 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1221 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1222 post-S4-M1221 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1219-post-s4-m1218-validate-all.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1221-multivariate-normal-throughput.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -93,14 +94,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1219-post-s4-m1218-validate-all.md` records the latest full validation refresh.
-S4-M11 is closed for the current bar, and S4-M1220 is closed for the current bar, but exact/default-compatible dense SIMD
+Wasmtime profilelongcheck run. `compare/results/s4-m1221-multivariate-normal-throughput.md` records the latest full validation refresh.
+S4-M11 is closed for the current bar; S4-M1220 and S4-M1221 are also closed for their current bars, but exact/default-compatible dense SIMD
 normal/exponential kernels are still not known to beat scalar lane-fill in the
 real vector-slice harness.
 
-## Current Post-S4-M1220 Bar
+## Current Post-S4-M1221 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1221: pursue
+The long-term product goal is not complete. The next bar is S4-M1222: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, or newly
 discovered local `rand` / `rand_distr` gaps.
@@ -109,4 +110,4 @@ discovered local `rand` / `rand_distr` gaps.
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1220 S4-M1221 bar remains the active follow-up.
+while the post-S4-M1221 S4-M1222 bar remains the active follow-up.

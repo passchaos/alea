@@ -15,8 +15,8 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. The active post-S4-M1220 bar is
-S4-M1221: exact/default dense SIMD research, additional non-WASI
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. The active post-S4-M1221 bar is
+S4-M1222: exact/default dense SIMD research, additional non-WASI
 OS/architecture execution, broader validation, or newly discovered core
 random-workflow gaps.
 
@@ -6208,4 +6208,7 @@ allocation, and expose owned/caller-owned/checked/direct/batch APIs plus
 rank/mean/covariance/factor diagnostics. Unit tests, `distcheck`, the
 multivariate example, and focused throughput rows cover the new workflow. This
 is a Zig-native breadth improvement beyond the local `rand_distr` surface, not
-whole-goal completion; S4-M1221 remains active.
+whole-goal completion; S4-M1221 is now closed by the performance follow-up below.
+
+S4-M1221 corrects and optimizes multivariate-normal throughput
+(`compare/results/s4-m1221-multivariate-normal-throughput.md`): corrected benchmarks observe all coordinates outside the timed region, f64 1–3D transforms and full-rank 3D batch loops improve f64/f32 throughput while preserving checksum and repeated-sample stream shape. This is performance evidence, not whole-goal completion; S4-M1222 remains active.

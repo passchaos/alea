@@ -389,6 +389,9 @@ before any component draws; zero-length checked batch outputs are no-ops.
 semidefinite covariance matrices. It performs and owns a Cholesky factorization
 at construction, exposes rank/covariance/factor diagnostics, supports singular
 and deterministic covariance, and performs no allocation while sampling.
+Common one- through three-dimensional f64 transforms and full-rank
+three-dimensional f32/f64 batches use stream-equivalent specialized hot paths;
+larger or singular dimensions retain the generic reverse Cholesky traversal.
 Run `zig build run-multivariate-sampling` for a runnable comparison of
 allocation-returning, caller-owned-buffer, and flat batched Multinomial,
 Dirichlet, and correlated multivariate-normal sampling.

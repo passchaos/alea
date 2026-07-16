@@ -19104,6 +19104,36 @@ pub fn MultivariateNormal(comptime T: type) type {
         }
 
         fn sampleManyIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            if (self.rank == 0) {
+                var offset: usize = 0;
+                while (offset < out.len) : (offset += self.mean.len) {
+                    @memcpy(out[offset..][0..self.mean.len], self.mean);
+                }
+                return;
+            }
+
+            if (self.rank == 3 and self.mean.len == 3) {
+                // Keep the three independent draws adjacent to their
+                // triangular transform. This removes dynamic dimension checks
+                // from the hottest multivariate case without changing the
+                // repeated-sample stream shape.
+                var offset: usize = 0;
+                while (offset < out.len) : (offset += 3) {
+                    const z0 = standardNormalFrom(source, T);
+                    const z1 = standardNormalFrom(source, T);
+                    const z2 = standardNormalFrom(source, T);
+                    out[offset] = self.mean[0] + self.cholesky[0] * z0;
+                    out[offset + 1] = self.mean[1] +
+                        self.cholesky[3] * z0 +
+                        self.cholesky[4] * z1;
+                    out[offset + 2] = self.mean[2] +
+                        self.cholesky[6] * z0 +
+                        self.cholesky[7] * z1 +
+                        self.cholesky[8] * z2;
+                }
+                return;
+            }
+
             var offset: usize = 0;
             while (offset < out.len) : (offset += self.mean.len) {
                 self.sampleIntoUnchecked(source, out[offset..][0..self.mean.len]);
@@ -19126,6 +19156,44 @@ pub fn MultivariateNormal(comptime T: type) type {
                         0
                     else
                         standardNormalFrom(source, T);
+                }
+            }
+
+            self.transformStandardNormals(out);
+        }
+
+        fn transformStandardNormals(self: Self, out: []T) void {
+            if (T == f64) {
+                // Small fixed dimensions dominate practical correlated-vector
+                // workloads. Spell them out so f64 avoids dynamic row-major
+                // indexing and loop control while preserving the exact
+                // multiply/add order of the generic reverse traversal below.
+                // Keep f32 on the generic loop: long-run benchmarks show LLVM
+                // already optimizes that shape better for f32.
+                switch (self.mean.len) {
+                    1 => {
+                        out[0] = self.mean[0] + self.cholesky[0] * out[0];
+                        return;
+                    },
+                    2 => {
+                        out[1] = self.mean[1] +
+                            self.cholesky[2] * out[0] +
+                            self.cholesky[3] * out[1];
+                        out[0] = self.mean[0] + self.cholesky[0] * out[0];
+                        return;
+                    },
+                    3 => {
+                        out[2] = self.mean[2] +
+                            self.cholesky[6] * out[0] +
+                            self.cholesky[7] * out[1] +
+                            self.cholesky[8] * out[2];
+                        out[1] = self.mean[1] +
+                            self.cholesky[3] * out[0] +
+                            self.cholesky[4] * out[1];
+                        out[0] = self.mean[0] + self.cholesky[0] * out[0];
+                        return;
+                    },
+                    else => {},
                 }
             }
 
@@ -38995,6 +39063,113 @@ test "multivariate normal sample moments recover full covariance" {
             );
         }
     }
+}
+
+test "multivariate normal batches preserve repeated sample stream shape" {
+    const alea = @import("root.zig");
+
+    inline for (.{ f32, f64 }) |T| {
+        var full_rank = try MultivariateNormal(T).init(
+            std.testing.allocator,
+            &.{ 1, -2, 0.5 },
+            &.{
+                1.0,  0.6, -0.2,
+                0.6,  2.0, 0.3,
+                -0.2, 0.3, 0.5,
+            },
+        );
+        defer full_rank.deinit();
+
+        var batch_engine = alea.ScalarPrng.init(0x5150_b47c);
+        var repeated_engine = alea.ScalarPrng.init(0x5150_b47c);
+        var batch: [3 * 257]T = undefined;
+        var repeated: [batch.len]T = undefined;
+        full_rank.sampleManyIntoFrom(&batch_engine, &batch);
+        var offset: usize = 0;
+        while (offset < repeated.len) : (offset += full_rank.dimensionValue()) {
+            full_rank.sampleIntoFrom(
+                &repeated_engine,
+                repeated[offset..][0..full_rank.dimensionValue()],
+            );
+        }
+        try std.testing.expectEqualSlices(T, &repeated, &batch);
+        try std.testing.expectEqual(repeated_engine.next(), batch_engine.next());
+
+        var checked_batch_engine = alea.ScalarPrng.init(0x5150_b47d);
+        var checked_repeated_engine = alea.ScalarPrng.init(0x5150_b47d);
+        try full_rank.sampleManyIntoCheckedFrom(&checked_batch_engine, &batch);
+        offset = 0;
+        while (offset < repeated.len) : (offset += full_rank.dimensionValue()) {
+            try full_rank.sampleIntoCheckedFrom(
+                &checked_repeated_engine,
+                repeated[offset..][0..full_rank.dimensionValue()],
+            );
+        }
+        try std.testing.expectEqualSlices(T, &repeated, &batch);
+        try std.testing.expectEqual(checked_repeated_engine.next(), checked_batch_engine.next());
+    }
+
+    var singular = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &.{ 2, -1 },
+        &.{
+            1, 1,
+            1, 1,
+        },
+    );
+    defer singular.deinit();
+    var singular_batch_engine = alea.ScalarPrng.init(0x5150_51b4);
+    var singular_repeated_engine = alea.ScalarPrng.init(0x5150_51b4);
+    var singular_batch: [2 * 129]f64 = undefined;
+    var singular_repeated: [singular_batch.len]f64 = undefined;
+    singular.sampleManyIntoFrom(&singular_batch_engine, &singular_batch);
+    var offset: usize = 0;
+    while (offset < singular_repeated.len) : (offset += 2) {
+        singular.sampleIntoFrom(&singular_repeated_engine, singular_repeated[offset..][0..2]);
+    }
+    try std.testing.expectEqualSlices(f64, &singular_repeated, &singular_batch);
+    try std.testing.expectEqual(singular_repeated_engine.next(), singular_batch_engine.next());
+}
+
+test "multivariate normal small f64 transforms preserve manual operation order" {
+    const alea = @import("root.zig");
+
+    var one_dimensional = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &.{2},
+        &.{9},
+    );
+    defer one_dimensional.deinit();
+    var one_engine = alea.ScalarPrng.init(0x5150_1d);
+    var one_control = alea.ScalarPrng.init(0x5150_1d);
+    var one_out: [1]f64 = undefined;
+    one_dimensional.sampleIntoFrom(&one_engine, &one_out);
+    const one_z = standardNormalFrom(&one_control, f64);
+    try std.testing.expectEqual(@as(f64, 2) + 3 * one_z, one_out[0]);
+    try std.testing.expectEqual(one_control.next(), one_engine.next());
+
+    var two_dimensional = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &.{ 1, -2 },
+        &.{
+            4, 1,
+            1, 3,
+        },
+    );
+    defer two_dimensional.deinit();
+    var two_engine = alea.ScalarPrng.init(0x5150_2d);
+    var two_control = alea.ScalarPrng.init(0x5150_2d);
+    var two_out: [2]f64 = undefined;
+    two_dimensional.sampleIntoFrom(&two_engine, &two_out);
+    const z0 = standardNormalFrom(&two_control, f64);
+    const z1 = standardNormalFrom(&two_control, f64);
+    const factor = two_dimensional.choleskyValues();
+    try std.testing.expectEqual(@as(f64, 1) + factor[0] * z0, two_out[0]);
+    try std.testing.expectEqual(
+        @as(f64, -2) + factor[2] * z0 + factor[3] * z1,
+        two_out[1],
+    );
+    try std.testing.expectEqual(two_control.next(), two_engine.next());
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {

@@ -1,6 +1,6 @@
 # S4-M11 Resolution Audit
 
-Date: 2026-07-10
+Date: 2026-07-16
 
 S4-M11 asked for one of three ways to keep raising the accepted vector profile
 bar:
@@ -96,7 +96,7 @@ compare/results/s4-m1161-dirichlet-subnormal-alpha.md
 compare/results/s4-m1160-hypergeometric-large-population.md
 compare/results/s4-m1159-nig-alpha-infinity.md
 `1`
-Alea local rand/rand_distr status (2026-07-10)
+Alea local rand/rand_distr status (2026-07-16)
 "schema_version"
 "baseline"
 "validate_local_passes"
@@ -107,7 +107,7 @@ Alea local rand/rand_distr status (2026-07-10)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1219-post-s4-m1218-validate-all.md"
+"compare/results/s4-m1221-multivariate-normal-throughput.md"
 "compare/results/s4-m1218-post-s4-m1217-validate-local.md"
 "compare/results/s4-m1217-minimum-vectorbench-gate.md"
 "compare/results/s4-m1216-post-s4-m1215-validate-all.md"
@@ -363,4 +363,6 @@ S4-M1219 is closed after refreshing validate-all evidence in `compare/results/s4
 
 S4-M1220 is closed after adding full-covariance multivariate normal sampling in `compare/results/s4-m1220-multivariate-normal.md`.
 
-S4-M1221 remains active after S4-M1220 raises the multivariate feature bar.
+S4-M1221 is closed after correcting and optimizing multivariate-normal throughput in `compare/results/s4-m1221-multivariate-normal-throughput.md`.
+
+S4-M1222 remains active after S4-M1221 closes the first multivariate-normal performance follow-up.
