@@ -94,6 +94,7 @@ toolkit functionality and reduce reliance on companion crates:
 | Pareto | Covered: `pareto`, `Pareto(T)`, including scale/shape, finite-moment, median/mode, and support accessors plus collapsed `scale == 0`, infinite-shape point masses, and local `rand_distr` infinite-scale acceptance |
 | Weibull | Covered: `weibull`, `Weibull(T)`, including scale/shape/moment/median/mode/support accessors plus collapsed `scale == 0`, infinite-shape point masses, and local `rand_distr` infinite-scale acceptance |
 | Dirichlet | Covered: `Dirichlet(T)` and `multi.Dirichlet(T)` for local `rand_distr::multi::Dirichlet` discovery, allocation and `sampleInto` APIs, including alpha/mean/variance/covariance export, dimension/total-alpha accessors, local `rand_distr` subnormal-alpha rejection and all-small Beta stick-breaking stability, one-dimensional point masses, and single-infinite-alpha vertex point masses |
+| MultivariateNormal | Alea extra: `MultivariateNormal(T)` and `multi.MultivariateNormal(T)` own a reusable Cholesky factor for finite symmetric positive-semidefinite covariance matrices, support correlated/singular/deterministic outputs, expose factor/rank/mean/covariance diagnostics, and provide allocation-returning, caller-owned, checked, direct-source, and flat batch sampling |
 | Multinomial | Covered: `Multinomial`, including trials/category/probability lookup/export and count moment lookup/export accessors |
 | NegativeBinomial | Covered: `NegativeBinomial`, including successes/probability/moment/support accessors |
 

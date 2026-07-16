@@ -155,6 +155,7 @@ pub const Error = error{
     NonFinite,
     InvalidProbability,
     InvalidInput,
+    InvalidCovariance,
     InvalidWeight,
     InsufficientNonZero,
     Overflow,
@@ -186,6 +187,7 @@ pub const GumbelError = Error;
 pub const HyperGeoError = Error;
 pub const InverseGaussianError = Error;
 pub const NormalInverseGaussianError = Error;
+pub const MultivariateNormalError = Error;
 pub const ParetoError = Error;
 pub const PertError = Error;
 pub const PoissonError = Error;
@@ -234,6 +236,10 @@ pub const weighted = struct {
 pub const multi = struct {
     pub fn Dirichlet(comptime T: type) type {
         return distributions_module.Dirichlet(T);
+    }
+
+    pub fn MultivariateNormal(comptime T: type) type {
+        return distributions_module.MultivariateNormal(T);
     }
 };
 
@@ -18847,6 +18853,303 @@ pub fn Zeta(comptime T: type) type {
     };
 }
 
+/// Reusable multivariate normal sampler backed by an owned Cholesky factor.
+///
+/// Construction performs the O(d^3) factorization once. Sampling is
+/// allocation-free after construction and costs O(d^2) per vector. Mean and
+/// covariance inputs use row-major layout; the covariance must be finite,
+/// symmetric, and positive semidefinite.
+pub fn MultivariateNormal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mean: []T,
+        cholesky: []T,
+        rank: usize,
+        allocator: std.mem.Allocator,
+
+        pub fn init(
+            allocator: std.mem.Allocator,
+            mean: []const T,
+            covariance: []const T,
+        ) !Self {
+            comptime requireFloat(T);
+            if (mean.len == 0) return error.EmptyRange;
+            const matrix_len = std.math.mul(usize, mean.len, mean.len) catch return error.InvalidLength;
+            if (covariance.len != matrix_len) return error.InvalidLength;
+
+            for (mean) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidParameter;
+            }
+            for (covariance) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidCovariance;
+            }
+
+            // Accept the small asymmetry produced by ordinary floating-point
+            // matrix construction, but reject matrices whose two triangles
+            // materially disagree. Averaging below then gives Cholesky one
+            // canonical symmetric value without risking a +max + +max sum.
+            var row: usize = 0;
+            while (row < mean.len) : (row += 1) {
+                if (covariance[row * mean.len + row] < 0) return error.InvalidCovariance;
+                var col: usize = 0;
+                while (col < row) : (col += 1) {
+                    const lower = covariance[row * mean.len + col];
+                    const upper = covariance[col * mean.len + row];
+                    const delta = @abs(lower - upper);
+                    const scale = @max(@abs(lower), @abs(upper));
+                    if (!std.math.isFinite(delta) or delta > factorTolerance(scale)) {
+                        return error.InvalidCovariance;
+                    }
+                }
+            }
+
+            const factors = try allocator.alloc(T, matrix_len);
+            errdefer allocator.free(factors);
+            @memset(factors, 0);
+
+            var rank: usize = 0;
+            row = 0;
+            while (row < mean.len) : (row += 1) {
+                var col: usize = 0;
+                while (col <= row) : (col += 1) {
+                    const covariance_value = if (row == col)
+                        covariance[row * mean.len + col]
+                    else
+                        covariance[row * mean.len + col] / 2 +
+                            covariance[col * mean.len + row] / 2;
+                    var residual = covariance_value;
+                    var residual_scale = @abs(covariance_value);
+                    var k: usize = 0;
+                    while (k < col) : (k += 1) {
+                        const product = factors[row * mean.len + k] *
+                            factors[col * mean.len + k];
+                        residual -= product;
+                        residual_scale += @abs(product);
+                    }
+                    const tolerance = factorTolerance(residual_scale);
+
+                    if (row == col) {
+                        if (residual < -tolerance) return error.InvalidCovariance;
+                        if (residual <= tolerance) {
+                            factors[row * mean.len + col] = 0;
+                        } else {
+                            factors[row * mean.len + col] = @sqrt(residual);
+                            rank += 1;
+                        }
+                    } else {
+                        const pivot = factors[col * mean.len + col];
+                        if (pivot != 0) {
+                            factors[row * mean.len + col] = residual / pivot;
+                        } else if (@abs(residual) > tolerance) {
+                            // A zero-variance component may only have zero
+                            // residual covariance with every later component.
+                            return error.InvalidCovariance;
+                        }
+                    }
+                }
+            }
+
+            const owned_mean = try allocator.dupe(T, mean);
+            errdefer allocator.free(owned_mean);
+            return .{
+                .mean = owned_mean,
+                .cholesky = factors,
+                .rank = rank,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(
+            allocator: std.mem.Allocator,
+            mean: []const T,
+            covariance: []const T,
+        ) !Self {
+            return Self.init(allocator, mean, covariance);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.allocator.free(self.mean);
+            self.allocator.free(self.cholesky);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const owned_mean = try allocator.dupe(T, self.mean);
+            errdefer allocator.free(owned_mean);
+            const factors = try allocator.dupe(T, self.cholesky);
+            errdefer allocator.free(factors);
+            return .{
+                .mean = owned_mean,
+                .cholesky = factors,
+                .rank = self.rank,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.mean.len;
+        }
+
+        pub fn rankValue(self: Self) usize {
+            return self.rank;
+        }
+
+        pub fn isDegenerate(self: Self) bool {
+            return self.rank < self.mean.len;
+        }
+
+        pub fn meanValues(self: Self) []const T {
+            return self.mean;
+        }
+
+        pub fn meanAt(self: Self, index: usize) Error!T {
+            if (index >= self.mean.len) return error.InvalidParameter;
+            return self.mean[index];
+        }
+
+        /// Returns the owned row-major lower-triangular Cholesky factor.
+        ///
+        /// The upper triangle is zero. This borrowed slice remains valid until
+        /// `deinit` and is useful for diagnostics or external linear algebra.
+        pub fn choleskyValues(self: Self) []const T {
+            return self.cholesky;
+        }
+
+        pub fn covarianceAt(self: Self, row: usize, col: usize) Error!T {
+            if (row >= self.mean.len or col >= self.mean.len) return error.InvalidParameter;
+            var covariance: T = 0;
+            var k: usize = 0;
+            while (k <= @min(row, col)) : (k += 1) {
+                covariance += self.cholesky[row * self.mean.len + k] *
+                    self.cholesky[col * self.mean.len + k];
+            }
+            return covariance;
+        }
+
+        pub fn varianceAt(self: Self, index: usize) Error!T {
+            return self.covarianceAt(index, index);
+        }
+
+        pub fn covariances(self: Self, allocator: std.mem.Allocator) ![]T {
+            const out = try allocator.alloc(T, self.cholesky.len);
+            errdefer allocator.free(out);
+            try self.covariancesInto(out);
+            return out;
+        }
+
+        pub fn covariancesInto(self: Self, out: []T) Error!void {
+            if (out.len != self.cholesky.len) return error.InvalidLength;
+            var row: usize = 0;
+            while (row < self.mean.len) : (row += 1) {
+                var col: usize = 0;
+                while (col < self.mean.len) : (col += 1) {
+                    out[row * self.mean.len + col] = self.covarianceAt(row, col) catch unreachable;
+                }
+            }
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.mean.len);
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.mean.len);
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.mean.len);
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.mean.len);
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.mean.len) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.mean.len) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len % self.mean.len == 0);
+            self.sampleManyIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len % self.mean.len == 0);
+            self.sampleManyIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len % self.mean.len != 0) return error.InvalidLength;
+            self.sampleManyIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleManyIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len % self.mean.len != 0) return error.InvalidLength;
+            self.sampleManyIntoUnchecked(source, out);
+        }
+
+        fn sampleManyIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.mean.len) {
+                self.sampleIntoUnchecked(source, out[offset..][0..self.mean.len]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            if (self.rank == 0) {
+                @memcpy(out, self.mean);
+                return;
+            }
+
+            if (self.rank == self.mean.len) {
+                fillStandardNormalFrom(source, T, out);
+            } else {
+                // A semidefinite factor can contain zero columns. Avoid
+                // drawing normals which cannot affect the resulting vector.
+                for (0..self.mean.len) |index| {
+                    out[index] = if (self.cholesky[index * self.mean.len + index] == 0)
+                        0
+                    else
+                        standardNormalFrom(source, T);
+                }
+            }
+
+            // Apply y = mean + L*z from the last row backwards. Since row i
+            // only reads z[0..i], reverse traversal lets the output buffer
+            // double as standard-normal scratch without another allocation.
+            var row = self.mean.len;
+            while (row > 0) {
+                row -= 1;
+                var value = self.mean[row];
+                var col: usize = 0;
+                while (col <= row) : (col += 1) {
+                    value += self.cholesky[row * self.mean.len + col] * out[col];
+                }
+                out[row] = value;
+            }
+        }
+
+        fn factorTolerance(scale: T) T {
+            return 64 * std.math.floatEps(T) * scale;
+        }
+    };
+}
+
 pub fn Dirichlet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -23031,6 +23334,42 @@ fn floatDistancePositiveF64(a: f64, b: f64) u64 {
     const ai: u64 = @bitCast(a);
     const bi: u64 = @bitCast(b);
     return if (ai >= bi) ai - bi else bi - ai;
+}
+
+fn expectApproxEqualFloatSlices(comptime T: type, expected: []const T, actual: []const T) !void {
+    try std.testing.expectEqual(expected.len, actual.len);
+    for (expected, actual) |expected_value, actual_value| {
+        try expectApproxEqualFloatValue(T, expected_value, actual_value);
+    }
+}
+
+fn expectApproxEqualVectorSlices(comptime VectorType: type, expected: []const VectorType, actual: []const VectorType) !void {
+    const info = vectorInfo(VectorType);
+    try std.testing.expectEqual(expected.len, actual.len);
+    for (expected, actual) |expected_vec, actual_vec| {
+        inline for (0..info.len) |lane| {
+            try expectApproxEqualFloatValue(info.child, expected_vec[lane], actual_vec[lane]);
+        }
+    }
+}
+
+fn expectApproxEqualFloatValue(comptime T: type, expected: T, actual: T) !void {
+    if (expected == actual) return;
+    if (std.math.isNan(expected) or std.math.isNan(actual)) {
+        try std.testing.expect(std.math.isNan(expected) and std.math.isNan(actual));
+        return;
+    }
+    const expected_abs = @abs(expected);
+    const actual_abs = @abs(actual);
+    if (comptime T == f32) {
+        const scale = @max(@as(f32, 1), @max(expected_abs, actual_abs));
+        try std.testing.expect(@abs(expected - actual) <= 1e-5 * scale or
+            floatDistancePositiveF32(expected_abs, actual_abs) <= 8);
+    } else if (comptime T == f64) {
+        const scale = @max(@as(f64, 1), @max(expected_abs, actual_abs));
+        try std.testing.expect(@abs(expected - actual) <= 1e-12 * scale or
+            floatDistancePositiveF64(expected_abs, actual_abs) <= 8);
+    } else @compileError("expectApproxEqualFloatValue expects f32 or f64");
 }
 
 fn expVectorSliceInPlace(comptime VectorType: type, dest: []VectorType) void {
@@ -31725,7 +32064,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_exp_loop: [3]@Vector(8, f32) = undefined;
     vector_exp_sampler.fillFrom(&vector_exp_fill_engine, &vector_exp_fill);
     for (&vector_exp_loop) |*slot| slot.* = vector_exp_sampler.sampleFrom(&vector_exp_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_exp_loop, &vector_exp_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_exp_loop, &vector_exp_fill);
     try std.testing.expectEqual(vector_exp_loop_engine.next(), vector_exp_fill_engine.next());
     var vector_exp_identity_fill_engine = alea.ScalarPrng.init(0xe836_1001);
     var vector_exp_identity_standard_engine = alea.ScalarPrng.init(0xe836_1001);
@@ -31747,7 +32086,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_uniform_buf: [3]@Vector(4, f32) = undefined;
     try fillVectorUniformChecked(rng, @Vector(4, f32), &uniform_buf, -1, 2);
     try fillVectorUniformCheckedFrom(&direct_engine, @Vector(4, f32), &direct_uniform_buf, -1, 2);
-    try std.testing.expectEqualSlices(@Vector(4, f32), &uniform_buf, &direct_uniform_buf);
+    try expectApproxEqualVectorSlices(@Vector(4, f32), &uniform_buf, &direct_uniform_buf);
     for (uniform_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] < 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -31755,13 +32094,13 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_inclusive_buf: [3]@Vector(4, f32) = undefined;
     try fillVectorUniformInclusiveChecked(rng, @Vector(4, f32), &inclusive_buf, -1, 2);
     try fillVectorUniformInclusiveCheckedFrom(&direct_engine, @Vector(4, f32), &direct_inclusive_buf, -1, 2);
-    try std.testing.expectEqualSlices(@Vector(4, f32), &inclusive_buf, &direct_inclusive_buf);
+    try expectApproxEqualVectorSlices(@Vector(4, f32), &inclusive_buf, &direct_inclusive_buf);
     for (inclusive_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] <= 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     vector_uniform_sampler.fill(rng, &uniform_buf);
     vector_uniform_sampler.fillFrom(&direct_engine, &direct_uniform_buf);
-    try std.testing.expectEqualSlices(@Vector(4, f32), &uniform_buf, &direct_uniform_buf);
+    try expectApproxEqualVectorSlices(@Vector(4, f32), &uniform_buf, &direct_uniform_buf);
     for (uniform_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= -1 and vec[lane] < 2);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -31769,7 +32108,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_open_buf: [3]@Vector(8, f32) = undefined;
     (Open01{}).fill(rng, @Vector(8, f32), &open_buf);
     (Open01{}).fillFrom(&direct_engine, @Vector(8, f32), &direct_open_buf);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &open_buf, &direct_open_buf);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &open_buf, &direct_open_buf);
     for (open_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0 and vec[lane] < 1);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -31777,7 +32116,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_open_closed_buf: [3]@Vector(8, f32) = undefined;
     (OpenClosed01{}).fill(rng, @Vector(8, f32), &open_closed_buf);
     (OpenClosed01{}).fillFrom(&direct_engine, @Vector(8, f32), &direct_open_closed_buf);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &open_closed_buf, &direct_open_closed_buf);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &open_closed_buf, &direct_open_closed_buf);
     for (open_closed_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0 and vec[lane] <= 1);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -31799,7 +32138,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_normal_buf: [3]@Vector(8, f32) = undefined;
     try fillVectorNormalChecked(rng, @Vector(8, f32), &normal_buf, 1, 2);
     try fillVectorNormalCheckedFrom(&direct_engine, @Vector(8, f32), &direct_normal_buf, 1, 2);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &normal_buf, &direct_normal_buf);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &normal_buf, &direct_normal_buf);
     for (normal_buf) |vec| inline for (0..8) |lane| try std.testing.expect(std.math.isFinite(vec[lane]));
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -31820,12 +32159,12 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_approx_log_normal_buf_vec: [3]@Vector(8, f32) = undefined;
     try fillVectorLogNormalApproxF32Checked(rng, @Vector(8, f32), &approx_log_normal_buf_vec, 0, 0.25);
     try fillVectorLogNormalApproxF32CheckedFrom(&direct_engine, @Vector(8, f32), &direct_approx_log_normal_buf_vec, 0, 0.25);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &approx_log_normal_buf_vec, &direct_approx_log_normal_buf_vec);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &approx_log_normal_buf_vec, &direct_approx_log_normal_buf_vec);
     for (approx_log_normal_buf_vec) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
     vector_approx_log_normal_sampler.fill(rng, &approx_log_normal_buf_vec);
     vector_approx_log_normal_sampler.fillFrom(&direct_engine, &direct_approx_log_normal_buf_vec);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &approx_log_normal_buf_vec, &direct_approx_log_normal_buf_vec);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &approx_log_normal_buf_vec, &direct_approx_log_normal_buf_vec);
     for (approx_log_normal_buf_vec) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] > 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
@@ -31907,7 +32246,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_gamma_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_gamma_f32.fillFrom(&vector_gamma_f32_fill_engine, &vector_gamma_f32_fill);
     for (&vector_gamma_f32_loop) |*slot| slot.* = vector_gamma_f32.sampleFrom(&vector_gamma_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_gamma_f32_loop, &vector_gamma_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_gamma_f32_loop, &vector_gamma_f32_fill);
     try std.testing.expectEqual(vector_gamma_f32_loop_engine.next(), vector_gamma_f32_fill_engine.next());
     var vector_gamma_shape_one_fill_engine = alea.ScalarPrng.init(0x6838_0001);
     var vector_gamma_shape_one_standard_engine = alea.ScalarPrng.init(0x6838_0001);
@@ -31927,7 +32266,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_gamma_shape_one_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_gamma_shape_one_f32.fillFrom(&vector_gamma_shape_one_f32_fill_engine, &vector_gamma_shape_one_f32_fill);
     for (&vector_gamma_shape_one_f32_loop) |*slot| slot.* = vector_gamma_shape_one_f32.sampleFrom(&vector_gamma_shape_one_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_gamma_shape_one_f32_loop, &vector_gamma_shape_one_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_gamma_shape_one_f32_loop, &vector_gamma_shape_one_f32_fill);
     try std.testing.expectEqual(vector_gamma_shape_one_f32_loop_engine.next(), vector_gamma_shape_one_f32_fill_engine.next());
 
     const chi_squared_vec = try vectorChiSquaredChecked(rng, @Vector(4, f64), 4);
@@ -31977,7 +32316,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_chi_squared_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_chi_squared_f32.fillFrom(&vector_chi_squared_f32_fill_engine, &vector_chi_squared_f32_fill);
     for (&vector_chi_squared_f32_loop) |*slot| slot.* = vector_chi_squared_f32.sampleFrom(&vector_chi_squared_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_chi_squared_f32_loop, &vector_chi_squared_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_chi_squared_f32_loop, &vector_chi_squared_f32_fill);
     try std.testing.expectEqual(vector_chi_squared_f32_loop_engine.next(), vector_chi_squared_f32_fill_engine.next());
     var vector_chi_squared_degenerate_engine = alea.ScalarPrng.init(0xc840_d00);
     var vector_chi_squared_degenerate_control = alea.ScalarPrng.init(0xc840_d00);
@@ -32034,7 +32373,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_chi_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_chi_f32.fillFrom(&vector_chi_f32_fill_engine, &vector_chi_f32_fill);
     for (&vector_chi_f32_loop) |*slot| slot.* = vector_chi_f32.sampleFrom(&vector_chi_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_chi_f32_loop, &vector_chi_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_chi_f32_loop, &vector_chi_f32_fill);
     try std.testing.expectEqual(vector_chi_f32_loop_engine.next(), vector_chi_f32_fill_engine.next());
     var vector_chi_degenerate_engine = alea.ScalarPrng.init(0xc842_d00);
     var vector_chi_degenerate_control = alea.ScalarPrng.init(0xc842_d00);
@@ -32090,7 +32429,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_erlang_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_erlang_f32.fillFrom(&vector_erlang_f32_fill_engine, &vector_erlang_f32_fill);
     for (&vector_erlang_f32_loop) |*slot| slot.* = vector_erlang_f32.sampleFrom(&vector_erlang_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_erlang_f32_loop, &vector_erlang_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_erlang_f32_loop, &vector_erlang_f32_fill);
     try std.testing.expectEqual(vector_erlang_f32_loop_engine.next(), vector_erlang_f32_fill_engine.next());
     var vector_erlang_degenerate_engine = alea.ScalarPrng.init(0xe844_d00);
     var vector_erlang_degenerate_control = alea.ScalarPrng.init(0xe844_d00);
@@ -32146,7 +32485,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_beta_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_beta_f32.fillFrom(&vector_beta_f32_fill_engine, &vector_beta_f32_fill);
     for (&vector_beta_f32_loop) |*slot| slot.* = vector_beta_f32.sampleFrom(&vector_beta_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_beta_f32_loop, &vector_beta_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_beta_f32_loop, &vector_beta_f32_fill);
     try std.testing.expectEqual(vector_beta_f32_loop_engine.next(), vector_beta_f32_fill_engine.next());
     var vector_beta_infinite_fill_engine = alea.ScalarPrng.init(0x5869_d00);
     var vector_beta_infinite_loop_engine = alea.ScalarPrng.init(0x5869_d00);
@@ -32203,7 +32542,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_fisher_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_fisher_f32.fillFrom(&vector_fisher_f32_fill_engine, &vector_fisher_f32_fill);
     for (&vector_fisher_f32_loop) |*slot| slot.* = vector_fisher_f32.sampleFrom(&vector_fisher_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_fisher_f32_loop, &vector_fisher_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_fisher_f32_loop, &vector_fisher_f32_fill);
     try std.testing.expectEqual(vector_fisher_f32_loop_engine.next(), vector_fisher_f32_fill_engine.next());
     var vector_fisher_infinite_fill_engine = alea.ScalarPrng.init(0xf846_1af);
     var vector_fisher_infinite_loop_engine = alea.ScalarPrng.init(0xf846_1af);
@@ -32259,7 +32598,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_student_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_student_f32.fillFrom(&vector_student_f32_fill_engine, &vector_student_f32_fill);
     for (&vector_student_f32_loop) |*slot| slot.* = vector_student_f32.sampleFrom(&vector_student_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_student_f32_loop, &vector_student_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_student_f32_loop, &vector_student_f32_fill);
     try std.testing.expectEqual(vector_student_f32_loop_engine.next(), vector_student_f32_fill_engine.next());
 
     const triangular_vec = try vectorTriangularChecked(rng, @Vector(4, f64), -1, 0, 2);
@@ -32308,7 +32647,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_triangular_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_triangular_f32.fillFrom(&vector_triangular_f32_fill_engine, &vector_triangular_f32_fill);
     for (&vector_triangular_f32_loop) |*slot| slot.* = vector_triangular_f32.sampleFrom(&vector_triangular_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_triangular_f32_loop, &vector_triangular_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_triangular_f32_loop, &vector_triangular_f32_fill);
     try std.testing.expectEqual(vector_triangular_f32_loop_engine.next(), vector_triangular_f32_fill_engine.next());
     var vector_triangular_degenerate_engine = alea.ScalarPrng.init(0x7849_d00);
     var vector_triangular_degenerate_control = alea.ScalarPrng.init(0x7849_d00);
@@ -32362,7 +32701,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_arcsine_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_arcsine_f32.fillFrom(&vector_arcsine_f32_fill_engine, &vector_arcsine_f32_fill);
     for (&vector_arcsine_f32_loop) |*slot| slot.* = vector_arcsine_f32.sampleFrom(&vector_arcsine_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_arcsine_f32_loop, &vector_arcsine_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_arcsine_f32_loop, &vector_arcsine_f32_fill);
     try std.testing.expectEqual(vector_arcsine_f32_loop_engine.next(), vector_arcsine_f32_fill_engine.next());
     var vector_arcsine_degenerate_engine = alea.ScalarPrng.init(0xa850_d00);
     var vector_arcsine_degenerate_control = alea.ScalarPrng.init(0xa850_d00);
@@ -32418,7 +32757,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_cauchy_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_cauchy_f32.fillFrom(&vector_cauchy_f32_fill_engine, &vector_cauchy_f32_fill);
     for (&vector_cauchy_f32_loop) |*slot| slot.* = vector_cauchy_f32.sampleFrom(&vector_cauchy_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_cauchy_f32_loop, &vector_cauchy_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_cauchy_f32_loop, &vector_cauchy_f32_fill);
     try std.testing.expectEqual(vector_cauchy_f32_loop_engine.next(), vector_cauchy_f32_fill_engine.next());
     var vector_cauchy_degenerate_engine = alea.ScalarPrng.init(0xc851_d00);
     var vector_cauchy_degenerate_control = alea.ScalarPrng.init(0xc851_d00);
@@ -32475,7 +32814,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_laplace_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_laplace_f32.fillFrom(&vector_laplace_f32_fill_engine, &vector_laplace_f32_fill);
     for (&vector_laplace_f32_loop) |*slot| slot.* = vector_laplace_f32.sampleFrom(&vector_laplace_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_laplace_f32_loop, &vector_laplace_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_laplace_f32_loop, &vector_laplace_f32_fill);
     try std.testing.expectEqual(vector_laplace_f32_loop_engine.next(), vector_laplace_f32_fill_engine.next());
     var vector_laplace_degenerate_engine = alea.ScalarPrng.init(0x1a52_d00);
     var vector_laplace_degenerate_control = alea.ScalarPrng.init(0x1a52_d00);
@@ -32532,7 +32871,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_logistic_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_logistic_f32.fillFrom(&vector_logistic_f32_fill_engine, &vector_logistic_f32_fill);
     for (&vector_logistic_f32_loop) |*slot| slot.* = vector_logistic_f32.sampleFrom(&vector_logistic_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_logistic_f32_loop, &vector_logistic_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_logistic_f32_loop, &vector_logistic_f32_fill);
     try std.testing.expectEqual(vector_logistic_f32_loop_engine.next(), vector_logistic_f32_fill_engine.next());
     var vector_logistic_degenerate_engine = alea.ScalarPrng.init(0x1053_d00);
     var vector_logistic_degenerate_control = alea.ScalarPrng.init(0x1053_d00);
@@ -32590,7 +32929,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_log_logistic_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_log_logistic_f32.fillFrom(&vector_log_logistic_f32_fill_engine, &vector_log_logistic_f32_fill);
     for (&vector_log_logistic_f32_loop) |*slot| slot.* = vector_log_logistic_f32.sampleFrom(&vector_log_logistic_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_log_logistic_f32_loop, &vector_log_logistic_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_log_logistic_f32_loop, &vector_log_logistic_f32_fill);
     try std.testing.expectEqual(vector_log_logistic_f32_loop_engine.next(), vector_log_logistic_f32_fill_engine.next());
 
     const vector_log_logistic_shape_one = try VectorLogLogistic(@Vector(4, f64)).init(2, 1);
@@ -32666,7 +33005,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_kumaraswamy_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_kumaraswamy_f32.fillFrom(&vector_kumaraswamy_f32_fill_engine, &vector_kumaraswamy_f32_fill);
     for (&vector_kumaraswamy_f32_loop) |*slot| slot.* = vector_kumaraswamy_f32.sampleFrom(&vector_kumaraswamy_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_kumaraswamy_f32_loop, &vector_kumaraswamy_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_kumaraswamy_f32_loop, &vector_kumaraswamy_f32_fill);
     try std.testing.expectEqual(vector_kumaraswamy_f32_loop_engine.next(), vector_kumaraswamy_f32_fill_engine.next());
 
     const vector_kumaraswamy_beta_one = try VectorKumaraswamy(@Vector(4, f64)).init(2, 1);
@@ -32741,7 +33080,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_power_function_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_power_function_f32.fillFrom(&vector_power_function_f32_fill_engine, &vector_power_function_f32_fill);
     for (&vector_power_function_f32_loop) |*slot| slot.* = vector_power_function_f32.sampleFrom(&vector_power_function_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_power_function_f32_loop, &vector_power_function_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_power_function_f32_loop, &vector_power_function_f32_fill);
     try std.testing.expectEqual(vector_power_function_f32_loop_engine.next(), vector_power_function_f32_fill_engine.next());
 
     const vector_power_function_uniform = try VectorPowerFunction(@Vector(4, f64)).init(-1, 2, 1);
@@ -32829,7 +33168,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_rayleigh_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_rayleigh_f32.fillFrom(&vector_rayleigh_f32_fill_engine, &vector_rayleigh_f32_fill);
     for (&vector_rayleigh_f32_loop) |*slot| slot.* = vector_rayleigh_f32.sampleFrom(&vector_rayleigh_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_rayleigh_f32_loop, &vector_rayleigh_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_rayleigh_f32_loop, &vector_rayleigh_f32_fill);
     try std.testing.expectEqual(vector_rayleigh_f32_loop_engine.next(), vector_rayleigh_f32_fill_engine.next());
     var vector_rayleigh_degenerate_engine = alea.ScalarPrng.init(0x7857_d00);
     var vector_rayleigh_degenerate_control = alea.ScalarPrng.init(0x7857_d00);
@@ -32884,7 +33223,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_maxwell_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_maxwell_f32.fillFrom(&vector_maxwell_f32_fill_engine, &vector_maxwell_f32_fill);
     for (&vector_maxwell_f32_loop) |*slot| slot.* = vector_maxwell_f32.sampleFrom(&vector_maxwell_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_maxwell_f32_loop, &vector_maxwell_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_maxwell_f32_loop, &vector_maxwell_f32_fill);
     try std.testing.expectEqual(vector_maxwell_f32_loop_engine.next(), vector_maxwell_f32_fill_engine.next());
     var vector_maxwell_degenerate_engine = alea.ScalarPrng.init(0x5858_d00);
     var vector_maxwell_degenerate_control = alea.ScalarPrng.init(0x5858_d00);
@@ -32941,7 +33280,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_pareto_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_pareto_f32.fillFrom(&vector_pareto_f32_fill_engine, &vector_pareto_f32_fill);
     for (&vector_pareto_f32_loop) |*slot| slot.* = vector_pareto_f32.sampleFrom(&vector_pareto_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_pareto_f32_loop, &vector_pareto_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_pareto_f32_loop, &vector_pareto_f32_fill);
     try std.testing.expectEqual(vector_pareto_f32_loop_engine.next(), vector_pareto_f32_fill_engine.next());
 
     const vector_pareto_shape_one = try VectorPareto(@Vector(4, f64)).init(2, 1);
@@ -33015,7 +33354,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_weibull_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_weibull_f32.fillFrom(&vector_weibull_f32_fill_engine, &vector_weibull_f32_fill);
     for (&vector_weibull_f32_loop) |*slot| slot.* = vector_weibull_f32.sampleFrom(&vector_weibull_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_weibull_f32_loop, &vector_weibull_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_weibull_f32_loop, &vector_weibull_f32_fill);
     try std.testing.expectEqual(vector_weibull_f32_loop_engine.next(), vector_weibull_f32_fill_engine.next());
 
     const vector_weibull_shape_one = try VectorWeibull(@Vector(4, f64)).init(2, 1);
@@ -33087,7 +33426,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_gumbel_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_gumbel_f32.fillFrom(&vector_gumbel_f32_fill_engine, &vector_gumbel_f32_fill);
     for (&vector_gumbel_f32_loop) |*slot| slot.* = vector_gumbel_f32.sampleFrom(&vector_gumbel_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_gumbel_f32_loop, &vector_gumbel_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_gumbel_f32_loop, &vector_gumbel_f32_fill);
     try std.testing.expectEqual(vector_gumbel_f32_loop_engine.next(), vector_gumbel_f32_fill_engine.next());
     var vector_gumbel_degenerate_engine = alea.ScalarPrng.init(0x6861_d00);
     var vector_gumbel_degenerate_control = alea.ScalarPrng.init(0x6861_d00);
@@ -33147,7 +33486,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_frechet_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_frechet_f32.fillFrom(&vector_frechet_f32_fill_engine, &vector_frechet_f32_fill);
     for (&vector_frechet_f32_loop) |*slot| slot.* = vector_frechet_f32.sampleFrom(&vector_frechet_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_frechet_f32_loop, &vector_frechet_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_frechet_f32_loop, &vector_frechet_f32_fill);
     try std.testing.expectEqual(vector_frechet_f32_loop_engine.next(), vector_frechet_f32_fill_engine.next());
 
     const vector_frechet_shape_one = try VectorFrechet(@Vector(4, f64)).init(0, 2, 1);
@@ -33225,7 +33564,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_skew_normal_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_skew_normal_f32.fillFrom(&vector_skew_normal_f32_fill_engine, &vector_skew_normal_f32_fill);
     for (&vector_skew_normal_f32_loop) |*slot| slot.* = vector_skew_normal_f32.sampleFrom(&vector_skew_normal_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_skew_normal_f32_loop, &vector_skew_normal_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_skew_normal_f32_loop, &vector_skew_normal_f32_fill);
     try std.testing.expectEqual(vector_skew_normal_f32_loop_engine.next(), vector_skew_normal_f32_fill_engine.next());
 
     const vector_skew_normal_symmetric = try VectorSkewNormal(@Vector(4, f64)).init(0, 1, 0);
@@ -33302,7 +33641,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_pert_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_pert_f32.fillFrom(&vector_pert_f32_fill_engine, &vector_pert_f32_fill);
     for (&vector_pert_f32_loop) |*slot| slot.* = vector_pert_f32.sampleFrom(&vector_pert_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_pert_f32_loop, &vector_pert_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_pert_f32_loop, &vector_pert_f32_fill);
     try std.testing.expectEqual(vector_pert_f32_loop_engine.next(), vector_pert_f32_fill_engine.next());
     var vector_pert_degenerate_engine = alea.ScalarPrng.init(0x5864_d00);
     var vector_pert_degenerate_control = alea.ScalarPrng.init(0x5864_d00);
@@ -33382,7 +33721,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_inverse_gaussian_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_inverse_gaussian_f32.fillFrom(&vector_inverse_gaussian_f32_fill_engine, &vector_inverse_gaussian_f32_fill);
     for (&vector_inverse_gaussian_f32_loop) |*slot| slot.* = vector_inverse_gaussian_f32.sampleFrom(&vector_inverse_gaussian_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_inverse_gaussian_f32_loop, &vector_inverse_gaussian_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_inverse_gaussian_f32_loop, &vector_inverse_gaussian_f32_fill);
     try std.testing.expectEqual(vector_inverse_gaussian_f32_loop_engine.next(), vector_inverse_gaussian_f32_fill_engine.next());
     var vector_inverse_gaussian_zero_engine = alea.ScalarPrng.init(0x5865_d00);
     var vector_inverse_gaussian_zero_control = alea.ScalarPrng.init(0x5865_d00);
@@ -33446,7 +33785,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_nig_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_nig_f32.fillFrom(&vector_nig_f32_fill_engine, &vector_nig_f32_fill);
     for (&vector_nig_f32_loop) |*slot| slot.* = vector_nig_f32.sampleFrom(&vector_nig_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_nig_f32_loop, &vector_nig_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_nig_f32_loop, &vector_nig_f32_fill);
     try std.testing.expectEqual(vector_nig_f32_loop_engine.next(), vector_nig_f32_fill_engine.next());
     var vector_nig_invalid_engine = alea.ScalarPrng.init(0x5866_d00);
     var vector_nig_invalid_control = alea.ScalarPrng.init(0x5866_d00);
@@ -33497,7 +33836,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_zipf_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_zipf_f32.fillFrom(&vector_zipf_f32_fill_engine, &vector_zipf_f32_fill);
     for (&vector_zipf_f32_loop) |*slot| slot.* = vector_zipf_f32.sampleFrom(&vector_zipf_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_zipf_f32_loop, &vector_zipf_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_zipf_f32_loop, &vector_zipf_f32_fill);
     try std.testing.expectEqual(vector_zipf_f32_loop_engine.next(), vector_zipf_f32_fill_engine.next());
 
     const vector_zipf_degenerate = try VectorZipf(@Vector(4, f64)).init(10, std.math.inf(f64));
@@ -33557,7 +33896,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var vector_zeta_f32_loop: [2]@Vector(8, f32) = undefined;
     vector_zeta_f32.fillFrom(&vector_zeta_f32_fill_engine, &vector_zeta_f32_fill);
     for (&vector_zeta_f32_loop) |*slot| slot.* = vector_zeta_f32.sampleFrom(&vector_zeta_f32_loop_engine);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &vector_zeta_f32_loop, &vector_zeta_f32_fill);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &vector_zeta_f32_loop, &vector_zeta_f32_fill);
     try std.testing.expectEqual(vector_zeta_f32_loop_engine.next(), vector_zeta_f32_fill_engine.next());
     var vector_zeta_degenerate_engine = alea.ScalarPrng.init(0x5868_d00);
     var vector_zeta_degenerate_control = alea.ScalarPrng.init(0x5868_d00);
@@ -33710,13 +34049,13 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_exp_buf: [3]@Vector(8, f32) = undefined;
     try fillVectorExponentialChecked(rng, @Vector(8, f32), &exp_buf, 2);
     try fillVectorExponentialCheckedFrom(&direct_engine, @Vector(8, f32), &direct_exp_buf, 2);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
     for (exp_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] >= 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 
     vector_exp_sampler.fill(rng, &exp_buf);
     vector_exp_sampler.fillFrom(&direct_engine, &direct_exp_buf);
-    try std.testing.expectEqualSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
+    try expectApproxEqualVectorSlices(@Vector(8, f32), &exp_buf, &direct_exp_buf);
     for (exp_buf) |vec| inline for (0..8) |lane| try std.testing.expect(vec[lane] >= 0);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
 }
@@ -36711,7 +37050,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var exponential_f32_loop: [11]f32 = undefined;
     exponential_f32_sampler.fillFrom(&exponential_f32_fill_engine, &exponential_f32_fill);
     for (&exponential_f32_loop) |*slot| slot.* = exponential_f32_sampler.sampleFrom(&exponential_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &exponential_f32_loop, &exponential_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &exponential_f32_loop, &exponential_f32_fill);
     try std.testing.expectEqual(exponential_f32_loop_engine.next(), exponential_f32_fill_engine.next());
     var exponential_degenerate_engine = alea.ScalarPrng.init(0xe835_1af);
     var exponential_degenerate_control = alea.ScalarPrng.init(0xe835_1af);
@@ -37044,7 +37383,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var gamma_f32_loop: [11]f32 = undefined;
     gamma_f32_sampler.fillFrom(&gamma_f32_fill_engine, &gamma_f32_fill);
     for (&gamma_f32_loop) |*slot| slot.* = gamma_f32_sampler.sampleFrom(&gamma_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &gamma_f32_loop, &gamma_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &gamma_f32_loop, &gamma_f32_fill);
     try std.testing.expectEqual(gamma_f32_loop_engine.next(), gamma_f32_fill_engine.next());
     var gamma_boosted_fill_engine = alea.ScalarPrng.init(0x5873_b005);
     var gamma_boosted_loop_engine = alea.ScalarPrng.init(0x5873_b005);
@@ -37076,7 +37415,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var gamma_shape_one_f32_loop: [11]f32 = undefined;
     gamma_shape_one_f32.fillFrom(&gamma_shape_one_f32_fill_engine, &gamma_shape_one_f32_fill);
     for (&gamma_shape_one_f32_loop) |*slot| slot.* = gamma_shape_one_f32.sampleFrom(&gamma_shape_one_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &gamma_shape_one_f32_loop, &gamma_shape_one_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &gamma_shape_one_f32_loop, &gamma_shape_one_f32_fill);
     try std.testing.expectEqual(gamma_shape_one_f32_loop_engine.next(), gamma_shape_one_f32_fill_engine.next());
     var gamma_shape_half_buf: [8]f64 = undefined;
     fillGammaFrom(&direct_engine, f64, &gamma_shape_half_buf, 0.5, 3);
@@ -37127,7 +37466,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var chi_squared_f32_loop: [11]f32 = undefined;
     chi_squared_f32.fillFrom(&chi_squared_f32_fill_engine, &chi_squared_f32_fill);
     for (&chi_squared_f32_loop) |*slot| slot.* = chi_squared_f32.sampleFrom(&chi_squared_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &chi_squared_f32_loop, &chi_squared_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &chi_squared_f32_loop, &chi_squared_f32_fill);
     try std.testing.expectEqual(chi_squared_f32_loop_engine.next(), chi_squared_f32_fill_engine.next());
     var chi_squared_degenerate_engine = alea.ScalarPrng.init(0xc839_d00);
     var chi_squared_degenerate_control = alea.ScalarPrng.init(0xc839_d00);
@@ -37181,7 +37520,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var chi_f32_loop: [11]f32 = undefined;
     chi_f32.fillFrom(&chi_f32_fill_engine, &chi_f32_fill);
     for (&chi_f32_loop) |*slot| slot.* = chi_f32.sampleFrom(&chi_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &chi_f32_loop, &chi_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &chi_f32_loop, &chi_f32_fill);
     try std.testing.expectEqual(chi_f32_loop_engine.next(), chi_f32_fill_engine.next());
     var chi_degenerate_engine = alea.ScalarPrng.init(0xc841_d00);
     var chi_degenerate_control = alea.ScalarPrng.init(0xc841_d00);
@@ -37259,7 +37598,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var erlang_f32_loop: [11]f32 = undefined;
     erlang_f32.fillFrom(&erlang_f32_fill_engine, &erlang_f32_fill);
     for (&erlang_f32_loop) |*slot| slot.* = erlang_f32.sampleFrom(&erlang_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &erlang_f32_loop, &erlang_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &erlang_f32_loop, &erlang_f32_fill);
     try std.testing.expectEqual(erlang_f32_loop_engine.next(), erlang_f32_fill_engine.next());
     var erlang_degenerate_engine = alea.ScalarPrng.init(0xe843_d00);
     var erlang_degenerate_control = alea.ScalarPrng.init(0xe843_d00);
@@ -37315,7 +37654,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var beta_f32_loop: [11]f32 = undefined;
     beta_f32_sampler.fillFrom(&beta_f32_fill_engine, &beta_f32_fill);
     for (&beta_f32_loop) |*slot| slot.* = beta_f32_sampler.sampleFrom(&beta_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &beta_f32_loop, &beta_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &beta_f32_loop, &beta_f32_fill);
     try std.testing.expectEqual(beta_f32_loop_engine.next(), beta_f32_fill_engine.next());
     var beta_unit_buf: [8]f64 = undefined;
     fillBetaFrom(&direct_engine, f64, &beta_unit_buf, 1, 1);
@@ -37367,7 +37706,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var fisher_f32_loop: [11]f32 = undefined;
     fisher_f32.fillFrom(&fisher_f32_fill_engine, &fisher_f32_fill);
     for (&fisher_f32_loop) |*slot| slot.* = fisher_f32.sampleFrom(&fisher_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &fisher_f32_loop, &fisher_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &fisher_f32_loop, &fisher_f32_fill);
     try std.testing.expectEqual(fisher_f32_loop_engine.next(), fisher_f32_fill_engine.next());
     var fisher_infinite_fill_engine = alea.ScalarPrng.init(0xf845_1af);
     var fisher_infinite_loop_engine = alea.ScalarPrng.init(0xf845_1af);
@@ -37421,7 +37760,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var student_f32_loop: [11]f32 = undefined;
     student_f32.fillFrom(&student_f32_fill_engine, &student_f32_fill);
     for (&student_f32_loop) |*slot| slot.* = student_f32.sampleFrom(&student_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &student_f32_loop, &student_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &student_f32_loop, &student_f32_fill);
     try std.testing.expectEqual(student_f32_loop_engine.next(), student_f32_fill_engine.next());
 
     var triangulars = rng.sampleIter(f64, try Triangular(f64).init(-1, 0, 2));
@@ -37639,7 +37978,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var kumaraswamy_f32_loop: [11]f32 = undefined;
     kumaraswamy_f32_sampler.fillFrom(&kumaraswamy_f32_fill_engine, &kumaraswamy_f32_fill);
     for (&kumaraswamy_f32_loop) |*slot| slot.* = kumaraswamy_f32_sampler.sampleFrom(&kumaraswamy_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &kumaraswamy_f32_loop, &kumaraswamy_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &kumaraswamy_f32_loop, &kumaraswamy_f32_fill);
     try std.testing.expectEqual(kumaraswamy_f32_loop_engine.next(), kumaraswamy_f32_fill_engine.next());
     const direct_checked_kumaraswamy = try kumaraswamyCheckedFrom(&direct_engine, f64, 2, 5);
     try std.testing.expect(direct_checked_kumaraswamy >= 0 and direct_checked_kumaraswamy <= 1);
@@ -37934,7 +38273,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var pert_f32_loop: [11]f32 = undefined;
     pert_f32_sampler.fillFrom(&pert_f32_fill_engine, &pert_f32_fill);
     for (&pert_f32_loop) |*slot| slot.* = pert_f32_sampler.sampleFrom(&pert_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &pert_f32_loop, &pert_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &pert_f32_loop, &pert_f32_fill);
     try std.testing.expectEqual(pert_f32_loop_engine.next(), pert_f32_fill_engine.next());
     const pert_builder = Pert(f64).initRange(-1, 2).withShape(4);
     try std.testing.expectApproxEqAbs(@as(f64, -1), pert_builder.minValue(), 1e-12);
@@ -38057,7 +38396,7 @@ test "non-uniform samplers can be reused with sample iterators" {
     var zeta_f32_loop: [11]f32 = undefined;
     zeta_f32_sampler.fillFrom(&zeta_f32_fill_engine, &zeta_f32_fill);
     for (&zeta_f32_loop) |*slot| slot.* = zeta_f32_sampler.sampleFrom(&zeta_f32_loop_engine);
-    try std.testing.expectEqualSlices(f32, &zeta_f32_loop, &zeta_f32_fill);
+    try expectApproxEqualFloatSlices(f32, &zeta_f32_loop, &zeta_f32_fill);
     try std.testing.expectEqual(zeta_f32_loop_engine.next(), zeta_f32_fill_engine.next());
     fillZeta(rng, f64, &zeta_buf, 3);
     for (zeta_buf) |value| try std.testing.expect(value >= 1);
@@ -38394,6 +38733,268 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectError(error.EmptyRange, Multinomial.init(1, &.{}));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 0.0, 0.0 }));
+}
+
+test "multivariate normal owns and factors covariance once" {
+    const alea = @import("root.zig");
+    var mean = [_]f64{ 1, -2, 0.5 };
+    var covariance = [_]f64{
+        1.0,  0.6, -0.2,
+        0.6,  2.0, 0.3,
+        -0.2, 0.3, 0.5,
+    };
+    var dist = try MultivariateNormal(f64).init(std.testing.allocator, &mean, &covariance);
+    defer dist.deinit();
+
+    // Constructor inputs are borrowed only for construction. Owning the
+    // factorized state keeps a long-lived sampler independent of caller data.
+    mean[0] = 99;
+    covariance[0] = 99;
+    try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
+    try std.testing.expectEqual(@as(usize, 3), dist.rankValue());
+    try std.testing.expect(!dist.isDegenerate());
+    try std.testing.expectEqualSlices(f64, &.{ 1, -2, 0.5 }, dist.meanValues());
+    try std.testing.expectEqual(@as(f64, -2), try dist.meanAt(1));
+    try std.testing.expectError(error.InvalidParameter, dist.meanAt(3));
+
+    const expected_covariance = [_]f64{
+        1.0,  0.6, -0.2,
+        0.6,  2.0, 0.3,
+        -0.2, 0.3, 0.5,
+    };
+    for (0..3) |row| {
+        for (0..3) |col| {
+            try std.testing.expectApproxEqAbs(
+                expected_covariance[row * 3 + col],
+                try dist.covarianceAt(row, col),
+                1e-12,
+            );
+        }
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 2), try dist.varianceAt(1), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, dist.covarianceAt(3, 0));
+
+    const factor = dist.choleskyValues();
+    try std.testing.expectEqual(@as(usize, 9), factor.len);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), factor[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6), factor[3], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.2806248474865698), factor[4], 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), factor[1]);
+    try std.testing.expectEqual(@as(f64, 0), factor[2]);
+
+    var copied_covariance: [9]f64 = undefined;
+    try dist.covariancesInto(&copied_covariance);
+    for (expected_covariance, copied_covariance) |expected, actual| {
+        try std.testing.expectApproxEqAbs(expected, actual, 1e-12);
+    }
+    var wrong_covariance: [8]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.covariancesInto(&wrong_covariance));
+    const owned_covariance = try dist.covariances(std.testing.allocator);
+    defer std.testing.allocator.free(owned_covariance);
+    for (expected_covariance, owned_covariance) |expected, actual| {
+        try std.testing.expectApproxEqAbs(expected, actual, 1e-12);
+    }
+
+    var clone = try dist.clone(std.testing.allocator);
+    defer clone.deinit();
+    try std.testing.expectEqualSlices(f64, dist.meanValues(), clone.meanValues());
+    try std.testing.expectEqualSlices(f64, dist.choleskyValues(), clone.choleskyValues());
+
+    var engine = alea.ScalarPrng.init(0x5150_c0de);
+    const rng = Rng.init(&engine);
+    const allocated = try dist.sample(std.testing.allocator, rng);
+    defer std.testing.allocator.free(allocated);
+    try std.testing.expectEqual(@as(usize, 3), allocated.len);
+    for (allocated) |value| try std.testing.expect(std.math.isFinite(value));
+
+    var direct_engine = alea.ScalarPrng.init(0x5150_c0df);
+    const allocated_direct = try dist.sampleFrom(std.testing.allocator, &direct_engine);
+    defer std.testing.allocator.free(allocated_direct);
+    try std.testing.expectEqual(@as(usize, 3), allocated_direct.len);
+
+    var out: [3]f64 = undefined;
+    dist.sampleInto(rng, &out);
+    for (out) |value| try std.testing.expect(std.math.isFinite(value));
+    try dist.sampleIntoCheckedFrom(&direct_engine, &out);
+    var wrong_out: [2]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, &wrong_out));
+
+    var many: [12]f64 = undefined;
+    dist.sampleManyIntoFrom(&direct_engine, &many);
+    for (many) |value| try std.testing.expect(std.math.isFinite(value));
+    try dist.sampleManyIntoChecked(rng, &many);
+    var wrong_many: [11]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleManyIntoCheckedFrom(&direct_engine, &wrong_many));
+
+    comptime std.debug.assert(multi.MultivariateNormal(f64) == MultivariateNormal(f64));
+}
+
+test "multivariate normal handles positive-semidefinite and point covariance" {
+    const alea = @import("root.zig");
+    var semidefinite = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &.{ 2, -1 },
+        &.{
+            1, 1,
+            1, 1,
+        },
+    );
+    defer semidefinite.deinit();
+    try std.testing.expectEqual(@as(usize, 1), semidefinite.rankValue());
+    try std.testing.expect(semidefinite.isDegenerate());
+
+    var engine = alea.ScalarPrng.init(0x5150_5e1d);
+    var control = alea.ScalarPrng.init(0x5150_5e1d);
+    var sample: [2]f64 = undefined;
+    semidefinite.sampleIntoFrom(&engine, &sample);
+    const z = standardNormalFrom(&control, f64);
+    try std.testing.expectEqual(@as(f64, 2) + z, sample[0]);
+    try std.testing.expectEqual(@as(f64, -1) + z, sample[1]);
+    try std.testing.expectEqual(control.next(), engine.next());
+
+    var point = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &.{ 3, 4 },
+        &.{
+            0, 0,
+            0, 0,
+        },
+    );
+    defer point.deinit();
+    try std.testing.expectEqual(@as(usize, 0), point.rankValue());
+    var point_engine = alea.ScalarPrng.init(0x5150_9017);
+    var point_control = alea.ScalarPrng.init(0x5150_9017);
+    var points: [6]f64 = undefined;
+    point.sampleManyIntoFrom(&point_engine, &points);
+    try std.testing.expectEqualSlices(f64, &.{ 3, 4, 3, 4, 3, 4 }, &points);
+    try std.testing.expectEqual(point_control.next(), point_engine.next());
+
+    var f32_dist = try MultivariateNormal(f32).init(
+        std.testing.allocator,
+        &.{ 1, 2 },
+        &.{
+            2,    0.25,
+            0.25, 1,
+        },
+    );
+    defer f32_dist.deinit();
+    try std.testing.expectApproxEqAbs(@as(f32, 0.25), try f32_dist.covarianceAt(0, 1), 1e-5);
+}
+
+test "multivariate normal rejects invalid covariance before sampling" {
+    try std.testing.expectError(
+        error.EmptyRange,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{}, &.{}),
+    );
+    try std.testing.expectError(
+        error.InvalidLength,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{ 0, 0 }, &.{ 1, 0, 1 }),
+    );
+    try std.testing.expectError(
+        error.InvalidParameter,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{std.math.nan(f64)}, &.{1}),
+    );
+    try std.testing.expectError(
+        error.InvalidCovariance,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{0}, &.{std.math.inf(f64)}),
+    );
+    try std.testing.expectError(
+        error.InvalidCovariance,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{ 0, 0 }, &.{
+            1,   0.1,
+            0.2, 1,
+        }),
+    );
+    try std.testing.expectError(
+        error.InvalidCovariance,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{ 0, 0 }, &.{
+            -1, 0,
+            0,  1,
+        }),
+    );
+    try std.testing.expectError(
+        error.InvalidCovariance,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{ 0, 0 }, &.{
+            1, 2,
+            2, 1,
+        }),
+    );
+    try std.testing.expectError(
+        error.InvalidCovariance,
+        MultivariateNormal(f64).init(std.testing.allocator, &.{ 0, 0 }, &.{
+            0, 1,
+            1, 1,
+        }),
+    );
+
+    var allocation_failure = std.testing.FailingAllocator.init(
+        std.testing.allocator,
+        .{ .fail_index = 0 },
+    );
+    try std.testing.expectError(
+        error.OutOfMemory,
+        MultivariateNormal(f64).init(allocation_failure.allocator(), &.{0}, &.{1}),
+    );
+    try std.testing.expect(allocation_failure.has_induced_failure);
+
+    const alea = @import("root.zig");
+    var dist = try MultivariateNormal(f64).init(std.testing.allocator, &.{ 0, 0 }, &.{
+        1, 0,
+        0, 1,
+    });
+    defer dist.deinit();
+    var engine = alea.ScalarPrng.init(0x5150_bad0);
+    var control = alea.ScalarPrng.init(0x5150_bad0);
+    var wrong: [1]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoCheckedFrom(&engine, &wrong));
+    try std.testing.expectEqual(control.next(), engine.next());
+}
+
+test "multivariate normal sample moments recover full covariance" {
+    const alea = @import("root.zig");
+    const expected_mean = [_]f64{ 1, -2, 0.5 };
+    const expected_covariance = [_]f64{
+        1.0,  0.6, -0.2,
+        0.6,  2.0, 0.3,
+        -0.2, 0.3, 0.5,
+    };
+    var dist = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &expected_mean,
+        &expected_covariance,
+    );
+    defer dist.deinit();
+
+    var engine = alea.ScalarPrng.init(0x5150_5707);
+    const samples = 30_000;
+    var sums = [_]f64{0} ** 3;
+    var products = [_]f64{0} ** 9;
+    var sample: [3]f64 = undefined;
+    for (0..samples) |_| {
+        dist.sampleIntoFrom(&engine, &sample);
+        for (0..3) |row| {
+            sums[row] += sample[row];
+            for (0..3) |col| products[row * 3 + col] += sample[row] * sample[col];
+        }
+    }
+
+    const count: f64 = @floatFromInt(samples);
+    var observed_mean: [3]f64 = undefined;
+    for (0..3) |index| {
+        observed_mean[index] = sums[index] / count;
+        try std.testing.expectApproxEqAbs(expected_mean[index], observed_mean[index], 0.035);
+    }
+    for (0..3) |row| {
+        for (0..3) |col| {
+            const observed = products[row * 3 + col] / count -
+                observed_mean[row] * observed_mean[col];
+            try std.testing.expectApproxEqAbs(
+                expected_covariance[row * 3 + col],
+                observed,
+                0.055,
+            );
+        }
+    }
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {

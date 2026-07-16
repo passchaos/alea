@@ -240,6 +240,8 @@ pub fn main(init: std.process.Init) !void {
     try benchMultinomial(io, stdout, "alea multinomial", bytes / 512);
     try benchMultinomialDirect(io, stdout, "alea multinomial direct", bytes / 512);
     try benchMultinomialManyDirect(io, stdout, "alea multinomial many direct", bytes / 512);
+    try benchMultivariateNormalDirect(io, stdout, "alea multivariate-normal direct", bytes / 512);
+    try benchMultivariateNormalManyDirect(io, stdout, "alea multivariate-normal many direct", bytes / 512);
     try benchGamma(io, stdout, "alea gamma", bytes / 128);
     try benchGammaScalar(io, stdout, "alea gamma scalar direct", bytes / 128);
     try benchFillGamma(io, stdout, "alea fillGamma", bytes / 128);
@@ -5701,6 +5703,86 @@ fn benchMultinomialManyDirect(io: std.Io, stdout: *std.Io.Writer, name: []const 
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchMultivariateNormalDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var dist = alea.distributions.MultivariateNormal(f64).init(
+        std.heap.smp_allocator,
+        &.{ 1, -2, 0.5 },
+        &.{
+            1.0,  0.6, -0.2,
+            0.6,  2.0, 0.3,
+            -0.2, 0.3, 0.5,
+        },
+    ) catch unreachable;
+    defer dist.deinit();
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x4d56_4e4f);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) {
+            var sample: [3]f64 = undefined;
+            dist.sampleIntoFrom(&engine, &sample);
+            checksum += sample[0];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M vectors/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchMultivariateNormalManyDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var dist = alea.distributions.MultivariateNormal(f64).init(
+        std.heap.smp_allocator,
+        &.{ 1, -2, 0.5 },
+        &.{
+            1.0,  0.6, -0.2,
+            0.6,  2.0, 0.3,
+            -0.2, 0.3, 0.5,
+        },
+    ) catch unreachable;
+    defer dist.deinit();
+    var out: [3 * 128]f64 = undefined;
+    const chunk_samples: usize = out.len / 3;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x4d56_4e4f);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const samples = @min(remaining, chunk_samples);
+            dist.sampleManyIntoFrom(&engine, out[0 .. samples * 3]);
+            var i: usize = 0;
+            while (i < samples) : (i += 1) checksum += out[i * 3];
+            remaining -= samples;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M vectors/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchGamma(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {

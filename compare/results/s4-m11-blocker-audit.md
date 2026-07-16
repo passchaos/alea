@@ -361,4 +361,6 @@ S4-M1218 is closed after refreshing validate-local evidence in `compare/results/
 
 S4-M1219 is closed after refreshing validate-all evidence in `compare/results/s4-m1219-post-s4-m1218-validate-all.md`.
 
-S4-M1220 remains active after S4-M1219 refreshes full validation evidence.
+S4-M1220 is closed after adding full-covariance multivariate normal sampling in `compare/results/s4-m1220-multivariate-normal.md`.
+
+S4-M1221 remains active after S4-M1220 raises the multivariate feature bar.

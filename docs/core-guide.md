@@ -356,7 +356,7 @@ families.
 Run `zig build run-rank-distributions` for a runnable comparison of finite
 `Zipf`, unbounded `Zeta`, vector rank samplers, and degenerate infinite-exponent
 rank-one behavior.
-- dirichlet
+- dirichlet and full-covariance multivariate normal
 
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be
@@ -376,16 +376,22 @@ iterator fills to `Rng.fill` / `fillFrom` for stream-compatible `f64`,
 64-bit integer, and matching vector slice types; packed `bool`, `f32`, `u8`,
 and sub-64-bit integer fills keep repeated-`nextValue` stream shape.
 `Dirichlet` (also available as `multi.Dirichlet` for local `rand_distr::multi`
-discovery) and `Multinomial` support allocation-returning `sample(allocator, rng)` /
+discovery), `Multinomial`, and the Zig-native
+`MultivariateNormal(T)` / `multi.MultivariateNormal(T)` support
+allocation-returning `sample(allocator, rng)` /
 `sampleFrom(allocator, source)` and allocation-free `sampleInto(rng, out)` /
 `sampleIntoFrom(source, out)` and flat `sampleManyInto` / `sampleManyIntoFrom`
 batch APIs; both also expose checked `sampleInto*` / `sampleManyInto*` variants
 for user-supplied output buffers. Invalid checked output lengths and initial
 allocation failures in allocation-returning multivariate samples are reported
 before any component draws; zero-length checked batch outputs are no-ops.
+`MultivariateNormal` accepts finite row-major means and symmetric positive
+semidefinite covariance matrices. It performs and owns a Cholesky factorization
+at construction, exposes rank/covariance/factor diagnostics, supports singular
+and deterministic covariance, and performs no allocation while sampling.
 Run `zig build run-multivariate-sampling` for a runnable comparison of
-allocation-returning, caller-owned-buffer, and flat batched Multinomial and
-Dirichlet sampling.
+allocation-returning, caller-owned-buffer, and flat batched Multinomial,
+Dirichlet, and correlated multivariate-normal sampling.
 For callers porting local `rand_distr` names, distribution-specific error aliases
 such as `NormalError`, `ExpError`, `GammaError`, `BetaError`, `PoissonError`,
 `PertError`, `ZipfError`, and the other local `rand_distr::*Error` names map to

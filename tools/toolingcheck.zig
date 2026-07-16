@@ -247,8 +247,8 @@ const rand_status_source_tokens = [_][]const u8{
     "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
     "Rust comparison: parser tests and rand-bench-smoke pass",
     "Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
-    "Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1219 follow-ups closed for current bar",
-    "Next bar: S4-M1220 post-S4-M1219 exact/default dense SIMD, broader runtime, or new local Rust gap",
+    "Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1220 follow-ups closed for current bar",
+    "Next bar: S4-M1221 post-S4-M1220 exact/default dense SIMD, broader runtime, or new core random-workflow gap",
     "Details: compare/results/s4-m420-current-rand-status.md",
 };
 

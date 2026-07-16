@@ -14,9 +14,11 @@ stress bar is closed by `2026-07-04-s4-m8-profilestresscheck.md`, and the S4-M9 
 S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
-The active post-S4-M1219 bar is S4-M1220: exact/default dense SIMD research,
-additional non-WASI OS/architecture execution, broader validation, or new local
-Rust gap audits.
+S4-M1220 raises the feature bar beyond local Rust with a reusable,
+full-covariance `MultivariateNormal(T)` sampler. The active post-S4-M1220 bar is
+S4-M1221: exact/default dense SIMD research, additional non-WASI
+OS/architecture execution, broader validation, or newly discovered core
+random-workflow gaps.
 
 ## Scope
 
@@ -6196,3 +6198,14 @@ S4-M1217 refreshes the minimum real-harness dense-SIMD vectorbench gate (`compar
 S4-M1218 refreshes local comparison validation after S4-M1217 (`compare/results/s4-m1218-post-s4-m1217-validate-local.md`): `zig build validate-local` passed, including local Rust surface scans, rand-bench parser/smoke checks, runtime availability checks, current status output, and focused profile/stat checks. This is validation evidence, not whole-goal completion; S4-M1219 was the next raised product bar and is now closed by the validate-all refresh below.
 
 S4-M1219 refreshes full validation after S4-M1218 (`compare/results/s4-m1219-post-s4-m1218-validate-all.md`): `zig build validate-all` passed, covering native validation, crosscheck, Node WASI unit/dry/self tests, and the chained WASI report ending with `profilelongcheck ok`. This is validation evidence, not whole-goal completion; S4-M1220 remains active.
+
+S4-M1220 adds full-covariance multivariate normal sampling
+(`compare/results/s4-m1220-multivariate-normal.md`):
+`MultivariateNormal(T)` / `multi.MultivariateNormal(T)` own a reusable
+Cholesky factor, accept finite symmetric positive-semidefinite covariance,
+support singular and deterministic outputs, sample without per-vector
+allocation, and expose owned/caller-owned/checked/direct/batch APIs plus
+rank/mean/covariance/factor diagnostics. Unit tests, `distcheck`, the
+multivariate example, and focused throughput rows cover the new workflow. This
+is a Zig-native breadth improvement beyond the local `rand_distr` surface, not
+whole-goal completion; S4-M1221 remains active.

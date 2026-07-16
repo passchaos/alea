@@ -29,6 +29,7 @@ fn runChecks() !void {
     try checkInverseAndRank();
     try checkBoundedSupport();
     try checkVectorDistributions();
+    try checkMultivariateNormal();
     try checkConstructorErgonomics();
 }
 
@@ -690,6 +691,61 @@ fn checkVectorDistributions() !void {
     var parameterized_table_exponential_f64: [approximation_vectors]@Vector(4, f64) = undefined;
     alea.distributions.fillVectorExponentialTableF64From(&vector_parameterized_table_exponential_f64_engine, @Vector(4, f64), &parameterized_table_exponential_f64, 4);
     try expectVectorMoments(@Vector(4, f64), "vector exponential table f64x4", &parameterized_table_exponential_f64, 0.24, 0.26, 0.055, 0.075);
+}
+
+fn checkMultivariateNormal() !void {
+    const expected_mean = [_]f64{ 1, -2, 0.5 };
+    const expected_covariance = [_]f64{
+        1.0,  0.6, -0.2,
+        0.6,  2.0, 0.3,
+        -0.2, 0.3, 0.5,
+    };
+    var sampler = try alea.distributions.MultivariateNormal(f64).init(
+        std.heap.smp_allocator,
+        &expected_mean,
+        &expected_covariance,
+    );
+    defer sampler.deinit();
+
+    const sample_count = 40_000;
+    var engine = alea.ScalarPrng.init(0x4d56_4e4f);
+    var sums = [_]f64{0} ** expected_mean.len;
+    var products = [_]f64{0} ** expected_covariance.len;
+    var sample: [expected_mean.len]f64 = undefined;
+    for (0..sample_count) |_| {
+        sampler.sampleIntoFrom(&engine, &sample);
+        for (0..expected_mean.len) |row| {
+            sums[row] += sample[row];
+            for (0..expected_mean.len) |col| {
+                products[row * expected_mean.len + col] += sample[row] * sample[col];
+            }
+        }
+    }
+
+    const count: f64 = @floatFromInt(sample_count);
+    var observed_mean: [expected_mean.len]f64 = undefined;
+    for (0..expected_mean.len) |index| {
+        observed_mean[index] = sums[index] / count;
+        try expectFloatBetween(
+            "multivariate-normal mean",
+            observed_mean[index],
+            expected_mean[index] - 0.035,
+            expected_mean[index] + 0.035,
+        );
+    }
+    for (0..expected_mean.len) |row| {
+        for (0..expected_mean.len) |col| {
+            const observed = products[row * expected_mean.len + col] / count -
+                observed_mean[row] * observed_mean[col];
+            const expected = expected_covariance[row * expected_mean.len + col];
+            try expectFloatBetween(
+                "multivariate-normal covariance",
+                observed,
+                expected - 0.05,
+                expected + 0.05,
+            );
+        }
+    }
 }
 
 fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min: f64, max: f64) !void {
