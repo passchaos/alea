@@ -107,7 +107,7 @@ Alea local rand/rand_distr status (2026-07-16)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1221-multivariate-normal-throughput.md"
+"compare/results/s4-m1222-static-multivariate-normal.md"
 "compare/results/s4-m1218-post-s4-m1217-validate-local.md"
 "compare/results/s4-m1217-minimum-vectorbench-gate.md"
 "compare/results/s4-m1216-post-s4-m1215-validate-all.md"
@@ -365,4 +365,6 @@ S4-M1220 is closed after adding full-covariance multivariate normal sampling in 
 
 S4-M1221 is closed after correcting and optimizing multivariate-normal throughput in `compare/results/s4-m1221-multivariate-normal-throughput.md`.
 
-S4-M1222 remains active after S4-M1221 closes the first multivariate-normal performance follow-up.
+S4-M1222 is closed after adding static allocation-free multivariate-normal sampling in `compare/results/s4-m1222-static-multivariate-normal.md`.
+
+S4-M1223 remains active after S4-M1222 raises the fixed-dimension multivariate bar.

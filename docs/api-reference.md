@@ -1058,6 +1058,27 @@ Reusable samplers:
 - `MultivariateNormal(T).sampleManyIntoChecked`
 - `MultivariateNormal(T).sampleManyIntoCheckedFrom`
 - `MultivariateNormalError`
+- `StaticMultivariateNormal(T, dimension)`
+- `multi.StaticMultivariateNormal(T, dimension)`
+- `StaticMultivariateNormal(T, dimension).Vector`
+- `StaticMultivariateNormal(T, dimension).Matrix`
+- `StaticMultivariateNormal(T, dimension).init`
+- `StaticMultivariateNormal(T, dimension).new`
+- `StaticMultivariateNormal(T, dimension).dimensionValue`
+- `StaticMultivariateNormal(T, dimension).rankValue`
+- `StaticMultivariateNormal(T, dimension).isDegenerate`
+- `StaticMultivariateNormal(T, dimension).meanValues`
+- `StaticMultivariateNormal(T, dimension).meanAt`
+- `StaticMultivariateNormal(T, dimension).choleskyValues`
+- `StaticMultivariateNormal(T, dimension).varianceAt`
+- `StaticMultivariateNormal(T, dimension).covarianceAt`
+- `StaticMultivariateNormal(T, dimension).covariances`
+- `StaticMultivariateNormal(T, dimension).sample`
+- `StaticMultivariateNormal(T, dimension).sampleFrom`
+- `StaticMultivariateNormal(T, dimension).sampleInto`
+- `StaticMultivariateNormal(T, dimension).sampleIntoFrom`
+- `StaticMultivariateNormal(T, dimension).sampleManyInto`
+- `StaticMultivariateNormal(T, dimension).sampleManyIntoFrom`
 - `Multinomial`
 - `Multinomial.init`
 - `Multinomial.trialsValue`
@@ -2715,6 +2736,7 @@ Reusable samplers:
 - `multi`
 - `multi.Dirichlet(T)`
 - `multi.MultivariateNormal(T)`
+- `multi.StaticMultivariateNormal(T, dimension)`
 - `Dirichlet(T).init`
 - `Dirichlet(T).new`
 - `Dirichlet(T).alphaValues`

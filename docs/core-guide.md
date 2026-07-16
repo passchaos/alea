@@ -392,6 +392,12 @@ and deterministic covariance, and performs no allocation while sampling.
 Common one- through three-dimensional f64 transforms and full-rank
 three-dimensional f32/f64 batches use stream-equivalent specialized hot paths;
 larger or singular dimensions retain the generic reverse Cholesky traversal.
+When the dimension is known at compile time,
+`StaticMultivariateNormal(T, dimension)` stores mean/factor arrays inline,
+requires no allocator or `deinit`, returns fixed `[dimension]T` samples, and
+lets Zig unroll the triangular transform. Prefer it for long-lived,
+fixed-dimensional simulation kernels; use `MultivariateNormal(T)` when
+dimension or configuration arrives at runtime.
 Run `zig build run-multivariate-sampling` for a runnable comparison of
 allocation-returning, caller-owned-buffer, and flat batched Multinomial,
 Dirichlet, and correlated multivariate-normal sampling.

@@ -89,6 +89,21 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("multivariate normal caller-owned sample: {any}\n", .{caller_gaussian});
     try stdout.print("multivariate normal batch samples: {any}\n", .{batch_gaussian});
 
+    const static_normal = try alea.distributions.StaticMultivariateNormal(f64, 3).init(
+        gaussian_mean,
+        .{
+            .{ 1.0, 0.6, -0.2 },
+            .{ 0.6, 2.0, 0.3 },
+            .{ -0.2, 0.3, 0.5 },
+        },
+    );
+    var static_engine = alea.ScalarPrng.init(0x4d17_2601);
+    const static_sample = static_normal.sampleFrom(&static_engine);
+    var static_batch: [2][3]f64 = undefined;
+    static_normal.sampleManyIntoFrom(&static_engine, &static_batch);
+    try stdout.print("static multivariate normal sample: {any}\n", .{static_sample});
+    try stdout.print("static multivariate normal batch: {any}\n", .{static_batch});
+
     const vertex_dirichlet = try alea.distributions.Dirichlet(f64).init(&.{ 2, std.math.inf(f64), 3 });
     var vertex: [3]f64 = undefined;
     var vertex_engine = alea.ScalarPrng.init(0x4d17_3001);

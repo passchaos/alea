@@ -15,8 +15,8 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. The active post-S4-M1221 bar is
-S4-M1222: exact/default dense SIMD research, additional non-WASI
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. The active post-S4-M1222 bar is
+S4-M1223: exact/default dense SIMD research, additional non-WASI
 OS/architecture execution, broader validation, or newly discovered core
 random-workflow gaps.
 
@@ -6211,4 +6211,7 @@ is a Zig-native breadth improvement beyond the local `rand_distr` surface, not
 whole-goal completion; S4-M1221 is now closed by the performance follow-up below.
 
 S4-M1221 corrects and optimizes multivariate-normal throughput
-(`compare/results/s4-m1221-multivariate-normal-throughput.md`): corrected benchmarks observe all coordinates outside the timed region, f64 1–3D transforms and full-rank 3D batch loops improve f64/f32 throughput while preserving checksum and repeated-sample stream shape. This is performance evidence, not whole-goal completion; S4-M1222 remains active.
+(`compare/results/s4-m1221-multivariate-normal-throughput.md`): corrected benchmarks observe all coordinates outside the timed region, f64 1–3D transforms and full-rank 3D batch loops improve f64/f32 throughput while preserving checksum and repeated-sample stream shape. This is performance evidence, not whole-goal completion; S4-M1222 is now closed by the static sampler below.
+
+S4-M1222 adds static allocation-free multivariate-normal sampling
+(`compare/results/s4-m1222-static-multivariate-normal.md`): inline fixed-dimension state removes allocator lifecycle, fixed-array sampling matches dynamic output/state, and 8D throughput reaches about 46.0M versus 31.9M dynamic vectors/s. This is Zig-native breadth/performance evidence, not whole-goal completion; S4-M1223 remains active.

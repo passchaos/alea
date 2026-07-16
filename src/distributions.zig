@@ -241,6 +241,10 @@ pub const multi = struct {
     pub fn MultivariateNormal(comptime T: type) type {
         return distributions_module.MultivariateNormal(T);
     }
+
+    pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) type {
+        return distributions_module.StaticMultivariateNormal(T, dimension);
+    }
 };
 
 pub const BernoulliError = error{
@@ -18853,6 +18857,92 @@ pub fn Zeta(comptime T: type) type {
     };
 }
 
+fn factorMultivariateCovariance(
+    comptime T: type,
+    mean: []const T,
+    covariance: []const T,
+    factors: []T,
+) Error!usize {
+    comptime requireFloat(T);
+    if (mean.len == 0) return error.EmptyRange;
+    const matrix_len = std.math.mul(usize, mean.len, mean.len) catch return error.InvalidLength;
+    if (covariance.len != matrix_len or factors.len != matrix_len) return error.InvalidLength;
+
+    for (mean) |value| {
+        if (!std.math.isFinite(value)) return error.InvalidParameter;
+    }
+    for (covariance) |value| {
+        if (!std.math.isFinite(value)) return error.InvalidCovariance;
+    }
+
+    // Accept the small asymmetry produced by ordinary floating-point matrix
+    // construction, but reject matrices whose two triangles materially
+    // disagree. Averaging below gives Cholesky one canonical symmetric value
+    // without risking a +max + +max sum.
+    var row: usize = 0;
+    while (row < mean.len) : (row += 1) {
+        if (covariance[row * mean.len + row] < 0) return error.InvalidCovariance;
+        var col: usize = 0;
+        while (col < row) : (col += 1) {
+            const lower = covariance[row * mean.len + col];
+            const upper = covariance[col * mean.len + row];
+            const delta = @abs(lower - upper);
+            const scale = @max(@abs(lower), @abs(upper));
+            if (!std.math.isFinite(delta) or delta > multivariateFactorTolerance(T, scale)) {
+                return error.InvalidCovariance;
+            }
+        }
+    }
+
+    @memset(factors, 0);
+    var rank: usize = 0;
+    row = 0;
+    while (row < mean.len) : (row += 1) {
+        var col: usize = 0;
+        while (col <= row) : (col += 1) {
+            const covariance_value = if (row == col)
+                covariance[row * mean.len + col]
+            else
+                covariance[row * mean.len + col] / 2 +
+                    covariance[col * mean.len + row] / 2;
+            var residual = covariance_value;
+            var residual_scale = @abs(covariance_value);
+            var k: usize = 0;
+            while (k < col) : (k += 1) {
+                const product = factors[row * mean.len + k] *
+                    factors[col * mean.len + k];
+                residual -= product;
+                residual_scale += @abs(product);
+            }
+            const tolerance = multivariateFactorTolerance(T, residual_scale);
+
+            if (row == col) {
+                if (residual < -tolerance) return error.InvalidCovariance;
+                if (residual <= tolerance) {
+                    factors[row * mean.len + col] = 0;
+                } else {
+                    factors[row * mean.len + col] = @sqrt(residual);
+                    rank += 1;
+                }
+            } else {
+                const pivot = factors[col * mean.len + col];
+                if (pivot != 0) {
+                    factors[row * mean.len + col] = residual / pivot;
+                } else if (@abs(residual) > tolerance) {
+                    // A zero-variance component may only have zero residual
+                    // covariance with every later component.
+                    return error.InvalidCovariance;
+                }
+            }
+        }
+    }
+    return rank;
+}
+
+fn multivariateFactorTolerance(comptime T: type, scale: T) T {
+    return 64 * std.math.floatEps(T) * scale;
+}
+
 /// Reusable multivariate normal sampler backed by an owned Cholesky factor.
 ///
 /// Construction performs the O(d^3) factorization once. Sampling is
@@ -18878,77 +18968,9 @@ pub fn MultivariateNormal(comptime T: type) type {
             const matrix_len = std.math.mul(usize, mean.len, mean.len) catch return error.InvalidLength;
             if (covariance.len != matrix_len) return error.InvalidLength;
 
-            for (mean) |value| {
-                if (!std.math.isFinite(value)) return error.InvalidParameter;
-            }
-            for (covariance) |value| {
-                if (!std.math.isFinite(value)) return error.InvalidCovariance;
-            }
-
-            // Accept the small asymmetry produced by ordinary floating-point
-            // matrix construction, but reject matrices whose two triangles
-            // materially disagree. Averaging below then gives Cholesky one
-            // canonical symmetric value without risking a +max + +max sum.
-            var row: usize = 0;
-            while (row < mean.len) : (row += 1) {
-                if (covariance[row * mean.len + row] < 0) return error.InvalidCovariance;
-                var col: usize = 0;
-                while (col < row) : (col += 1) {
-                    const lower = covariance[row * mean.len + col];
-                    const upper = covariance[col * mean.len + row];
-                    const delta = @abs(lower - upper);
-                    const scale = @max(@abs(lower), @abs(upper));
-                    if (!std.math.isFinite(delta) or delta > factorTolerance(scale)) {
-                        return error.InvalidCovariance;
-                    }
-                }
-            }
-
             const factors = try allocator.alloc(T, matrix_len);
             errdefer allocator.free(factors);
-            @memset(factors, 0);
-
-            var rank: usize = 0;
-            row = 0;
-            while (row < mean.len) : (row += 1) {
-                var col: usize = 0;
-                while (col <= row) : (col += 1) {
-                    const covariance_value = if (row == col)
-                        covariance[row * mean.len + col]
-                    else
-                        covariance[row * mean.len + col] / 2 +
-                            covariance[col * mean.len + row] / 2;
-                    var residual = covariance_value;
-                    var residual_scale = @abs(covariance_value);
-                    var k: usize = 0;
-                    while (k < col) : (k += 1) {
-                        const product = factors[row * mean.len + k] *
-                            factors[col * mean.len + k];
-                        residual -= product;
-                        residual_scale += @abs(product);
-                    }
-                    const tolerance = factorTolerance(residual_scale);
-
-                    if (row == col) {
-                        if (residual < -tolerance) return error.InvalidCovariance;
-                        if (residual <= tolerance) {
-                            factors[row * mean.len + col] = 0;
-                        } else {
-                            factors[row * mean.len + col] = @sqrt(residual);
-                            rank += 1;
-                        }
-                    } else {
-                        const pivot = factors[col * mean.len + col];
-                        if (pivot != 0) {
-                            factors[row * mean.len + col] = residual / pivot;
-                        } else if (@abs(residual) > tolerance) {
-                            // A zero-variance component may only have zero
-                            // residual covariance with every later component.
-                            return error.InvalidCovariance;
-                        }
-                    }
-                }
-            }
+            const rank = try factorMultivariateCovariance(T, mean, covariance, factors);
 
             const owned_mean = try allocator.dupe(T, mean);
             errdefer allocator.free(owned_mean);
@@ -19211,9 +19233,146 @@ pub fn MultivariateNormal(comptime T: type) type {
                 out[row] = value;
             }
         }
+    };
+}
 
-        fn factorTolerance(scale: T) T {
-            return 64 * std.math.floatEps(T) * scale;
+/// Fixed-dimension, allocation-free multivariate normal sampler.
+///
+/// Use this shape when the dimension is known at compile time. Construction
+/// stores the mean and Cholesky factor inline, while sampling returns or fills
+/// `[dimension]T` values and lets Zig unroll the triangular transform.
+pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) type {
+    if (dimension == 0) @compileError("StaticMultivariateNormal dimension must be greater than zero");
+    comptime requireFloat(T);
+
+    return struct {
+        const Self = @This();
+        const matrix_len = dimension * dimension;
+        pub const Vector = [dimension]T;
+        pub const Matrix = [dimension][dimension]T;
+
+        mean: Vector,
+        cholesky: Matrix,
+        rank: usize,
+
+        pub fn init(mean: Vector, covariance: Matrix) Error!Self {
+            var factors: Matrix = undefined;
+            const covariance_flat: *const [matrix_len]T = @ptrCast(&covariance);
+            const factors_flat: *[matrix_len]T = @ptrCast(&factors);
+            const rank = try factorMultivariateCovariance(
+                T,
+                &mean,
+                covariance_flat,
+                factors_flat,
+            );
+            return .{
+                .mean = mean,
+                .cholesky = factors,
+                .rank = rank,
+            };
+        }
+
+        pub fn new(mean: Vector, covariance: Matrix) Error!Self {
+            return Self.init(mean, covariance);
+        }
+
+        pub fn dimensionValue(_: *const Self) usize {
+            return dimension;
+        }
+
+        pub fn rankValue(self: *const Self) usize {
+            return self.rank;
+        }
+
+        pub fn isDegenerate(self: *const Self) bool {
+            return self.rank < dimension;
+        }
+
+        pub fn meanValues(self: *const Self) *const Vector {
+            return &self.mean;
+        }
+
+        pub fn meanAt(self: *const Self, index: usize) Error!T {
+            if (index >= dimension) return error.InvalidParameter;
+            return self.mean[index];
+        }
+
+        pub fn choleskyValues(self: *const Self) *const Matrix {
+            return &self.cholesky;
+        }
+
+        pub fn covarianceAt(self: *const Self, row: usize, col: usize) Error!T {
+            if (row >= dimension or col >= dimension) return error.InvalidParameter;
+            var covariance: T = 0;
+            inline for (0..dimension) |k| {
+                if (k <= @min(row, col)) {
+                    covariance += self.cholesky[row][k] * self.cholesky[col][k];
+                }
+            }
+            return covariance;
+        }
+
+        pub fn varianceAt(self: *const Self, index: usize) Error!T {
+            return self.covarianceAt(index, index);
+        }
+
+        pub fn covariances(self: *const Self) Matrix {
+            var out: Matrix = undefined;
+            inline for (0..dimension) |row| {
+                inline for (0..dimension) |col| {
+                    out[row][col] = self.covarianceAt(row, col) catch unreachable;
+                }
+            }
+            return out;
+        }
+
+        pub fn sample(self: *const Self, rng: Rng) Vector {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *const Self, source: anytype) Vector {
+            var out: Vector = undefined;
+            self.sampleIntoFrom(source, &out);
+            return out;
+        }
+
+        pub fn sampleInto(self: *const Self, rng: Rng, out: *Vector) void {
+            self.sampleIntoFrom(rng, out);
+        }
+
+        pub inline fn sampleIntoFrom(self: *const Self, source: anytype, out: *Vector) void {
+            if (self.rank == 0) {
+                out.* = self.mean;
+                return;
+            }
+
+            inline for (0..dimension) |index| {
+                out[index] = if (self.cholesky[index][index] == 0)
+                    0
+                else
+                    standardNormalFrom(source, T);
+            }
+
+            inline for (0..dimension) |reverse_row| {
+                const row = dimension - 1 - reverse_row;
+                var value = self.mean[row];
+                inline for (0..row + 1) |col| {
+                    value += self.cholesky[row][col] * out[col];
+                }
+                out[row] = value;
+            }
+        }
+
+        pub fn sampleManyInto(self: *const Self, rng: Rng, out: []Vector) void {
+            self.sampleManyIntoFrom(rng, out);
+        }
+
+        pub fn sampleManyIntoFrom(self: *const Self, source: anytype, out: []Vector) void {
+            if (self.rank == 0) {
+                @memset(out, self.mean);
+                return;
+            }
+            for (out) |*item| self.sampleIntoFrom(source, item);
         }
     };
 }
@@ -39170,6 +39329,154 @@ test "multivariate normal small f64 transforms preserve manual operation order" 
         two_out[1],
     );
     try std.testing.expectEqual(two_control.next(), two_engine.next());
+}
+
+test "static multivariate normal matches dynamic sampler without allocation" {
+    const alea = @import("root.zig");
+    const mean = [3]f64{ 1, -2, 0.5 };
+    const covariance = [3][3]f64{
+        .{ 1.0, 0.6, -0.2 },
+        .{ 0.6, 2.0, 0.3 },
+        .{ -0.2, 0.3, 0.5 },
+    };
+
+    var dynamic = try MultivariateNormal(f64).init(
+        std.testing.allocator,
+        &mean,
+        @as(*const [9]f64, @ptrCast(&covariance)),
+    );
+    defer dynamic.deinit();
+    const static = try StaticMultivariateNormal(f64, 3).init(mean, covariance);
+    comptime std.debug.assert(
+        multi.StaticMultivariateNormal(f64, 3) == StaticMultivariateNormal(f64, 3),
+    );
+
+    try std.testing.expectEqual(@as(usize, 3), static.dimensionValue());
+    try std.testing.expectEqual(dynamic.rankValue(), static.rankValue());
+    try std.testing.expectEqual(dynamic.isDegenerate(), static.isDegenerate());
+    try std.testing.expectEqualSlices(f64, dynamic.meanValues(), static.meanValues());
+    try std.testing.expectEqual(@as(f64, -2), try static.meanAt(1));
+    try std.testing.expectError(error.InvalidParameter, static.meanAt(3));
+    try std.testing.expectError(error.InvalidParameter, static.covarianceAt(3, 0));
+
+    const static_covariance = static.covariances();
+    for (0..3) |row| {
+        for (0..3) |col| {
+            try std.testing.expectEqual(
+                try dynamic.covarianceAt(row, col),
+                static_covariance[row][col],
+            );
+        }
+    }
+
+    var dynamic_engine = alea.ScalarPrng.init(0x5150_5747);
+    var static_engine = alea.ScalarPrng.init(0x5150_5747);
+    var dynamic_sample: [3]f64 = undefined;
+    dynamic.sampleIntoFrom(&dynamic_engine, &dynamic_sample);
+    const static_sample = static.sampleFrom(&static_engine);
+    try std.testing.expectEqualSlices(f64, &dynamic_sample, &static_sample);
+    try std.testing.expectEqual(dynamic_engine.next(), static_engine.next());
+
+    var facade_dynamic_engine = alea.ScalarPrng.init(0x5150_5748);
+    var facade_static_engine = alea.ScalarPrng.init(0x5150_5748);
+    const dynamic_rng = Rng.init(&facade_dynamic_engine);
+    const static_rng = Rng.init(&facade_static_engine);
+    dynamic.sampleInto(dynamic_rng, &dynamic_sample);
+    const static_facade_sample = static.sample(static_rng);
+    try std.testing.expectEqualSlices(f64, &dynamic_sample, &static_facade_sample);
+    try std.testing.expectEqual(facade_dynamic_engine.next(), facade_static_engine.next());
+
+    var dynamic_batch_engine = alea.ScalarPrng.init(0x5150_5749);
+    var static_batch_engine = alea.ScalarPrng.init(0x5150_5749);
+    var dynamic_batch: [257 * 3]f64 = undefined;
+    var static_batch: [257][3]f64 = undefined;
+    dynamic.sampleManyIntoFrom(&dynamic_batch_engine, &dynamic_batch);
+    static.sampleManyIntoFrom(&static_batch_engine, &static_batch);
+    const static_batch_flat: *const [dynamic_batch.len]f64 = @ptrCast(&static_batch);
+    try std.testing.expectEqualSlices(f64, &dynamic_batch, static_batch_flat);
+    try std.testing.expectEqual(dynamic_batch_engine.next(), static_batch_engine.next());
+}
+
+test "static multivariate normal handles singular and deterministic covariance" {
+    const alea = @import("root.zig");
+    const singular = try StaticMultivariateNormal(f64, 2).init(
+        .{ 2, -1 },
+        .{
+            .{ 1, 1 },
+            .{ 1, 1 },
+        },
+    );
+    try std.testing.expectEqual(@as(usize, 1), singular.rankValue());
+    try std.testing.expect(singular.isDegenerate());
+
+    var singular_engine = alea.ScalarPrng.init(0x5150_574a);
+    var singular_control = alea.ScalarPrng.init(0x5150_574a);
+    const sample = singular.sampleFrom(&singular_engine);
+    const z = standardNormalFrom(&singular_control, f64);
+    try std.testing.expectEqual(@as(f64, 2) + z, sample[0]);
+    try std.testing.expectEqual(@as(f64, -1) + z, sample[1]);
+    try std.testing.expectEqual(singular_control.next(), singular_engine.next());
+
+    const point = try StaticMultivariateNormal(f32, 2).init(
+        .{ 3, 4 },
+        .{
+            .{ 0, 0 },
+            .{ 0, 0 },
+        },
+    );
+    try std.testing.expectEqual(@as(usize, 0), point.rankValue());
+    var point_engine = alea.ScalarPrng.init(0x5150_574b);
+    var point_control = alea.ScalarPrng.init(0x5150_574b);
+    var batch: [5][2]f32 = undefined;
+    point.sampleManyIntoFrom(&point_engine, &batch);
+    for (batch) |value| try std.testing.expectEqual([2]f32{ 3, 4 }, value);
+    try std.testing.expectEqual(point_control.next(), point_engine.next());
+
+    try std.testing.expectError(
+        error.InvalidCovariance,
+        StaticMultivariateNormal(f64, 2).init(
+            .{ 0, 0 },
+            .{
+                .{ 1, 2 },
+                .{ 2, 1 },
+            },
+        ),
+    );
+}
+
+test "static eight-dimensional multivariate normal recovers moments" {
+    const alea = @import("root.zig");
+    const dimension = 8;
+    const mean = [_]f64{0} ** dimension;
+    const covariance = [dimension][dimension]f64{
+        .{ 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+        .{ 0.1, 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+        .{ 0.1, 0.1, 1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+        .{ 0.1, 0.1, 0.1, 1, 0.1, 0.1, 0.1, 0.1 },
+        .{ 0.1, 0.1, 0.1, 0.1, 1, 0.1, 0.1, 0.1 },
+        .{ 0.1, 0.1, 0.1, 0.1, 0.1, 1, 0.1, 0.1 },
+        .{ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1, 0.1 },
+        .{ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1 },
+    };
+    const sampler = try StaticMultivariateNormal(f64, dimension).init(mean, covariance);
+    var engine = alea.ScalarPrng.init(0x5150_574c);
+    const sample_count = 20_000;
+    var sum: f64 = 0;
+    var sum_squares: f64 = 0;
+    var cross: f64 = 0;
+    for (0..sample_count) |_| {
+        const sample = sampler.sampleFrom(&engine);
+        sum += sample[0];
+        sum_squares += sample[0] * sample[0];
+        cross += sample[0] * sample[7];
+    }
+    const count: f64 = @floatFromInt(sample_count);
+    const observed_mean = sum / count;
+    const variance = sum_squares / count - observed_mean * observed_mean;
+    const covariance_0_7 = cross / count - observed_mean * observed_mean;
+    try std.testing.expectApproxEqAbs(@as(f64, 0), observed_mean, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), variance, 0.04);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), covariance_0_7, 0.035);
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {

@@ -746,6 +746,50 @@ fn checkMultivariateNormal() !void {
             );
         }
     }
+
+    const static_sampler = try alea.distributions.StaticMultivariateNormal(f64, 3).init(
+        expected_mean,
+        .{
+            .{ 1.0, 0.6, -0.2 },
+            .{ 0.6, 2.0, 0.3 },
+            .{ -0.2, 0.3, 0.5 },
+        },
+    );
+    var static_engine = alea.ScalarPrng.init(0x4d56_4e50);
+    var static_sums = [_]f64{0} ** expected_mean.len;
+    var static_products = [_]f64{0} ** expected_covariance.len;
+    for (0..sample_count) |_| {
+        const static_sample = static_sampler.sampleFrom(&static_engine);
+        for (0..expected_mean.len) |row| {
+            static_sums[row] += static_sample[row];
+            for (0..expected_mean.len) |col| {
+                static_products[row * expected_mean.len + col] +=
+                    static_sample[row] * static_sample[col];
+            }
+        }
+    }
+    for (0..expected_mean.len) |index| {
+        observed_mean[index] = static_sums[index] / count;
+        try expectFloatBetween(
+            "static-multivariate-normal mean",
+            observed_mean[index],
+            expected_mean[index] - 0.035,
+            expected_mean[index] + 0.035,
+        );
+    }
+    for (0..expected_mean.len) |row| {
+        for (0..expected_mean.len) |col| {
+            const observed = static_products[row * expected_mean.len + col] / count -
+                observed_mean[row] * observed_mean[col];
+            const expected = expected_covariance[row * expected_mean.len + col];
+            try expectFloatBetween(
+                "static-multivariate-normal covariance",
+                observed,
+                expected - 0.05,
+                expected + 0.05,
+            );
+        }
+    }
 }
 
 fn expectVectorMean(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType, min: f64, max: f64) !void {

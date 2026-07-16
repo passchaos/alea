@@ -244,6 +244,8 @@ pub fn main(init: std.process.Init) !void {
     try benchMultivariateNormalManyDirect(io, stdout, "alea multivariate-normal many direct", bytes / 512);
     try benchMultivariateNormalF32Direct(io, stdout, "alea multivariate-normal f32 direct", bytes / 512);
     try benchMultivariateNormalF32ManyDirect(io, stdout, "alea multivariate-normal f32 many direct", bytes / 512);
+    try benchMultivariateNormal8Direct(io, stdout, "alea multivariate-normal f64x8 direct", bytes / 1024);
+    try benchStaticMultivariateNormal8Direct(io, stdout, "alea static multivariate-normal f64x8 direct", bytes / 1024);
     try benchGamma(io, stdout, "alea gamma", bytes / 128);
     try benchGammaScalar(io, stdout, "alea gamma scalar direct", bytes / 128);
     try benchFillGamma(io, stdout, "alea fillGamma", bytes / 128);
@@ -5849,6 +5851,85 @@ fn benchMultivariateNormalF32ManyDirect(io: std.Io, stdout: *std.Io.Writer, name
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         var checksum: f64 = 0;
         for (out) |value| checksum += value;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M vectors/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+const multivariate_normal_8_mean = [_]f64{0} ** 8;
+const multivariate_normal_8_covariance = [8][8]f64{
+    .{ 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+    .{ 0.1, 1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+    .{ 0.1, 0.1, 1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+    .{ 0.1, 0.1, 0.1, 1, 0.1, 0.1, 0.1, 0.1 },
+    .{ 0.1, 0.1, 0.1, 0.1, 1, 0.1, 0.1, 0.1 },
+    .{ 0.1, 0.1, 0.1, 0.1, 0.1, 1, 0.1, 0.1 },
+    .{ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1, 0.1 },
+    .{ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1 },
+};
+
+fn benchMultivariateNormal8Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const out = try std.heap.smp_allocator.alloc([8]f64, count);
+    defer std.heap.smp_allocator.free(out);
+    const covariance_flat: *const [64]f64 = @ptrCast(&multivariate_normal_8_covariance);
+    var dist = alea.distributions.MultivariateNormal(f64).init(
+        std.heap.smp_allocator,
+        &multivariate_normal_8_mean,
+        covariance_flat,
+    ) catch unreachable;
+    defer dist.deinit();
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x4d56_8e4f);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        for (out) |*item| dist.sampleIntoFrom(&engine, item);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        var checksum: f64 = 0;
+        for (out) |item| for (item) |value| {
+            checksum += value;
+        };
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M vectors/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchStaticMultivariateNormal8Direct(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    const out = try std.heap.smp_allocator.alloc([8]f64, count);
+    defer std.heap.smp_allocator.free(out);
+    const dist = alea.distributions.StaticMultivariateNormal(f64, 8).init(
+        multivariate_normal_8_mean,
+        multivariate_normal_8_covariance,
+    ) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x4d56_8e4f);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        for (out) |*item| dist.sampleIntoFrom(&engine, item);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        var checksum: f64 = 0;
+        for (out) |item| for (item) |value| {
+            checksum += value;
+        };
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
         if (million_per_s > best_million_per_s) {

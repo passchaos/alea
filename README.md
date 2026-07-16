@@ -112,8 +112,10 @@ The current Linux-first roadmap is intentionally broad:
   inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial, and Zig-native full-covariance multivariate normal with
-  reusable Cholesky factorization and allocation-free sampling;
-  `multi.Dirichlet` and `multi.MultivariateNormal` provide multivariate
+  reusable dynamic Cholesky factorization plus allocation-free
+  `StaticMultivariateNormal(T, dimension)` fixed-array sampling;
+  `multi.Dirichlet`, `multi.MultivariateNormal`, and
+  `multi.StaticMultivariateNormal` provide multivariate
   namespace discovery; local `rand_distr` scalar sampler `new(...)` constructor aliases
   are available over canonical `init(...)` names; root `distr` aliases
   `distributions` for local Rust
