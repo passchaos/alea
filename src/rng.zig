@@ -4324,7 +4324,13 @@ fn isValidExponentialRate(comptime T: type, rate: T) bool {
 }
 
 pub inline fn nextFrom(source: anytype) u64 {
-    return source.next();
+    if (@TypeOf(source) == Rng) return source.next();
+    if (comptime sourceCanNext(@TypeOf(source))) return source.next();
+    return source.nextU64();
+}
+
+fn sourceCanNext(comptime Source: type) bool {
+    return sourceHasDecl(Source, "next");
 }
 
 fn sourceCanTryNext(comptime Source: type) bool {
@@ -4831,6 +4837,35 @@ test "rng direct raw aliases dispatch source native nextU64" {
     try std.testing.expectEqual(@as(u64, 0xaaaa_bbbb_cccc_dddd), try Rng.tryNextU64From(&try_source));
     try std.testing.expect(!try_source.next_called);
     try std.testing.expect(try_source.next_u64_called);
+}
+
+test "rng direct generic helpers accept source native nextU64 only" {
+    const NativeU64OnlySource = struct {
+        next_u64_called: usize = 0,
+
+        fn nextU64(self: *@This()) u64 {
+            self.next_u64_called += 1;
+            return 0x8000_0000_0000_0000;
+        }
+    };
+
+    var bool_source = NativeU64OnlySource{};
+    try std.testing.expect(Rng.booleanFrom(&bool_source));
+    try std.testing.expectEqual(@as(usize, 1), bool_source.next_u64_called);
+
+    var int_source = NativeU64OnlySource{};
+    try std.testing.expectEqual(@as(u16, 0), Rng.valueFrom(&int_source, u16));
+    try std.testing.expectEqual(@as(usize, 1), int_source.next_u64_called);
+
+    var float_source = NativeU64OnlySource{};
+    try std.testing.expectEqual(@as(f64, 0.5), Rng.floatFrom(&float_source, f64));
+    try std.testing.expectEqual(@as(usize, 1), float_source.next_u64_called);
+
+    var fill_source = NativeU64OnlySource{};
+    var bools: [3]bool = undefined;
+    Rng.fillFrom(&fill_source, bool, &bools);
+    try std.testing.expectEqualSlices(bool, &.{ true, false, false }, &bools);
+    try std.testing.expectEqual(@as(usize, 1), fill_source.next_u64_called);
 }
 
 test "fromRandom nextU32 preserves std.Random byte shape" {
