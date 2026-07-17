@@ -4810,6 +4810,25 @@ test "ordinary f64 standard uniform uses full 53-bit grid on all paths" {
     fillFrom(&fill_engine, f64, &fill_buf);
     try std.testing.expectEqualSlices(f64, &.{ half_ulp, half_ulp, half_ulp }, &fill_buf);
 
+    var value_engine = StepRng.constant(@as(u64, 1) << 11);
+    try std.testing.expectEqual(half_ulp, valueFrom(&value_engine, f64));
+
+    var iter_engine = StepRng.constant(@as(u64, 1) << 11);
+    var iter = valueIterFrom(&iter_engine, f64);
+    var iter_buf: [2]f64 = undefined;
+    iter.fill(&iter_buf);
+    try std.testing.expectEqualSlices(f64, &.{ half_ulp, half_ulp }, &iter_buf);
+
+    const alea = @import("root.zig");
+    const standard = alea.distributions.StandardUniform{};
+    var dist_sample_engine = StepRng.constant(@as(u64, 1) << 11);
+    try std.testing.expectEqual(half_ulp, standard.sampleFrom(&dist_sample_engine, f64));
+
+    var dist_fill_engine = StepRng.constant(@as(u64, 1) << 11);
+    var dist_fill_buf: [2]f64 = undefined;
+    standard.fillFrom(&dist_fill_engine, f64, &dist_fill_buf);
+    try std.testing.expectEqualSlices(f64, &.{ half_ulp, half_ulp }, &dist_fill_buf);
+
     var vector_engine = StepRng.constant(@as(u64, 1) << 11);
     const vector_sample = vectorFrom(&vector_engine, @Vector(4, f64));
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(half_ulp)), vector_sample);
