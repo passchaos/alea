@@ -11557,12 +11557,77 @@ test "engine fromRng and fork aliases consume full seed material" {
     }
 }
 
+const NativeNextSeedSource = struct {
+    values: []const u64,
+    index: usize = 0,
+
+    pub fn next(self: *@This()) u64 {
+        const value = self.values[self.index];
+        self.index += 1;
+        return value;
+    }
+};
+
+const NativeU64SeedSource = struct {
+    values: []const u64,
+    index: usize = 0,
+
+    pub fn nextU64(self: *@This()) u64 {
+        const value = self.values[self.index];
+        self.index += 1;
+        return value;
+    }
+};
+
+fn expectEngineFromNativeU64Alias(comptime Engine: type, words: []const u64) !void {
+    var direct_source = NativeNextSeedSource{ .values = words };
+    var alias_source = NativeU64SeedSource{ .values = words };
+    var direct = engineFromRngReference(Engine, &direct_source);
+    var alias = Engine.fromRng(&alias_source);
+    try std.testing.expectEqual(direct.next(), alias.next());
+    try std.testing.expectEqual(direct_source.index, alias_source.index);
+}
+
+test "engine and seed fromRng aliases accept native nextU64 sources" {
+    const words = [_]u64{
+        0x0123_4567_89ab_cdef,
+        0xfedc_ba98_7654_3210,
+        0x0f1e_2d3c_4b5a_6978,
+        0x8877_6655_4433_2211,
+    };
+
+    var seed_source = NativeU64SeedSource{ .values = &words };
+    const seed = Seed.fromRng(&seed_source);
+    try std.testing.expectEqual(words[0], seed.state);
+    try std.testing.expectEqual(@as(usize, 1), seed_source.index);
+
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Xoshiro128PlusPlus, Pcg64, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
+        try expectEngineFromNativeU64Alias(Engine, &words);
+    }
+}
+
 const FallibleSeedSource = struct {
     values: []const u64,
     index: usize = 0,
     fail_after: ?usize = null,
 
     pub fn tryNext(self: *@This()) error{SeedUnavailable}!u64 {
+        if (self.fail_after) |limit| {
+            if (self.index >= limit) return error.SeedUnavailable;
+        }
+        if (self.index >= self.values.len) return error.SeedUnavailable;
+        const value = self.values[self.index];
+        self.index += 1;
+        return value;
+    }
+};
+
+const FallibleU64SeedSource = struct {
+    values: []const u64,
+    index: usize = 0,
+    fail_after: ?usize = null,
+
+    pub fn tryNextU64(self: *@This()) error{SeedUnavailable}!u64 {
         if (self.fail_after) |limit| {
             if (self.index >= limit) return error.SeedUnavailable;
         }
@@ -11586,6 +11651,41 @@ fn expectEngineTryFromRngFailure(comptime Engine: type, words: []const u64, fail
     var source = FallibleSeedSource{ .values = words, .fail_after = fail_after };
     try std.testing.expectError(error.SeedUnavailable, Engine.tryFromRng(&source));
     try std.testing.expectEqual(fail_after, source.index);
+}
+
+fn expectEngineTryFromNativeU64Alias(comptime Engine: type, words: []const u64) !void {
+    var direct_source = FallibleSeedSource{ .values = words };
+    var alias_source = FallibleU64SeedSource{ .values = words };
+    var direct = engineFromFallibleRngReference(Engine, &direct_source) catch unreachable;
+    var alias = try Engine.tryFromRng(&alias_source);
+    try std.testing.expectEqual(direct.next(), alias.next());
+    try std.testing.expectEqual(direct_source.index, alias_source.index);
+}
+
+test "fallible engine and seed fromRng aliases accept native tryNextU64 sources" {
+    const words = [_]u64{
+        0x0123_4567_89ab_cdef,
+        0xfedc_ba98_7654_3210,
+        0x0f1e_2d3c_4b5a_6978,
+        0x8877_6655_4433_2211,
+    };
+
+    var seed_source = FallibleU64SeedSource{ .values = &words };
+    const seed = try Seed.tryFromRng(&seed_source);
+    try std.testing.expectEqual(words[0], seed.state);
+    try std.testing.expectEqual(@as(usize, 1), seed_source.index);
+
+    var failing_seed_source = FallibleU64SeedSource{ .values = &words, .fail_after = 0 };
+    try std.testing.expectError(error.SeedUnavailable, Seed.tryFromRng(&failing_seed_source));
+    try std.testing.expectEqual(@as(usize, 0), failing_seed_source.index);
+
+    inline for (.{ SplitMix64, Alea4x64, Wyhash64, Xoshiro256, Xoshiro256PlusPlus, Xoshiro128PlusPlus, Pcg64, ChaCha, ChaCha8Rng, ChaCha20Rng }) |Engine| {
+        try expectEngineTryFromNativeU64Alias(Engine, &words);
+    }
+
+    var failing_engine_source = FallibleU64SeedSource{ .values = &words, .fail_after = 1 };
+    try std.testing.expectError(error.SeedUnavailable, Xoshiro256.tryFromRng(&failing_engine_source));
+    try std.testing.expectEqual(@as(usize, 1), failing_engine_source.index);
 }
 
 fn engineFromFallibleRngReference(comptime Engine: type, source: anytype) !Engine {

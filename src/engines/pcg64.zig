@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("splitmix64.zig");
+const source_helpers = @import("../source.zig");
 
 const Pcg64 = @This();
 
@@ -29,12 +30,12 @@ pub fn fromSeedBytes(seed: [16]u8) Pcg64 {
 }
 
 pub fn fromRng(source: anytype) Pcg64 {
-    return initTwo(source.next(), source.next());
+    return initTwo(source_helpers.nextU64(source), source_helpers.nextU64(source));
 }
 
 pub fn tryFromRng(source: anytype) !Pcg64 {
-    const seed = try source.tryNext();
-    const stream = try source.tryNext();
+    const seed = try source_helpers.tryNextU64(source);
+    const stream = try source_helpers.tryNextU64(source);
     return initTwo(seed, stream);
 }
 

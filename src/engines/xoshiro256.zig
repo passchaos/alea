@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("splitmix64.zig");
+const source_helpers = @import("../source.zig");
 
 const Xoshiro256 = @This();
 
@@ -32,14 +33,14 @@ pub fn fromSeedBytes(seed_bytes: [32]u8) Xoshiro256 {
 
 pub fn fromRng(source: anytype) Xoshiro256 {
     var self: Xoshiro256 = .{ .state = undefined };
-    inline for (0..4) |i| self.state[i] = source.next();
+    inline for (0..4) |i| self.state[i] = source_helpers.nextU64(source);
     if (self.isZeroState()) return init(0);
     return self;
 }
 
 pub fn tryFromRng(source: anytype) !Xoshiro256 {
     var self: Xoshiro256 = .{ .state = undefined };
-    inline for (0..4) |i| self.state[i] = try source.tryNext();
+    inline for (0..4) |i| self.state[i] = try source_helpers.tryNextU64(source);
     if (self.isZeroState()) return init(0);
     return self;
 }

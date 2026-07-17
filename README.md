@@ -30,10 +30,11 @@ The current Linux-first roadmap is intentionally broad:
 - Rust-discoverable engine `fromSeedBytes(seed)` constructors for fixed-size
   little-endian byte-array seeds
 - Rust-discoverable `Seed.fromRng(source)`, engine `fromRng(source)`, and
-  engine `fork()` helpers for deriving child streams from existing generators
+  engine `fork()` helpers for deriving child streams from existing generators,
+  accepting either Zig-native `next()` or Rust-style `nextU64()` seed sources
 - Rust-discoverable fallible `Seed.tryFromRng(source)` and engine
   `tryFromRng(source)` / `tryFork()` helpers for sources exposing
-  `tryNext() !u64`
+  `tryNext() !u64` or `tryNextU64() !u64`
 - Rust-discoverable generic `makeRng(Engine, io)` for system-entropy
   construction of any exported deterministic engine
 - Rust-discoverable `Rng.SysRng` / root `SysRng` / root `SysError` /

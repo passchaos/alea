@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("splitmix64.zig");
+const source_helpers = @import("../source.zig");
 
 const Alea4x64 = @This();
 
@@ -35,15 +36,15 @@ pub fn fromSeedBytes(seed: [32]u8) Alea4x64 {
 }
 
 pub fn fromRng(source: anytype) Alea4x64 {
-    return .{ .state = .{ source.next(), source.next(), source.next(), source.next() } };
+    return .{ .state = .{ source_helpers.nextU64(source), source_helpers.nextU64(source), source_helpers.nextU64(source), source_helpers.nextU64(source) } };
 }
 
 pub fn tryFromRng(source: anytype) !Alea4x64 {
     return .{ .state = .{
-        try source.tryNext(),
-        try source.tryNext(),
-        try source.tryNext(),
-        try source.tryNext(),
+        try source_helpers.tryNextU64(source),
+        try source_helpers.tryNextU64(source),
+        try source_helpers.tryNextU64(source),
+        try source_helpers.tryNextU64(source),
     } };
 }
 

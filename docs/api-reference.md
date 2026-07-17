@@ -491,9 +491,9 @@ aliases; all deterministic engines expose Rust-discoverable `nextU64` /
 Seedable production engines also expose Rust-discoverable `seedFromU64`,
 `fromSeed`, and `fromSeedBytes` constructor aliases alongside their Zig-native
 seed constructors. Engines with larger state expose Rust-discoverable `fromRng`
-and `fork` helpers for
-deriving child streams from existing generators, plus `tryFromRng` for
-fallible sources exposing `tryNext() !u64` and `tryFork` for fallible
+and `fork` helpers for deriving child streams from existing generators; seed
+sources may expose either `next()` or `nextU64()`. Fallible `tryFromRng` accepts
+`tryNext() !u64` or `tryNextU64() !u64`, and `tryFork` covers fallible
 self-forking.
 
 - `SplitMix64`: `init`, `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`,

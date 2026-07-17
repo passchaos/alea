@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("engines/splitmix64.zig");
+const source_helpers = @import("source.zig");
 
 const Seed = @This();
 
@@ -18,11 +19,11 @@ pub fn fromString(input: []const u8) Seed {
 }
 
 pub fn fromRng(source: anytype) Seed {
-    return .{ .state = source.next() };
+    return .{ .state = source_helpers.nextU64(source) };
 }
 
 pub fn tryFromRng(source: anytype) !Seed {
-    return .{ .state = try source.tryNext() };
+    return .{ .state = try source_helpers.tryNextU64(source) };
 }
 
 pub fn secure(io: std.Io) !Seed {

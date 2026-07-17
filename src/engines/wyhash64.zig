@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("splitmix64.zig");
+const source_helpers = @import("../source.zig");
 
 const Wyhash64 = @This();
 
@@ -30,11 +31,11 @@ pub fn fromSeedBytes(seed: [8]u8) Wyhash64 {
 }
 
 pub fn fromRng(source: anytype) Wyhash64 {
-    return fromState(source.next());
+    return fromState(source_helpers.nextU64(source));
 }
 
 pub fn tryFromRng(source: anytype) !Wyhash64 {
-    return fromState(try source.tryNext());
+    return fromState(try source_helpers.tryNextU64(source));
 }
 
 pub fn fromState(state: u64) Wyhash64 {

@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("splitmix64.zig");
+const source_helpers = @import("../source.zig");
 
 const Xoshiro128PlusPlus = @This();
 
@@ -31,14 +32,14 @@ pub fn fromSeedBytes(seed_bytes: [16]u8) Xoshiro128PlusPlus {
 }
 
 pub fn fromRng(source: anytype) Xoshiro128PlusPlus {
-    const first = source.next();
-    const second = source.next();
+    const first = source_helpers.nextU64(source);
+    const second = source_helpers.nextU64(source);
     return fromSeedWords(first, second);
 }
 
 pub fn tryFromRng(source: anytype) !Xoshiro128PlusPlus {
-    const first = try source.tryNext();
-    const second = try source.tryNext();
+    const first = try source_helpers.tryNextU64(source);
+    const second = try source_helpers.tryNextU64(source);
     return fromSeedWords(first, second);
 }
 

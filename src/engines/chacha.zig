@@ -1,5 +1,6 @@
 const std = @import("std");
 const SplitMix64 = @import("splitmix64.zig");
+const source_helpers = @import("../source.zig");
 
 const ChaCha = @This();
 
@@ -51,7 +52,7 @@ pub fn fromRng(source: anytype) ChaCha {
     var i: usize = 0;
     while (i < seed_length) : (i += 8) {
         var bytes: [8]u8 = undefined;
-        std.mem.writeInt(u64, &bytes, source.next(), .little);
+        std.mem.writeInt(u64, &bytes, source_helpers.nextU64(source), .little);
         @memcpy(key[i..][0..8], &bytes);
     }
     return init(key);
@@ -62,7 +63,7 @@ pub fn tryFromRng(source: anytype) !ChaCha {
     var i: usize = 0;
     while (i < seed_length) : (i += 8) {
         var bytes: [8]u8 = undefined;
-        std.mem.writeInt(u64, &bytes, try source.tryNext(), .little);
+        std.mem.writeInt(u64, &bytes, try source_helpers.tryNextU64(source), .little);
         @memcpy(key[i..][0..8], &bytes);
     }
     return init(key);

@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const source_helpers = @import("../source.zig");
+
 const SplitMix64 = @This();
 
 state: u64,
@@ -21,11 +23,11 @@ pub fn fromSeedBytes(seed: [8]u8) SplitMix64 {
 }
 
 pub fn fromRng(source: anytype) SplitMix64 {
-    return init(source.next());
+    return init(source_helpers.nextU64(source));
 }
 
 pub fn tryFromRng(source: anytype) !SplitMix64 {
-    return init(try source.tryNext());
+    return init(try source_helpers.tryNextU64(source));
 }
 
 pub fn next(self: *SplitMix64) u64 {

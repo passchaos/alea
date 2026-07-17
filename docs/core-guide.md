@@ -70,10 +70,12 @@ Xoshiro all-zero states remapped through `init(0)`.
 mirror local Rust `SeedableRng::from_rng` / `fork` naming for deterministic
 child derivation from an existing generator; `Seed.fromRng` consumes one `u64`
 seed draw, while engine `fromRng` / `fork` consume enough `u64` seed material
-to fill the target engine's state or key before constructing the child.
+to fill the target engine's state or key before constructing the child. These
+infallible seed sources may expose either Zig-native `next()` or Rust-style
+`nextU64()`, with `next()` preserving precedence when both are available.
 For fallible seed sources, `Seed.tryFromRng(source)` and engine
 `tryFromRng(source)` mirror local Rust `SeedableRng::try_from_rng` naming using
-a Zig-native `source.tryNext() !u64` contract and propagate source errors
+`source.tryNext() !u64` or `source.tryNextU64() !u64` and propagate source errors
 without constructing a child. Engine `tryFork()` mirrors local Rust
 `SeedableRng::try_fork` naming by delegating to `tryFromRng(self)`.
 Direct engines also expose Rust-discoverable `nextU64()` / `nextU32()` aliases
