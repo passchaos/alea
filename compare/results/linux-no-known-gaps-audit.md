@@ -15,8 +15,8 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, and S4-M1225 improves the low-bit/vector8 hot path. The active post-S4-M1225 bar is
-S4-M1226: exact/default dense SIMD research, additional non-WASI
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, and S4-M1226 refactors vectorized float fill lane stores. The active post-S4-M1226 bar is
+S4-M1227: exact/default dense SIMD research, additional non-WASI
 OS/architecture execution, broader validation, further semantics-preserving
 performance work, or newly discovered core random-workflow gaps.
 
@@ -6233,6 +6233,7 @@ optimization below.
 S4-M1225 improves ordinary f64 uniform low-bit/vector8 throughput
 (`compare/results/s4-m1225-f64-uniform-lowbit-vector8.md`): the remaining
 half-ULP bit is now produced by bitcast and f64 fill/range bulk chunks use eight
-lanes while preserving scalar stream shape. S4-M1226 remains active for
+lanes while preserving scalar stream shape. S4-M1226 refactors float fill lane stores
+(`compare/results/s4-m1226-float-fill-lane-store-refactor.md`) by deriving vectorized fill widths from the vector type and centralizing lane copies while covering packed f32 and f64 strict-open stream shapes. S4-M1227 remains active for
 exact/default dense SIMD, broader runtime, longer validation, further
 semantics-preserving performance work, or newly discovered core workflow gaps.

@@ -1786,11 +1786,12 @@ fn fillFloatsFrom(source: anytype, comptime T: type, dest: []T) void {
 
 fn fillF32From(source: anytype, dest: []f32) void {
     const VectorType = @Vector(8, f32);
+    const lanes = vectorInfo(VectorType).len;
 
     var i: usize = 0;
-    while (i + 8 <= dest.len) : (i += 8) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = vectorF32From(source, VectorType);
-        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) {
@@ -1806,11 +1807,12 @@ fn fillF32From(source: anytype, dest: []f32) void {
 
 fn fillOpenF32From(source: anytype, dest: []f32) void {
     const VectorType = @Vector(8, f32);
+    const lanes = vectorInfo(VectorType).len;
 
     var i: usize = 0;
-    while (i + 8 <= dest.len) : (i += 8) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = vectorOpenF32From(source, VectorType);
-        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) {
@@ -1826,19 +1828,20 @@ fn fillOpenF32From(source: anytype, dest: []f32) void {
 
 fn fillOpenClosedF32From(source: anytype, dest: []f32) void {
     const VectorType = @Vector(8, f32);
+    const lanes = vectorInfo(VectorType).len;
 
     var i: usize = 0;
-    while (i + 8 <= dest.len) : (i += 8) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = vectorOpenClosedF32From(source, VectorType);
-        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) {
         const bits = nextFrom(source);
-        dest[i] = (@as(f32, @floatFromInt(@as(u24, @truncate(bits >> 40)))) + 1.0) * (1.0 / 16777216.0);
+        dest[i] = f32OpenClosedFromBits(@truncate(bits >> 40));
         i += 1;
         if (i < dest.len) {
-            dest[i] = (@as(f32, @floatFromInt(@as(u24, @truncate(bits >> 16)))) + 1.0) * (1.0 / 16777216.0);
+            dest[i] = f32OpenClosedFromBits(@truncate(bits >> 16));
             i += 1;
         }
     }
@@ -1846,12 +1849,12 @@ fn fillOpenClosedF32From(source: anytype, dest: []f32) void {
 
 fn fillF64From(source: anytype, dest: []f64) void {
     const VectorType = @Vector(8, f64);
-    const lanes = @typeInfo(VectorType).vector.len;
+    const lanes = vectorInfo(VectorType).len;
 
     var i: usize = 0;
     while (i + lanes <= dest.len) : (i += lanes) {
         const vec = vectorF64From(source, VectorType);
-        inline for (0..lanes) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) : (i += 1) dest[i] = floatFrom(source, f64);
@@ -1859,11 +1862,12 @@ fn fillF64From(source: anytype, dest: []f64) void {
 
 fn fillOpenF64From(source: anytype, dest: []f64) void {
     const VectorType = @Vector(4, f64);
+    const lanes = vectorInfo(VectorType).len;
 
     var i: usize = 0;
-    while (i + 4 <= dest.len) : (i += 4) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = vectorOpenF64From(source, VectorType);
-        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) : (i += 1) dest[i] = floatOpenFrom(source, f64);
@@ -1906,13 +1910,14 @@ fn fillFloatRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max:
 
 fn fillRangeF32From(source: anytype, dest: []f32, min: f32, max: f32) void {
     const VectorType = @Vector(8, f32);
+    const lanes = vectorInfo(VectorType).len;
     const min_vec: VectorType = @splat(min);
     const width_vec: VectorType = @splat(max - min);
 
     var i: usize = 0;
-    while (i + 8 <= dest.len) : (i += 8) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = min_vec + width_vec * vectorF32From(source, VectorType);
-        inline for (0..8) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     const width = max - min;
@@ -1921,14 +1926,14 @@ fn fillRangeF32From(source: anytype, dest: []f32, min: f32, max: f32) void {
 
 fn fillRangeF64From(source: anytype, dest: []f64, min: f64, max: f64) void {
     const VectorType = @Vector(8, f64);
-    const lanes = @typeInfo(VectorType).vector.len;
+    const lanes = vectorInfo(VectorType).len;
     const min_vec: VectorType = @splat(min);
     const width_vec: VectorType = @splat(max - min);
 
     var i: usize = 0;
     while (i + lanes <= dest.len) : (i += lanes) {
         const vec = min_vec + width_vec * vectorF64From(source, VectorType);
-        inline for (0..lanes) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     const width = max - min;
@@ -4401,6 +4406,15 @@ fn vectorChild(comptime VectorType: type) type {
     return vectorInfo(VectorType).child;
 }
 
+inline fn storeVectorLanes(comptime VectorType: type, dest: []vectorChild(VectorType), start: usize, vec: VectorType) void {
+    const info = vectorInfo(VectorType);
+    // Vectorized slice fills are a frequent source of subtle stream-shape bugs:
+    // the loop step, copy width, and helper vector width must all remain the
+    // same. Centralizing the lane store makes width changes local to the vector
+    // type instead of duplicating magic lane counts at every fill site.
+    inline for (0..info.len) |lane| dest[start + lane] = vec[lane];
+}
+
 fn vectorScalarFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     var out: VectorType = undefined;
@@ -4558,7 +4572,7 @@ fn vectorOpenClosedF32From(source: anytype, comptime VectorType: type) VectorTyp
             @truncate(bits >> 40)
         else
             @truncate(bits >> 16);
-        out[i] = (@as(f32, @floatFromInt(raw)) + 1.0) * (1.0 / 16777216.0);
+        out[i] = f32OpenClosedFromBits(raw);
     }
     return out;
 }
@@ -4675,6 +4689,10 @@ fn f32OpenFromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(non_zero)) * (1.0 / 16777216.0);
 }
 
+fn f32OpenClosedFromBits(bits: u24) f32 {
+    return (@as(f32, @floatFromInt(bits)) + 1.0) * (1.0 / 16777216.0);
+}
+
 const f64_one_exponent_bits: u64 = @as(u64, 0x3ff) << 52;
 const f64_half_ulp_bits: u64 = @as(u64, 1023 - 53) << 52;
 
@@ -4727,7 +4745,7 @@ pub fn floatOpenFrom(source: anytype, comptime T: type) T {
 pub fn floatOpenClosedFrom(source: anytype, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
-        f32 => (@as(f32, @floatFromInt(nextFrom(source) >> 40)) + 1.0) * (1.0 / 16777216.0),
+        f32 => f32OpenClosedFromBits(@truncate(nextFrom(source) >> 40)),
         f64 => f64OpenClosedFromRaw(nextFrom(source)),
         else => @compileError("alea supports f32 and f64 floats"),
     };
@@ -4859,6 +4877,94 @@ test "ordinary f64 bulk fills preserve scalar stream shape" {
     for (&range_scalar_values) |*item| item.* = floatRangeFrom(&range_scalar_engine, f64, -5, 7);
     try std.testing.expectEqualSlices(f64, &range_scalar_values, &range_fill_values);
     try std.testing.expectEqual(range_scalar_engine.next(), range_fill_engine.next());
+}
+
+test "float bulk fill lane helpers preserve stream shape" {
+    const alea = @import("root.zig");
+    const StepRng = @import("engines/step.zig");
+    const f32_initial: u64 = 0x1234_5678_9abc_def0;
+    const f32_increment: u64 = 0x0101_0101_0101_0101;
+
+    var f32_fill_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_control_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_fill_values: [17]f32 = undefined;
+    var f32_control_values: [17]f32 = undefined;
+    fillFrom(&f32_fill_engine, f32, &f32_fill_values);
+    var i: usize = 0;
+    while (i < f32_control_values.len) {
+        const bits = nextFrom(&f32_control_engine);
+        f32_control_values[i] = f32FromBits(@truncate(bits >> 40));
+        i += 1;
+        if (i < f32_control_values.len) {
+            f32_control_values[i] = f32FromBits(@truncate(bits >> 16));
+            i += 1;
+        }
+    }
+    try std.testing.expectEqualSlices(f32, &f32_control_values, &f32_fill_values);
+    try std.testing.expectEqual(f32_control_engine.next(), f32_fill_engine.next());
+
+    var f32_open_fill_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_open_control_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_open_fill_values: [17]f32 = undefined;
+    var f32_open_control_values: [17]f32 = undefined;
+    fillOpenFrom(&f32_open_fill_engine, f32, &f32_open_fill_values);
+    i = 0;
+    while (i < f32_open_control_values.len) {
+        const bits = nextFrom(&f32_open_control_engine);
+        f32_open_control_values[i] = f32OpenFromBits(@truncate(bits >> 40));
+        i += 1;
+        if (i < f32_open_control_values.len) {
+            f32_open_control_values[i] = f32OpenFromBits(@truncate(bits >> 16));
+            i += 1;
+        }
+    }
+    try std.testing.expectEqualSlices(f32, &f32_open_control_values, &f32_open_fill_values);
+    try std.testing.expectEqual(f32_open_control_engine.next(), f32_open_fill_engine.next());
+
+    var f32_open_closed_fill_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_open_closed_control_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_open_closed_fill_values: [17]f32 = undefined;
+    var f32_open_closed_control_values: [17]f32 = undefined;
+    fillOpenClosedFrom(&f32_open_closed_fill_engine, f32, &f32_open_closed_fill_values);
+    i = 0;
+    while (i < f32_open_closed_control_values.len) {
+        const bits = nextFrom(&f32_open_closed_control_engine);
+        f32_open_closed_control_values[i] = f32OpenClosedFromBits(@truncate(bits >> 40));
+        i += 1;
+        if (i < f32_open_closed_control_values.len) {
+            f32_open_closed_control_values[i] = f32OpenClosedFromBits(@truncate(bits >> 16));
+            i += 1;
+        }
+    }
+    try std.testing.expectEqualSlices(f32, &f32_open_closed_control_values, &f32_open_closed_fill_values);
+    try std.testing.expectEqual(f32_open_closed_control_engine.next(), f32_open_closed_fill_engine.next());
+
+    var f32_range_fill_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_range_control_engine = StepRng.init(f32_initial, f32_increment);
+    var f32_range_fill_values: [17]f32 = undefined;
+    var f32_range_control_values: [17]f32 = undefined;
+    fillRangeFrom(&f32_range_fill_engine, f32, &f32_range_fill_values, -3, 9);
+    i = 0;
+    while (i < f32_range_control_values.len) {
+        const bits = nextFrom(&f32_range_control_engine);
+        f32_range_control_values[i] = -3 + 12 * f32FromBits(@truncate(bits >> 40));
+        i += 1;
+        if (i < f32_range_control_values.len) {
+            f32_range_control_values[i] = -3 + 12 * f32FromBits(@truncate(bits >> 16));
+            i += 1;
+        }
+    }
+    try std.testing.expectEqualSlices(f32, &f32_range_control_values, &f32_range_fill_values);
+    try std.testing.expectEqual(f32_range_control_engine.next(), f32_range_fill_engine.next());
+
+    var f64_open_fill_engine = alea.FastPrng.init(0xf642);
+    var f64_open_scalar_engine = alea.FastPrng.init(0xf642);
+    var f64_open_fill_values: [17]f64 = undefined;
+    var f64_open_scalar_values: [17]f64 = undefined;
+    fillOpenFrom(&f64_open_fill_engine, f64, &f64_open_fill_values);
+    for (&f64_open_scalar_values) |*item| item.* = floatOpenFrom(&f64_open_scalar_engine, f64);
+    try std.testing.expectEqualSlices(f64, &f64_open_scalar_values, &f64_open_fill_values);
+    try std.testing.expectEqual(f64_open_scalar_engine.next(), f64_open_fill_engine.next());
 }
 
 test "rng facade covers scalar APIs" {
