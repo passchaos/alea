@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1234-root-string-preallocation.md"
 "compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md"
 "compare/results/s4-m1232-owned-byte-allocation-fallback.md"
 "compare/results/s4-m1231-rng-reader-tryfill-hardening.md"
@@ -399,4 +400,6 @@ S4-M1232 is closed after hardening owned byte allocation fallbacks in `compare/r
 
 S4-M1233 is closed after fixing `std.Random` adapter `nextU32` byte-stream shape in `compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md`.
 
-S4-M1234 remains active after S4-M1233 raises the next correctness/performance/product bar.
+S4-M1234 is closed after hardening root alphanumeric string preallocation in `compare/results/s4-m1234-root-string-preallocation.md`.
+
+S4-M1235 remains active after S4-M1234 raises the next correctness/performance/product bar.

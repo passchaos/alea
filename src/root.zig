@@ -4705,24 +4705,38 @@ pub fn char(io: std.Io) !u8 {
 }
 
 pub fn string(allocator: std.mem.Allocator, io: std.Io, len: usize) ![]u8 {
-    if (len == 0) return allocator.alloc(u8, 0);
-    var engine = try secure(io);
-    const random_source = Rng.init(&engine);
-    return ascii.string(allocator, random_source, len);
+    return rootAlphanumericAlloc(allocator, io, len);
 }
 
 pub fn sampleString(allocator: std.mem.Allocator, io: std.Io, len: usize) ![]u8 {
+    return rootAlphanumericAlloc(allocator, io, len);
+}
+
+fn rootAlphanumericAlloc(allocator: std.mem.Allocator, io: std.Io, len: usize) ![]u8 {
     if (len == 0) return allocator.alloc(u8, 0);
+    const out = try allocator.alloc(u8, len);
+    errdefer allocator.free(out);
+
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
-    return ascii.sampleString(allocator, random_source, len);
+    ascii.Alphanumeric.fill(random_source, out);
+    return out;
 }
 
 pub fn appendString(allocator: std.mem.Allocator, io: std.Io, string_buffer: *std.ArrayList(u8), len: usize) !void {
     if (len == 0) return;
+    const old_len = string_buffer.items.len;
+    const new_len = std.math.add(usize, old_len, len) catch return error.OutOfMemory;
+    // Reserve caller-owned output before requesting entropy so allocation
+    // failures do not consume randomness and entropy failures leave visible
+    // list contents untouched. Capacity may grow, but `items.len` is advanced
+    // only after the secure engine is available.
+    try string_buffer.ensureUnusedCapacity(allocator, len);
+
     var engine = try secure(io);
     const random_source = Rng.init(&engine);
-    try ascii.appendString(allocator, random_source, string_buffer, len);
+    string_buffer.items.len = new_len;
+    ascii.Alphanumeric.fill(random_source, string_buffer.items[old_len..new_len]);
 }
 
 pub fn unicodeScalar(io: std.Io) !u21 {
@@ -6825,6 +6839,36 @@ test "root random helpers use explicit system entropy" {
     const weighted_sample = try sampleIteratorWeighted(u8, io, std.testing.allocator, &weighted_sample_iter, 2);
     defer std.testing.allocator.free(weighted_sample);
     try std.testing.expectEqual(@as(usize, 2), weighted_sample.len);
+}
+
+test "root string allocation paths allocate before entropy" {
+    const failing = std.Io.failing;
+
+    var string_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, string(string_alloc.allocator(), failing, 8));
+    try std.testing.expect(string_alloc.has_induced_failure);
+
+    var sample_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    try std.testing.expectError(error.OutOfMemory, sampleString(sample_alloc.allocator(), failing, 8));
+    try std.testing.expect(sample_alloc.has_induced_failure);
+
+    var append_alloc = std.testing.FailingAllocator.init(std.testing.allocator, .{ .fail_index = 0 });
+    var append_list = try std.ArrayList(u8).initCapacity(std.testing.allocator, 0);
+    defer append_list.deinit(std.testing.allocator);
+    try std.testing.expectError(error.OutOfMemory, appendString(append_alloc.allocator(), failing, &append_list, 8));
+    try std.testing.expect(append_alloc.has_induced_failure);
+    try std.testing.expectEqual(@as(usize, 0), append_list.items.len);
+
+    try append_list.appendSlice(std.testing.allocator, "pre");
+    try appendString(std.testing.allocator, failing, &append_list, 0);
+    try std.testing.expectEqualStrings("pre", append_list.items);
+    try std.testing.expectError(error.EntropyUnavailable, appendString(std.testing.allocator, failing, &append_list, 1));
+    try std.testing.expectEqualStrings("pre", append_list.items);
+    try std.testing.expectError(error.OutOfMemory, appendString(std.testing.allocator, failing, &append_list, std.math.maxInt(usize)));
+    try std.testing.expectEqualStrings("pre", append_list.items);
+
+    try std.testing.expectError(error.EntropyUnavailable, string(std.testing.allocator, failing, 1));
+    try std.testing.expectError(error.EntropyUnavailable, sampleString(std.testing.allocator, failing, 1));
 }
 
 test "root random helpers validate deterministic cases before entropy" {

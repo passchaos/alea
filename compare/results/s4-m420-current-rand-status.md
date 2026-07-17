@@ -56,12 +56,13 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1231 hardens rng byte-fill / reader refill correctness;
 - S4-M1232 hardens owned byte allocation for fallible byte sources;
 - S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape;
+- S4-M1234 hardens root alphanumeric string preallocation before entropy;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape after S4-M1232
-hardened owned byte allocation for fallible byte sources. The retained status and validation evidence include:
+S4-M1234 hardens root alphanumeric string preallocation before entropy after S4-M1233
+fixed the `std.Random` adapter `nextU32` byte-stream shape. The retained status and validation evidence include:
 
 ```text
 $ zig build validate-all
@@ -79,21 +80,21 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1233 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1234 post-S4-M1233 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1234 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1235 post-S4-M1234 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1234-root-string-preallocation.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
 rand_bench_smoke self-test ok
-rand_distr standard-normal: 39.5 M samples/s checksum=-3.640
-rand_distr standard-normal f32: 37.7 M samples/s checksum=-3.640
+rand_distr standard-normal: 40.4 M samples/s checksum=-3.640
+rand_distr standard-normal f32: 37.1 M samples/s checksum=-3.640
 surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137
 surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30
 surfacecheck local rand_distr: files=34 expected-tokens=72 source-tokens=185
@@ -106,14 +107,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md` records the latest focused `std.Random` adapter byte-shape hardening after S4-M1232.
-S4-M11 is closed for the current bar; S4-M1220 through S4-M1233 are also closed for their current bars, but exact/default-compatible dense SIMD
+Wasmtime profilelongcheck run. `compare/results/s4-m1234-root-string-preallocation.md` records the latest focused root string preallocation hardening after S4-M1233.
+S4-M11 is closed for the current bar; S4-M1220 through S4-M1234 are also closed for their current bars, but exact/default-compatible dense SIMD
 normal/exponential kernels are still not known to beat scalar lane-fill in the
 real vector-slice harness.
 
-## Current Post-S4-M1233 Bar
+## Current Post-S4-M1234 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1234: pursue
+The long-term product goal is not complete. The next bar is S4-M1235: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, further
 semantics-preserving performance work, or newly discovered local `rand` /
@@ -123,4 +124,4 @@ semantics-preserving performance work, or newly discovered local `rand` /
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1233 S4-M1234 bar remains the active follow-up.
+while the post-S4-M1234 S4-M1235 bar remains the active follow-up.
