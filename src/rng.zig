@@ -128,7 +128,12 @@ pub fn fromRandom(random_source: *std.Random) Rng {
 
         fn nextU32(ptr: *anyopaque) u32 {
             const source: *std.Random = @ptrCast(@alignCast(ptr));
-            return @truncate(source.int(u64) >> 32);
+            // `std.Random` is fundamentally a byte-stream interface.  Preserve
+            // its native u32 byte shape instead of manufacturing a u32 from the
+            // high half of a u64 draw; otherwise `Rng.fromRandom(...).nextU32()`
+            // would disagree with `random.int(u32)` and could over-read sources
+            // whose fill function tracks exact requested byte counts.
+            return source.int(u32);
         }
 
         fn fill(ptr: *anyopaque, buf: []u8) void {
@@ -4778,6 +4783,41 @@ pub fn probabilityThreshold(p: f64) u64 {
     const threshold = @floor(p * scale);
     if (threshold >= scale) return std.math.maxInt(u64);
     return @intFromFloat(threshold);
+}
+
+test "fromRandom nextU32 preserves std.Random byte shape" {
+    const CountingByteSource = struct {
+        next_byte: u8 = 1,
+        requested: usize = 0,
+
+        fn fill(ctx: *@This(), out: []u8) void {
+            ctx.requested += out.len;
+            for (out) |*byte| {
+                byte.* = ctx.next_byte;
+                ctx.next_byte +%= 1;
+            }
+        }
+    };
+
+    var native_source = CountingByteSource{};
+    var native_random = std.Random.init(&native_source, CountingByteSource.fill);
+    const native_u32 = native_random.int(u32);
+    try std.testing.expectEqual(@as(u32, 0x0403_0201), native_u32);
+    try std.testing.expectEqual(@as(usize, 4), native_source.requested);
+    try std.testing.expectEqual(@as(u8, 5), native_source.next_byte);
+
+    var adapted_source = CountingByteSource{};
+    var adapted_random = std.Random.init(&adapted_source, CountingByteSource.fill);
+    var rng = Rng.fromRandom(&adapted_random);
+    try std.testing.expectEqual(native_u32, rng.nextU32());
+    try std.testing.expectEqual(@as(usize, 4), adapted_source.requested);
+    try std.testing.expectEqual(@as(u8, 5), adapted_source.next_byte);
+
+    var direct_source = CountingByteSource{};
+    var direct_random = std.Random.init(&direct_source, CountingByteSource.fill);
+    var direct_rng = Rng.fromRandom(&direct_random);
+    try std.testing.expectEqual(@as(u64, 0x0807_0605_0403_0201), direct_rng.nextU64());
+    try std.testing.expectEqual(@as(usize, 8), direct_source.requested);
 }
 
 test "rng direct raw aliases dispatch source native nextU32" {

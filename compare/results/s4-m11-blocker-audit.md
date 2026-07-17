@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md"
 "compare/results/s4-m1232-owned-byte-allocation-fallback.md"
 "compare/results/s4-m1231-rng-reader-tryfill-hardening.md"
 "compare/results/s4-m1230-rng-normal-affine-lane-store.md"
@@ -396,4 +397,6 @@ S4-M1231 is closed after hardening rng byte-fill / reader refill correctness in 
 
 S4-M1232 is closed after hardening owned byte allocation fallbacks in `compare/results/s4-m1232-owned-byte-allocation-fallback.md`.
 
-S4-M1233 remains active after S4-M1232 raises the next correctness/performance/product bar.
+S4-M1233 is closed after fixing `std.Random` adapter `nextU32` byte-stream shape in `compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md`.
+
+S4-M1234 remains active after S4-M1233 raises the next correctness/performance/product bar.
