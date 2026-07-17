@@ -4706,4 +4706,8 @@ S4-M1240 is closed after aligning `Rng.init` raw-alias source fallback behavior 
 
 S4-M1241 is closed after aligning nextU32-only direct-source fallback behavior in `compare/results/s4-m1241-next-u32-only-source-fallback.md`.
 
-S4-M1242 remains active after S4-M1241 raises the next correctness/performance/product bar.
+S4-M1242 is closed after addressing the first concrete post-S4-M1241 improvement: stable iterator choice semantics in `compare/results/s4-m1243-stable-iterator-choice-semantics.md`.
+
+S4-M1243 is closed after fixing `chooseIteratorStable` to use sequential reservoir sampling rather than the size-hint skip-ahead fast path in `compare/results/s4-m1243-stable-iterator-choice-semantics.md`.
+
+S4-M1244 remains active after S4-M1243 raises the next correctness/performance/product bar.

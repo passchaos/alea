@@ -4920,7 +4920,22 @@ pub fn chooseIteratorStableCheckedFrom(source: anytype, comptime T: type, iterat
 }
 
 pub fn chooseIteratorStableFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
-    return chooseIteratorFrom(source, T, iterator);
+    // Stable choice always uses sequential reservoir sampling, never the
+    // size_hint-based skip-ahead fast path that picks one random index. This
+    // guarantees that the sequence of RNG draws is independent of the
+    // iterator's reported size_hint, matching Rust rand `choose_stable`
+    // semantics for reproducibility across iterator implementations.
+    //
+    // The one exception is an exactly-known empty iterator (via len() or
+    // remaining()), where we return null without consuming randomness or
+    // calling next(); this preserves the library's no-consume contract for
+    // trivially empty inputs and matches the reservoir algorithm (which would
+    // not consume any randomness for zero items anyway).
+    if (comptime valueTypeHasEmptyEnum(T)) return null;
+    if (iteratorExactRemaining(iterator)) |remaining| {
+        if (remaining == 0) return null;
+    }
+    return chooseIteratorReservoirFrom(source, T, iterator);
 }
 
 fn chooseIteratorReservoirFrom(source: anytype, comptime T: type, iterator: anytype) ?T {
@@ -12391,7 +12406,9 @@ test "exact-count stable iterator choice does not probe past source" {
         chooseIteratorStableFrom(&stable_reference, u8, &stable_reference_iter),
         chooseIteratorStableFrom(&stable_engine, u8, &stable_iter),
     );
-    try std.testing.expectEqual(@as(usize, 3), stable_iter.calls);
+    // Stable always uses sequential reservoir sampling regardless of size_hint,
+    // so it calls next() for every item plus one terminating null call.
+    try std.testing.expectEqual(@as(usize, 4), stable_iter.calls);
     try std.testing.expectEqual(@as(usize, 4), stable_reference_iter.calls);
     try std.testing.expectEqual(stable_reference.next(), stable_engine.next());
 
