@@ -96,7 +96,7 @@ compare/results/s4-m1161-dirichlet-subnormal-alpha.md
 compare/results/s4-m1160-hypergeometric-large-population.md
 compare/results/s4-m1159-nig-alpha-infinity.md
 `1`
-Alea local rand/rand_distr status (2026-07-17)
+Alea local rand/rand_distr status (2026-07-18)
 "schema_version"
 "baseline"
 "validate_local_passes"
@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1235-try-next-u32-native-fallback.md"
 "compare/results/s4-m1234-root-string-preallocation.md"
 "compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md"
 "compare/results/s4-m1232-owned-byte-allocation-fallback.md"
@@ -402,4 +403,6 @@ S4-M1233 is closed after fixing `std.Random` adapter `nextU32` byte-stream shape
 
 S4-M1234 is closed after hardening root alphanumeric string preallocation in `compare/results/s4-m1234-root-string-preallocation.md`.
 
-S4-M1235 remains active after S4-M1234 raises the next correctness/performance/product bar.
+S4-M1235 is closed after aligning fallible direct-source raw-u32 fallback behavior in `compare/results/s4-m1235-try-next-u32-native-fallback.md`.
+
+S4-M1236 remains active after S4-M1235 raises the next correctness/performance/product bar.

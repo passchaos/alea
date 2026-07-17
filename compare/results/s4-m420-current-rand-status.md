@@ -1,6 +1,6 @@
 # S4-M420 Current Local Rand Comparison Status
 
-Date: 2026-07-17
+Date: 2026-07-18
 
 ## Summary
 
@@ -57,12 +57,13 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1232 hardens owned byte allocation for fallible byte sources;
 - S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape;
 - S4-M1234 hardens root alphanumeric string preallocation before entropy;
+- S4-M1235 aligns fallible direct-source `tryNextU32From` with source-native `nextU32`;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1234 hardens root alphanumeric string preallocation before entropy after S4-M1233
-fixed the `std.Random` adapter `nextU32` byte-stream shape. The retained status and validation evidence include:
+S4-M1235 aligns fallible direct-source `tryNextU32From` with source-native `nextU32` after S4-M1234
+hardened root alphanumeric string preallocation before entropy. The retained status and validation evidence include:
 
 ```text
 $ zig build validate-all
@@ -80,15 +81,15 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1234 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1235 post-S4-M1234 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1235 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1236 post-S4-M1235 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1234-root-string-preallocation.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1235-try-next-u32-native-fallback.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -107,14 +108,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1234-root-string-preallocation.md` records the latest focused root string preallocation hardening after S4-M1233.
-S4-M11 is closed for the current bar; S4-M1220 through S4-M1234 are also closed for their current bars, but exact/default-compatible dense SIMD
+Wasmtime profilelongcheck run. `compare/results/s4-m1235-try-next-u32-native-fallback.md` records the latest focused direct-source raw-u32 fallback hardening after S4-M1234.
+S4-M11 is closed for the current bar; S4-M1220 through S4-M1235 are also closed for their current bars, but exact/default-compatible dense SIMD
 normal/exponential kernels are still not known to beat scalar lane-fill in the
 real vector-slice harness.
 
-## Current Post-S4-M1234 Bar
+## Current Post-S4-M1235 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1235: pursue
+The long-term product goal is not complete. The next bar is S4-M1236: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, further
 semantics-preserving performance work, or newly discovered local `rand` /
@@ -124,4 +125,4 @@ semantics-preserving performance work, or newly discovered local `rand` /
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1234 S4-M1235 bar remains the active follow-up.
+while the post-S4-M1235 S4-M1236 bar remains the active follow-up.

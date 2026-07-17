@@ -1985,6 +1985,11 @@ pub fn tryNextU32(self: Rng) !u32 {
 pub fn tryNextU32From(source: anytype) !u32 {
     if (@TypeOf(source) == Rng) return source.tryNextU32();
     if (comptime sourceCanTryNextU32(@TypeOf(source))) return source.tryNextU32();
+    // Preserve a direct source's native u32 stream shape when it exposes an
+    // infallible `nextU32` but no fallible `tryNextU32`. Falling back to a
+    // fallible u64 draw would over-consume u32-native sources and disagree with
+    // `nextU32From` for the same source.
+    if (comptime sourceCanNextU32(@TypeOf(source))) return source.nextU32();
     return @truncate((try tryNextU64From(source)) >> 32);
 }
 
@@ -4852,6 +4857,11 @@ test "rng direct raw aliases dispatch source native nextU32" {
     try std.testing.expectEqual(@as(u32, 0x1234_5678), Rng.nextU32From(&source));
     try std.testing.expect(!source.next_called);
     try std.testing.expect(source.next_u32_called);
+
+    var try_source = NativeU32Source{};
+    try std.testing.expectEqual(@as(u32, 0x1234_5678), try Rng.tryNextU32From(&try_source));
+    try std.testing.expect(!try_source.next_called);
+    try std.testing.expect(try_source.next_u32_called);
 
     var facade_source = NativeU32Source{};
     const rng = Rng.init(&facade_source);
