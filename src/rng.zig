@@ -1655,10 +1655,32 @@ fn fillBools(self: Rng, dest: []bool) void {
 }
 
 pub fn fillBytesFrom(source: anytype, buf: []u8) void {
+    if (buf.len == 0) return;
     if (@TypeOf(source) == Rng) {
         source.bytes(buf);
-    } else {
+        return;
+    }
+    // Prefer the Rust-discoverable raw byte alias for direct sources before
+    // falling back to Alea's Zig-native `fill` spelling.  This keeps
+    // `fillBytesFrom` usable with alias-only sources and matches the fallible
+    // helper's accepted source shapes.
+    if (comptime sourceCanFillBytesAlias(@TypeOf(source))) {
+        source.fillBytes(buf);
+        return;
+    }
+    if (comptime sourceCanFill(@TypeOf(source))) {
         source.fill(buf);
+        return;
+    }
+
+    var i: usize = 0;
+    while (i < buf.len) {
+        const word = nextU64From(source);
+        var word_bytes: [8]u8 = undefined;
+        std.mem.writeInt(u64, &word_bytes, word, .little);
+        const n = @min(8, buf.len - i);
+        @memcpy(buf[i..][0..n], word_bytes[0..n]);
+        i += n;
     }
 }
 
@@ -1684,21 +1706,19 @@ fn fillSourceBytesFrom(source: anytype, buf: []u8) !void {
 }
 
 fn sourceCanFillBytes(comptime Source: type) bool {
-    if (Source == Rng) return true;
-    const info = @typeInfo(Source);
-    if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "fill");
-    }
-    return @hasDecl(Source, "fill");
+    return sourceCanFillBytesAlias(Source) or sourceCanFill(Source);
+}
+
+fn sourceCanFillBytesAlias(comptime Source: type) bool {
+    return sourceHasDecl(Source, "fillBytes");
+}
+
+fn sourceCanFill(comptime Source: type) bool {
+    return sourceHasDecl(Source, "fill");
 }
 
 fn sourceCanTryFillBytes(comptime Source: type) bool {
-    if (Source == Rng) return true;
-    const info = @typeInfo(Source);
-    if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "tryFillBytes");
-    }
-    return @hasDecl(Source, "tryFillBytes");
+    return sourceHasDecl(Source, "tryFillBytes");
 }
 
 fn fillBoolsFrom(source: anytype, dest: []bool) void {
@@ -4308,48 +4328,32 @@ pub inline fn nextFrom(source: anytype) u64 {
 }
 
 fn sourceCanTryNext(comptime Source: type) bool {
-    if (Source == Rng) return true;
-    const info = @typeInfo(Source);
-    if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "tryNext");
-    }
-    return @hasDecl(Source, "tryNext");
+    return sourceHasDecl(Source, "tryNext");
 }
 
 fn sourceCanTryNextU64(comptime Source: type) bool {
-    if (Source == Rng) return true;
-    const info = @typeInfo(Source);
-    if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "tryNextU64");
-    }
-    return @hasDecl(Source, "tryNextU64");
+    return sourceHasDecl(Source, "tryNextU64");
 }
 
 fn sourceCanNextU64(comptime Source: type) bool {
-    if (Source == Rng) return true;
-    const info = @typeInfo(Source);
-    if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "nextU64");
-    }
-    return @hasDecl(Source, "nextU64");
+    return sourceHasDecl(Source, "nextU64");
 }
 
 fn sourceCanTryNextU32(comptime Source: type) bool {
-    if (Source == Rng) return true;
-    const info = @typeInfo(Source);
-    if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "tryNextU32");
-    }
-    return @hasDecl(Source, "tryNextU32");
+    return sourceHasDecl(Source, "tryNextU32");
 }
 
 fn sourceCanNextU32(comptime Source: type) bool {
+    return sourceHasDecl(Source, "nextU32");
+}
+
+fn sourceHasDecl(comptime Source: type, comptime name: []const u8) bool {
     if (Source == Rng) return true;
     const info = @typeInfo(Source);
     if (info == .pointer and info.pointer.size == .one) {
-        return @hasDecl(info.pointer.child, "nextU32");
+        return @hasDecl(info.pointer.child, name);
     }
-    return @hasDecl(Source, "nextU32");
+    return @hasDecl(Source, name);
 }
 
 fn randomFrom(source: anytype) std.Random {
@@ -5831,6 +5835,67 @@ test "tryFillBytesFrom preserves fallible tryNext fallback and bytesAllocFrom sh
     defer std.testing.allocator.free(empty_owned);
     try std.testing.expectEqual(@as(usize, 0), empty_owned.len);
     try std.testing.expectEqual(@as(usize, 0), zero_len_owned_fail.index);
+}
+
+test "rng direct byte helpers dispatch raw fillBytes alias" {
+    const AliasOnlySource = struct {
+        next_called: bool = false,
+        fill_bytes_called: bool = false,
+
+        fn next(self: *@This()) u64 {
+            self.next_called = true;
+            return 0xffff_ffff_ffff_ffff;
+        }
+
+        fn fillBytes(self: *@This(), out: []u8) void {
+            self.fill_bytes_called = true;
+            for (out, 0..) |*byte, i| byte.* = @intCast(i + 1);
+        }
+    };
+
+    var source = AliasOnlySource{};
+    var buf: [5]u8 = undefined;
+    Rng.fillBytesFrom(&source, &buf);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4, 5 }, &buf);
+    try std.testing.expect(source.fill_bytes_called);
+    try std.testing.expect(!source.next_called);
+
+    var try_source = AliasOnlySource{};
+    var try_buf: [3]u8 = undefined;
+    try Rng.tryFillBytesFrom(&try_source, &try_buf);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3 }, &try_buf);
+    try std.testing.expect(try_source.fill_bytes_called);
+    try std.testing.expect(!try_source.next_called);
+
+    var owned_source = AliasOnlySource{};
+    const owned = try Rng.bytesAllocFrom(&owned_source, std.testing.allocator, 4);
+    defer std.testing.allocator.free(owned);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, owned);
+    try std.testing.expect(owned_source.fill_bytes_called);
+    try std.testing.expect(!owned_source.next_called);
+}
+
+test "rng direct infallible byte helpers fall back to native nextU64" {
+    const NextU64OnlySource = struct {
+        word: u64 = 0x0807_0605_0403_0201,
+        next_u64_called: usize = 0,
+
+        fn nextU64(self: *@This()) u64 {
+            self.next_u64_called += 1;
+            return self.word;
+        }
+    };
+
+    var source = NextU64OnlySource{};
+    var buf: [6]u8 = undefined;
+    Rng.fillBytesFrom(&source, &buf);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4, 5, 6 }, &buf);
+    try std.testing.expectEqual(@as(usize, 1), source.next_u64_called);
+
+    var empty_source = NextU64OnlySource{};
+    var empty: [0]u8 = .{};
+    Rng.fillBytesFrom(&empty_source, &empty);
+    try std.testing.expectEqual(@as(usize, 0), empty_source.next_u64_called);
 }
 
 test "rng reader adapter streams deterministic bytes" {
