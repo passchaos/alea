@@ -226,6 +226,11 @@ pub fn RngReader(comptime Source: type) type {
         fn readVec(io_r: *std.Io.Reader, data: [][]u8) std.Io.Reader.Error!usize {
             const self: *Self = @alignCast(@fieldParentPtr("interface", io_r));
             if (data[0].len == 0) {
+                // Zig's Reader contract uses a zero-length first vector as a
+                // request to refill the internal buffer.  Rebase may leave
+                // seek > 0, so appending at `end` is the only correct place:
+                // overwriting at the start would corrupt still-buffered bytes
+                // and break peek/fill users that ask for contiguous data.
                 const dest = io_r.buffer[io_r.end..];
                 if (dest.len == 0) return error.ReadFailed;
                 fillSourceBytes(self, dest) catch return error.ReadFailed;
@@ -243,6 +248,7 @@ pub fn RngReader(comptime Source: type) type {
         }
 
         fn fillSourceBytes(self: *Self, out: []u8) !void {
+            if (out.len == 0) return;
             self.err = null;
             if (comptime isSinglePointer(Source)) {
                 fillSourceBytesFrom(self.source, out) catch |err| {
@@ -446,13 +452,7 @@ pub fn tryFillBytes(self: Rng, buf: []u8) !void {
 }
 
 pub fn tryFillBytesFrom(source: anytype, buf: []u8) !void {
-    if (@TypeOf(source) == Rng) {
-        try source.tryFillBytes(buf);
-    } else if (comptime sourceCanTryFillBytes(@TypeOf(source))) {
-        try source.tryFillBytes(buf);
-    } else {
-        fillBytesFrom(source, buf);
-    }
+    try fillSourceBytesFrom(source, buf);
 }
 
 pub fn bytesAlloc(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u8 {
@@ -1653,6 +1653,7 @@ pub fn fillBytesFrom(source: anytype, buf: []u8) void {
 }
 
 fn fillSourceBytesFrom(source: anytype, buf: []u8) !void {
+    if (buf.len == 0) return;
     if (comptime sourceCanTryFillBytes(@TypeOf(source))) {
         return source.tryFillBytes(buf);
     }
@@ -5681,6 +5682,47 @@ test "rng direct try raw aliases propagate source failures" {
     try std.testing.expectEqual(@as(usize, 1), fail_fill.index);
 }
 
+test "tryFillBytesFrom preserves fallible tryNext fallback" {
+    const TryNextOnlySource = struct {
+        words: []const u64,
+        index: usize = 0,
+        fail_after: ?usize = null,
+
+        fn tryNext(self: *@This()) error{NoSeed}!u64 {
+            if (self.fail_after) |limit| {
+                if (self.index >= limit) return error.NoSeed;
+            }
+            if (self.index >= self.words.len) return error.NoSeed;
+            const word = self.words[self.index];
+            self.index += 1;
+            return word;
+        }
+    };
+
+    const words = [_]u64{
+        0x0123_4567_89ab_cdef,
+        0xfedc_ba98_7654_3210,
+    };
+
+    var source = TryNextOnlySource{ .words = &words };
+    var buf: [12]u8 = undefined;
+    try Rng.tryFillBytesFrom(&source, &buf);
+    var expected: [12]u8 = undefined;
+    std.mem.writeInt(u64, expected[0..8], words[0], .little);
+    std.mem.writeInt(u32, expected[8..12], @truncate(words[1]), .little);
+    try std.testing.expectEqualSlices(u8, &expected, &buf);
+    try std.testing.expectEqual(@as(usize, 2), source.index);
+
+    var fail = TryNextOnlySource{ .words = &words, .fail_after = 1 };
+    try std.testing.expectError(error.NoSeed, Rng.tryFillBytesFrom(&fail, &buf));
+    try std.testing.expectEqual(@as(usize, 1), fail.index);
+
+    var zero_len_fail = TryNextOnlySource{ .words = &.{}, .fail_after = 0 };
+    var empty: [0]u8 = .{};
+    try Rng.tryFillBytesFrom(&zero_len_fail, &empty);
+    try std.testing.expectEqual(@as(usize, 0), zero_len_fail.index);
+}
+
 test "rng reader adapter streams deterministic bytes" {
     const StepSource = struct {
         value: u64,
@@ -5750,6 +5792,37 @@ test "rng reader adapter integrates with Io stream and discard" {
     var expected_after_skip: [7]u8 = undefined;
     direct_engine.fill(&expected_after_skip);
     try std.testing.expectEqualSlices(u8, &expected_after_skip, &after_skip);
+}
+
+test "rng reader adapter preserves buffered data across peek refills" {
+    const alea = @import("root.zig");
+
+    var engine = alea.stepRng(0x0102_0304_0506_0708, 0x1111_1111_1111_1111);
+    var buffer: [8]u8 = undefined;
+    var adapter = Rng.init(&engine).reader(&buffer);
+    const io_reader = adapter.reader();
+
+    try std.testing.expectEqualSlices(u8, &.{
+        0x08, 0x07, 0x06, 0x05, 0x04,
+    }, try io_reader.take(5));
+
+    // The next peek must append to the three unconsumed bytes already in the
+    // Reader buffer instead of overwriting them at offset 0.  This exercises
+    // the std.Io.Reader zero-length readVec refill path directly.
+    try std.testing.expectEqualSlices(u8, &.{
+        0x03, 0x02, 0x01, 0x19, 0x18, 0x17,
+    }, try io_reader.peek(6));
+    try std.testing.expectEqualSlices(u8, &.{
+        0x03, 0x02, 0x01, 0x19, 0x18, 0x17,
+    }, try io_reader.take(6));
+
+    var direct = alea.stepRng(0x0102_0304_0506_0708, 0x1111_1111_1111_1111);
+    var expected: [11]u8 = undefined;
+    direct.fill(&expected);
+    try std.testing.expectEqualSlices(u8, &expected, &.{
+        0x08, 0x07, 0x06, 0x05, 0x04,
+        0x03, 0x02, 0x01, 0x19, 0x18, 0x17,
+    });
 }
 
 test "rng reader adapter propagates fallible sources" {

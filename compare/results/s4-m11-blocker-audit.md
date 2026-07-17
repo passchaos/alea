@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1231-rng-reader-tryfill-hardening.md"
 "compare/results/s4-m1230-rng-normal-affine-lane-store.md"
 "compare/results/s4-m1229-vector-sampler-lane-count-sweep.md"
 "compare/results/s4-m1228-distribution-transform-lane-store-sweep.md"
@@ -390,4 +391,6 @@ S4-M1229 is closed after completing the vector sampler lane-count sweep in `comp
 
 S4-M1230 is closed after refactoring the rng normal affine lane-store helper in `compare/results/s4-m1230-rng-normal-affine-lane-store.md`.
 
-S4-M1231 remains active after S4-M1230 raises the next correctness/performance/product bar.
+S4-M1231 is closed after hardening rng byte-fill / reader refill correctness in `compare/results/s4-m1231-rng-reader-tryfill-hardening.md`.
+
+S4-M1232 remains active after S4-M1231 raises the next correctness/performance/product bar.
