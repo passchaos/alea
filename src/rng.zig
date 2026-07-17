@@ -4501,10 +4501,19 @@ fn vectorF64From(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     if (info.child != f64) @compileError("vectorF64From expects an f64 vector");
 
+    // Keep the public 53-bit StandardUniform grid while avoiding a full-width
+    // integer-to-float conversion for the common upper 52 bits. The bitcast
+    // forms the `floor(n / 2) / 2^52` component exactly, then the remaining
+    // low grid bit contributes either zero or one half-ulp. This preserves the
+    // same `n / 2^53` values as the straightforward multiply path.
     const RawVector = @Vector(info.len, u64);
     var raw: RawVector = undefined;
-    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
-    return @as(VectorType, @floatFromInt(raw)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
+    inline for (0..info.len) |i| raw[i] = nextFrom(source);
+
+    const base_bits = (@as(RawVector, @splat(@as(u64, 0x3ff) << 52)) | (raw >> @splat(12)));
+    const low_bit = (raw >> @splat(11)) & @as(RawVector, @splat(1));
+    return (@as(VectorType, @bitCast(base_bits)) - @as(VectorType, @splat(1.0))) +
+        @as(VectorType, @floatFromInt(low_bit)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
 }
 
 fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
@@ -4670,7 +4679,14 @@ fn f64FromRaw(raw: u64) f64 {
     // below deliberately keeps the faster exponent-bit 52-bit grid because its
     // contract is endpoint avoidance, while `[0, 1)` should not silently lose
     // one bit of precision or differ between facade and direct-source paths.
-    return @as(f64, @floatFromInt(raw >> 11)) * (1.0 / 9007199254740992.0);
+    //
+    // Split `n / 2^53` into a fast exponent-bit 52-bit base plus the remaining
+    // half-ulp bit. This gives the same grid as `float(raw >> 11) * 2^-53`,
+    // while recovering much of the pre-S4-M1223 bitcast throughput.
+    const base_bits = (@as(u64, 0x3ff) << 52) | (raw >> 12);
+    const base = @as(f64, @bitCast(base_bits)) - 1.0;
+    const low = @as(f64, @floatFromInt((raw >> 11) & 1)) * (1.0 / 9007199254740992.0);
+    return base + low;
 }
 
 fn f64UnitOpenBitsFromRaw(raw: u64) u64 {

@@ -15,10 +15,10 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. The active post-S4-M1222 bar is
-S4-M1223: exact/default dense SIMD research, additional non-WASI
-OS/architecture execution, broader validation, or newly discovered core
-random-workflow gaps.
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, and S4-M1224 recovers throughput without changing that grid. The active post-S4-M1224 bar is
+S4-M1225: exact/default dense SIMD research, additional non-WASI
+OS/architecture execution, broader validation, further semantics-preserving
+performance work, or newly discovered core random-workflow gaps.
 
 ## Scope
 
@@ -6214,12 +6214,19 @@ S4-M1221 corrects and optimizes multivariate-normal throughput
 (`compare/results/s4-m1221-multivariate-normal-throughput.md`): corrected benchmarks observe all coordinates outside the timed region, f64 1–3D transforms and full-rank 3D batch loops improve f64/f32 throughput while preserving checksum and repeated-sample stream shape. This is performance evidence, not whole-goal completion; S4-M1222 is now closed by the static sampler below.
 
 S4-M1222 adds static allocation-free multivariate-normal sampling
-(`compare/results/s4-m1222-static-multivariate-normal.md`): inline fixed-dimension state removes allocator lifecycle, fixed-array sampling matches dynamic output/state, and 8D throughput reaches about 46.0M versus 31.9M dynamic vectors/s. This is Zig-native breadth/performance evidence, not whole-goal completion; S4-M1223 remains active.
+(`compare/results/s4-m1222-static-multivariate-normal.md`): inline fixed-dimension state removes allocator lifecycle, fixed-array sampling matches dynamic output/state, and 8D throughput reaches about 46.0M versus 31.9M dynamic vectors/s. This is Zig-native breadth/performance evidence, not whole-goal completion; S4-M1223 is now closed by the f64 StandardUniform correctness fix below.
 
 S4-M1223 fixes ordinary f64 StandardUniform grid consistency
 (`compare/results/s4-m1223-f64-standard-uniform-grid.md`): facade, direct-source,
 bulk-fill, value-iterator/distribution-fill, and vector ordinary f64 paths now
 all use the local Rust `StandardUniform` high-53-bit `n / 2^53` grid. This is a
-correctness-first fix; S4-M1224 remains active for exact/default dense SIMD,
-broader runtime, longer validation, performance recovery for the stricter f64
-grid, or newly discovered core workflow gaps.
+correctness-first fix; S4-M1224 is now closed by the semantics-preserving
+throughput recovery below.
+
+S4-M1224 recovers ordinary f64 StandardUniform throughput
+(`compare/results/s4-m1224-f64-standard-uniform-throughput.md`): scalar and
+vector ordinary f64 paths split the 53-bit grid into an exponent-bit 52-bit base
+plus the remaining half-ULP bit, preserving `n / 2^53` while restoring much of
+the hot-path throughput. S4-M1225 remains active for exact/default dense SIMD,
+broader runtime, longer validation, further semantics-preserving performance
+work, or newly discovered core workflow gaps.

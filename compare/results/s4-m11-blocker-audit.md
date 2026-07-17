@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1224-f64-standard-uniform-throughput.md"
 "compare/results/s4-m1223-f64-standard-uniform-grid.md"
 "compare/results/s4-m1218-post-s4-m1217-validate-local.md"
 "compare/results/s4-m1217-minimum-vectorbench-gate.md"
@@ -369,4 +370,6 @@ S4-M1222 is closed after adding static allocation-free multivariate-normal sampl
 
 S4-M1223 is closed after fixing ordinary f64 StandardUniform 53-bit grid consistency across facade, direct-source, bulk-fill, value-iterator, distribution-fill, and vector paths in `compare/results/s4-m1223-f64-standard-uniform-grid.md`.
 
-S4-M1224 remains active after S4-M1223 raises the next correctness/performance/product bar.
+S4-M1224 is closed after recovering ordinary f64 StandardUniform throughput while preserving the S4-M1223 53-bit grid in `compare/results/s4-m1224-f64-standard-uniform-throughput.md`.
+
+S4-M1225 remains active after S4-M1224 raises the next correctness/performance/product bar.
