@@ -1224,6 +1224,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1226", .path = "compare/results/s4-m1226-float-fill-lane-store-refactor.md" },
     .{ .milestone = "S4-M1227", .path = "compare/results/s4-m1227-distribution-lane-store-refactor.md" },
     .{ .milestone = "S4-M1228", .path = "compare/results/s4-m1228-distribution-transform-lane-store-sweep.md" },
+    .{ .milestone = "S4-M1229", .path = "compare/results/s4-m1229-vector-sampler-lane-count-sweep.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1231,6 +1232,7 @@ const required_tokens = [_][]const u8{
     "S4-M11",
     "blocked",
     "do not call `update_goal(status=complete)`",
+    "S4-M1230",
     "S4-M1229",
     "S4-M1228",
     "S4-M1227",
@@ -1351,6 +1353,7 @@ const blocker_tokens = [_][]const u8{
     "\"local_rand_status\"",
     "\"blocker_audit\"",
     "\"latest_validate_local_evidence\"",
+    "\"compare/results/s4-m1229-vector-sampler-lane-count-sweep.md\"",
     "\"compare/results/s4-m1228-distribution-transform-lane-store-sweep.md\"",
     "\"compare/results/s4-m1227-distribution-lane-store-refactor.md\"",
     "\"compare/results/s4-m1226-float-fill-lane-store-refactor.md\"",
@@ -1606,7 +1609,7 @@ const current_rand_status_tokens = [_][]const u8{
     "\"s4_m11_blocked\": false",
     "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
     "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
-    "\"latest_validate_local_evidence\": \"compare/results/s4-m1228-distribution-transform-lane-store-sweep.md\"",
+    "\"latest_validate_local_evidence\": \"compare/results/s4-m1229-vector-sampler-lane-count-sweep.md\"",
     "surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137",
     "surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30",
     "surfacecheck local rand_distr: files=34 expected-tokens=72 source-tokens=185",
@@ -1634,7 +1637,7 @@ const rand_status_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --help",
     "--schema-version prints the stable JSON schema version",
     "--self-test validates text, JSON, help, and bad-argument paths without Rust tools",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1228 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1229 follow-ups closed for current bar",
 };
 
 const rand_status_direct_matrix_tokens = [_][]const u8{
@@ -1648,7 +1651,7 @@ const rand_status_direct_matrix_tokens = [_][]const u8{
     "$ zig build rand-status -- --schema-version",
     "$ zig build rand-status -- --self-test",
     "rand-status self-test ok",
-    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1228 follow-ups closed for current bar",
+    "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1229 follow-ups closed for current bar",
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -2015,8 +2018,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1228 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1229 | Next post-S4-M1228 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1229 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1229 | Vector sampler lane-count sweep") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1229 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1230 | Next post-S4-M1229 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1230 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
@@ -2279,8 +2286,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: active audit missing S4-M1228 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "| S4-M1229 next post-S4-M1228 product bar") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1229 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, audit, "| S4-M1229 vector sampler lane-count sweep") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1229 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "| S4-M1230 next post-S4-M1229 product bar") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1230 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

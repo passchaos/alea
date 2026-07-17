@@ -10098,14 +10098,14 @@ pub fn VectorGamma(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (gammaPoint(Child, self.sampler.shape, self.sampler.scale)) |point| return @splat(point);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (gammaPoint(Child, self.sampler.shape, self.sampler.scale)) |point| return @splat(point);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -10124,7 +10124,7 @@ pub fn VectorGamma(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
                 item.* = out;
             }
         }
@@ -10144,7 +10144,7 @@ pub fn VectorGamma(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
                 item.* = out;
             }
         }
@@ -10497,7 +10497,7 @@ pub fn VectorChiSquared(comptime VectorType: type) type {
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (chiSquaredPoint(Child, self.sampler.dof)) |point| return @splat(point);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -10754,7 +10754,7 @@ pub fn VectorChi(comptime VectorType: type) type {
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (chiPoint(Child, self.sampler.dofValue())) |point| return @splat(point);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -11004,7 +11004,7 @@ pub fn VectorErlang(comptime VectorType: type) type {
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(0);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -11389,14 +11389,14 @@ pub fn VectorBeta(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -11407,7 +11407,7 @@ pub fn VectorBeta(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
                 item.* = out;
             }
         }
@@ -11419,7 +11419,7 @@ pub fn VectorBeta(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
                 item.* = out;
             }
         }
@@ -11768,9 +11768,9 @@ pub fn VectorFisherF(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             var out: VectorType = undefined;
             if (self.sampler.hasInfiniteDof()) {
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
             } else {
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                inline for (0..vectorInfo(VectorType).len) |lane| {
                     out[lane] = self.sampler.numerator.sample(rng) / self.sampler.denominator.sample(rng);
                 }
             }
@@ -11780,9 +11780,9 @@ pub fn VectorFisherF(comptime VectorType: type) type {
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             var out: VectorType = undefined;
             if (self.sampler.hasInfiniteDof()) {
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             } else {
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                inline for (0..vectorInfo(VectorType).len) |lane| {
                     out[lane] = self.sampler.numerator.sampleFrom(source) / self.sampler.denominator.sampleFrom(source);
                 }
             }
@@ -11796,7 +11796,7 @@ pub fn VectorFisherF(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                inline for (0..vectorInfo(VectorType).len) |lane| {
                     out[lane] = self.sampler.numerator.sample(rng) / self.sampler.denominator.sample(rng);
                 }
                 item.* = out;
@@ -11810,7 +11810,7 @@ pub fn VectorFisherF(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                inline for (0..vectorInfo(VectorType).len) |lane| {
                     out[lane] = self.sampler.numerator.sampleFrom(source) / self.sampler.denominator.sampleFrom(source);
                 }
                 item.* = out;
@@ -12067,13 +12067,13 @@ pub fn VectorStudentT(comptime VectorType: type) type {
 
         pub fn sample(self: Self, rng: Rng) VectorType {
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sample(rng);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -12084,7 +12084,7 @@ pub fn VectorStudentT(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                inline for (0..vectorInfo(VectorType).len) |lane| {
                     const standard_normal_draw = Rng.normalFastFrom(rng, Child, 0, 1);
                     out[lane] = standard_normal_draw * @sqrt(self.sampler.dof / self.sampler.chi_squared_sampler.sample(rng));
                 }
@@ -12099,7 +12099,7 @@ pub fn VectorStudentT(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+                inline for (0..vectorInfo(VectorType).len) |lane| {
                     const standard_normal_draw = Rng.normalFastFrom(source, Child, 0, 1);
                     out[lane] = standard_normal_draw * @sqrt(self.sampler.dof / self.sampler.chi_squared_sampler.sampleFrom(source));
                 }
@@ -12297,7 +12297,7 @@ fn triangularFromUniformVector(comptime VectorType: type, uniform_vec: VectorTyp
     if (min == max) return @splat(min);
     if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) {
         var out: VectorType = undefined;
-        inline for (0..@typeInfo(VectorType).vector.len) |lane| {
+        inline for (0..vectorInfo(VectorType).len) |lane| {
             out[lane] = triangularRustShapeFromUniform(Child, uniform_vec[lane], min, mode, max);
         }
         return out;
@@ -18433,14 +18433,14 @@ pub fn VectorZipf(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -18451,7 +18451,7 @@ pub fn VectorZipf(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
                 item.* = out;
             }
         }
@@ -18463,7 +18463,7 @@ pub fn VectorZipf(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
                 item.* = out;
             }
         }
@@ -18703,14 +18703,14 @@ pub fn VectorZeta(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
-            inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
@@ -18721,7 +18721,7 @@ pub fn VectorZeta(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(rng);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
                 item.* = out;
             }
         }
@@ -18733,7 +18733,7 @@ pub fn VectorZeta(comptime VectorType: type) type {
             }
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..@typeInfo(VectorType).vector.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
                 item.* = out;
             }
         }
