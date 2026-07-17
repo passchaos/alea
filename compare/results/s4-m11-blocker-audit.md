@@ -96,7 +96,7 @@ compare/results/s4-m1161-dirichlet-subnormal-alpha.md
 compare/results/s4-m1160-hypergeometric-large-population.md
 compare/results/s4-m1159-nig-alpha-infinity.md
 `1`
-Alea local rand/rand_distr status (2026-07-16)
+Alea local rand/rand_distr status (2026-07-17)
 "schema_version"
 "baseline"
 "validate_local_passes"
@@ -107,7 +107,7 @@ Alea local rand/rand_distr status (2026-07-16)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
-"compare/results/s4-m1222-static-multivariate-normal.md"
+"compare/results/s4-m1223-f64-standard-uniform-grid.md"
 "compare/results/s4-m1218-post-s4-m1217-validate-local.md"
 "compare/results/s4-m1217-minimum-vectorbench-gate.md"
 "compare/results/s4-m1216-post-s4-m1215-validate-all.md"
@@ -367,4 +367,6 @@ S4-M1221 is closed after correcting and optimizing multivariate-normal throughpu
 
 S4-M1222 is closed after adding static allocation-free multivariate-normal sampling in `compare/results/s4-m1222-static-multivariate-normal.md`.
 
-S4-M1223 remains active after S4-M1222 raises the fixed-dimension multivariate bar.
+S4-M1223 is closed after fixing ordinary f64 StandardUniform 53-bit grid consistency across facade, direct-source, bulk-fill, value-iterator, distribution-fill, and vector paths in `compare/results/s4-m1223-f64-standard-uniform-grid.md`.
+
+S4-M1224 remains active after S4-M1223 raises the next correctness/performance/product bar.

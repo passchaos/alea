@@ -2248,7 +2248,7 @@ pub fn float(self: Rng, comptime T: type) T {
     comptime requireFloat(T);
     return switch (T) {
         f32 => f32FromBits(@truncate(self.next() >> 40)),
-        f64 => @as(f64, @floatFromInt(self.next() >> 11)) * (1.0 / 9007199254740992.0),
+        f64 => f64FromRaw(self.next()),
         else => @compileError("alea supports f32 and f64 floats"),
     };
 }
@@ -4503,8 +4503,8 @@ fn vectorF64From(source: anytype, comptime VectorType: type) VectorType {
 
     const RawVector = @Vector(info.len, u64);
     var raw: RawVector = undefined;
-    inline for (0..info.len) |i| raw[i] = f64UnitBitsFromRaw(nextFrom(source));
-    return @as(VectorType, @bitCast(raw)) - @as(VectorType, @splat(1.0));
+    inline for (0..info.len) |i| raw[i] = nextFrom(source) >> 11;
+    return @as(VectorType, @floatFromInt(raw)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
 }
 
 fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
@@ -4663,12 +4663,14 @@ fn f32OpenFromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(non_zero)) * (1.0 / 16777216.0);
 }
 
-fn f64UnitBitsFromRaw(raw: u64) u64 {
-    return (@as(u64, 0x3ff) << 52) | (raw >> 12);
-}
-
 fn f64FromRaw(raw: u64) f64 {
-    return @as(f64, @bitCast(f64UnitBitsFromRaw(raw))) - 1.0;
+    // Match Alea's facade `Rng.float(f64)` and local Rust `StandardUniform`
+    // precision: the ordinary half-open f64 sampler uses the high 53 bits of a
+    // u64 and maps them to the exact `n / 2^53` grid. The strict-open helper
+    // below deliberately keeps the faster exponent-bit 52-bit grid because its
+    // contract is endpoint avoidance, while `[0, 1)` should not silently lose
+    // one bit of precision or differ between facade and direct-source paths.
+    return @as(f64, @floatFromInt(raw >> 11)) * (1.0 / 9007199254740992.0);
 }
 
 fn f64UnitOpenBitsFromRaw(raw: u64) u64 {
@@ -4765,6 +4767,36 @@ test "rng direct raw aliases dispatch source native nextU32" {
     try std.testing.expectEqual(@as(u32, 0x1234_5678), rng.nextU32());
     try std.testing.expect(!facade_source.next_called);
     try std.testing.expect(facade_source.next_u32_called);
+}
+
+test "ordinary f64 standard uniform uses full 53-bit grid on all paths" {
+    const StepRng = @import("engines/step.zig");
+    const zero = @as(f64, 0);
+    const half_ulp = @as(f64, 1.0 / 9007199254740992.0);
+    const one_minus_half_ulp = @as(f64, 1.0 - half_ulp);
+
+    var scalar_zero = StepRng.constant(0);
+    try std.testing.expectEqual(zero, floatFrom(&scalar_zero, f64));
+
+    var scalar_low_bit = StepRng.constant(@as(u64, 1) << 11);
+    try std.testing.expectEqual(half_ulp, floatFrom(&scalar_low_bit, f64));
+
+    var scalar_max = StepRng.constant(std.math.maxInt(u64));
+    try std.testing.expectEqual(one_minus_half_ulp, floatFrom(&scalar_max, f64));
+
+    var facade_low_bit_engine = StepRng.constant(@as(u64, 1) << 11);
+    const facade_low_bit = Rng.init(&facade_low_bit_engine);
+    var direct_low_bit_engine = StepRng.constant(@as(u64, 1) << 11);
+    try std.testing.expectEqual(facade_low_bit.float(f64), floatFrom(&direct_low_bit_engine, f64));
+
+    var fill_engine = StepRng.constant(@as(u64, 1) << 11);
+    var fill_buf: [3]f64 = undefined;
+    fillFrom(&fill_engine, f64, &fill_buf);
+    try std.testing.expectEqualSlices(f64, &.{ half_ulp, half_ulp, half_ulp }, &fill_buf);
+
+    var vector_engine = StepRng.constant(@as(u64, 1) << 11);
+    const vector_sample = vectorFrom(&vector_engine, @Vector(4, f64));
+    try std.testing.expectEqual(@as(@Vector(4, f64), @splat(half_ulp)), vector_sample);
 }
 
 test "rng facade covers scalar APIs" {

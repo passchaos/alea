@@ -6215,3 +6215,11 @@ S4-M1221 corrects and optimizes multivariate-normal throughput
 
 S4-M1222 adds static allocation-free multivariate-normal sampling
 (`compare/results/s4-m1222-static-multivariate-normal.md`): inline fixed-dimension state removes allocator lifecycle, fixed-array sampling matches dynamic output/state, and 8D throughput reaches about 46.0M versus 31.9M dynamic vectors/s. This is Zig-native breadth/performance evidence, not whole-goal completion; S4-M1223 remains active.
+
+S4-M1223 fixes ordinary f64 StandardUniform grid consistency
+(`compare/results/s4-m1223-f64-standard-uniform-grid.md`): facade, direct-source,
+bulk-fill, value-iterator/distribution-fill, and vector ordinary f64 paths now
+all use the local Rust `StandardUniform` high-53-bit `n / 2^53` grid. This is a
+correctness-first fix; S4-M1224 remains active for exact/default dense SIMD,
+broader runtime, longer validation, performance recovery for the stricter f64
+grid, or newly discovered core workflow gaps.
