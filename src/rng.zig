@@ -84,8 +84,8 @@ pub fn init(pointer: anytype) Rng {
             @compileError("Rng.init expects a single-item pointer to an engine");
         }
         const Child = ptr_info.pointer.child;
-        if (!@hasDecl(Child, "next") and !@hasDecl(Child, "nextU64")) {
-            @compileError(@typeName(Child) ++ " must expose pub fn next(*Self) u64 or pub fn nextU64(*Self) u64");
+        if (!@hasDecl(Child, "next") and !@hasDecl(Child, "nextU64") and !@hasDecl(Child, "nextU32")) {
+            @compileError(@typeName(Child) ++ " must expose pub fn next(*Self) u64, pub fn nextU64(*Self) u64, or pub fn nextU32(*Self) u32");
         }
     }
     const gen = struct {
@@ -1982,6 +1982,8 @@ pub fn tryNextU64From(source: anytype) !u64 {
     if (comptime sourceCanTryNextU64(@TypeOf(source))) return source.tryNextU64();
     if (comptime sourceCanTryNext(@TypeOf(source))) return source.tryNext();
     if (comptime sourceCanNextU64(@TypeOf(source))) return source.nextU64();
+    if (comptime sourceCanNext(@TypeOf(source))) return source.next();
+    if (comptime sourceCanTryNextU32(@TypeOf(source)) or sourceCanNextU32(@TypeOf(source))) return tryNextU64FromU32(source);
     return nextFrom(source);
 }
 
@@ -4320,7 +4322,20 @@ fn isValidExponentialRate(comptime T: type, rate: T) bool {
 pub inline fn nextFrom(source: anytype) u64 {
     if (@TypeOf(source) == Rng) return source.next();
     if (comptime sourceCanNext(@TypeOf(source))) return source.next();
-    return source.nextU64();
+    if (comptime sourceCanNextU64(@TypeOf(source))) return source.nextU64();
+    return nextU64FromU32(source);
+}
+
+fn nextU64FromU32(source: anytype) u64 {
+    const low: u64 = nextU32From(source);
+    const high: u64 = nextU32From(source);
+    return low | (high << 32);
+}
+
+fn tryNextU64FromU32(source: anytype) !u64 {
+    const low: u64 = try tryNextU32From(source);
+    const high: u64 = try tryNextU32From(source);
+    return low | (high << 32);
 }
 
 fn sourceCanNext(comptime Source: type) bool {
@@ -4890,6 +4905,36 @@ test "rng facade init accepts raw alias-only sources" {
     rng.fillBytes(&out_bytes);
     try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &out_bytes);
     try std.testing.expect(source.fill_bytes_called);
+}
+
+test "rng raw helpers accept native nextU32 only sources" {
+    const NativeU32OnlySource = struct {
+        index: u32 = 0,
+
+        fn nextU32(self: *@This()) u32 {
+            self.index += 1;
+            return self.index;
+        }
+    };
+
+    var scalar_source = NativeU32OnlySource{};
+    try std.testing.expectEqual(@as(u32, 1), Rng.nextU32From(&scalar_source));
+    try std.testing.expectEqual(@as(u32, 2), try Rng.tryNextU32From(&scalar_source));
+    try std.testing.expectEqual(@as(u32, 2), scalar_source.index);
+
+    var u64_source = NativeU32OnlySource{};
+    try std.testing.expectEqual(@as(u64, 0x0000_0002_0000_0001), Rng.nextU64From(&u64_source));
+    try std.testing.expectEqual(@as(u32, 2), u64_source.index);
+
+    var try_u64_source = NativeU32OnlySource{};
+    try std.testing.expectEqual(@as(u64, 0x0000_0002_0000_0001), try Rng.tryNextU64From(&try_u64_source));
+    try std.testing.expectEqual(@as(u32, 2), try_u64_source.index);
+
+    var facade_source = NativeU32OnlySource{};
+    const rng = Rng.init(&facade_source);
+    try std.testing.expectEqual(@as(u32, 1), rng.nextU32());
+    try std.testing.expectEqual(@as(u64, 0x0000_0003_0000_0002), rng.nextU64());
+    try std.testing.expectEqual(@as(u32, 3), facade_source.index);
 }
 
 test "fromRandom nextU32 preserves std.Random byte shape" {
