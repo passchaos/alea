@@ -4614,57 +4614,88 @@ pub fn fillVectorNormalTableF64CheckedFrom(source: anytype, comptime VectorType:
     fillVectorNormalTableF64From(source, VectorType, dest, mean, stddev);
 }
 
-pub fn StandardNormal(comptime T: type) type {
-    return struct {
-        pub fn meanValue(_: @This()) T {
-            return 0;
-        }
+/// Standard normal distribution: N(0, 1). Samples from the standard normal
+/// (Gaussian) distribution with mean 0 and standard deviation 1.
+///
+/// This is a polymorphic unit-struct sampler following the same pattern as
+/// `StandardUniform`, `Open01`, and `OpenClosed01`. Use as:
+///   const z = rng.sample(f64, StandardNormal{});
+///   const z_vec = rng.sample(@Vector(4, f64), StandardNormal{});
+///   rng.fill(f64, &buf, StandardNormal{});
+///   var iter = rng.sampleIter(f64, StandardNormal{});
+///
+/// Supports scalar f32/f64 sampling and SIMD vector batch sampling through the
+/// standard Distribution interface, including bulk fill methods and iterators.
+/// Moment accessors also accept a comptime T parameter for type-specific values.
+pub const StandardNormal = struct {
+    pub fn meanValue(_: StandardNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
 
-        pub fn stddevValue(_: @This()) T {
-            return 1;
-        }
+    pub fn stddevValue(_: StandardNormal, comptime T: type) T {
+        return oneOf(T);
+    }
 
-        pub fn expectedValue(_: @This()) T {
-            return 0;
-        }
+    pub fn expectedValue(_: StandardNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
 
-        pub fn varianceValue(_: @This()) T {
-            return 1;
-        }
+    pub fn varianceValue(_: StandardNormal, comptime T: type) T {
+        return oneOf(T);
+    }
 
-        pub fn medianValue(_: @This()) T {
-            return 0;
-        }
+    pub fn medianValue(_: StandardNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
 
-        pub fn modeValue(_: @This()) T {
-            return 0;
-        }
+    pub fn modeValue(_: StandardNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
 
-        pub fn minValue(_: @This()) ?T {
-            return null;
-        }
+    pub fn minValue(_: StandardNormal, comptime T: type) ?T {
+        return null;
+    }
 
-        pub fn maxValue(_: @This()) ?T {
-            return null;
-        }
+    pub fn maxValue(_: StandardNormal, comptime T: type) ?T {
+        return null;
+    }
 
-        pub fn sample(_: @This(), rng: Rng) T {
-            return standardNormal(rng, T);
-        }
+    pub fn sample(_: StandardNormal, rng: Rng, comptime T: type) T {
+        requireFloatOrFloatVector(T);
+        return switch (@typeInfo(T)) {
+            .float => standardNormal(rng, T),
+            .vector => vectorStandardNormal(rng, T),
+            else => unreachable,
+        };
+    }
 
-        pub fn sampleFrom(_: @This(), source: anytype) T {
-            return standardNormalFrom(source, T);
-        }
+    pub fn sampleFrom(_: StandardNormal, source: anytype, comptime T: type) T {
+        requireFloatOrFloatVector(T);
+        return switch (@typeInfo(T)) {
+            .float => standardNormalFrom(source, T),
+            .vector => vectorStandardNormalFrom(source, T),
+            else => unreachable,
+        };
+    }
 
-        pub fn fill(_: @This(), rng: Rng, dest: []T) void {
-            fillStandardNormal(rng, T, dest);
+    pub fn fill(_: StandardNormal, rng: Rng, comptime T: type, dest: []T) void {
+        requireFloatOrFloatVector(T);
+        switch (@typeInfo(T)) {
+            .float => fillStandardNormal(rng, T, dest),
+            .vector => fillVectorStandardNormal(rng, T, dest),
+            else => unreachable,
         }
+    }
 
-        pub fn fillFrom(_: @This(), source: anytype, dest: []T) void {
-            fillStandardNormalFrom(source, T, dest);
+    pub fn fillFrom(_: StandardNormal, source: anytype, comptime T: type, dest: []T) void {
+        requireFloatOrFloatVector(T);
+        switch (@typeInfo(T)) {
+            .float => fillStandardNormalFrom(source, T, dest),
+            .vector => fillVectorStandardNormalFrom(source, T, dest),
+            else => unreachable,
         }
-    };
-}
+    }
+};
 
 pub const StandardNormalNativeF32 = struct {
     pub fn meanValue(_: StandardNormalNativeF32) f32 {
@@ -5941,61 +5972,92 @@ pub fn VectorNormal(comptime VectorType: type) type {
     };
 }
 
-pub fn StandardExponential(comptime T: type) type {
-    return struct {
-        pub fn rateValue(_: @This()) T {
-            return 1;
-        }
+/// Standard exponential distribution: Exp(1). Samples from the standard
+/// exponential distribution with rate 1 (mean 1).
+///
+/// This is a polymorphic unit-struct sampler following the same pattern as
+/// `StandardUniform`, `Open01`, and `OpenClosed01`. Use as:
+///   const x = rng.sample(f64, StandardExponential{});
+///   const x_vec = rng.sample(@Vector(4, f64), StandardExponential{});
+///   rng.fill(f64, &buf, StandardExponential{});
+///   var iter = rng.sampleIter(f64, StandardExponential{});
+///
+/// Supports scalar f32/f64 sampling and SIMD vector batch sampling through the
+/// standard Distribution interface, including bulk fill methods and iterators.
+/// Moment accessors also accept a comptime T parameter for type-specific values.
+pub const StandardExponential = struct {
+    pub fn rateValue(_: StandardExponential, comptime T: type) T {
+        return oneOf(T);
+    }
 
-        pub fn inverseRateValue(_: @This()) T {
-            return 1;
-        }
+    pub fn inverseRateValue(_: StandardExponential, comptime T: type) T {
+        return oneOf(T);
+    }
 
-        pub fn expectedValue(_: @This()) T {
-            return 1;
-        }
+    pub fn expectedValue(_: StandardExponential, comptime T: type) T {
+        return oneOf(T);
+    }
 
-        pub fn varianceValue(_: @This()) T {
-            return 1;
-        }
+    pub fn varianceValue(_: StandardExponential, comptime T: type) T {
+        return oneOf(T);
+    }
 
-        pub fn medianValue(_: @This()) T {
-            return @log(@as(T, 2));
-        }
+    pub fn medianValue(_: StandardExponential, comptime T: type) T {
+        return @log(@as(T, 2));
+    }
 
-        pub fn modeValue(_: @This()) T {
-            return 0;
-        }
+    pub fn modeValue(_: StandardExponential, comptime T: type) T {
+        return zeroOf(T);
+    }
 
-        pub fn minValue(_: @This()) T {
-            return 0;
-        }
+    pub fn minValue(_: StandardExponential, comptime T: type) T {
+        return zeroOf(T);
+    }
 
-        pub fn maxValue(_: @This()) ?T {
-            return null;
-        }
+    pub fn maxValue(_: StandardExponential, comptime T: type) ?T {
+        return null;
+    }
 
-        pub fn sample(_: @This(), rng: Rng) T {
-            return standardExponential(rng, T);
-        }
+    pub fn sample(_: StandardExponential, rng: Rng, comptime T: type) T {
+        requireFloatOrFloatVector(T);
+        return switch (@typeInfo(T)) {
+            .float => standardExponential(rng, T),
+            .vector => vectorStandardExponential(rng, T),
+            else => unreachable,
+        };
+    }
 
-        pub fn sampleFrom(_: @This(), source: anytype) T {
-            return standardExponentialFrom(source, T);
-        }
+    pub fn sampleFrom(_: StandardExponential, source: anytype, comptime T: type) T {
+        requireFloatOrFloatVector(T);
+        return switch (@typeInfo(T)) {
+            .float => standardExponentialFrom(source, T),
+            .vector => vectorStandardExponentialFrom(source, T),
+            else => unreachable,
+        };
+    }
 
-        pub fn fill(_: @This(), rng: Rng, dest: []T) void {
-            fillStandardExponential(rng, T, dest);
+    pub fn fill(_: StandardExponential, rng: Rng, comptime T: type, dest: []T) void {
+        requireFloatOrFloatVector(T);
+        switch (@typeInfo(T)) {
+            .float => fillStandardExponential(rng, T, dest),
+            .vector => fillVectorStandardExponential(rng, T, dest),
+            else => unreachable,
         }
+    }
 
-        pub fn fillFrom(_: @This(), source: anytype, dest: []T) void {
-            fillStandardExponentialFrom(source, T, dest);
+    pub fn fillFrom(_: StandardExponential, source: anytype, comptime T: type, dest: []T) void {
+        requireFloatOrFloatVector(T);
+        switch (@typeInfo(T)) {
+            .float => fillStandardExponentialFrom(source, T, dest),
+            .vector => fillVectorStandardExponentialFrom(source, T, dest),
+            else => unreachable,
         }
-    };
-}
+    }
+};
 
-pub fn Exp1(comptime T: type) type {
-    return StandardExponential(T);
-}
+/// Alias for `StandardExponential` matching Rust's `rand::distributions::Exp1`
+/// naming convention for users porting code from Rust.
+pub const Exp1 = StandardExponential;
 
 pub const StandardExponentialNativeF32 = struct {
     pub fn rateValue(_: StandardExponentialNativeF32) f32 {
@@ -37441,43 +37503,60 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (exponential_degenerate_fill) |value| try std.testing.expectEqual(@as(f64, 0), value);
     try std.testing.expectEqual(exponential_degenerate_control.next(), exponential_degenerate_engine.next());
 
-    var standard_normals = rng.sampleIter(f64, StandardNormal(f64){});
+    var standard_normals = rng.sampleIter(f64, StandardNormal{});
     try std.testing.expect(std.math.isFinite(standard_normals.next().?));
-    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).meanValue());
-    try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).stddevValue());
-    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).expectedValue());
-    try std.testing.expectEqual(@as(f64, 1), (StandardNormal(f64){}).varianceValue());
-    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).medianValue());
-    try std.testing.expectEqual(@as(f64, 0), (StandardNormal(f64){}).modeValue());
-    try std.testing.expect((StandardNormal(f64){}).minValue() == null);
-    try std.testing.expect((StandardNormal(f64){}).maxValue() == null);
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal{}).meanValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (StandardNormal{}).stddevValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal{}).expectedValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (StandardNormal{}).varianceValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal{}).medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), (StandardNormal{}).modeValue(f64));
+    try std.testing.expect((StandardNormal{}).minValue(f64) == null);
+    try std.testing.expect((StandardNormal{}).maxValue(f64) == null);
     var standard_normal_buf: [8]f64 = undefined;
     fillStandardNormal(rng, f64, &standard_normal_buf);
     for (standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
     var direct_standard_normal_buf: [8]f64 = undefined;
     fillStandardNormalFrom(&direct_engine, f64, &direct_standard_normal_buf);
     for (direct_standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
-    (StandardNormal(f64){}).fillFrom(&direct_engine, &direct_standard_normal_buf);
+    (StandardNormal{}).fillFrom(&direct_engine, f64, &direct_standard_normal_buf);
     for (direct_standard_normal_buf) |value| try std.testing.expect(std.math.isFinite(value));
 
-    var standard_exponentials = rng.sampleIter(f64, StandardExponential(f64){});
+    // Also test vector sampling through the polymorphic API
+    const vec_normal = rng.sample(@Vector(4, f64), StandardNormal{});
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vec_normal[lane]));
+    var vec_normal_buf: [4]@Vector(4, f64) = undefined;
+    rng.fillSample(@Vector(4, f64), &vec_normal_buf, StandardNormal{});
+    for (vec_normal_buf) |v| inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(v[lane]));
+
+    var standard_exponentials = rng.sampleIter(f64, StandardExponential{});
     try std.testing.expect(standard_exponentials.next().? >= 0);
-    try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).rateValue());
-    try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).inverseRateValue());
-    try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).expectedValue());
-    try std.testing.expectEqual(@as(f64, 1), (StandardExponential(f64){}).varianceValue());
-    try std.testing.expectEqual(@log(@as(f64, 2)), (StandardExponential(f64){}).medianValue());
-    try std.testing.expectEqual(@as(f64, 0), (StandardExponential(f64){}).modeValue());
-    try std.testing.expectEqual(@as(f64, 0), (StandardExponential(f64){}).minValue());
-    try std.testing.expect((StandardExponential(f64){}).maxValue() == null);
+    try std.testing.expectEqual(@as(f64, 1), (StandardExponential{}).rateValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (StandardExponential{}).inverseRateValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (StandardExponential{}).expectedValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), (StandardExponential{}).varianceValue(f64));
+    try std.testing.expectEqual(@log(@as(f64, 2)), (StandardExponential{}).medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), (StandardExponential{}).modeValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), (StandardExponential{}).minValue(f64));
+    try std.testing.expect((StandardExponential{}).maxValue(f64) == null);
     var standard_exponential_buf: [8]f64 = undefined;
     fillStandardExponential(rng, f64, &standard_exponential_buf);
     for (standard_exponential_buf) |value| try std.testing.expect(value >= 0);
     var direct_standard_exponential_buf: [8]f64 = undefined;
     fillStandardExponentialFrom(&direct_engine, f64, &direct_standard_exponential_buf);
     for (direct_standard_exponential_buf) |value| try std.testing.expect(value >= 0);
-    (StandardExponential(f64){}).fillFrom(&direct_engine, &direct_standard_exponential_buf);
+    (StandardExponential{}).fillFrom(&direct_engine, f64, &direct_standard_exponential_buf);
     for (direct_standard_exponential_buf) |value| try std.testing.expect(value >= 0);
+
+    // Also test vector exponential sampling
+    const vec_exp = rng.sample(@Vector(4, f64), StandardExponential{});
+    inline for (0..4) |lane| try std.testing.expect(vec_exp[lane] >= 0);
+
+    // Exp1 is an alias for StandardExponential (Rust naming compatibility)
+    try std.testing.expectEqual(@TypeOf(StandardExponential{}), @TypeOf(Exp1{}));
+    try std.testing.expectEqual((StandardExponential{}).expectedValue(f64), (Exp1{}).expectedValue(f64));
+    const exp1_sample = rng.sample(f64, Exp1{});
+    try std.testing.expect(exp1_sample >= 0);
 
     var log_normals = rng.sampleIter(f64, try LogNormal(f64).init(0, 0.25));
     try std.testing.expect(log_normals.next().? > 0);
@@ -40647,7 +40726,7 @@ test "rand_distr Exp and Exp1 aliases mirror exponential samplers" {
     const root = @import("root.zig");
     comptime {
         std.debug.assert(Exp(f64) == Exponential(f64));
-        std.debug.assert(Exp1(f64) == StandardExponential(f64));
+        std.debug.assert(Exp1 == StandardExponential);
     }
 
     const exp_alias = try Exp(f64).init(2);
@@ -40662,15 +40741,15 @@ test "rand_distr Exp and Exp1 aliases mirror exponential samplers" {
 
     var exp1_alias_engine = root.DefaultPrng.init(0x51_4d_291);
     var standard_engine = root.DefaultPrng.init(0x51_4d_291);
-    try std.testing.expectEqual((StandardExponential(f64){}).sampleFrom(&standard_engine), (Exp1(f64){}).sampleFrom(&exp1_alias_engine));
+    try std.testing.expectEqual((StandardExponential{}).sampleFrom(&standard_engine, f64), (Exp1{}).sampleFrom(&exp1_alias_engine, f64));
     try std.testing.expectEqual(standard_engine.next(), exp1_alias_engine.next());
 
     var exp1_alias_buf: [6]f64 = undefined;
     var standard_buf: [6]f64 = undefined;
     var exp1_fill_engine = root.DefaultPrng.init(0x51_4d_292);
     var standard_fill_engine = root.DefaultPrng.init(0x51_4d_292);
-    (Exp1(f64){}).fillFrom(&exp1_fill_engine, &exp1_alias_buf);
-    (StandardExponential(f64){}).fillFrom(&standard_fill_engine, &standard_buf);
+    (Exp1{}).fillFrom(&exp1_fill_engine, f64, &exp1_alias_buf);
+    (StandardExponential{}).fillFrom(&standard_fill_engine, f64, &standard_buf);
     try std.testing.expectEqualSlices(f64, &standard_buf, &exp1_alias_buf);
     try std.testing.expectEqual(standard_fill_engine.next(), exp1_fill_engine.next());
 }

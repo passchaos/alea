@@ -4711,3 +4711,7 @@ S4-M1242 is closed after addressing the first concrete post-S4-M1241 improvement
 S4-M1243 is closed after fixing `chooseIteratorStable` to use sequential reservoir sampling rather than the size-hint skip-ahead fast path in `compare/results/s4-m1243-stable-iterator-choice-semantics.md`.
 
 S4-M1244 remains active after S4-M1243 raises the next correctness/performance/product bar.
+
+S4-M1244 is closed after converting the legacy per-type `StandardNormal(T)` and `StandardExponential(T)` factory functions to polymorphic unit structs consistent with `StandardUniform`, `Open01`, `OpenClosed01`, and `StandardGeometric`, adding `Exp1` as a Rust-naming alias and vector support for both distributions (`compare/results/s4-m1244-polymorphic-standard-normal-exponential.md`).
+
+S4-M1245 remains active after S4-M1244 raises the next correctness/performance/product bar.

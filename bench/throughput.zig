@@ -2401,14 +2401,14 @@ fn benchStandardNormalScalar(io: std.Io, stdout: *std.Io.Writer, name: []const u
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
-    const dist = alea.distributions.StandardNormal(f64){};
+    const dist = alea.distributions.StandardNormal{};
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0xd15a);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: f64 = 0;
-        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine, f64);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -2450,14 +2450,14 @@ fn benchStandardNormalScalarF32(io: std.Io, stdout: *std.Io.Writer, name: []cons
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
-    const dist = alea.distributions.StandardNormal(f32){};
+    const dist = alea.distributions.StandardNormal{};
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0xd15a);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: f32 = 0;
-        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine, f32);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -4032,14 +4032,14 @@ fn benchStandardExponentialScalar(io: std.Io, stdout: *std.Io.Writer, name: []co
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f64 = 0;
-    const dist = alea.distributions.StandardExponential(f64){};
+    const dist = alea.distributions.StandardExponential{};
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0xe15a);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: f64 = 0;
-        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine, f64);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
@@ -4081,14 +4081,14 @@ fn benchStandardExponentialScalarF32(io: std.Io, stdout: *std.Io.Writer, name: [
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: f32 = 0;
-    const dist = alea.distributions.StandardExponential(f32){};
+    const dist = alea.distributions.StandardExponential{};
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.ScalarPrng.init(0xe15a);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: f32 = 0;
-        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine);
+        while (i < count) : (i += 1) checksum += dist.sampleFrom(&engine, f32);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
