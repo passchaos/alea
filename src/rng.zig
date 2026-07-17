@@ -4406,6 +4406,13 @@ fn vectorChild(comptime VectorType: type) type {
     return vectorInfo(VectorType).child;
 }
 
+inline fn loadVectorLanes(comptime VectorType: type, source: []const vectorChild(VectorType), start: usize) VectorType {
+    const info = vectorInfo(VectorType);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = source[start + lane];
+    return out;
+}
+
 inline fn storeVectorLanes(comptime VectorType: type, dest: []vectorChild(VectorType), start: usize, vec: VectorType) void {
     const info = vectorInfo(VectorType);
     // Vectorized slice fills are a frequent source of subtle stream-shape bugs:
@@ -4647,16 +4654,15 @@ fn normalAffineInPlace(comptime T: type, dest: []T, mean: T, stddev: T) void {
 }
 
 fn normalAffineInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T, mean: T, stddev: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const mean_vec: VectorType = @splat(mean);
     const stddev_vec: VectorType = @splat(stddev);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var vec: VectorType = undefined;
-        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        var vec = loadVectorLanes(VectorType, dest, i);
         vec = mean_vec + stddev_vec * vec;
-        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) : (i += 1) dest[i] = mean + stddev * dest[i];
@@ -7629,6 +7635,26 @@ test "standard scalar normal parameters match standard stream shape" {
         normalFastFrom(&normal_engine, f32, 0, 1),
     );
     try std.testing.expectEqual(standard_engine.next(), normal_engine.next());
+}
+
+test "normal affine in-place helper preserves scalar slice transform" {
+    var values_f32 = [_]f32{
+        -4.0, -3.0, -2.0, -1.0, -0.5, -0.0, 0.0, 0.25, 0.5,
+        0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 8.0, 13.0,
+    };
+    var expected_f32 = values_f32;
+    normalAffineInPlace(f32, &values_f32, -1.5, 2.25);
+    for (&expected_f32) |*item| item.* = -1.5 + 2.25 * item.*;
+    try std.testing.expectEqualSlices(f32, &expected_f32, &values_f32);
+
+    var values_f64 = [_]f64{
+        -9.0, -7.0, -5.0, -3.0, -1.0, -0.0, 0.0, 0.125, 0.5,
+        1.0, 2.0, 4.0, 8.0, 16.0, 23.0, 42.0, 64.0,
+    };
+    var expected_f64 = values_f64;
+    normalAffineInPlace(f64, &values_f64, 3.5, -0.75);
+    for (&expected_f64) |*item| item.* = 3.5 - 0.75 * item.*;
+    try std.testing.expectEqualSlices(f64, &expected_f64, &values_f64);
 }
 
 test "negative normal stddev helpers preserve rand_distr-compatible stream shape" {
