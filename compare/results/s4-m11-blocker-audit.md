@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-18)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1236-next-u64-native-fallback.md"
 "compare/results/s4-m1235-try-next-u32-native-fallback.md"
 "compare/results/s4-m1234-root-string-preallocation.md"
 "compare/results/s4-m1233-fromrandom-nextu32-byte-shape.md"
@@ -405,4 +406,6 @@ S4-M1234 is closed after hardening root alphanumeric string preallocation in `co
 
 S4-M1235 is closed after aligning fallible direct-source raw-u32 fallback behavior in `compare/results/s4-m1235-try-next-u32-native-fallback.md`.
 
-S4-M1236 remains active after S4-M1235 raises the next correctness/performance/product bar.
+S4-M1236 is closed after aligning direct-source native-u64 fallback behavior in `compare/results/s4-m1236-next-u64-native-fallback.md`.
+
+S4-M1237 remains active after S4-M1236 raises the next correctness/performance/product bar.

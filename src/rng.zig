@@ -1967,10 +1967,13 @@ pub fn tryNextU64From(source: anytype) !u64 {
     if (@TypeOf(source) == Rng) return source.tryNextU64();
     if (comptime sourceCanTryNextU64(@TypeOf(source))) return source.tryNextU64();
     if (comptime sourceCanTryNext(@TypeOf(source))) return source.tryNext();
+    if (comptime sourceCanNextU64(@TypeOf(source))) return source.nextU64();
     return nextFrom(source);
 }
 
 pub fn nextU64From(source: anytype) u64 {
+    if (@TypeOf(source) == Rng) return source.nextU64();
+    if (comptime sourceCanNextU64(@TypeOf(source))) return source.nextU64();
     return nextFrom(source);
 }
 
@@ -4322,6 +4325,15 @@ fn sourceCanTryNextU64(comptime Source: type) bool {
     return @hasDecl(Source, "tryNextU64");
 }
 
+fn sourceCanNextU64(comptime Source: type) bool {
+    if (Source == Rng) return true;
+    const info = @typeInfo(Source);
+    if (info == .pointer and info.pointer.size == .one) {
+        return @hasDecl(info.pointer.child, "nextU64");
+    }
+    return @hasDecl(Source, "nextU64");
+}
+
 fn sourceCanTryNextU32(comptime Source: type) bool {
     if (Source == Rng) return true;
     const info = @typeInfo(Source);
@@ -4788,6 +4800,33 @@ pub fn probabilityThreshold(p: f64) u64 {
     const threshold = @floor(p * scale);
     if (threshold >= scale) return std.math.maxInt(u64);
     return @intFromFloat(threshold);
+}
+
+test "rng direct raw aliases dispatch source native nextU64" {
+    const NativeU64Source = struct {
+        next_called: bool = false,
+        next_u64_called: bool = false,
+
+        fn next(self: *@This()) u64 {
+            self.next_called = true;
+            return 0x1111_2222_3333_4444;
+        }
+
+        fn nextU64(self: *@This()) u64 {
+            self.next_u64_called = true;
+            return 0xaaaa_bbbb_cccc_dddd;
+        }
+    };
+
+    var source = NativeU64Source{};
+    try std.testing.expectEqual(@as(u64, 0xaaaa_bbbb_cccc_dddd), Rng.nextU64From(&source));
+    try std.testing.expect(!source.next_called);
+    try std.testing.expect(source.next_u64_called);
+
+    var try_source = NativeU64Source{};
+    try std.testing.expectEqual(@as(u64, 0xaaaa_bbbb_cccc_dddd), try Rng.tryNextU64From(&try_source));
+    try std.testing.expect(!try_source.next_called);
+    try std.testing.expect(try_source.next_u64_called);
 }
 
 test "fromRandom nextU32 preserves std.Random byte shape" {
@@ -5892,7 +5931,8 @@ test "rng reader adapter preserves buffered data across peek refills" {
     direct.fill(&expected);
     try std.testing.expectEqualSlices(u8, &expected, &.{
         0x08, 0x07, 0x06, 0x05, 0x04,
-        0x03, 0x02, 0x01, 0x19, 0x18, 0x17,
+        0x03, 0x02, 0x01, 0x19, 0x18,
+        0x17,
     });
 }
 
@@ -7793,7 +7833,7 @@ test "standard scalar normal parameters match standard stream shape" {
 test "normal affine in-place helper preserves scalar slice transform" {
     var values_f32 = [_]f32{
         -4.0, -3.0, -2.0, -1.0, -0.5, -0.0, 0.0, 0.25, 0.5,
-        0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 8.0, 13.0,
+        0.75, 1.0,  1.5,  2.0,  3.0,  5.0,  8.0, 13.0,
     };
     var expected_f32 = values_f32;
     normalAffineInPlace(f32, &values_f32, -1.5, 2.25);
@@ -7801,8 +7841,8 @@ test "normal affine in-place helper preserves scalar slice transform" {
     try std.testing.expectEqualSlices(f32, &expected_f32, &values_f32);
 
     var values_f64 = [_]f64{
-        -9.0, -7.0, -5.0, -3.0, -1.0, -0.0, 0.0, 0.125, 0.5,
-        1.0, 2.0, 4.0, 8.0, 16.0, 23.0, 42.0, 64.0,
+        -9.0, -7.0, -5.0, -3.0, -1.0, -0.0, 0.0,  0.125, 0.5,
+        1.0,  2.0,  4.0,  8.0,  16.0, 23.0, 42.0, 64.0,
     };
     var expected_f64 = values_f64;
     normalAffineInPlace(f64, &values_f64, 3.5, -0.75);
