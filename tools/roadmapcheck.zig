@@ -2128,8 +2128,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1245 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1246 | Next post-S4-M1245 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1246 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1246 | Von Mises circular/directional distribution") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1246 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1247 | Next post-S4-M1246 product bar") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1247 next-gap row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
@@ -2460,8 +2464,12 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: active audit missing S4-M1245 closure\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "S4-M1246 remains active") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1246 next-gap line\n", .{});
+    if (std.mem.indexOf(u8, audit, "S4-M1246 is closed after adding") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1246 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1247 remains active") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1247 next-gap line\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

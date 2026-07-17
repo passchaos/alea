@@ -6178,6 +6178,232 @@ pub const StandardLogistic = struct {
     }
 };
 
+/// Von Mises circular distribution (also known as the circular normal distribution).
+/// Continuous probability distribution on the unit circle with mean direction `mu`
+/// (in radians) and concentration parameter `kappa` (≥ 0). Kappa=0 gives uniform
+/// distribution on the circle; larger kappa produces more concentrated samples
+/// around the mean direction.
+///
+/// Implements Best & Fisher's (1979) efficient rejection algorithm which works well
+/// across all values of kappa without requiring separate cases for small/large kappa.
+/// Samples are returned in radians in the range (-pi, pi] relative to mu.
+pub fn VonMises(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        mu: T,
+        kappa: T,
+
+        const Self = @This();
+
+        /// Create a new Von Mises distribution with given mean direction (radians)
+        /// and concentration parameter. Returns error if kappa is negative or non-finite.
+        pub fn new(mu: T, kappa: T) Rng.Error!Self {
+            if (!std.math.isFinite(kappa) or kappa < 0) return error.InvalidParameter;
+            return Self{ .mu = mu, .kappa = kappa };
+        }
+
+        /// Mean direction (location parameter) in radians.
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Concentration parameter.
+        pub fn concentrationValue(self: Self) T {
+            return self.kappa;
+        }
+
+        /// Mean direction (same as locationValue for symmetric von Mises).
+        pub fn expectedValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Circular variance: 1 - I₁(κ)/I₀(κ), where I₀, I₁ are modified Bessel functions.
+        pub fn varianceValue(self: Self) T {
+            if (self.kappa == 0) return 1; // uniform
+            return 1 - besselI1Ratio(self.kappa);
+        }
+
+        /// Median direction, same as mean for symmetric von Mises.
+        pub fn medianValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Mode direction, same as mean for symmetric von Mises.
+        pub fn modeValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Samples are bounded to (-pi, pi] relative to the mean direction.
+        pub fn minValue(_: Self) T {
+            return -@as(T, @floatCast(std.math.pi));
+        }
+
+        /// Samples are bounded to (-pi, pi] relative to the mean direction.
+        pub fn maxValue(_: Self) T {
+            return @as(T, @floatCast(std.math.pi));
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return vonMisesFrom(rng, T, self.mu, self.kappa);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return vonMisesFrom(source, T, self.mu, self.kappa);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            fillVonMisesFrom(rng, T, dest, self.mu, self.kappa);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillVonMisesFrom(source, T, dest, self.mu, self.kappa);
+        }
+    };
+}
+
+/// Standard Von Mises distribution with mean direction 0 and concentration 1.
+/// This is the canonical circular distribution analogous to the standard normal
+/// distribution on the line. Samples are in radians on (-pi, pi].
+pub const StandardVonMises = struct {
+    pub fn locationValue(_: StandardVonMises, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn concentrationValue(_: StandardVonMises, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn expectedValue(_: StandardVonMises, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn varianceValue(_: StandardVonMises, comptime T: type) T {
+        return 1 - besselI1Ratio(oneOf(T));
+    }
+
+    pub fn medianValue(_: StandardVonMises, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn modeValue(_: StandardVonMises, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn minValue(_: StandardVonMises, comptime T: type) T {
+        return -@as(T, @floatCast(std.math.pi));
+    }
+
+    pub fn maxValue(_: StandardVonMises, comptime T: type) T {
+        return @as(T, @floatCast(std.math.pi));
+    }
+
+    pub fn sample(_: StandardVonMises, rng: Rng, comptime T: type) T {
+        return vonMisesFrom(rng, T, zeroOf(T), oneOf(T));
+    }
+
+    pub fn sampleFrom(_: StandardVonMises, source: anytype, comptime T: type) T {
+        return vonMisesFrom(source, T, zeroOf(T), oneOf(T));
+    }
+
+    pub fn fill(_: StandardVonMises, rng: Rng, comptime T: type, dest: []T) void {
+        fillVonMisesFrom(rng, T, dest, zeroOf(T), oneOf(T));
+    }
+
+    pub fn fillFrom(_: StandardVonMises, source: anytype, comptime T: type, dest: []T) void {
+        fillVonMisesFrom(source, T, dest, zeroOf(T), oneOf(T));
+    }
+};
+
+// Von Mises sampling helpers using Best & Fisher's (1979) rejection algorithm.
+fn vonMises(rng: Rng, comptime T: type, mu: T, kappa: T) T {
+    return vonMisesFrom(rng, T, mu, kappa);
+}
+
+fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
+    std.debug.assert(std.math.isFinite(kappa) and kappa >= 0);
+
+    const pi: T = @floatCast(std.math.pi);
+
+    // Kappa = 0: uniform on the circle: delta ∈ (-pi, pi]
+    if (kappa == 0) {
+        const delta = (Rng.floatOpenClosedFrom(source, T) * 2 - 1) * pi;
+        return mu + delta;
+    }
+
+    // Best & Fisher (1979) algorithm constants for rejection sampling.
+    // This algorithm works uniformly well across all kappa ≥ 0 without
+    // special-case branches for small or large concentration.
+    const tau = 1 + @sqrt(1 + 4 * kappa * kappa);
+    const rho = (tau - @sqrt(2 * tau)) / (2 * kappa);
+    const r = (1 + rho * rho) / (2 * rho);
+
+    while (true) {
+        const ua = Rng.floatOpenFrom(source, T);
+        const z = @cos(pi * ua);
+        const f = (1 + r * z) / (r + z);
+        const c = kappa * (r - f);
+
+        const ub = Rng.floatOpenFrom(source, T);
+        // Fast accept: squeeze test
+        if (c * (2 - c) - ub > 0) {
+            const uc = Rng.floatOpenClosedFrom(source, T);
+            // delta from mean: cos⁻¹(f) ∈ [0, π], sign gives left/right half
+            const delta = std.math.sign(uc - 0.5) * std.math.acos(f);
+            return mu + delta;
+        }
+        // Slow accept: log-ratio test
+        if (@log(c / ub) + 1 - c >= 0) {
+            const uc = Rng.floatOpenClosedFrom(source, T);
+            const delta = std.math.sign(uc - 0.5) * std.math.acos(f);
+            return mu + delta;
+        }
+    }
+}
+
+fn fillVonMises(rng: Rng, comptime T: type, dest: []T, mu: T, kappa: T) void {
+    fillVonMisesFrom(rng, T, dest, mu, kappa);
+}
+
+fn fillVonMisesFrom(source: anytype, comptime T: type, dest: []T, mu: T, kappa: T) void {
+    for (dest) |*item| {
+        item.* = vonMisesFrom(source, T, mu, kappa);
+    }
+}
+
+// Wrap angle to (-pi, pi] interval accepting explicit pi/two_pi (supports testing)
+fn wrapAngle(theta: anytype, pi: anytype, two_pi: anytype) @TypeOf(theta) {
+    var t = theta;
+    while (t > pi) t -= two_pi;
+    while (t <= -pi) t += two_pi;
+    return t;
+}
+
+// Ratio I₁(κ)/I₀(κ) of modified Bessel functions of the first kind,
+// used to compute circular variance: Var = 1 - I1(κ)/I0(κ) = 1 - ρ,
+// where ρ is the mean resultant length.
+//
+// This is used *only* for reporting statistical property metadata.
+// The actual sampling algorithm (Best & Fisher 1979) is exact and
+// does not depend on this. Evaluated via continued fraction expansion
+// (Abramowitz & Stegun 9.1.73) truncated after 20 terms, giving high
+// precision for all κ > 0; asymptotic form used for κ > 30.
+inline fn besselI1Ratio(k: anytype) @TypeOf(k) {
+    if (k == 0) return 0;
+
+    // For large k, use asymptotic form to avoid division issues
+    if (k > 30) return 1 - 0.5 / k;
+
+    // Continued fraction: I1(z)/I0(z) = 1/( 2/z + 1/( 4/z + 1/( 6/z + ... )))
+    // Evaluate from the bottom up for numerical stability
+    const z_inv = 1 / k;
+    var a: @TypeOf(k) = 0;
+    comptime var n = 40;
+    inline while (n >= 2) : (n -= 2) {
+        a = 1 / (@as(@TypeOf(k), @floatFromInt(n)) * z_inv + a);
+    }
+    return a;
+}
+
 // Standard Cauchy sampling helpers: median=0, scale=1
 fn standardCauchy(rng: Rng, comptime T: type) T {
     return standardCauchyFrom(rng, T);
@@ -42361,5 +42587,174 @@ test "N-dimensional unit sphere/ball sampling" {
     var norm10: f64 = 0;
     for (p10) |x| norm10 += x * x;
     try std.testing.expectApproxEqAbs(@as(f64, 1), @sqrt(norm10), 1e-10);
+}
+
+test "VonMises constructor validates parameters" {
+    // Negative kappa returns error
+    try std.testing.expectError(error.InvalidParameter, VonMises(f64).new(0, -1));
+    // Infinite kappa returns error
+    try std.testing.expectError(error.InvalidParameter, VonMises(f64).new(0, std.math.inf(f64)));
+    // NaN kappa returns error
+    try std.testing.expectError(error.InvalidParameter, VonMises(f64).new(0, std.math.nan(f64)));
+    // Valid kappa=0 and kappa=10 construct successfully
+    const vm0 = try VonMises(f64).new(0, 0);
+    try std.testing.expectEqual(@as(f64, 0), vm0.locationValue());
+    try std.testing.expectEqual(@as(f64, 0), vm0.concentrationValue());
+    const vm10 = try VonMises(f64).new(1.5, 10);
+    try std.testing.expectEqual(@as(f64, 1.5), vm10.locationValue());
+    try std.testing.expectEqual(@as(f64, 10), vm10.concentrationValue());
+}
+
+test "VonMises samples stay within (-pi, pi] bounds relative to mu" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9abc_def0);
+    const rng = Rng.init(&engine);
+    const mu: f64 = 1.0; // Off-center mean
+    const vm = try VonMises(f64).new(mu, 2.0);
+    const pi = std.math.pi;
+
+    // All samples should be in (mu - pi, mu + pi]
+    for (0..5000) |_| {
+        const x = vm.sample(rng);
+        try std.testing.expect(x > mu - pi - 1e-12);
+        try std.testing.expect(x <= mu + pi + 1e-12);
+        // After wrapping, should be in (-pi, pi] around 0
+        const wrapped = x - mu;
+        try std.testing.expect(wrapped > -pi - 1e-12);
+        try std.testing.expect(wrapped <= pi + 1e-12);
+    }
+}
+
+test "VonMises kappa=0 produces uniform distribution on circle" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead_beef);
+    const rng = Rng.init(&engine);
+    const vm = try VonMises(f64).new(0, 0);
+    const pi = std.math.pi;
+
+    // For uniform circular distribution: mean ~0, variance ~1 (circular variance = 1 for uniform)
+    try std.testing.expectEqual(@as(f64, 1), vm.varianceValue());
+
+    // Bin samples into 8 sectors, check counts are roughly uniform
+    var bins = [_]u32{0} ** 8;
+    const n_samples: u32 = 8000;
+    for (0..n_samples) |_| {
+        const x = vm.sample(rng);
+        const idx: usize = @intFromFloat(@floor((x + pi) / (2 * pi) * 8));
+        bins[@min(idx, 7)] += 1;
+    }
+    // Each bin should have ~1000 samples; allow 15% tolerance
+    for (bins) |count| {
+        try std.testing.expect(count > 800);
+        try std.testing.expect(count < 1200);
+    }
+}
+
+test "VonMises large kappa concentrates around mean direction" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafe_babe);
+    const rng = Rng.init(&engine);
+    const mu: f64 = 0.7;
+    const kappa: f64 = 50.0; // High concentration
+    const vm = try VonMises(f64).new(mu, kappa);
+
+    // Variance should be small for large kappa: ~1/(2*kappa) ~0.01
+    // The varianceValue uses besselI1Ratio so it's self-consistent;
+    // just verify it's small and in valid range
+    const var_val = vm.varianceValue();
+    try std.testing.expect(var_val > 0);
+    try std.testing.expect(var_val < 0.05); // Tight bound for kappa=50
+
+    // Mean of samples should be very close to mu
+    var sum: f64 = 0;
+    const n_samples: f64 = 10000;
+    for (0..10000) |_| {
+        sum += vm.sample(rng);
+    }
+    const sample_mean = sum / n_samples;
+    try std.testing.expectApproxEqAbs(mu, sample_mean, 0.03); // Very tight bound for kappa=50
+}
+
+test "StandardVonMises unit struct has correct parameters" {
+    const dist = StandardVonMises{};
+    // Mean direction = 0, concentration = 1
+    try std.testing.expectEqual(@as(f64, 0), dist.locationValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), dist.concentrationValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.expectedValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.modeValue(f64));
+    try std.testing.expectApproxEqAbs(-std.math.pi, dist.minValue(f64), 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi, dist.maxValue(f64), 1e-12);
+    // Variance is between 0 and 1 (circular variance is always in this range)
+    const var_val = dist.varianceValue(f64);
+    try std.testing.expect(var_val > 0);
+    try std.testing.expect(var_val < 1);
+
+    // Test sample and fill work
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234_5678);
+    const rng = Rng.init(&engine);
+    const x = dist.sample(rng, f64);
+    try std.testing.expect(x > -std.math.pi);
+    try std.testing.expect(x <= std.math.pi);
+
+    var buf: [64]f64 = undefined;
+    dist.fill(rng, f64, &buf);
+    for (buf) |val| {
+        try std.testing.expect(val > -std.math.pi);
+        try std.testing.expect(val <= std.math.pi);
+        try std.testing.expect(std.math.isFinite(val));
+    }
+}
+
+test "wrapAngle correctly maps angles to (-pi, pi]" {
+    const pi: f64 = @floatCast(std.math.pi);
+    const two_pi: f64 = 2 * pi;
+
+    // Identity for angles already in range
+    try std.testing.expectApproxEqAbs(@as(f64, 0), wrapAngle(@as(f64, 0), pi, two_pi), 1e-12);
+    try std.testing.expectApproxEqAbs(pi, wrapAngle(pi, pi, two_pi), 1e-12);
+    try std.testing.expectApproxEqAbs(-pi + 1e-6, wrapAngle(-pi + 1e-6, pi, two_pi), 1e-12);
+
+    // Wrap positive overflows
+    try std.testing.expectApproxEqAbs(-pi + 0.1, wrapAngle(pi + 0.1, pi, two_pi), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), wrapAngle(0.5 + 4 * pi, pi, two_pi), 1e-12);
+
+    // Wrap negative overflows
+    try std.testing.expectApproxEqAbs(pi - 0.1, wrapAngle(-pi - 0.1, pi, two_pi), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -0.5), wrapAngle(-0.5 - 6 * pi, pi, two_pi), 1e-12);
+}
+
+test "besselI1Ratio has correct limits and monotonicity" {
+    // Verify exact boundary value
+    try std.testing.expectEqual(@as(f64, 0), besselI1Ratio(@as(f64, 0)));
+
+    // Ratio must be monotonic increasing from 0 to 1
+    var prev: f64 = 0;
+    for (1..100) |i| {
+        const k: f64 = @floatFromInt(i);
+        const r = besselI1Ratio(k);
+        try std.testing.expect(r > prev - 1e-12); // allow tiny floating error
+        try std.testing.expect(r < 1);
+        try std.testing.expect(r >= 0);
+        prev = r;
+    }
+
+    // Spot checks for key values with loose tolerance (this is just metadata)
+    // k=1: ~0.446
+    const r1 = besselI1Ratio(@as(f64, 1));
+    try std.testing.expect(r1 > 0.4);
+    try std.testing.expect(r1 < 0.5);
+    // k=5: ~0.89
+    const r5 = besselI1Ratio(@as(f64, 5));
+    try std.testing.expect(r5 > 0.85);
+    try std.testing.expect(r5 < 0.95);
+    // k=10: ~0.95
+    const r10 = besselI1Ratio(@as(f64, 10));
+    try std.testing.expect(r10 > 0.9);
+    try std.testing.expect(r10 < 0.98);
+    // Large k: approaches 1
+    try std.testing.expect(besselI1Ratio(@as(f64, 50)) > 0.97);
+    try std.testing.expect(besselI1Ratio(@as(f64, 100)) > 0.98);
 }
 
