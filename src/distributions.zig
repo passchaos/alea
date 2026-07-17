@@ -272,6 +272,14 @@ pub const StandardUniform = struct {
     }
 };
 
+/// Alias for `StandardUniform` matching Rust's `rand::distributions::Standard`
+/// naming convention for users porting code from Rust. This is the default
+/// sampler used for `rng.sample(T, Standard{})` and produces values uniformly
+/// over the full type range: integers across their full domain, floats in
+/// [0, 1), bools with 50% probability, and composite types via recursive
+/// standard sampling.
+pub const Standard = StandardUniform;
+
 fn standardUniformFillFrom(source: anytype, comptime T: type, dest: []T) void {
     if (comptime standardUniformCanBulkFill(T)) {
         Rng.fillFrom(source, T, dest);
@@ -6058,6 +6066,199 @@ pub const StandardExponential = struct {
 /// Alias for `StandardExponential` matching Rust's `rand::distributions::Exp1`
 /// naming convention for users porting code from Rust.
 pub const Exp1 = StandardExponential;
+
+/// Standard Cauchy distribution with median 0 and scale 1. This is the standard
+/// Lorentz distribution, a heavy-tailed distribution with undefined mean and
+/// variance. Uses the standard ratio-of-normals algorithm with the open (0,1)
+/// uniform to avoid pole singularities at tan(π/2).
+pub const StandardCauchy = struct {
+    pub fn medianValue(_: StandardCauchy, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn modeValue(_: StandardCauchy, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn scaleValue(_: StandardCauchy, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn expectedValue(_: StandardCauchy, comptime T: type) ?T {
+        return null; // Cauchy mean is undefined
+    }
+
+    pub fn varianceValue(_: StandardCauchy, comptime T: type) ?T {
+        return null; // Cauchy variance is undefined
+    }
+
+    pub fn minValue(_: StandardCauchy, comptime T: type) ?T {
+        return null;
+    }
+
+    pub fn maxValue(_: StandardCauchy, comptime T: type) ?T {
+        return null;
+    }
+
+    pub fn sample(_: StandardCauchy, rng: Rng, comptime T: type) T {
+        comptime requireFloatOrFloatVector(T);
+        return standardCauchy(rng, T);
+    }
+
+    pub fn sampleFrom(_: StandardCauchy, source: anytype, comptime T: type) T {
+        comptime requireFloatOrFloatVector(T);
+        return standardCauchyFrom(source, T);
+    }
+
+    pub fn fill(_: StandardCauchy, rng: Rng, comptime T: type, dest: []T) void {
+        comptime requireFloatOrFloatVector(T);
+        fillStandardCauchy(rng, T, dest);
+    }
+
+    pub fn fillFrom(_: StandardCauchy, source: anytype, comptime T: type, dest: []T) void {
+        comptime requireFloatOrFloatVector(T);
+        fillStandardCauchyFrom(source, T, dest);
+    }
+};
+
+/// Standard logistic distribution with location 0 and scale 1. The CDF is the
+/// logistic function, with mean=0, variance=π²/3 ≈ 3.2899, and excess kurtosis
+/// of 1.2. Uses the inverse-CDF method: X = log(u/(1-u)) where u ~ Uniform(0,1).
+pub const StandardLogistic = struct {
+    pub fn locationValue(_: StandardLogistic, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn scaleValue(_: StandardLogistic, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn expectedValue(_: StandardLogistic, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn varianceValue(_: StandardLogistic, comptime T: type) T {
+        return @as(T, @floatCast(std.math.pi)) * @as(T, @floatCast(std.math.pi)) / 3;
+    }
+
+    pub fn medianValue(_: StandardLogistic, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn modeValue(_: StandardLogistic, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn minValue(_: StandardLogistic, comptime T: type) ?T {
+        return null;
+    }
+
+    pub fn maxValue(_: StandardLogistic, comptime T: type) ?T {
+        return null;
+    }
+
+    pub fn sample(_: StandardLogistic, rng: Rng, comptime T: type) T {
+        comptime requireFloatOrFloatVector(T);
+        return standardLogistic(rng, T);
+    }
+
+    pub fn sampleFrom(_: StandardLogistic, source: anytype, comptime T: type) T {
+        comptime requireFloatOrFloatVector(T);
+        return standardLogisticFrom(source, T);
+    }
+
+    pub fn fill(_: StandardLogistic, rng: Rng, comptime T: type, dest: []T) void {
+        comptime requireFloatOrFloatVector(T);
+        fillStandardLogistic(rng, T, dest);
+    }
+
+    pub fn fillFrom(_: StandardLogistic, source: anytype, comptime T: type, dest: []T) void {
+        comptime requireFloatOrFloatVector(T);
+        fillStandardLogisticFrom(source, T, dest);
+    }
+};
+
+// Standard Cauchy sampling helpers: median=0, scale=1
+fn standardCauchy(rng: Rng, comptime T: type) T {
+    return standardCauchyFrom(rng, T);
+}
+
+fn standardCauchyFrom(source: anytype, comptime T: type) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => blk: {
+            const angle = @as(T, @floatCast(std.math.pi)) * Rng.floatOpenFrom(source, T);
+            break :blk -@cos(angle) / @sin(angle);
+        },
+        .vector => blk: {
+            const Child = vectorChild(T);
+            const pi_vec: T = @splat(@as(Child, @floatCast(std.math.pi)));
+            const angle_vec = pi_vec * Rng.vectorOpenFrom(source, T);
+            break :blk -@cos(angle_vec) / @sin(angle_vec);
+        },
+        else => unreachable,
+    };
+}
+
+fn fillStandardCauchy(rng: Rng, comptime T: type, dest: []T) void {
+    fillStandardCauchyFrom(rng, T, dest);
+}
+
+fn fillStandardCauchyFrom(source: anytype, comptime T: type, dest: []T) void {
+    fillOpen01From(source, T, dest);
+    switch (@typeInfo(T)) {
+        .float => {
+            const pi: T = @floatCast(std.math.pi);
+            for (dest) |*item| {
+                const angle = pi * item.*;
+                item.* = -@cos(angle) / @sin(angle);
+            }
+        },
+        .vector => {
+            const Child = vectorChild(T);
+            const pi_vec: T = @splat(@as(Child, @floatCast(std.math.pi)));
+            for (dest) |*item| {
+                const angle_vec = pi_vec * item.*;
+                item.* = -@cos(angle_vec) / @sin(angle_vec);
+            }
+        },
+        else => unreachable,
+    }
+}
+
+// Standard Logistic sampling helpers: location=0, scale=1
+fn standardLogistic(rng: Rng, comptime T: type) T {
+    return standardLogisticFrom(rng, T);
+}
+
+fn standardLogisticFrom(source: anytype, comptime T: type) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => blk: {
+            const u = Rng.floatOpenFrom(source, T);
+            break :blk @log(u / (1 - u));
+        },
+        .vector => blk: {
+            const Child = vectorChild(T);
+            const one: T = @splat(@as(Child, 1));
+            const u = Rng.vectorOpenFrom(source, T);
+            break :blk @log(u / (one - u));
+        },
+        else => unreachable,
+    };
+}
+
+fn fillStandardLogistic(rng: Rng, comptime T: type, dest: []T) void {
+    fillStandardLogisticFrom(rng, T, dest);
+}
+
+fn fillStandardLogisticFrom(source: anytype, comptime T: type, dest: []T) void {
+    fillOpen01From(source, T, dest);
+    for (dest) |*item| {
+        const u = item.*;
+        item.* = @log(u / (1 - u));
+    }
+}
 
 pub const StandardExponentialNativeF32 = struct {
     pub fn rateValue(_: StandardExponentialNativeF32) f32 {
@@ -17811,6 +18012,181 @@ pub fn VectorUnitBall(comptime VectorType: type) type {
         }
     };
 }
+
+/// N-dimensional unit sphere surface sampling (Marsaglia 1972 algorithm).
+/// Generates uniformly random points on the surface of the n-dimensional unit
+/// sphere by drawing n independent standard normal variates and normalizing
+/// by their Euclidean norm. Numerically stable for dimensions up to typical
+/// floating-point limits; degenerate zero vectors are rejection-resampled.
+/// This matches Rust rand_distr's `UnitSphereSurface` generalized to arbitrary
+/// dimensions, while retaining the 2D/3D specialized fast paths for common
+/// graphics/physics use cases.
+pub fn unitSphereSurface(rng: Rng, comptime T: type, comptime n: usize) [n]T {
+    return unitSphereSurfaceFrom(rng, T, n);
+}
+
+/// Source-accepting variant of `unitSphereSurface`.
+pub fn unitSphereSurfaceFrom(source: anytype, comptime T: type, comptime n: usize) [n]T {
+    comptime requireFloat(T);
+    if (comptime n == 0) @compileError("unitSphereSurface requires at least 1 dimension");
+    if (comptime n == 2) return unitCircleFrom(source, T);
+    if (comptime n == 3) return unitSphereFrom(source, T);
+
+    while (true) {
+        var point: [n]T = undefined;
+        var norm_sq: T = 0;
+        inline for (0..n) |i| {
+            const x = standardNormalFrom(source, T);
+            point[i] = x;
+            norm_sq += x * x;
+        }
+        // Reject points too close to origin to avoid numerical instability
+        if (norm_sq > 1e-20 and std.math.isFinite(norm_sq)) {
+            const inv_norm = 1 / @sqrt(norm_sq);
+            inline for (0..n) |i| point[i] *= inv_norm;
+            return point;
+        }
+    }
+}
+
+/// Fill a slice with N-dimensional unit sphere surface points.
+pub fn fillUnitSphereSurface(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T) void {
+    fillUnitSphereSurfaceFrom(rng, T, n, dest);
+}
+
+/// Source-accepting variant of `fillUnitSphereSurface`.
+pub fn fillUnitSphereSurfaceFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T) void {
+    if (comptime n == 0) @compileError("fillUnitSphereSurface requires at least 1 dimension");
+    if (comptime n == 2) {
+        fillUnitCircleFrom(source, T, @ptrCast(dest));
+        return;
+    }
+    if (comptime n == 3) {
+        fillUnitSphereFrom(source, T, @ptrCast(dest));
+        return;
+    }
+    for (dest) |*item| item.* = unitSphereSurfaceFrom(source, T, n);
+}
+
+/// N-dimensional unit ball sampling. Generates uniformly random points inside
+/// the n-dimensional unit ball by: (1) sampling a point on the unit sphere,
+/// (2) scaling by u^(1/n) where u ~ Uniform(0,1), following the correct
+/// n-dimensional volume element radial distribution. This matches the
+/// mathematical property that n-ball volume scales as r^n.
+pub fn unitBallVolume(rng: Rng, comptime T: type, comptime n: usize) [n]T {
+    return unitBallVolumeFrom(rng, T, n);
+}
+
+/// Source-accepting variant of `unitBallVolume`.
+pub fn unitBallVolumeFrom(source: anytype, comptime T: type, comptime n: usize) [n]T {
+    comptime requireFloat(T);
+    if (comptime n == 0) @compileError("unitBallVolume requires at least 1 dimension");
+    if (comptime n == 1) {
+        // 1D unit ball is [-1, 1]
+        const u = Rng.floatFrom(source, T);
+        return .{2 * u - 1};
+    }
+    if (comptime n == 2) {
+        // Unit disk: use specialized polar rejection method for efficiency
+        while (true) {
+            const x = 2 * Rng.floatFrom(source, T) - 1;
+            const y = 2 * Rng.floatFrom(source, T) - 1;
+            const r2 = x * x + y * y;
+            if (r2 < 1 and r2 > 1e-20) {
+                return .{ x, y };
+            }
+        }
+    }
+    if (comptime n == 3) return unitBallFrom(source, T);
+
+    // General n-dimensional case
+    var point = unitSphereSurfaceFrom(source, T, n);
+    const u = Rng.floatFrom(source, T);
+    const scale = std.math.pow(T, u, 1.0 / @as(T, @floatFromInt(n)));
+    inline for (0..n) |i| point[i] *= scale;
+    return point;
+}
+
+/// Fill a slice with N-dimensional unit ball points.
+pub fn fillUnitBallVolume(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T) void {
+    fillUnitBallVolumeFrom(rng, T, n, dest);
+}
+
+/// Source-accepting variant of `fillUnitBallVolume`.
+pub fn fillUnitBallVolumeFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T) void {
+    if (comptime n == 0) @compileError("fillUnitBallVolume requires at least 1 dimension");
+    if (comptime n == 3) {
+        fillUnitBallFrom(source, T, @ptrCast(dest));
+        return;
+    }
+    for (dest) |*item| item.* = unitBallVolumeFrom(source, T, n);
+}
+
+/// Reusable sampler for the n-dimensional unit sphere surface. Follows the
+/// same polymorphic unit-struct pattern as StandardNormal/StandardExponential
+/// with methods that take the dimension as a comptime parameter for type-safe
+/// generic sampling.
+pub const UnitSphereSurface = struct {
+    pub fn dimensionValue(_: UnitSphereSurface, comptime n: usize) usize {
+        return n;
+    }
+
+    pub fn radiusValue(_: UnitSphereSurface, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn isSurface(_: UnitSphereSurface) bool {
+        return true;
+    }
+
+    pub fn sample(_: UnitSphereSurface, rng: Rng, comptime T: type, comptime n: usize) [n]T {
+        return unitSphereSurface(rng, T, n);
+    }
+
+    pub fn sampleFrom(_: UnitSphereSurface, source: anytype, comptime T: type, comptime n: usize) [n]T {
+        return unitSphereSurfaceFrom(source, T, n);
+    }
+
+    pub fn fill(_: UnitSphereSurface, rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T) void {
+        fillUnitSphereSurface(rng, T, n, dest);
+    }
+
+    pub fn fillFrom(_: UnitSphereSurface, source: anytype, comptime T: type, comptime n: usize, dest: [][n]T) void {
+        fillUnitSphereSurfaceFrom(source, T, n, dest);
+    }
+};
+
+/// Reusable sampler for the n-dimensional unit ball interior. Follows the
+/// same polymorphic unit-struct pattern as other standard distributions.
+pub const UnitBallVolume = struct {
+    pub fn dimensionValue(_: UnitBallVolume, comptime n: usize) usize {
+        return n;
+    }
+
+    pub fn radiusValue(_: UnitBallVolume, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn isSurface(_: UnitBallVolume) bool {
+        return false;
+    }
+
+    pub fn sample(_: UnitBallVolume, rng: Rng, comptime T: type, comptime n: usize) [n]T {
+        return unitBallVolume(rng, T, n);
+    }
+
+    pub fn sampleFrom(_: UnitBallVolume, source: anytype, comptime T: type, comptime n: usize) [n]T {
+        return unitBallVolumeFrom(source, T, n);
+    }
+
+    pub fn fill(_: UnitBallVolume, rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T) void {
+        fillUnitBallVolume(rng, T, n, dest);
+    }
+
+    pub fn fillFrom(_: UnitBallVolume, source: anytype, comptime T: type, comptime n: usize, dest: [][n]T) void {
+        fillUnitBallVolumeFrom(source, T, n, dest);
+    }
+};
 
 fn inverseGaussianParametersValid(comptime T: type, mean: T, shape: T) bool {
     return mean >= 0 and
@@ -41891,3 +42267,99 @@ test "distribution Map and Iter aliases mirror concrete adapter types" {
     try std.testing.expect(@TypeOf(namespace_iter) == AliasIter);
     _ = namespace_iter.next().?;
 }
+
+test "Standard alias matches StandardUniform" {
+    const alea = @import("root.zig");
+    var engine1 = alea.DefaultPrng.init(0x1234_5678);
+    var engine2 = alea.DefaultPrng.init(0x1234_5678);
+    const rng1 = Rng.init(&engine1);
+    const rng2 = Rng.init(&engine2);
+    try std.testing.expectEqual(
+        rng1.sample(u64, Standard{}),
+        rng2.sample(u64, StandardUniform{}),
+    );
+}
+
+test "StandardCauchy unit struct samples correctly" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234_5678);
+    const rng = Rng.init(&engine);
+    const dist = StandardCauchy{};
+    // Sample a few points; Cauchy is heavy-tailed so just check they are finite
+    for (0..100) |_| {
+        const x = dist.sample(rng, f64);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+    // Check moments: Cauchy mean/variance are undefined (null)
+    try std.testing.expect(dist.expectedValue(f64) == null);
+    try std.testing.expect(dist.varianceValue(f64) == null);
+    try std.testing.expectEqual(@as(f64, 0), dist.medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), dist.scaleValue(f64));
+    // Test fill
+    var buf: [32]f64 = undefined;
+    dist.fill(rng, f64, &buf);
+    for (buf) |x| try std.testing.expect(std.math.isFinite(x));
+    // Test f32 vector sampling
+    const vec = dist.sampleFrom(&engine, @Vector(4, f32));
+    _ = vec;
+}
+
+test "StandardLogistic unit struct samples correctly" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234_5678);
+    const rng = Rng.init(&engine);
+    const dist = StandardLogistic{};
+    // Mean should be 0, variance pi^2/3 ~3.2899
+    const expected_variance = std.math.pi * std.math.pi / 3.0;
+    try std.testing.expectEqual(@as(f64, 0), dist.expectedValue(f64));
+    try std.testing.expectApproxEqAbs(expected_variance, dist.varianceValue(f64), 1e-10);
+    try std.testing.expectEqual(@as(f64, 0), dist.medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), dist.scaleValue(f64));
+    // Sample and check mean is roughly 0 (with small sample)
+    var sum: f64 = 0;
+    for (0..1000) |_| {
+        sum += dist.sample(rng, f64);
+    }
+    const mean = sum / 1000.0;
+    try std.testing.expectApproxEqAbs(@as(f64, 0), mean, 0.15); // loose bound for small sample
+}
+
+test "N-dimensional unit sphere/ball sampling" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234_5678);
+    const rng = Rng.init(&engine);
+    const sphere_sampler = UnitSphereSurface{};
+    const ball_sampler = UnitBallVolume{};
+
+    // 4D unit sphere: points should lie on surface (norm = 1)
+    const p4 = sphere_sampler.sample(rng, f64, 4);
+    var norm4: f64 = 0;
+    for (p4) |x| norm4 += x * x;
+    try std.testing.expectApproxEqAbs(@as(f64, 1), @sqrt(norm4), 1e-10);
+
+    // 5D unit ball: points should be inside (norm <= 1)
+    const p5 = ball_sampler.sample(rng, f64, 5);
+    var norm5: f64 = 0;
+    for (p5) |x| norm5 += x * x;
+    try std.testing.expect(@sqrt(norm5) <= 1.0 + 1e-10);
+
+    // Test fill for 4D sphere
+    var buf: [16][4]f64 = undefined;
+    sphere_sampler.fill(rng, f64, 4, &buf);
+    for (buf) |p| {
+        var n: f64 = 0;
+        for (p) |x| n += x * x;
+        try std.testing.expectApproxEqAbs(@as(f64, 1), @sqrt(n), 1e-10);
+    }
+
+    // Test direct function call for 1D
+    const p1 = unitBallVolume(rng, f64, 1);
+    try std.testing.expect(@abs(p1[0]) <= 1.0);
+
+    // Test high-dimensional sampling (10D)
+    const p10 = unitSphereSurfaceFrom(&engine, f64, 10);
+    var norm10: f64 = 0;
+    for (p10) |x| norm10 += x * x;
+    try std.testing.expectApproxEqAbs(@as(f64, 1), @sqrt(norm10), 1e-10);
+}
+

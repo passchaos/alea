@@ -6245,6 +6245,27 @@ now follow the same polymorphic unit-struct pattern as `StandardUniform`, `Open0
 `OpenClosed01`, and `StandardGeometric`, supporting f32, f64, and SIMD vector types
 through the standard `sample`/`fill`/`sampleIter` Distribution interface. This is
 an ergonomic API consistency improvement matching local Rust `rand::distributions::StandardNormal`
-and `rand::distributions::Exp1` naming and usage patterns. S4-M1245 remains active for
+and `rand::distributions::Exp1` naming and usage patterns.
+
+S4-M1245 completes additional Rust `rand` API parity and geometry sampling coverage
+(`compare/results/s4-m1245-rust-api-parity-ndim-geometry-standard-distributions.md`):
+- Added `Standard` as a Rust-naming alias for `StandardUniform`, matching
+  `rand::distributions::Standard` conventions.
+- Implemented generalized N-dimensional unit sphere surface sampling using Marsaglia's
+  algorithm, with correct radial normalization producing points uniformly distributed
+  over the (n-1)-dimensional surface of the n-dimensional unit sphere.
+- Implemented generalized N-dimensional unit ball volume sampling with correct radial
+  scaling `u^(1/n)`, producing points uniformly distributed inside the n-dimensional
+  unit ball.
+- Added `UnitSphereSurface{}` and `UnitBallVolume{}` reusable unit struct samplers
+  following the same polymorphic pattern as other standard distributions, with dimension
+  passed as an explicit comptime parameter on sample/fill methods.
+- Added `StandardCauchy{}` and `StandardLogistic{}` polymorphic unit structs matching
+  Rust `rand_distr::StandardCauchy` and `rand_distr::StandardLogistic` conventions,
+  both supporting scalar f32/f64 and full SIMD vector types through the standard
+  distribution interface.
+
+S4-M1246 remains active for
 exact/default dense SIMD, broader runtime, longer validation, further
-semantics-preserving performance work, or newly discovered core workflow gaps.
+semantics-preserving performance work, circular/directional distributions, or newly
+discovered core workflow gaps.

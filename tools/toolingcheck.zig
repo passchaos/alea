@@ -247,8 +247,8 @@ const rand_status_source_tokens = [_][]const u8{
     "Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests",
     "Rust comparison: parser tests and rand-bench-smoke pass",
     "Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
-    "Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1244 follow-ups closed for current bar",
-    "Next bar: S4-M1245 post-S4-M1244 polymorphic standard normal/exponential unit structs, Exp1 alias, vector support, further API consistency work, or new core random-workflow gap",
+    "Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar",
+    "Next bar: S4-M1246 post-S4-M1245 dense SIMD ziggurat, broader platform support, circular/directional distributions, performance work, or new core random-workflow gap",
     "Details: compare/results/s4-m420-current-rand-status.md",
 };
 
