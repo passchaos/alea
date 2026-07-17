@@ -1845,12 +1845,13 @@ fn fillOpenClosedF32From(source: anytype, dest: []f32) void {
 }
 
 fn fillF64From(source: anytype, dest: []f64) void {
-    const VectorType = @Vector(4, f64);
+    const VectorType = @Vector(8, f64);
+    const lanes = @typeInfo(VectorType).vector.len;
 
     var i: usize = 0;
-    while (i + 4 <= dest.len) : (i += 4) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = vectorF64From(source, VectorType);
-        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+        inline for (0..lanes) |lane| dest[i + lane] = vec[lane];
     }
 
     while (i < dest.len) : (i += 1) dest[i] = floatFrom(source, f64);
@@ -1919,14 +1920,15 @@ fn fillRangeF32From(source: anytype, dest: []f32, min: f32, max: f32) void {
 }
 
 fn fillRangeF64From(source: anytype, dest: []f64, min: f64, max: f64) void {
-    const VectorType = @Vector(4, f64);
+    const VectorType = @Vector(8, f64);
+    const lanes = @typeInfo(VectorType).vector.len;
     const min_vec: VectorType = @splat(min);
     const width_vec: VectorType = @splat(max - min);
 
     var i: usize = 0;
-    while (i + 4 <= dest.len) : (i += 4) {
+    while (i + lanes <= dest.len) : (i += lanes) {
         const vec = min_vec + width_vec * vectorF64From(source, VectorType);
-        inline for (0..4) |lane| dest[i + lane] = vec[lane];
+        inline for (0..lanes) |lane| dest[i + lane] = vec[lane];
     }
 
     const width = max - min;
@@ -4510,10 +4512,11 @@ fn vectorF64From(source: anytype, comptime VectorType: type) VectorType {
     var raw: RawVector = undefined;
     inline for (0..info.len) |i| raw[i] = nextFrom(source);
 
-    const base_bits = (@as(RawVector, @splat(@as(u64, 0x3ff) << 52)) | (raw >> @splat(12)));
+    const base_bits = @as(RawVector, @splat(f64_one_exponent_bits)) | (raw >> @splat(12));
     const low_bit = (raw >> @splat(11)) & @as(RawVector, @splat(1));
+    const low_bits = (@as(RawVector, @splat(0)) -% low_bit) & @as(RawVector, @splat(f64_half_ulp_bits));
     return (@as(VectorType, @bitCast(base_bits)) - @as(VectorType, @splat(1.0))) +
-        @as(VectorType, @floatFromInt(low_bit)) * @as(VectorType, @splat(1.0 / 9007199254740992.0));
+        @as(VectorType, @bitCast(low_bits));
 }
 
 fn vectorOpenF32From(source: anytype, comptime VectorType: type) VectorType {
@@ -4672,6 +4675,9 @@ fn f32OpenFromBits(bits: u24) f32 {
     return @as(f32, @floatFromInt(non_zero)) * (1.0 / 16777216.0);
 }
 
+const f64_one_exponent_bits: u64 = @as(u64, 0x3ff) << 52;
+const f64_half_ulp_bits: u64 = @as(u64, 1023 - 53) << 52;
+
 fn f64FromRaw(raw: u64) f64 {
     // Match Alea's facade `Rng.float(f64)` and local Rust `StandardUniform`
     // precision: the ordinary half-open f64 sampler uses the high 53 bits of a
@@ -4683,9 +4689,8 @@ fn f64FromRaw(raw: u64) f64 {
     // Split `n / 2^53` into a fast exponent-bit 52-bit base plus the remaining
     // half-ulp bit. This gives the same grid as `float(raw >> 11) * 2^-53`,
     // while recovering much of the pre-S4-M1223 bitcast throughput.
-    const base_bits = (@as(u64, 0x3ff) << 52) | (raw >> 12);
-    const base = @as(f64, @bitCast(base_bits)) - 1.0;
-    const low = @as(f64, @floatFromInt((raw >> 11) & 1)) * (1.0 / 9007199254740992.0);
+    const base = @as(f64, @bitCast(f64_one_exponent_bits | (raw >> 12))) - 1.0;
+    const low = @as(f64, @bitCast((0 -% ((raw >> 11) & 1)) & f64_half_ulp_bits));
     return base + low;
 }
 
@@ -4832,6 +4837,28 @@ test "ordinary f64 standard uniform uses full 53-bit grid on all paths" {
     var vector_engine = StepRng.constant(@as(u64, 1) << 11);
     const vector_sample = vectorFrom(&vector_engine, @Vector(4, f64));
     try std.testing.expectEqual(@as(@Vector(4, f64), @splat(half_ulp)), vector_sample);
+}
+
+test "ordinary f64 bulk fills preserve scalar stream shape" {
+    const alea = @import("root.zig");
+
+    var fill_engine = alea.FastPrng.init(0xf64a);
+    var scalar_engine = alea.FastPrng.init(0xf64a);
+    var fill_values: [17]f64 = undefined;
+    var scalar_values: [17]f64 = undefined;
+    fillFrom(&fill_engine, f64, &fill_values);
+    for (&scalar_values) |*item| item.* = floatFrom(&scalar_engine, f64);
+    try std.testing.expectEqualSlices(f64, &scalar_values, &fill_values);
+    try std.testing.expectEqual(scalar_engine.next(), fill_engine.next());
+
+    var range_fill_engine = alea.FastPrng.init(0xf64b);
+    var range_scalar_engine = alea.FastPrng.init(0xf64b);
+    var range_fill_values: [17]f64 = undefined;
+    var range_scalar_values: [17]f64 = undefined;
+    fillRangeFrom(&range_fill_engine, f64, &range_fill_values, -5, 7);
+    for (&range_scalar_values) |*item| item.* = floatRangeFrom(&range_scalar_engine, f64, -5, 7);
+    try std.testing.expectEqualSlices(f64, &range_scalar_values, &range_fill_values);
+    try std.testing.expectEqual(range_scalar_engine.next(), range_fill_engine.next());
 }
 
 test "rng facade covers scalar APIs" {
