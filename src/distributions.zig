@@ -23254,6 +23254,22 @@ fn vectorChild(comptime VectorType: type) type {
     return vectorInfo(VectorType).child;
 }
 
+inline fn loadVectorLanes(comptime VectorType: type, source: []const vectorChild(VectorType), start: usize) VectorType {
+    const info = vectorInfo(VectorType);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = source[start + lane];
+    return out;
+}
+
+inline fn storeVectorLanes(comptime VectorType: type, dest: []vectorChild(VectorType), start: usize, vec: VectorType) void {
+    const info = vectorInfo(VectorType);
+    // Keep the vector type, loop step, and copied lane count tied together.
+    // Distribution transforms reuse these helpers after staging scalar slices;
+    // duplicating literal lane counts here has the same stream-shape risk as
+    // the core float fills fixed in S4-M1226.
+    inline for (0..info.len) |lane| dest[start + lane] = vec[lane];
+}
+
 fn zeroOf(comptime T: type) T {
     requireFloatOrFloatVector(T);
     return switch (@typeInfo(T)) {
@@ -23394,36 +23410,35 @@ fn scaleInPlace(comptime T: type, dest: []T, scale: T) void {
 
 fn fillStandardNormalF32VectorChunksFrom(source: anytype, dest: []f32) void {
     const VectorType = @Vector(8, f32);
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const vec = vectorStandardNormalFrom(source, VectorType);
-        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
     while (i < dest.len) : (i += 1) dest[i] = standardNormalFrom(source, f32);
 }
 
 fn fillStandardExponentialF32VectorChunksFrom(source: anytype, dest: []f32) void {
     const VectorType = @Vector(8, f32);
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const vec = vectorStandardExponentialFrom(source, VectorType);
-        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
     while (i < dest.len) : (i += 1) dest[i] = standardExponentialFrom(source, f32);
 }
 
 fn scaleInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const scale_vec: VectorType = @splat(scale);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var vec: VectorType = undefined;
-        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        var vec = loadVectorLanes(VectorType, dest, i);
         vec *= scale_vec;
-        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
 
     while (i < dest.len) : (i += 1) dest[i] *= scale;
@@ -23434,13 +23449,12 @@ fn expInPlaceScalar(comptime T: type, dest: []T) void {
 }
 
 fn expInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var vec: VectorType = undefined;
-        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        var vec = loadVectorLanes(VectorType, dest, i);
         vec = @exp(vec);
-        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
@@ -23484,30 +23498,27 @@ fn dlsymExpInPlace(comptime T: type, exp_fn: LibmExpF64, dest: []T) void {
 }
 
 fn libmvecExpInPlaceF64(dest: []f64, exp_fn: LibmvecExpF64x4) void {
+    const VectorType = @Vector(4, f64);
+    const len = vectorInfo(VectorType).len;
+
     var i: usize = 0;
-    while (i + 4 <= dest.len) : (i += 4) {
-        const vec: @Vector(4, f64) = .{ dest[i], dest[i + 1], dest[i + 2], dest[i + 3] };
+    while (i + len <= dest.len) : (i += len) {
+        const vec = loadVectorLanes(VectorType, dest, i);
         const out = exp_fn(vec);
-        inline for (0..4) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
 
 fn libmvecExpInPlaceF32(dest: []f32, exp_fn: LibmvecExpF32x8) void {
+    const VectorType = @Vector(8, f32);
+    const len = vectorInfo(VectorType).len;
+
     var i: usize = 0;
-    while (i + 8 <= dest.len) : (i += 8) {
-        const vec: @Vector(8, f32) = .{
-            dest[i],
-            dest[i + 1],
-            dest[i + 2],
-            dest[i + 3],
-            dest[i + 4],
-            dest[i + 5],
-            dest[i + 6],
-            dest[i + 7],
-        };
+    while (i + len <= dest.len) : (i += len) {
+        const vec = loadVectorLanes(VectorType, dest, i);
         const out = exp_fn(vec);
-        inline for (0..8) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
     while (i < dest.len) : (i += 1) dest[i] = @exp(dest[i]);
 }
@@ -23620,13 +23631,12 @@ fn absInPlace(comptime T: type, dest: []T) void {
 }
 
 fn absInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var vec: VectorType = undefined;
-        inline for (0..len) |lane| vec[lane] = dest[i + lane];
+        var vec = loadVectorLanes(VectorType, dest, i);
         vec = @abs(vec);
-        inline for (0..len) |lane| dest[i + lane] = vec[lane];
+        storeVectorLanes(VectorType, dest, i, vec);
     }
     while (i < dest.len) : (i += 1) dest[i] = @abs(dest[i]);
 }
@@ -36286,6 +36296,44 @@ test "standard f32 fills preserve scalar stream shape" {
         try std.testing.expectEqual(standardExponential(facade_exp_control_rng, f32), sample);
     }
     try std.testing.expectEqual(facade_exp_control.next(), facade_exp_fill.next());
+}
+
+test "distribution vector lane helpers preserve scalar slice transforms" {
+    var scaled_f32 = [_]f32{
+        -3.5, -2.0, -1.0, -0.5, -0.0, 0.0, 0.25, 0.5, 1.0,
+        1.5, 2.0, 3.0, 4.0, 5.5, 7.0, 8.25, 10.0,
+    };
+    var expected_scaled_f32 = scaled_f32;
+    scaleInPlace(f32, &scaled_f32, -1.25);
+    for (&expected_scaled_f32) |*item| item.* *= -1.25;
+    try std.testing.expectEqualSlices(f32, &expected_scaled_f32, &scaled_f32);
+
+    var scaled_f64 = [_]f64{
+        -9.0, -4.0, -1.0, -0.25, -0.0, 0.0, 0.125, 0.5, 1.0,
+        2.0, 3.5, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0,
+    };
+    var expected_scaled_f64 = scaled_f64;
+    scaleInPlace(f64, &scaled_f64, 0.5);
+    for (&expected_scaled_f64) |*item| item.* *= 0.5;
+    try std.testing.expectEqualSlices(f64, &expected_scaled_f64, &scaled_f64);
+
+    var abs_f32 = [_]f32{
+        -8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, -0.0,
+        0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0,
+    };
+    var expected_abs_f32 = abs_f32;
+    absInPlace(f32, &abs_f32);
+    for (&expected_abs_f32) |*item| item.* = @abs(item.*);
+    try std.testing.expectEqualSlices(f32, &expected_abs_f32, &abs_f32);
+
+    var exp_f32 = [_]f32{
+        -1.0, -0.75, -0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5,
+        0.75, 1.0, 1.25, 1.5, 1.75, 2.0, -1.5, -2.0,
+    };
+    var expected_exp_f32 = exp_f32;
+    expInPlace(f32, &exp_f32);
+    for (&expected_exp_f32) |*item| item.* = @exp(item.*);
+    try expectApproxEqualFloatSlices(f32, &expected_exp_f32, &exp_f32);
 }
 
 test "native f32 parameterized samplers have stable snapshots" {

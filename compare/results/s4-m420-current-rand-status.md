@@ -49,12 +49,13 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1224 recovers ordinary f64 StandardUniform throughput while preserving the S4-M1223 53-bit grid;
 - S4-M1225 further recovers ordinary f64 uniform throughput via low-bit bitcast and 8-lane bulk chunks;
 - S4-M1226 refactors vectorized float slice-fill lane stores to reduce lane-width drift risk;
+- S4-M1227 refactors distribution vector lane stores and staged slice transforms;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1226 improves the structure around vectorized float slice fills after S4-M1225
-recovered more ordinary f64 uniform throughput. The retained status and validation evidence include:
+S4-M1227 improves the structure around distribution vector slice transforms after S4-M1226
+reduced core float-fill lane-width drift risk. The retained status and validation evidence include:
 
 ```text
 $ zig build validate-all
@@ -72,15 +73,15 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1226 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1227 post-S4-M1226 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1227 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1228 post-S4-M1227 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1226-float-fill-lane-store-refactor.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1227-distribution-lane-store-refactor.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -99,14 +100,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1226-float-fill-lane-store-refactor.md` records the latest focused performance/correctness refresh after the S4-M1223 grid fix.
-S4-M11 is closed for the current bar; S4-M1220 through S4-M1226 are also closed for their current bars, but exact/default-compatible dense SIMD
+Wasmtime profilelongcheck run. `compare/results/s4-m1227-distribution-lane-store-refactor.md` records the latest focused performance/correctness refresh after the S4-M1223 grid fix.
+S4-M11 is closed for the current bar; S4-M1220 through S4-M1227 are also closed for their current bars, but exact/default-compatible dense SIMD
 normal/exponential kernels are still not known to beat scalar lane-fill in the
 real vector-slice harness.
 
-## Current Post-S4-M1226 Bar
+## Current Post-S4-M1227 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1227: pursue
+The long-term product goal is not complete. The next bar is S4-M1228: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, further
 semantics-preserving performance work, or newly discovered local `rand` /
@@ -116,4 +117,4 @@ semantics-preserving performance work, or newly discovered local `rand` /
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1226 S4-M1227 bar remains the active follow-up.
+while the post-S4-M1227 S4-M1228 bar remains the active follow-up.
