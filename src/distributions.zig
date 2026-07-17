@@ -16998,7 +16998,7 @@ pub fn vectorUnitCircle(rng: Rng, comptime VectorType: type) [2]VectorType {
 pub fn vectorUnitCircleFrom(source: anytype, comptime VectorType: type) [2]VectorType {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var x: VectorType = undefined;
     var y: VectorType = undefined;
     inline for (0..len) |lane| {
@@ -17051,7 +17051,7 @@ pub fn vectorUnitDisc(rng: Rng, comptime VectorType: type) [2]VectorType {
 pub fn vectorUnitDiscFrom(source: anytype, comptime VectorType: type) [2]VectorType {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var x: VectorType = undefined;
     var y: VectorType = undefined;
     inline for (0..len) |lane| {
@@ -17108,7 +17108,7 @@ pub fn vectorUnitSphere(rng: Rng, comptime VectorType: type) [3]VectorType {
 pub fn vectorUnitSphereFrom(source: anytype, comptime VectorType: type) [3]VectorType {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var x: VectorType = undefined;
     var y: VectorType = undefined;
     var z: VectorType = undefined;
@@ -17164,7 +17164,7 @@ pub fn vectorUnitBall(rng: Rng, comptime VectorType: type) [3]VectorType {
 pub fn vectorUnitBallFrom(source: anytype, comptime VectorType: type) [3]VectorType {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     var x: VectorType = undefined;
     var y: VectorType = undefined;
     var z: VectorType = undefined;
@@ -23651,7 +23651,7 @@ fn inverseGaussianFromNormals(source: anytype, comptime T: type, dest: []T, mean
 }
 
 fn inverseGaussianFromNormalsVector(source: anytype, comptime T: type, comptime VectorType: type, dest: []T, mean: T, shape: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const mean_vec: VectorType = @splat(mean);
     const shape_vec: VectorType = @splat(shape);
     const mean_over_2shape: VectorType = @splat(mean / (2 * shape));
@@ -23660,19 +23660,16 @@ fn inverseGaussianFromNormalsVector(source: anytype, comptime T: type, comptime 
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var normal_vec: VectorType = undefined;
+        const normal_vec = loadVectorLanes(VectorType, dest, i);
         var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| {
-            normal_vec[lane] = dest[i + lane];
-            uniform_vec[lane] = Rng.floatFrom(source, T);
-        }
+        inline for (0..len) |lane| uniform_vec[lane] = Rng.floatFrom(source, T);
 
         const y = mean_vec * normal_vec * normal_vec;
         const x = mean_vec + mean_over_2shape * (y - @sqrt(four_vec * shape_vec * y + y * y));
         const threshold = mean_vec / (mean_vec + x);
         const out = @select(T, uniform_vec <= threshold, x, mean_squared / x);
 
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23698,7 +23695,7 @@ fn cauchyFromOpenUniforms(comptime T: type, dest: []T, median: T, scale: T) void
 }
 
 fn cauchyFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, median: T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const pi_vec: VectorType = @splat(@as(T, @floatCast(std.math.pi)));
     const half_vec: VectorType = @splat(0.5);
     const median_vec: VectorType = @splat(median);
@@ -23706,10 +23703,9 @@ fn cauchyFromOpenUniformsVector(comptime T: type, comptime VectorType: type, des
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = median_vec + scale_vec * @tan(pi_vec * (uniform_vec - half_vec));
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23727,7 +23723,7 @@ fn triangularFromUniforms(comptime T: type, dest: []T, min: T, mode: T, max: T) 
 }
 
 fn triangularFromUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, mode: T, max: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) {
         for (dest) |*item| item.* = triangularRustShapeFromUniform(T, item.*, min, mode, max);
         return;
@@ -23744,12 +23740,11 @@ fn triangularFromUniformsVector(comptime T: type, comptime VectorType: type, des
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const left = min_vec + @sqrt(uniform_vec * left_scale_vec);
         const right = max_vec - @sqrt((one_vec - uniform_vec) * right_scale_vec);
         const out = @select(T, uniform_vec < c_vec, left, right);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23771,16 +23766,15 @@ fn rayleighFromOpenUniforms(comptime T: type, dest: []T, scale: T) void {
 }
 
 fn rayleighFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const scale_vec: VectorType = @splat(scale);
     const neg_two_vec: VectorType = @splat(-2.0);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = scale_vec * @sqrt(neg_two_vec * @log(uniform_vec));
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23798,17 +23792,16 @@ fn logisticFromOpenUniforms(comptime T: type, dest: []T, location: T, scale: T) 
 }
 
 fn logisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
     const one_vec: VectorType = @splat(1.0);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = location_vec + scale_vec * @log(uniform_vec / (one_vec - uniform_vec));
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23827,7 +23820,7 @@ fn laplaceFromOpenUniforms(comptime T: type, dest: []T, location: T, scale: T) v
 }
 
 fn laplaceFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
     const half_vec: VectorType = @splat(0.5);
@@ -23838,12 +23831,11 @@ fn laplaceFromOpenUniformsVector(comptime T: type, comptime VectorType: type, de
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const centered = uniform_vec - half_vec;
         const sign = @select(T, centered < @as(VectorType, @splat(0.0)), negative, positive);
         const out = location_vec - scale_vec * sign * @log(one_vec - two_vec * @abs(centered));
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23863,17 +23855,16 @@ fn logLogisticFromOpenUniforms(comptime T: type, dest: []T, scale: T, inverse_sh
 }
 
 fn logLogisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T, inverse_shape: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const scale_vec: VectorType = @splat(scale);
     const inverse_shape_vec: VectorType = @splat(inverse_shape);
     const one_vec: VectorType = @splat(1.0);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = scale_vec * @exp(@log(uniform_vec / (one_vec - uniform_vec)) * inverse_shape_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23892,16 +23883,15 @@ fn logLogisticShapeOneFromOpenUniforms(comptime T: type, dest: []T, scale: T) vo
 }
 
 fn logLogisticShapeOneFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const scale_vec: VectorType = @splat(scale);
     const one_vec: VectorType = @splat(1.0);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = scale_vec * uniform_vec / (one_vec - uniform_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23920,17 +23910,16 @@ fn powerFunctionFromOpenUniforms(comptime T: type, dest: []T, min: T, width: T, 
 }
 
 fn powerFunctionFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, width: T, inverse_shape: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const min_vec: VectorType = @splat(min);
     const width_vec: VectorType = @splat(width);
     const inverse_shape_vec: VectorType = @splat(inverse_shape);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = min_vec + width_vec * @exp(@log(uniform_vec) * inverse_shape_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23948,16 +23937,15 @@ fn gumbelFromOpenClosedUniforms(comptime T: type, dest: []T, location: T, scale:
 }
 
 fn gumbelFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = location_vec - scale_vec * @log(-@log(uniform_vec));
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -23975,17 +23963,16 @@ fn frechetFromOpenClosedUniforms(comptime T: type, dest: []T, location: T, scale
 }
 
 fn frechetFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T, negative_inverse_shape: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
     const negative_inverse_shape_vec: VectorType = @splat(negative_inverse_shape);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = location_vec + scale_vec * @exp(@log(-@log(uniform_vec)) * negative_inverse_shape_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -24003,16 +23990,15 @@ fn frechetShapeOneFromOpenClosedUniforms(comptime T: type, dest: []T, location: 
 }
 
 fn frechetShapeOneFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const location_vec: VectorType = @splat(location);
     const negative_scale_vec: VectorType = @splat(-scale);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = location_vec + negative_scale_vec / @log(uniform_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) dest[i] = location - scale / @log(dest[i]);
@@ -24028,18 +24014,17 @@ fn arcsineFromOpenUniforms(comptime T: type, dest: []T, min: T, width: T) void {
 }
 
 fn arcsineFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, min: T, width: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const min_vec: VectorType = @splat(min);
     const width_vec: VectorType = @splat(width);
     const angle_scale_vec: VectorType = @splat(@as(T, @floatCast(std.math.pi)) / 2);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const s = @sin(angle_scale_vec * uniform_vec);
         const out = min_vec + width_vec * s * s;
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -24058,16 +24043,15 @@ fn paretoFromOpenUniforms(comptime T: type, dest: []T, scale: T, inverse_shape: 
 }
 
 fn paretoFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T, inverse_shape: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const scale_vec: VectorType = @splat(scale);
     const neg_inverse_shape_vec: VectorType = @splat(-inverse_shape);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = scale_vec * @exp(@log(uniform_vec) * neg_inverse_shape_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -24085,16 +24069,15 @@ fn weibullFromOpenUniforms(comptime T: type, dest: []T, scale: T, inverse_shape:
 }
 
 fn weibullFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T, inverse_shape: T) void {
-    const len = @typeInfo(VectorType).vector.len;
+    const len = vectorInfo(VectorType).len;
     const scale_vec: VectorType = @splat(scale);
     const inverse_shape_vec: VectorType = @splat(inverse_shape);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
-        var uniform_vec: VectorType = undefined;
-        inline for (0..len) |lane| uniform_vec[lane] = dest[i + lane];
+        const uniform_vec = loadVectorLanes(VectorType, dest, i);
         const out = scale_vec * @exp(@log(-@log(uniform_vec)) * inverse_shape_vec);
-        inline for (0..len) |lane| dest[i + lane] = out[lane];
+        storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
@@ -36299,6 +36282,8 @@ test "standard f32 fills preserve scalar stream shape" {
 }
 
 test "distribution vector lane helpers preserve scalar slice transforms" {
+    const alea = @import("root.zig");
+
     var scaled_f32 = [_]f32{
         -3.5, -2.0, -1.0, -0.5, -0.0, 0.0, 0.25, 0.5, 1.0,
         1.5, 2.0, 3.0, 4.0, 5.5, 7.0, 8.25, 10.0,
@@ -36334,6 +36319,127 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     expInPlace(f32, &exp_f32);
     for (&expected_exp_f32) |*item| item.* = @exp(item.*);
     try expectApproxEqualFloatSlices(f32, &expected_exp_f32, &exp_f32);
+
+    const uniforms = [_]f32{
+        0.03125, 0.0625, 0.09375, 0.125, 0.1875, 0.25, 0.3125, 0.375, 0.4375,
+        0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.9375,
+    };
+
+    var cauchy_values = uniforms;
+    var expected_cauchy = uniforms;
+    cauchyFromOpenUniforms(f32, &cauchy_values, 0.25, 2.0);
+    for (&expected_cauchy) |*item| item.* = 0.25 + 2.0 * @tan(@as(f32, @floatCast(std.math.pi)) * (item.* - 0.5));
+    try expectApproxEqualFloatSlices(f32, &expected_cauchy, &cauchy_values);
+
+    var triangular_values = uniforms;
+    var expected_triangular = uniforms;
+    triangularFromUniforms(f32, &triangular_values, -1.0, 0.25, 2.0);
+    for (&expected_triangular) |*item| {
+        const min: f32 = -1.0;
+        const mode: f32 = 0.25;
+        const max: f32 = 2.0;
+        const width = max - min;
+        const left_width = mode - min;
+        const right_width = max - mode;
+        item.* = if (item.* < left_width / width)
+            min + @sqrt(item.* * width * left_width)
+        else
+            max - @sqrt((1 - item.*) * width * right_width);
+    }
+    try expectApproxEqualFloatSlices(f32, &expected_triangular, &triangular_values);
+
+    var rayleigh_values = uniforms;
+    var expected_rayleigh = uniforms;
+    rayleighFromOpenUniforms(f32, &rayleigh_values, 1.5);
+    for (&expected_rayleigh) |*item| item.* = 1.5 * @sqrt(-2.0 * @log(item.*));
+    try expectApproxEqualFloatSlices(f32, &expected_rayleigh, &rayleigh_values);
+
+    var logistic_values = uniforms;
+    var expected_logistic = uniforms;
+    logisticFromOpenUniforms(f32, &logistic_values, -0.5, 1.25);
+    for (&expected_logistic) |*item| item.* = -0.5 + 1.25 * @log(item.* / (1 - item.*));
+    try expectApproxEqualFloatSlices(f32, &expected_logistic, &logistic_values);
+
+    var laplace_values = uniforms;
+    var expected_laplace = uniforms;
+    laplaceFromOpenUniforms(f32, &laplace_values, 0.75, 1.5);
+    for (&expected_laplace) |*item| {
+        const centered = item.* - 0.5;
+        const sign: f32 = if (centered < 0) -1 else 1;
+        item.* = 0.75 - 1.5 * sign * @log(1 - 2 * @abs(centered));
+    }
+    try expectApproxEqualFloatSlices(f32, &expected_laplace, &laplace_values);
+
+    var log_logistic_values = uniforms;
+    var expected_log_logistic = uniforms;
+    logLogisticFromOpenUniforms(f32, &log_logistic_values, 2.0, 1.0 / 3.0);
+    for (&expected_log_logistic) |*item| item.* = 2.0 * @exp(@log(item.* / (1 - item.*)) * (1.0 / 3.0));
+    try expectApproxEqualFloatSlices(f32, &expected_log_logistic, &log_logistic_values);
+
+    var log_logistic_shape_one_values = uniforms;
+    var expected_log_logistic_shape_one = uniforms;
+    logLogisticShapeOneFromOpenUniforms(f32, &log_logistic_shape_one_values, 2.0);
+    for (&expected_log_logistic_shape_one) |*item| item.* = 2.0 * item.* / (1 - item.*);
+    try expectApproxEqualFloatSlices(f32, &expected_log_logistic_shape_one, &log_logistic_shape_one_values);
+
+    var power_values = uniforms;
+    var expected_power = uniforms;
+    powerFunctionFromOpenUniforms(f32, &power_values, -1.0, 3.0, 0.25);
+    for (&expected_power) |*item| item.* = -1.0 + 3.0 * @exp(@log(item.*) * 0.25);
+    try expectApproxEqualFloatSlices(f32, &expected_power, &power_values);
+
+    var gumbel_values = uniforms;
+    var expected_gumbel = uniforms;
+    gumbelFromOpenClosedUniforms(f32, &gumbel_values, -0.5, 1.25);
+    for (&expected_gumbel) |*item| item.* = -0.5 - 1.25 * @log(-@log(item.*));
+    try expectApproxEqualFloatSlices(f32, &expected_gumbel, &gumbel_values);
+
+    var frechet_values = uniforms;
+    var expected_frechet = uniforms;
+    frechetFromOpenClosedUniforms(f32, &frechet_values, 0.5, 2.0, -1.0 / 3.0);
+    for (&expected_frechet) |*item| item.* = 0.5 + 2.0 * @exp(@log(-@log(item.*)) * (-1.0 / 3.0));
+    try expectApproxEqualFloatSlices(f32, &expected_frechet, &frechet_values);
+
+    var frechet_shape_one_values = uniforms;
+    var expected_frechet_shape_one = uniforms;
+    frechetShapeOneFromOpenClosedUniforms(f32, &frechet_shape_one_values, 0.5, 2.0);
+    for (&expected_frechet_shape_one) |*item| item.* = 0.5 - 2.0 / @log(item.*);
+    try expectApproxEqualFloatSlices(f32, &expected_frechet_shape_one, &frechet_shape_one_values);
+
+    var arcsine_values = uniforms;
+    var expected_arcsine = uniforms;
+    arcsineFromOpenUniforms(f32, &arcsine_values, -1.0, 4.0);
+    for (&expected_arcsine) |*item| {
+        const s = @sin(@as(f32, @floatCast(std.math.pi)) * item.* / 2);
+        item.* = -1.0 + 4.0 * s * s;
+    }
+    try expectApproxEqualFloatSlices(f32, &expected_arcsine, &arcsine_values);
+
+    var pareto_values = uniforms;
+    var expected_pareto = uniforms;
+    paretoFromOpenUniforms(f32, &pareto_values, 2.0, 1.0 / 3.0);
+    for (&expected_pareto) |*item| item.* = 2.0 * @exp(-@log(item.*) * (1.0 / 3.0));
+    try expectApproxEqualFloatSlices(f32, &expected_pareto, &pareto_values);
+
+    var weibull_values = uniforms;
+    var expected_weibull = uniforms;
+    weibullFromOpenUniforms(f32, &weibull_values, 1.5, 2.0 / 3.0);
+    for (&expected_weibull) |*item| item.* = 1.5 * @exp(@log(-@log(item.*)) * (2.0 / 3.0));
+    try expectApproxEqualFloatSlices(f32, &expected_weibull, &weibull_values);
+
+    var inverse_gaussian_values = [_]f32{
+        -1.5, -1.25, -1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5,
+        0.75, 1.0, 1.25, 1.5, 1.75, 2.0, -1.75, -2.0,
+    };
+    var expected_inverse_gaussian = inverse_gaussian_values;
+    var inverse_gaussian_engine = alea.FastPrng.init(0x1a65_1228);
+    var scalar_inverse_gaussian_engine = alea.FastPrng.init(0x1a65_1228);
+    inverseGaussianFromNormals(&inverse_gaussian_engine, f32, &inverse_gaussian_values, 2.0, 5.0);
+    for (&expected_inverse_gaussian) |*item| {
+        item.* = inverseGaussianFromNormal(&scalar_inverse_gaussian_engine, f32, item.*, 2.0, 5.0);
+    }
+    try expectApproxEqualFloatSlices(f32, &expected_inverse_gaussian, &inverse_gaussian_values);
+    try std.testing.expectEqual(scalar_inverse_gaussian_engine.next(), inverse_gaussian_engine.next());
 }
 
 test "native f32 parameterized samplers have stable snapshots" {

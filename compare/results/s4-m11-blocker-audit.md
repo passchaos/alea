@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1228-distribution-transform-lane-store-sweep.md"
 "compare/results/s4-m1227-distribution-lane-store-refactor.md"
 "compare/results/s4-m1226-float-fill-lane-store-refactor.md"
 "compare/results/s4-m1225-f64-uniform-lowbit-vector8.md"
@@ -381,4 +382,6 @@ S4-M1226 is closed after refactoring vectorized float fill lane stores in `compa
 
 S4-M1227 is closed after refactoring distribution vector lane stores in `compare/results/s4-m1227-distribution-lane-store-refactor.md`.
 
-S4-M1228 remains active after S4-M1227 raises the next correctness/performance/product bar.
+S4-M1228 is closed after completing the remaining distribution transform lane-store sweep in `compare/results/s4-m1228-distribution-transform-lane-store-sweep.md`.
+
+S4-M1229 remains active after S4-M1228 raises the next correctness/performance/product bar.
