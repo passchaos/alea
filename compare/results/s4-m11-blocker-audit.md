@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-17)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1232-owned-byte-allocation-fallback.md"
 "compare/results/s4-m1231-rng-reader-tryfill-hardening.md"
 "compare/results/s4-m1230-rng-normal-affine-lane-store.md"
 "compare/results/s4-m1229-vector-sampler-lane-count-sweep.md"
@@ -393,4 +394,6 @@ S4-M1230 is closed after refactoring the rng normal affine lane-store helper in 
 
 S4-M1231 is closed after hardening rng byte-fill / reader refill correctness in `compare/results/s4-m1231-rng-reader-tryfill-hardening.md`.
 
-S4-M1232 remains active after S4-M1231 raises the next correctness/performance/product bar.
+S4-M1232 is closed after hardening owned byte allocation fallbacks in `compare/results/s4-m1232-owned-byte-allocation-fallback.md`.
+
+S4-M1233 remains active after S4-M1232 raises the next correctness/performance/product bar.

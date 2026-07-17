@@ -462,7 +462,12 @@ pub fn bytesAlloc(self: Rng, allocator: std.mem.Allocator, count: usize) ![]u8 {
 pub fn bytesAllocFrom(source: anytype, allocator: std.mem.Allocator, count: usize) ![]u8 {
     const out = try allocator.alloc(u8, count);
     errdefer allocator.free(out);
-    fillBytesFrom(source, out);
+    // Owned byte allocation should support the same source contracts as
+    // `tryFillBytesFrom` and `RngReader`: deterministic engines may expose an
+    // infallible `fill`, while OS/adapter sources may only expose fallible
+    // try-fill or try-next hooks.  Keep allocation success separate from
+    // source success so `errdefer` reliably releases `out` on entropy errors.
+    try fillSourceBytesFrom(source, out);
     return out;
 }
 
@@ -5682,7 +5687,7 @@ test "rng direct try raw aliases propagate source failures" {
     try std.testing.expectEqual(@as(usize, 1), fail_fill.index);
 }
 
-test "tryFillBytesFrom preserves fallible tryNext fallback" {
+test "tryFillBytesFrom preserves fallible tryNext fallback and bytesAllocFrom shares it" {
     const TryNextOnlySource = struct {
         words: []const u64,
         index: usize = 0,
@@ -5713,14 +5718,30 @@ test "tryFillBytesFrom preserves fallible tryNext fallback" {
     try std.testing.expectEqualSlices(u8, &expected, &buf);
     try std.testing.expectEqual(@as(usize, 2), source.index);
 
+    var owned_source = TryNextOnlySource{ .words = &words };
+    const owned = try Rng.bytesAllocFrom(&owned_source, std.testing.allocator, 12);
+    defer std.testing.allocator.free(owned);
+    try std.testing.expectEqualSlices(u8, &expected, owned);
+    try std.testing.expectEqual(@as(usize, 2), owned_source.index);
+
     var fail = TryNextOnlySource{ .words = &words, .fail_after = 1 };
     try std.testing.expectError(error.NoSeed, Rng.tryFillBytesFrom(&fail, &buf));
     try std.testing.expectEqual(@as(usize, 1), fail.index);
+
+    var fail_owned = TryNextOnlySource{ .words = &words, .fail_after = 1 };
+    try std.testing.expectError(error.NoSeed, Rng.bytesAllocFrom(&fail_owned, std.testing.allocator, 12));
+    try std.testing.expectEqual(@as(usize, 1), fail_owned.index);
 
     var zero_len_fail = TryNextOnlySource{ .words = &.{}, .fail_after = 0 };
     var empty: [0]u8 = .{};
     try Rng.tryFillBytesFrom(&zero_len_fail, &empty);
     try std.testing.expectEqual(@as(usize, 0), zero_len_fail.index);
+
+    var zero_len_owned_fail = TryNextOnlySource{ .words = &.{}, .fail_after = 0 };
+    const empty_owned = try Rng.bytesAllocFrom(&zero_len_owned_fail, std.testing.allocator, 0);
+    defer std.testing.allocator.free(empty_owned);
+    try std.testing.expectEqual(@as(usize, 0), empty_owned.len);
+    try std.testing.expectEqual(@as(usize, 0), zero_len_owned_fail.index);
 }
 
 test "rng reader adapter streams deterministic bytes" {
@@ -5868,9 +5889,17 @@ test "sys rng source uses Io entropy and propagates failures" {
     var direct_bytes: [8]u8 = undefined;
     try tryFillBytesFrom(sys, &direct_bytes);
 
+    const owned_sys_bytes = try bytesAllocFrom(sys, std.testing.allocator, 8);
+    defer std.testing.allocator.free(owned_sys_bytes);
+    try std.testing.expectEqual(@as(usize, 8), owned_sys_bytes.len);
+
     var borrowed_sys = SysRng.init(io);
     var borrowed_bytes: [8]u8 = undefined;
     try tryFillBytesFrom(&borrowed_sys, &borrowed_bytes);
+
+    const borrowed_owned_sys_bytes = try bytesAllocFrom(&borrowed_sys, std.testing.allocator, 8);
+    defer std.testing.allocator.free(borrowed_owned_sys_bytes);
+    try std.testing.expectEqual(@as(usize, 8), borrowed_owned_sys_bytes.len);
 
     var reader_buffer: [8]u8 = undefined;
     var adapter = sys.reader(&reader_buffer);
@@ -5882,6 +5911,7 @@ test "sys rng source uses Io entropy and propagates failures" {
     try std.testing.expectError(error.EntropyUnavailable, failing.tryNextU64());
     try std.testing.expectError(error.EntropyUnavailable, failing.tryNextU32());
     try std.testing.expectError(error.EntropyUnavailable, tryFillBytesFrom(failing, &direct_bytes));
+    try std.testing.expectError(error.EntropyUnavailable, bytesAllocFrom(failing, std.testing.allocator, 8));
 
     var failing_reader_buffer: [8]u8 = undefined;
     var failing_reader = failing.reader(&failing_reader_buffer);
