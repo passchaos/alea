@@ -13,7 +13,7 @@ The current Linux-first roadmap is intentionally broad:
   `rand::prelude::*` imports
 - `ChaCha8Rng`, `ChaCha12Rng`, and `ChaCha20Rng` optional-chacha style stream
   names, with `SecurePrng` / `StdRng` continuing to use the ChaCha12 contract
-- `Rng`, a small facade with `std.Random` compatibility
+- `Rng`, a small facade with `std.Random` compatibility and shared direct-source raw-alias fallback dispatch
 - Rust-discoverable raw aliases `nextU64()`, `nextU32()`, `fillBytes(out)`,
   `tryNext()`, `tryNextU64()`, `tryNextU32()`, and `tryFillBytes(out)` on
   deterministic engines, alongside Zig-native `next()`, `bytes`, and

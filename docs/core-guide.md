@@ -51,7 +51,9 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
   construction.
 
 Every engine exposes `next() u64`, `fill([]u8)`, and `random() std.Random`.
-Use `alea.Rng.init(&engine)` when you want the ergonomic facade, and direct
+Use `alea.Rng.init(&engine)` when you want the ergonomic facade; it also
+accepts raw-alias direct sources exposing `nextU64()` and optional
+`fillBytes(out)` by routing through the same shared direct-source fallbacks. Direct
 engine helpers when benchmark shape matters.
 Seedable production engines expose Rust-discoverable `seedFromU64(seed)`
 aliases for their deterministic `u64` constructors, mirroring local Rust

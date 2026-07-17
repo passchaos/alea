@@ -62,12 +62,13 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1237 aligns direct-source byte helpers with source-native `fillBytes` and `nextU64` fallback shapes;
 - S4-M1238 aligns generic `nextFrom` direct-source workflows with source-native `nextU64`;
 - S4-M1239 aligns seed and engine `fromRng` workflows with source-native `nextU64` / `tryNextU64`;
+- S4-M1240 aligns `Rng.init` facade construction with raw-alias-only direct sources;
 - no new unblocked local Rust public-surface or comparison-benchmark gap is known.
 
 ## Latest Evidence
 
-S4-M1239 aligns seed and engine `fromRng` workflows with source-native `nextU64` / `tryNextU64` after S4-M1238
-aligned generic direct-source fallback behavior. The retained status and validation evidence include:
+S4-M1240 aligns `Rng.init` facade construction with raw-alias-only direct sources after S4-M1239
+aligned seed/fork native-u64 fallback behavior. The retained status and validation evidence include:
 
 ```text
 $ zig build validate-all
@@ -85,15 +86,15 @@ profilelongcheck ok
 
 $ zig build rand-status-json
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1239 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1240 post-S4-M1239 next product bar",
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1240 follow-ups closed for current bar",
+  "remaining_blocker": "S4-M1241 post-S4-M1240 next product bar",
   "validate_local_passes": true,
   "opportunity_runners_available": false,
   "no_known_unblocked_gap": true,
   "s4_m11_blocked": false,
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1239-fromrng-native-u64-fallback.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1240-rng-init-raw-alias-source.md"
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -112,14 +113,14 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1239-fromrng-native-u64-fallback.md` records the latest focused seed/fork native-u64 fallback hardening after S4-M1238.
-S4-M11 is closed for the current bar; S4-M1220 through S4-M1239 are also closed for their current bars, but exact/default-compatible dense SIMD
+Wasmtime profilelongcheck run. `compare/results/s4-m1240-rng-init-raw-alias-source.md` records the latest focused facade-constructor raw-alias hardening after S4-M1239.
+S4-M11 is closed for the current bar; S4-M1220 through S4-M1240 are also closed for their current bars, but exact/default-compatible dense SIMD
 normal/exponential kernels are still not known to beat scalar lane-fill in the
 real vector-slice harness.
 
-## Current Post-S4-M1239 Bar
+## Current Post-S4-M1240 Bar
 
-The long-term product goal is not complete. The next bar is S4-M1240: pursue
+The long-term product goal is not complete. The next bar is S4-M1241: pursue
 exact/default-compatible dense SIMD normal/exponential kernels, additional
 non-WASI OS/architecture execution, broader/longer validation, further
 semantics-preserving performance work, or newly discovered local `rand` /
@@ -129,4 +130,4 @@ semantics-preserving performance work, or newly discovered local `rand` /
 
 S4-M420 is a status snapshot only: current local Rust comparison evidence shows
 no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1239 S4-M1240 bar remains the active follow-up.
+while the post-S4-M1240 S4-M1241 bar remains the active follow-up.

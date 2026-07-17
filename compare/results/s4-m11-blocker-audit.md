@@ -107,6 +107,7 @@ Alea local rand/rand_distr status (2026-07-18)
 "local_rand_status"
 "blocker_audit"
 "latest_validate_local_evidence"
+"compare/results/s4-m1240-rng-init-raw-alias-source.md"
 "compare/results/s4-m1239-fromrng-native-u64-fallback.md"
 "compare/results/s4-m1238-nextfrom-native-u64-fallback.md"
 "compare/results/s4-m1237-fillbytes-direct-source-fallback.md"
@@ -417,4 +418,6 @@ S4-M1238 is closed after aligning generic direct-source native-u64 fallback beha
 
 S4-M1239 is closed after aligning seed/fork native-u64 fallback behavior in `compare/results/s4-m1239-fromrng-native-u64-fallback.md`.
 
-S4-M1240 remains active after S4-M1239 raises the next correctness/performance/product bar.
+S4-M1240 is closed after aligning `Rng.init` raw-alias source fallback behavior in `compare/results/s4-m1240-rng-init-raw-alias-source.md`.
+
+S4-M1241 remains active after S4-M1240 raises the next correctness/performance/product bar.

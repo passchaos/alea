@@ -234,6 +234,9 @@ command matrix evidence.
   `valueBatchCheckedFrom`, `valueIter`, `valueIterFrom`, `randomIter`,
   `randomIterFrom`, `sample`, `sampleFrom`, `sampleIter`, `sampleIterFrom`, `sampleBatch`,
   `sampleBatchFrom`
+- Facade construction: `Rng.init(&source)` accepts sources exposing `next()` or
+  Rust-style `nextU64()`, with byte filling supplied by `fill`, `fillBytes`, or
+  the shared u64-word fallback.
 - Bytes/fill: `bytes`, `fillBytes`, `tryFillBytes`, `fillBytesFrom`,
   `tryFillBytesFrom`,
   `bytesAlloc`, `bytesAllocFrom`, `fill` and `fillFrom` for scalar and vector slices,

@@ -84,30 +84,24 @@ pub fn init(pointer: anytype) Rng {
             @compileError("Rng.init expects a single-item pointer to an engine");
         }
         const Child = ptr_info.pointer.child;
-        if (!@hasDecl(Child, "next")) {
-            @compileError(@typeName(Child) ++ " must expose pub fn next(*Self) u64");
-        }
-        if (!@hasDecl(Child, "fill")) {
-            @compileError(@typeName(Child) ++ " must expose pub fn fill(*Self, []u8) void");
+        if (!@hasDecl(Child, "next") and !@hasDecl(Child, "nextU64")) {
+            @compileError(@typeName(Child) ++ " must expose pub fn next(*Self) u64 or pub fn nextU64(*Self) u64");
         }
     }
-    const Child = ptr_info.pointer.child;
-
     const gen = struct {
         fn next(ptr: *anyopaque) u64 {
             const self: Ptr = @ptrCast(@alignCast(ptr));
-            return self.next();
+            return nextFrom(self);
         }
 
         fn nextU32(ptr: *anyopaque) u32 {
             const self: Ptr = @ptrCast(@alignCast(ptr));
-            if (comptime @hasDecl(Child, "nextU32")) return self.nextU32();
-            return @truncate(self.next() >> 32);
+            return nextU32From(self);
         }
 
         fn fill(ptr: *anyopaque, buf: []u8) void {
             const self: Ptr = @ptrCast(@alignCast(ptr));
-            self.fill(buf);
+            fillBytesFrom(self, buf);
         }
     };
 
@@ -4866,6 +4860,36 @@ test "rng direct generic helpers accept source native nextU64 only" {
     Rng.fillFrom(&fill_source, bool, &bools);
     try std.testing.expectEqualSlices(bool, &.{ true, false, false }, &bools);
     try std.testing.expectEqual(@as(usize, 1), fill_source.next_u64_called);
+}
+
+test "rng facade init accepts raw alias-only sources" {
+    const AliasOnlySource = struct {
+        next_u64_called: usize = 0,
+        fill_bytes_called: bool = false,
+
+        fn nextU64(self: *@This()) u64 {
+            self.next_u64_called += 1;
+            return 0x0807_0605_0403_0201;
+        }
+
+        fn fillBytes(self: *@This(), out: []u8) void {
+            self.fill_bytes_called = true;
+            for (out, 0..) |*byte, i| byte.* = @intCast(i + 1);
+        }
+    };
+
+    var source = AliasOnlySource{};
+    const rng = Rng.init(&source);
+    try std.testing.expectEqual(@as(u64, 0x0807_0605_0403_0201), rng.nextU64());
+    try std.testing.expectEqual(@as(usize, 1), source.next_u64_called);
+
+    try std.testing.expectEqual(@as(u32, 0x0807_0605), rng.nextU32());
+    try std.testing.expectEqual(@as(usize, 2), source.next_u64_called);
+
+    var out_bytes: [4]u8 = undefined;
+    rng.fillBytes(&out_bytes);
+    try std.testing.expectEqualSlices(u8, &.{ 1, 2, 3, 4 }, &out_bytes);
+    try std.testing.expect(source.fill_bytes_called);
 }
 
 test "fromRandom nextU32 preserves std.Random byte shape" {
