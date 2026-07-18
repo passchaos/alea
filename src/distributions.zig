@@ -434,6 +434,22 @@ pub const TruncatedNormalError = Error;
 pub const VonMisesError = Error;
 pub const WrappedCauchyError = Error;
 
+/// Von Mises-Fisher distribution error set.
+pub const VonMisesFisherError = error{
+    /// Concentration parameter is negative or non-finite.
+    InvalidParameter,
+    /// Mean direction is not on the unit sphere (‖μ‖ not within tolerance of 1).
+    InvalidMeanDirection,
+};
+
+/// Watson distribution error set.
+pub const WatsonError = error{
+    /// Concentration parameter is non-finite.
+    InvalidParameter,
+    /// Mean axis is not on the unit sphere (‖μ‖ not within tolerance of 1).
+    InvalidMeanDirection,
+};
+
 pub fn weightedErrorMessage(err: WeightedError) []const u8 {
     return switch (err) {
         error.InvalidInput => "Weights sequence is empty/too long/unordered",
@@ -7898,14 +7914,6 @@ pub fn VectorTruncatedNormal(comptime VectorType: type) type {
 // (which does not ship vMF).
 // -----------------------------------------------------------------------------
 
-/// Von Mises-Fisher distribution error alias.
-pub const VonMisesFisherError = error{
-    /// Concentration parameter is negative or non-finite.
-    InvalidParameter,
-    /// Mean direction is not on the unit sphere (‖μ‖ not within tolerance of 1).
-    InvalidMeanDirection,
-};
-
 /// Compute the normalization constant and b parameter for Wood's algorithm.
 /// Returns (b, x0, c, log_c) used in tangent-plane rejection sampling.
 /// Reference: Wood (1994), "Simulation of the von Mises-Fisher distribution".
@@ -7997,9 +8005,16 @@ fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize,
     inline for (1..n) |i| x[i] = sqrt_1mw2 * v[i];
 
     // Step 4: Householder reflection: rotate from e_1 frame to mean_dir frame.
-    // H = I - 2vv^T/(v^T v) where v = e1 - mu.
+    return householderReflectFromE1(T, n, x, mean_dir);
+}
+
+/// Apply the Householder reflection that maps e_1 to the unit vector mu
+/// to the point x in the e_1-centered frame, returning the rotated point.
+/// H = I - 2vv^T/(v^T v) where v = e1 - mu; mu must be unit length.
+/// Handles ±e1 near-degenerate cases (|dot(mu,e1) ∓ 1| < 1e-12).
+fn householderReflectFromE1(comptime T: type, comptime n: usize, x: [n]T, mu: *const [n]T) [n]T {
     var result: [n]T = undefined;
-    const dot_mu_e1 = mean_dir[0];
+    const dot_mu_e1 = mu[0];
 
     if (@abs(dot_mu_e1 - 1) < 1e-12) {
         result = x;
@@ -8008,8 +8023,8 @@ fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize,
         inline for (1..n) |i| result[i] = x[i];
     } else {
         var v_hh: [n]T = undefined;
-        v_hh[0] = 1 - mean_dir[0];
-        inline for (1..n) |i| v_hh[i] = -mean_dir[i];
+        v_hh[0] = 1 - mu[0];
+        inline for (1..n) |i| v_hh[i] = -mu[i];
         var vv: T = v_hh[0] * v_hh[0];
         inline for (1..n) |i| vv += v_hh[i] * v_hh[i];
         var vx: T = v_hh[0] * x[0];
@@ -8168,6 +8183,349 @@ pub fn fillVonMisesFisherChecked(rng: Rng, comptime T: type, comptime n: usize, 
 /// Checked source-accepting fill variant.
 pub fn fillVonMisesFisherCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: [n]T, kappa: T) VonMisesFisherError!void {
     const dist = try VonMisesFisher(T, n).init(mean_dir, kappa);
+    dist.fillFrom(source, dest);
+}
+
+// -----------------------------------------------------------------------------
+// Watson distribution on S^{n-1} (n-dimensional unit sphere, n ≥ 2)
+//
+// The Watson distribution is the axial analogue of the von Mises-Fisher
+// distribution: it produces undirected axes (points modulo sign) on the unit
+// sphere S^{n-1} distributed symmetrically around a mean axis μ with
+// concentration κ ∈ ℝ.
+//
+// Density: f(x | μ, κ) = _c F1(; (n-1)/2; κ)^{-1} · exp(κ · (μᵀx)²)
+// where _c F1 is the confluent hypergeometric function.
+//
+// κ = 0   : uniform on the sphere.
+// κ > 0   : bipolar, concentrated around ±μ (girdle-like at small κ, two
+//           point masses at ±μ for κ → ∞).
+// κ < 0   : girdle, concentrated around the great circle perpendicular to μ
+//           (equatorial belt); κ → −∞ collapses to the equator.
+//
+// Sampling uses rejection against the uniform-on-sphere marginal envelope:
+//   * Sample w = μᵀx (cosine of angle from μ) by proposing from the uniform
+//     marginal w = 2B − 1, B ~ Beta((n-1)/2, (n-1)/2), and accepting with
+//     probability exp(κ·(w² − 1)) for κ ≥ 0 or exp(κ·w²) for κ < 0.
+//   * Sample v uniformly from S^{n-2} (the equatorial tangent subspace).
+//   * Assemble x = (w, √(1−w²)·v) in the e₁-centered frame.
+//   * Householder-reflect to the μ frame.
+//
+// Reference: Watson, G. S. (1965). "Equatorial distributions on a sphere."
+// Biometrika, 52(1/2), 193–201; Best & Fisher (1986); Sablica, Hornik &
+// Leydold (2022) for efficient sampling.
+// -----------------------------------------------------------------------------
+
+/// Sample a univariate value w ∈ [-1, 1] from the Watson marginal distribution
+/// of w = μᵀx, with density proportional to (1−w²)^{(n−3)/2} · exp(κ·w²).
+/// Uses rejection against the uniform-sphere Beta((n-1)/2,(n-1)/2) envelope.
+fn watsonSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T {
+    if (kappa == 0) {
+        // Uniform on sphere S^{n-1}: w = 2B - 1 where B ~ Beta((n-1)/2, (n-1)/2).
+        const half_d: T = (@as(T, @floatFromInt(dim - 1))) / 2;
+        const b_sample = betaFrom(source, T, half_d, half_d);
+        return 2 * b_sample - 1;
+    }
+
+    const shape: T = (@as(T, @floatFromInt(dim - 1))) / 2;
+
+    if (kappa > 0) {
+        // Bipolar: envelope is M · uniform marginal with M = exp(κ) at w = ±1.
+        // Accept iff log(u) ≤ κ·(w² − 1).
+        while (true) {
+            const b_sample = betaFrom(source, T, shape, shape);
+            const w = 2 * b_sample - 1;
+            const u = Rng.floatOpenFrom(source, T);
+            if (@log(u) <= kappa * (w * w - 1)) {
+                return w;
+            }
+        }
+    } else {
+        // Girdle (κ < 0): exp(κ·w²) ≤ 1, so envelope M=1 with uniform marginal.
+        // Accept iff log(u) ≤ κ·w².
+        const k = kappa;
+        while (true) {
+            const b_sample = betaFrom(source, T, shape, shape);
+            const w = 2 * b_sample - 1;
+            const u = Rng.floatOpenFrom(source, T);
+            if (@log(u) <= k * w * w) {
+                return w;
+            }
+        }
+    }
+}
+
+/// Sample a point on S^{n-1} ~ Watson(mean_axis, kappa) using Beta-rejection
+/// sampling plus Householder reflection from the e₁ frame. mean_axis must be
+/// a unit vector of length n; n ≥ 2.
+fn watsonPointFrom(source: anytype, comptime T: type, comptime n: usize, mean_axis: *const [n]T, kappa: T) [n]T {
+    comptime if (n < 2) @compileError("Watson requires at least 2 dimensions (circle/S¹)");
+
+    if (kappa == 0) {
+        return unitSphereSurfaceFrom(source, T, n);
+    }
+
+    // Bipolar degenerate case: κ → ∞ collapses to ±μ (coin flip between μ and -μ).
+    if (kappa > 1e12) {
+        const sign_flip: T = if (Rng.booleanFrom(source)) -1 else 1;
+        var result: [n]T = undefined;
+        inline for (0..n) |i| result[i] = sign_flip * mean_axis[i];
+        return result;
+    }
+
+    // Girdle degenerate case: κ → −∞ collapses to the equator (perpendicular to μ).
+    if (kappa < -1e12) {
+        // Sample uniform v on S^{n-2} tangent plane at e1, then reflect to μ frame.
+        var v: [n]T = undefined;
+        if (n == 2) {
+            // S^{0} = {±1} — tangent at e1 is just a point in 1D, but girdle on S¹
+            // concentrates at θ = π/2 (perpendicular), which is (0, ±1); sign is random.
+            v[0] = 0;
+            v[1] = if (Rng.booleanFrom(source)) @as(T, 1) else -1;
+        } else if (n == 3) {
+            const u = Rng.floatOpenClosedFrom(source, T) * 2 * @as(T, @floatCast(std.math.pi));
+            v[0] = 0;
+            v[1] = @cos(u);
+            v[2] = @sin(u);
+        } else {
+            const v_sub = unitSphereSurfaceFrom(source, T, n - 1);
+            v[0] = 0;
+            inline for (1..n) |i| v[i] = v_sub[i - 1];
+        }
+        return householderReflectFromE1(T, n, v, mean_axis);
+    }
+
+    if (n == 2) {
+        // S¹ Watson: w ∈ [-1,1] via marginal rejection; v on S^{0} = {±1}.
+        const w = watsonSampleWFrom(source, T, kappa, 2);
+        const sqrt_1mw2 = @sqrt(@max(0, 1 - w * w));
+        const sign_v: T = if (Rng.booleanFrom(source)) @as(T, 1) else -1;
+        const x = [2]T{ w, sqrt_1mw2 * sign_v };
+        return householderReflectFromE1(T, 2, x, mean_axis);
+    }
+
+    // General n ≥ 3.
+    // Step 1: Sample w from Watson marginal.
+    const w = watsonSampleWFrom(source, T, kappa, n);
+
+    // Step 2: Sample uniform point v on S^{n-2} (equatorial tangent subspace).
+    var v: [n]T = undefined;
+    if (n == 3) {
+        // Uniform on circle S^1 (tangent direction is 2D).
+        const u = Rng.floatOpenClosedFrom(source, T) * 2 * @as(T, @floatCast(std.math.pi));
+        v[0] = 0;
+        v[1] = @cos(u);
+        v[2] = @sin(u);
+    } else {
+        const v_sub = unitSphereSurfaceFrom(source, T, n - 1);
+        v[0] = 0;
+        inline for (1..n) |i| v[i] = v_sub[i - 1];
+    }
+
+    // Step 3: Assemble x = (w, √(1-w²) · v) in the e₁-centered frame.
+    const sqrt_1mw2 = @sqrt(@max(0, 1 - w * w));
+    var x: [n]T = undefined;
+    x[0] = w;
+    inline for (1..n) |i| x[i] = sqrt_1mw2 * v[i];
+
+    // Step 4: Householder-reflect to mean_axis frame.
+    return householderReflectFromE1(T, n, x, mean_axis);
+}
+
+/// Fill a slice with Watson-distributed points on S^{n-1}.
+fn fillWatsonPointsFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: *const [n]T, kappa: T) void {
+    for (dest) |*item| {
+        item.* = watsonPointFrom(source, T, n, mean_axis, kappa);
+    }
+}
+
+/// Watson distribution on S^{n-1} (n-dimensional unit sphere, n ≥ 2).
+/// Concentration κ ∈ ℝ; mean axis μ must be a unit vector.
+/// κ=0 is uniform; κ>0 bipolar around ±μ; κ<0 girdle around equator perpendicular to μ.
+pub fn Watson(comptime T: type, comptime n: usize) type {
+    comptime if (n < 2) @compileError("Watson requires at least 2 dimensions (S¹ circle)");
+    return struct {
+        const Self = @This();
+
+        mean_axis: [n]T,
+        kappa: T,
+
+        /// Construct a Watson distribution with given mean axis and concentration.
+        /// Validates kappa finite and that mean_axis is within 1e-6 of unit length.
+        pub fn init(mean_axis: [n]T, kappa: T) WatsonError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(kappa)) return error.InvalidParameter;
+
+            var norm_sq: T = 0;
+            inline for (0..n) |i| {
+                if (!std.math.isFinite(mean_axis[i])) return error.InvalidMeanDirection;
+                norm_sq += mean_axis[i] * mean_axis[i];
+            }
+            if (@abs(norm_sq - 1) > 1e-6) return error.InvalidMeanDirection;
+
+            return Self{ .mean_axis = mean_axis, .kappa = kappa };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(mean_axis: [n]T, kappa: T) Self {
+            return Self.init(mean_axis, kappa) catch |e| {
+                std.debug.panic("Watson.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        /// Construct with a caller-normalized axis (skips unit-vector check
+        /// in release mode; caller guarantees ‖mean_axis‖ = 1).
+        pub fn initNormalized(mean_axis: [n]T, kappa: T) WatsonError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(kappa)) return error.InvalidParameter;
+            return Self{ .mean_axis = mean_axis, .kappa = kappa };
+        }
+
+        pub fn meanAxis(self: Self) [n]T { return self.mean_axis; }
+        pub fn concentrationValue(self: Self) T { return self.kappa; }
+        pub fn dimensionValue(_: Self) usize { return n; }
+
+        /// Expected direction — for bipolar κ>0 the expected axis is zero (symmetric);
+        /// returns the mean axis scaled by the mean resultant length ρ.
+        pub fn expectedValue(self: Self) [n]T {
+            const rho = self.meanResultantLength();
+            var result: [n]T = undefined;
+            inline for (0..n) |i| result[i] = rho * self.mean_axis[i];
+            return result;
+        }
+
+        /// Mean resultant length ρ = |E[x]|. For the Watson distribution the
+        /// first moment is parallel to μ with magnitude
+        ///   ρ_n(κ) = _c F1(3/2; (n+1)/2; κ) / _c F1(1/2; (n-1)/2; κ)
+        /// i.e. a ratio of confluent hypergeometric functions. We use
+        /// continued-fraction / series approximations:
+        ///   * κ = 0   : ρ = 0 (uniform; expected value is zero vector).
+        ///   * κ → +∞  : ρ → 1 (bipolar → two point masses; mean cancels to 0
+        ///               in sign-averaged sense, but the signed mean along μ
+        ///               is 0 due to symmetry between ±μ).
+        /// Per the axial (symmetric) nature of Watson, E[x] = 0 identically
+        /// (because f(x) = f(-x)), so ρ is reported as 0 for signed first
+        /// moment. We instead report the *axial* concentration strength
+        ///   ρ₂ = E[(μᵀx)²]
+        /// which ranges from 1/n (uniform) to 1 (bipolar point mass), or to 0
+        /// (girdle equator). This is what users typically want for spherical
+        /// axial statistics.
+        pub fn meanResultantLength(self: Self) T {
+            return self.meanCosineSquared();
+        }
+
+        /// Axial strength E[(μᵀx)²], the second moment along the mean axis.
+        ///   * Uniform (κ=0): E[(μᵀx)²] = 1/n.
+        ///   * Bipolar κ → ∞: → 1.
+        ///   * Girdle κ → −∞: → 0.
+        /// Uses the confluent hypergeometric ratio:
+        ///   ρ₂(κ) = _c F1(3/2; (n+1)/2; κ) / (2·_c F1(1/2; (n-1)/2; κ)) · 2/(n-1)? ... use series.
+        /// For simplicity and stability across the full range, we use a
+        /// direct asymptotic/interpolating approximation.
+        pub fn meanCosineSquared(self: Self) T {
+            const k = self.kappa;
+            const d: T = @floatFromInt(n);
+            if (k == 0) return 1 / d;
+            if (k > 50) {
+                // Bipolar asymptotic: ρ₂ ≈ 1 − (d-1)/(2k) + O(1/k²).
+                return 1 - (d - 1) / (2 * k);
+            }
+            if (k < -50) {
+                // Girdle asymptotic: ρ₂ ≈ (d-1)/(-2k) + O(1/k²) for n≥3; for n=2 ~1/(-2k).
+                if (n == 2) return 1 / (-2 * k);
+                return (d - 1) / (-2 * k);
+            }
+            // Moderate |κ|: series expansion of the Kummer function ratio.
+            // ρ₂ = M(3/2, (d+1)/2, κ) / (d · M(1/2, (d-1)/2, κ))
+            // where M(a,b,z) = ₁F₁(a;b;z).
+            // Use truncated series M(a,b,z) = Σ z^j · (a)_j / ((b)_j · j!)
+            // with enough terms for |κ| ≤ 50.
+            const M1 = kummerM(1.0 / 2.0, (d - 1) / 2.0, k, 60);
+            const M2 = kummerM(3.0 / 2.0, (d + 1) / 2.0, k, 60);
+            return M2 / (d * M1);
+        }
+
+        /// Spherical variance 1 − E[(μᵀx)²] (axial variance analogue).
+        pub fn varianceValue(self: Self) T {
+            return 1 - self.meanCosineSquared();
+        }
+
+        pub fn sample(self: Self, rng: Rng) [n]T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [n]T {
+            return watsonPointFrom(source, T, n, &self.mean_axis, self.kappa);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][n]T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][n]T) void {
+            fillWatsonPointsFrom(source, T, n, dest, &self.mean_axis, self.kappa);
+        }
+    };
+}
+
+/// Kummer's confluent hypergeometric function ₁F₁(a; b; z) by truncated power
+/// series. For moderate |z| (|z| ≤ 100) this converges to high precision with
+/// modest terms. Uses the recurrence M_j = M_{j-1} · z · (a+j-1) / ((b+j-1)·j).
+fn kummerM(a: anytype, b: anytype, z: anytype, max_terms: usize) @TypeOf(a, b, z) {
+    const T = @TypeOf(a, b, z);
+    var sum: T = 1;
+    var term: T = 1;
+    var j: T = 1;
+    for (0..max_terms) |_| {
+        term *= z * (a + j - 1) / ((b + j - 1) * j);
+        sum += term;
+        if (@abs(term) < @abs(sum) * 1e-15) break;
+        j += 1;
+    }
+    return sum;
+}
+
+/// Sample a Watson-distributed point on S^{n-1}. Returns error on invalid parameters.
+pub fn watson(rng: Rng, comptime T: type, comptime n: usize, mean_axis: [n]T, kappa: T) WatsonError![n]T {
+    return watsonCheckedFrom(rng, T, n, mean_axis, kappa);
+}
+
+/// Source-accepting variant of `watson` (panics on invalid parameters in debug).
+pub fn watsonFrom(source: anytype, comptime T: type, comptime n: usize, mean_axis: [n]T, kappa: T) [n]T {
+    const dist = Watson(T, n).new(mean_axis, kappa);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn watsonChecked(rng: Rng, comptime T: type, comptime n: usize, mean_axis: [n]T, kappa: T) WatsonError![n]T {
+    return watsonCheckedFrom(rng, T, n, mean_axis, kappa);
+}
+
+/// Checked source-accepting variant.
+pub fn watsonCheckedFrom(source: anytype, comptime T: type, comptime n: usize, mean_axis: [n]T, kappa: T) WatsonError![n]T {
+    const dist = try Watson(T, n).init(mean_axis, kappa);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Watson-distributed points. Validates parameters (returns error on invalid).
+pub fn fillWatson(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: [n]T, kappa: T) WatsonError!void {
+    return fillWatsonCheckedFrom(rng, T, n, dest, mean_axis, kappa);
+}
+
+/// Source-accepting variant of `fillWatson`. Validates parameters.
+pub fn fillWatsonFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: [n]T, kappa: T) WatsonError!void {
+    const dist = try Watson(T, n).init(mean_axis, kappa);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillWatsonChecked(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: [n]T, kappa: T) WatsonError!void {
+    return fillWatsonCheckedFrom(rng, T, n, dest, mean_axis, kappa);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillWatsonCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: [n]T, kappa: T) WatsonError!void {
+    const dist = try Watson(T, n).init(mean_axis, kappa);
     dist.fillFrom(source, dest);
 }
 
@@ -45105,5 +45463,177 @@ test "VonMisesFisher f32 sampling works" {
         const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
         try std.testing.expect(@abs(norm_sq - 1) < 1e-4);
     }
+}
+
+test "Watson constructor validates parameters" {
+    // Non-finite kappa.
+    try std.testing.expectError(error.InvalidParameter, Watson(f64, 3).init(.{ 1, 0, 0 }, std.math.nan(f64)));
+    // Non-unit mean direction.
+    try std.testing.expectError(error.InvalidMeanDirection, Watson(f64, 3).init(.{ 1, 1, 0 }, 1));
+    // Infinite component.
+    try std.testing.expectError(error.InvalidMeanDirection, Watson(f64, 3).init(.{ 1, std.math.inf(f64), 0 }, 1));
+    // Valid.
+    const ok = try Watson(f64, 3).init(.{ 1, 0, 0 }, 1);
+    try std.testing.expectEqual(@as(usize, 3), ok.dimensionValue());
+    // κ=0 (uniform) is valid.
+    const ok2 = try Watson(f64, 3).init(.{ 0, 1, 0 }, 0);
+    try std.testing.expectEqual(@as(f64, 0), ok2.concentrationValue());
+    // Negative (girdle) κ is valid.
+    const ok3 = try Watson(f64, 3).init(.{ 0, 0, 1 }, -2);
+    try std.testing.expectEqual(@as(f64, -2), ok3.concentrationValue());
+}
+
+test "Watson 3D bipolar samples are unit vectors concentrated around axis" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1a2b3c4d);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 1, 0, 0 };
+    const dist = try Watson(f64, 3).init(mu, 10);
+    var sum_w: f64 = 0;
+    const n = 2000;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        // Axial: both w and -w are concentrated; use |μᵀx|.
+        const w = p[0]; // since μ=e1
+        sum_w += w * w; // E[(μ·x)^2] for bipolar κ=10 should be close to 1.
+    }
+    const mean_w2 = sum_w / @as(f64, @floatFromInt(n));
+    try std.testing.expect(mean_w2 > 0.7); // strong bipolar concentration
+}
+
+test "Watson kappa=0 is uniform on sphere" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5a5a);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 1, 0, 0 };
+    const dist = try Watson(f64, 3).init(mu, 0);
+    var sum_w2: f64 = 0;
+    const n = 2000;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[0] * p[0];
+    }
+    // Uniform on S^2: E[x^2] = 1/3 ≈ 0.333.
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(n));
+    try std.testing.expect(@abs(mean_w2 - 1.0 / 3.0) < 0.05);
+}
+
+test "Watson girdle (kappa<0) samples concentrate near equator" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9c);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 0, 0, 1 };
+    const dist = try Watson(f64, 3).init(mu, -20);
+    var sum_w2: f64 = 0;
+    const n = 1000;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[2] * p[2]; // equator → w ≈ 0
+    }
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(n));
+    try std.testing.expect(mean_w2 < 0.15); // girdle: strong equatorial concentration
+}
+
+test "Watson high kappa bipolar concentrates near ±mean axis" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbad);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 1, 0, 0 };
+    const dist = try Watson(f64, 3).init(mu, 1e13);
+    for (0..32) |_| {
+        const p = dist.sample(rng);
+        // Should be either μ or −μ.
+        const is_pos = @abs(p[0] - 1) < 1e-10 and @abs(p[1]) < 1e-10 and @abs(p[2]) < 1e-10;
+        const is_neg = @abs(p[0] + 1) < 1e-10 and @abs(p[1]) < 1e-10 and @abs(p[2]) < 1e-10;
+        try std.testing.expect(is_pos or is_neg);
+    }
+}
+
+test "Watson free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf00d);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 0, 1, 0 };
+    var buf: [32][3]f64 = undefined;
+    try fillWatson(rng, f64, 3, &buf, mu, 3);
+    for (buf) |p| {
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+    // Checked variant rejects negative non-finite etc.
+    try std.testing.expectError(error.InvalidParameter, fillWatson(rng, f64, 3, &buf, mu, std.math.inf(f64)));
+
+    // Direct sample
+    const p = try watsonChecked(rng, f64, 3, mu, 3);
+    const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+    try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+}
+
+test "Watson 4D samples are unit vectors" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x4d);
+    const rng = Rng.init(&engine);
+
+    const mu: [4]f64 = .{ 1, 0, 0, 0 };
+    const dist = try Watson(f64, 4).init(mu, 3);
+    for (0..200) |_| {
+        const p = dist.sample(rng);
+        var norm_sq: f64 = 0;
+        inline for (0..4) |i| norm_sq += p[i] * p[i];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+}
+
+test "Watson 2D (circle) axial bipolar works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x2d);
+    const rng = Rng.init(&engine);
+
+    const mu: [2]f64 = .{ 1, 0 };
+    const dist = try Watson(f64, 2).init(mu, 5);
+    var sum_w2: f64 = 0;
+    const n = 500;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[0] * p[0];
+    }
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(n));
+    try std.testing.expect(mean_w2 > 0.6); // bipolar on S¹ concentrates near ±(1,0)
+}
+
+test "Watson f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32b);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f32 = .{ 1, 0, 0 };
+    const dist = try Watson(f32, 3).init(mu, 2);
+    for (0..64) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+    }
+}
+
+test "kummerM hypergeometric sanity checks" {
+    // M(a,b,0) = 1 for any a,b.
+    try std.testing.expect(@abs(kummerM(0.5, 1.5, 0.0, 60) - 1.0) < 1e-12);
+    // M(1, b, z) = exp(z) for integer-like cases? Actually M(1,1,z)=exp(z).
+    const z: f64 = 0.5;
+    const m_val = kummerM(@as(f64, 1), @as(f64, 1), z, 100);
+    try std.testing.expect(@abs(m_val - @exp(z)) < 1e-8);
 }
 

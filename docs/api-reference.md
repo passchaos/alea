@@ -556,7 +556,7 @@ self-forking.
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
-  `VonMisesFisherError`;
+  `VonMisesFisherError`, `WatsonError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
@@ -657,6 +657,15 @@ self-forking.
   `VonMisesFisher(T,n).fillFrom`,
   `vonMisesFisher`, `vonMisesFisherFrom`, `vonMisesFisherChecked`, `vonMisesFisherCheckedFrom`,
   `fillVonMisesFisher`, `fillVonMisesFisherFrom`, `fillVonMisesFisherChecked`, `fillVonMisesFisherCheckedFrom`,
+  `Watson(T,n)`, `Watson(T,n).init`, `Watson(T,n).new`,
+  `Watson(T,n).initNormalized`, `Watson(T,n).meanAxis`,
+  `Watson(T,n).concentrationValue`, `Watson(T,n).dimensionValue`,
+  `Watson(T,n).expectedValue`, `Watson(T,n).meanResultantLength`,
+  `Watson(T,n).meanCosineSquared`, `Watson(T,n).varianceValue`,
+  `Watson(T,n).sample`, `Watson(T,n).sampleFrom`, `Watson(T,n).fill`,
+  `Watson(T,n).fillFrom`,
+  `watson`, `watsonFrom`, `watsonChecked`, `watsonCheckedFrom`,
+  `fillWatson`, `fillWatsonFrom`, `fillWatsonChecked`, `fillWatsonCheckedFrom`,
   `unitSphereSurface`, `unitSphereSurfaceFrom`, `fillUnitSphereSurface`,
   `fillUnitSphereSurfaceFrom`, `unitBallVolume`, `unitBallVolumeFrom`,
   `fillUnitBallVolume`, `fillUnitBallVolumeFrom`, `UnitSphereSurface`,
