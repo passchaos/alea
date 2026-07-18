@@ -8956,6 +8956,161 @@ pub fn fillNakagamiCheckedFrom(source: anytype, comptime T: type, dest: []T, m_p
     dist.fillFrom(source, dest);
 }
 
+// Inverse Gamma distribution -------------------------------------------------
+
+pub const InverseGammaError = Error;
+
+/// Sample a single Inverse-Gamma-distributed value: if X ~ Gamma(α, β) then
+/// 1/X ~ InverseGamma(shape=α, scale=β).
+fn inverseGammaPointFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
+    // Y ~ Gamma(α, 1/β) would give different parameterization.
+    // Standard InverseGamma(α, β) has PDF (β^α/Γ(α)) · x^{-(α+1)} · exp(−β/x),
+    // which corresponds to X = 1/Y where Y ~ Gamma(α, 1/β).
+    // But alea's gammaFrom uses (shape, scale) parameterization where scale is
+    // the mean scale: Gamma(k, θ) has mean kθ. So Y~Gamma(α, 1/β) is obtained
+    // by gammaFrom(source, T, shape, 1/scale), and X = 1/Y.
+    const y = gammaFrom(source, T, shape, 1 / scale);
+    return 1 / y;
+}
+
+/// Fill a slice with Inverse-Gamma-distributed values.
+fn fillInverseGammaPointsFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
+    for (dest) |*item| {
+        item.* = inverseGammaPointFrom(source, T, shape, scale);
+    }
+}
+
+/// Inverse Gamma distribution — the distribution of 1/X where X ~ Gamma(α, β).
+/// Defined on (0, ∞) with shape α > 0 and scale β > 0; PDF:
+///   f(x; α, β) = β^α / Γ(α) · x^{−(α+1)} · exp(−β/x)
+///
+/// Inverse Gamma is the conjugate prior for the variance of a normal
+/// distribution in Bayesian statistics, and is widely used for variance
+/// priors in regression, Gaussian processes, and hierarchical models.
+/// The scaled-inverse-χ²(ν, s²) distribution (used in BUGS/Stan) is
+/// InverseGamma(ν/2, ν·s²/2).
+///
+/// Sampling uses the reciprocal-Gamma identity: X = 1/Gamma(α, 1/β).
+/// Mean exists only for α > 1: β/(α−1). Variance exists only for α > 2:
+/// β²/((α−1)²·(α−2)). Mode: β/(α+1) for all α > 0.
+pub fn InverseGamma(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        shape: T,
+        scale: T,
+
+        /// Construct an Inverse Gamma distribution with shape α > 0 and scale β > 0.
+        /// Both parameters must be strictly positive and finite.
+        pub fn init(shape: T, scale: T) InverseGammaError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(shape) or shape <= 0) return error.InvalidParameter;
+            if (!std.math.isFinite(scale) or scale <= 0) return error.InvalidParameter;
+            return .{ .shape = shape, .scale = scale };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(shape: T, scale: T) Self {
+            return Self.init(shape, scale) catch |e| {
+                std.debug.panic("InverseGamma.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn shapeValue(self: Self) T { return self.shape; }
+        pub fn scaleValue(self: Self) T { return self.scale; }
+
+        /// Mean: E[X] = β/(α−1), defined only for α > 1. Returns +inf for α ≤ 1.
+        pub fn expectedValue(self: Self) T {
+            if (self.shape <= 1) return std.math.inf(T);
+            return self.scale / (self.shape - 1);
+        }
+
+        /// Variance: Var[X] = β²/((α−1)²·(α−2)), defined only for α > 2.
+        /// Returns +inf for α ≤ 2.
+        pub fn varianceValue(self: Self) T {
+            if (self.shape <= 2) return std.math.inf(T);
+            const a_minus_1 = self.shape - 1;
+            return (self.scale * self.scale) / (a_minus_1 * a_minus_1 * (self.shape - 2));
+        }
+
+        /// Mode: β/(α+1), defined for all α > 0.
+        pub fn modeValue(self: Self) T {
+            return self.scale / (self.shape + 1);
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return inverseGammaPointFrom(source, T, self.shape, self.scale);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillInverseGammaPointsFrom(source, T, dest, self.shape, self.scale);
+        }
+    };
+}
+
+/// Sample an Inverse-Gamma-distributed value, panics on invalid parameters in debug.
+pub fn inverseGamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
+    return inverseGammaFrom(rng, T, shape, scale);
+}
+
+/// Source-accepting variant of `inverseGamma`.
+pub fn inverseGammaFrom(source: anytype, comptime T: type, shape: T, scale: T) T {
+    const dist = InverseGamma(T).new(shape, scale);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn inverseGammaChecked(rng: Rng, comptime T: type, shape: T, scale: T) InverseGammaError!T {
+    return inverseGammaCheckedFrom(rng, T, shape, scale);
+}
+
+/// Checked source-accepting variant.
+pub fn inverseGammaCheckedFrom(source: anytype, comptime T: type, shape: T, scale: T) InverseGammaError!T {
+    const dist = try InverseGamma(T).init(shape, scale);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Inverse-Gamma-distributed values (panics on invalid parameters in debug).
+pub fn fillInverseGamma(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) void {
+    fillInverseGammaFrom(rng, T, dest, shape, scale);
+}
+
+/// Source-accepting variant of `fillInverseGamma` (panics on invalid parameters in debug).
+pub fn fillInverseGammaFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) void {
+    const dist = InverseGamma(T).new(shape, scale);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillInverseGammaChecked(rng: Rng, comptime T: type, dest: []T, shape: T, scale: T) InverseGammaError!void {
+    return fillInverseGammaCheckedFrom(rng, T, dest, shape, scale);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillInverseGammaCheckedFrom(source: anytype, comptime T: type, dest: []T, shape: T, scale: T) InverseGammaError!void {
+    if (dest.len == 0) return;
+    const dist = try InverseGamma(T).init(shape, scale);
+    dist.fillFrom(source, dest);
+}
+
 // Standard Cauchy sampling helpers: median=0, scale=1
 fn standardCauchy(rng: Rng, comptime T: type) T {
     return standardCauchyFrom(rng, T);
@@ -46296,6 +46451,122 @@ test "Nakagami f32 support" {
     for (0..64) |_| {
         const x = d.sample(rng);
         try std.testing.expect(x >= 0 and std.math.isFinite(x));
+    }
+}
+
+// Inverse Gamma distribution tests.
+test "InverseGamma constructor validates parameters" {
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(-1, 1));
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(1, 0));
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(1, -1));
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(std.math.nan(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(1, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, InverseGamma(f64).init(1, std.math.inf(f64)));
+    const d = try InverseGamma(f64).init(3, 2);
+    try std.testing.expectEqual(@as(f64, 3), d.shapeValue());
+    try std.testing.expectEqual(@as(f64, 2), d.scaleValue());
+}
+
+test "InverseGamma moments are correct" {
+    // IG(α=3, β=2): mean = β/(α-1) = 2/2 = 1; variance = β²/((α-1)²(α-2)) = 4/(4·1) = 1; mode = β/(α+1) = 2/4 = 0.5
+    const d = try InverseGamma(f64).init(3, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), d.modeValue(), 1e-12);
+
+    // IG(α=5, β=4): mean = 4/4 = 1; variance = 16/(16·3) = 1/3 ≈ 0.333; mode = 4/6 = 2/3
+    const d2 = try InverseGamma(f64).init(5, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d2.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), d2.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4.0 / 6.0), d2.modeValue(), 1e-12);
+}
+
+test "InverseGamma mean/variance infinite for small shape" {
+    // α ≤ 1: mean is infinite; α ≤ 2: variance is infinite.
+    const d1 = try InverseGamma(f64).init(0.5, 1);
+    try std.testing.expect(std.math.isInf(d1.expectedValue()));
+    try std.testing.expect(std.math.isInf(d1.varianceValue()));
+    const d2 = try InverseGamma(f64).init(1.5, 1);
+    try std.testing.expect(d2.expectedValue() > 0 and std.math.isFinite(d2.expectedValue()));
+    try std.testing.expect(std.math.isInf(d2.varianceValue()));
+}
+
+test "InverseGamma samples are positive and finite" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234);
+    const rng = Rng.init(&engine);
+    const d = try InverseGamma(f64).init(3, 2);
+    for (0..500) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x > 0 and std.math.isFinite(x));
+    }
+}
+
+test "InverseGamma reciprocal identity with Gamma" {
+    // If X ~ IG(α, β), then 1/X ~ Gamma(α, 1/β) with mean α/β.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5678);
+    const rng = Rng.init(&engine);
+    const alpha: f64 = 3;
+    const beta_param: f64 = 2;
+    const d = try InverseGamma(f64).init(alpha, beta_param);
+    var sum_recip: f64 = 0;
+    const n = 2000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum_recip += 1 / x;
+    }
+    const mean_recip = sum_recip / @as(f64, @floatFromInt(n));
+    // E[1/X] = α·(1/β) = α/β = 3/2 = 1.5 for Gamma(α, 1/β).
+    try std.testing.expectApproxEqAbs(alpha / beta_param, mean_recip, 0.1);
+}
+
+test "InverseGamma Monte Carlo mean/variance check" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9abc);
+    const rng = Rng.init(&engine);
+    const alpha: f64 = 5;
+    const beta_param: f64 = 4; // mean=1, var=1/3
+    const d = try InverseGamma(f64).init(alpha, beta_param);
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sum_sq += x * x;
+    }
+    const mc_mean = sum / @as(f64, @floatFromInt(n));
+    const mc_var = sum_sq / @as(f64, @floatFromInt(n)) - mc_mean * mc_mean;
+    try std.testing.expectApproxEqAbs(@as(f64, 1), mc_mean, 0.05);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), mc_var, 0.08);
+}
+
+test "InverseGamma free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdef0);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, inverseGammaChecked(rng, f64, 0, 1));
+
+    var buf: [100]f64 = undefined;
+    try fillInverseGammaChecked(rng, f64, &buf, 3, 2);
+    for (buf) |x| try std.testing.expect(x > 0);
+
+    const one_val = inverseGamma(rng, f64, 3, 2);
+    try std.testing.expect(one_val > 0);
+}
+
+test "InverseGamma f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32e);
+    const rng = Rng.init(&engine);
+    const d = try InverseGamma(f32).init(3, 2);
+    try std.testing.expectApproxEqAbs(@as(f32, 1), d.expectedValue(), 1e-6);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x > 0 and std.math.isFinite(x));
     }
 }
 

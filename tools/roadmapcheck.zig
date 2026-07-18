@@ -1249,6 +1249,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1252", .path = "compare/results/s4-m1252-watson-axial-spherical-distribution.md" },
     .{ .milestone = "S4-M1253", .path = "compare/results/s4-m1253-rice-rician-distribution.md" },
     .{ .milestone = "S4-M1254", .path = "compare/results/s4-m1254-nakagami-m-fading-distribution.md" },
+    .{ .milestone = "S4-M1255", .path = "compare/results/s4-m1255-inverse-gamma-distribution.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1265,6 +1266,7 @@ const required_tokens = [_][]const u8{
     "S4-M1252",
     "S4-M1253",
     "S4-M1254",
+    "S4-M1255",
     "S4-M1245",
     "S4-M1244",
     "S4-M1243",
@@ -2181,6 +2183,10 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1254 closure row\n", .{});
         missing += 1;
     }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1255 | Inverse Gamma distribution") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1255 closure row\n", .{});
+        missing += 1;
+    }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1164 closure row\n", .{});
         missing += 1;
@@ -2543,6 +2549,10 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, audit, "S4-M1254 adds a Nakagami-m") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1254 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1255 adds an Inverse Gamma") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1255 closure\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

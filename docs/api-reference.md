@@ -556,7 +556,8 @@ self-forking.
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
-  `VonMisesFisherError`, `WatsonError`, `RiceError`, `NakagamiError`;
+  `VonMisesFisherError`, `WatsonError`, `RiceError`, `NakagamiError`,
+  `InverseGammaError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
@@ -681,6 +682,13 @@ self-forking.
   `Nakagami(T).fill`, `Nakagami(T).fillFrom`,
   `nakagami`, `nakagamiFrom`, `nakagamiChecked`, `nakagamiCheckedFrom`,
   `fillNakagami`, `fillNakagamiFrom`, `fillNakagamiChecked`, `fillNakagamiCheckedFrom`,
+  `InverseGamma(T)`, `InverseGamma(T).init`, `InverseGamma(T).new`, `InverseGamma(T).shapeValue`,
+  `InverseGamma(T).scaleValue`, `InverseGamma(T).expectedValue`, `InverseGamma(T).varianceValue`,
+  `InverseGamma(T).modeValue`, `InverseGamma(T).minValue`, `InverseGamma(T).maxValue`,
+  `InverseGamma(T).sample`, `InverseGamma(T).sampleFrom`, `InverseGamma(T).fill`,
+  `InverseGamma(T).fillFrom`,
+  `inverseGamma`, `inverseGammaFrom`, `inverseGammaChecked`, `inverseGammaCheckedFrom`,
+  `fillInverseGamma`, `fillInverseGammaFrom`, `fillInverseGammaChecked`, `fillInverseGammaCheckedFrom`,
   `unitSphereSurface`, `unitSphereSurfaceFrom`, `fillUnitSphereSurface`,
   `fillUnitSphereSurfaceFrom`, `unitBallVolume`, `unitBallVolumeFrom`,
   `fillUnitBallVolume`, `fillUnitBallVolumeFrom`, `UnitSphereSurface`,
