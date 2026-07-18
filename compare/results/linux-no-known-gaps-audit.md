@@ -6286,7 +6286,22 @@ Alea now provides two circular distributions (Von Mises, Wrapped Cauchy)
 versus zero in local `rand_distr`, extending directional-statistics coverage
 beyond parity.
 
-S4-M1248 remains active for
-exact/default dense SIMD, broader runtime, longer validation, further
-circular/spherical directional distributions (e.g., von Mises-Fisher for the
-N-sphere, wrapped normal), or newly discovered core workflow gaps.
+S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal
+and exponential (`compare/results/s4-m1248-dense-simd-f64x4-ziggurat.md`):
+`simdNormalZigguratF64x4` and `simdExponentialZigguratF64x4` use a
+vectorized Marsaglia ziggurat with mask-based lane rejection, replacing the
+previous scalar-per-lane unrolling in the f64x4 bulk-fill pipeline. All
+active lanes draw bits and compute in parallel; quick-accept (~98-99% rate)
+lanes are blended vectorially into the result; non-zero-layer slow lanes use
+vectorized squeeze tests; rare tail lanes fall back to per-lane scalar
+handling. The kernel produces exact ziggurat-distributed samples (no
+approximation), uses the same tables and algorithmic thresholds as the
+scalar default, and closes the long-standing S4-M11 exact/default dense-SIMD
+blocker for f64x4. Stream-shape tests are updated to verify facade/direct
+consistency plus statistical sanity rather than bit-exact matching against
+the old scalar-per-lane order.
+
+S4-M1249 remains active for f32x8 true SIMD ziggurat,
+broader runtime, longer validation, further circular/spherical directional
+distributions (e.g., von Mises-Fisher for the N-sphere, wrapped normal), or
+newly discovered core workflow gaps.

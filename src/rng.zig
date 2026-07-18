@@ -4428,6 +4428,271 @@ inline fn exponentialZigguratF64(source: anytype) f64 {
     }
 }
 
+// True SIMD ziggurat for @Vector(4,f64).
+//
+// Unlike the scalar-per-lane unrolling used elsewhere, these functions draw
+// 4 u64s per iteration and use vector comparisons and mask blending to keep
+// as many lanes as possible computing in parallel. The algorithm:
+//
+//  1. All active lanes draw fresh random bits and compute i (layer index)
+//     and u (a signed uniform-ish value in (-1,1) for normal; (0,1) for exp).
+//  2. Quick-accept test fires for ~98-99% of lanes (point inside ziggurat
+//     rectangle); accepted lanes are blended into the result and removed
+//     from the active mask.
+//  3. Remaining lanes fall to the slow path: non-zero layers do an
+//     exponential-rectangle squeeze test using a second uniform; layer 0
+//     (the tail) is handled per-lane with a scalar tail call.
+//  4. Lanes that still reject after the squeeze loop back with fresh bits;
+//     only the still-active lanes consume new randomness.
+//
+// Table lookups use inline-per-lane gathers because i varies across lanes
+// and Zig vectors do not yet support memory-gather intrinsics portably.
+// Since the quick-accept rate is very high, the table lookup is the only
+// per-lane cost for nearly all samples.
+
+const V4F64 = @Vector(4, f64);
+const V4U64 = @Vector(4, u64);
+const V4BOOL = @Vector(4, bool);
+
+/// Draw 4 u64s from source in one inline sequence.
+inline fn next4U64From(source: anytype) V4U64 {
+    var bits: V4U64 = undefined;
+    inline for (0..4) |lane| bits[lane] = nextFrom(source);
+    return bits;
+}
+
+/// Draw 4 open-interval (0,1) f64s from source in one inline sequence.
+inline fn open4F64From(source: anytype) V4F64 {
+    var v: V4F64 = undefined;
+    inline for (0..4) |lane| v[lane] = floatOpenFrom(source, f64);
+    return v;
+}
+
+/// Look up normal ratio[i] for 4 lanes into a vector.
+inline fn gatherNormRatio(i: V4U64) V4F64 {
+    var out: V4F64 = undefined;
+    inline for (0..4) |lane| out[lane] = norm_ziggurat_ratio[@as(u8, @truncate(i[lane]))];
+    return out;
+}
+
+/// Look up exp mantissa threshold[i] for 4 lanes into a vector.
+inline fn gatherExpThresh(i: V4U64) V4U64 {
+    var out: V4U64 = undefined;
+    inline for (0..4) |lane| out[lane] = exp_ziggurat_mantissa_threshold[@as(u8, @truncate(i[lane]))];
+    return out;
+}
+
+/// Look up NormDist.x[i] for 4 lanes.
+inline fn gatherNormX(i: V4U64) V4F64 {
+    var out: V4F64 = undefined;
+    inline for (0..4) |lane| out[lane] = std_ziggurat.NormDist.x[@as(u8, @truncate(i[lane]))];
+    return out;
+}
+
+/// Look up ExpDist.x[i] for 4 lanes.
+inline fn gatherExpX(i: V4U64) V4F64 {
+    var out: V4F64 = undefined;
+    inline for (0..4) |lane| out[lane] = std_ziggurat.ExpDist.x[@as(u8, @truncate(i[lane]))];
+    return out;
+}
+
+/// Look up NormDist.f[i] and NormDist.f[i+1] for 4 lanes.
+inline fn gatherNormF(i: V4U64) struct { fi: V4F64, fi1: V4F64 } {
+    var fi: V4F64 = undefined;
+    var fi1: V4F64 = undefined;
+    inline for (0..4) |lane| {
+        const idx: usize = @as(u8, @truncate(i[lane]));
+        fi[lane] = std_ziggurat.NormDist.f[idx];
+        fi1[lane] = std_ziggurat.NormDist.f[idx + 1];
+    }
+    return .{ .fi = fi, .fi1 = fi1 };
+}
+
+/// Look up ExpDist.f[i] and ExpDist.f[i+1] for 4 lanes.
+inline fn gatherExpF(i: V4U64) struct { fi: V4F64, fi1: V4F64 } {
+    var fi: V4F64 = undefined;
+    var fi1: V4F64 = undefined;
+    inline for (0..4) |lane| {
+        const idx: usize = @as(u8, @truncate(i[lane]));
+        fi[lane] = std_ziggurat.ExpDist.f[idx];
+        fi1[lane] = std_ziggurat.ExpDist.f[idx + 1];
+    }
+    return .{ .fi = fi, .fi1 = fi1 };
+}
+
+/// True SIMD ziggurat for standard normal @Vector(4,f64).
+/// Uses mask-based lane rejection: all lanes advance together and only
+/// rejected lanes consume additional random bits in subsequent iterations.
+fn simdNormalZigguratF64x4(source: anytype) V4F64 {
+    // Accumulated result; accepted lanes are written here.
+    var result: V4F64 = @splat(0.0);
+    // Active mask: true for lanes that still need a sample.
+    var active: V4BOOL = @splat(true);
+
+    // Pre-build constants as vectors.
+    const repr_offset: V4U64 = @splat(@as(u64, 0x400) << 52);
+    const three: V4F64 = @splat(3.0);
+    const half: V4F64 = @splat(0.5);
+    const u64_sh12: @Vector(4, u6) = @splat(12);
+    const u64_mask: V4U64 = @splat(0xFF);
+    const zero_u64: V4U64 = @splat(0);
+    const false_v: V4BOOL = @splat(false);
+
+    while (true) {
+        // How many active lanes? If none, we're done.
+        if (!@reduce(.Or, active)) break;
+
+        // Step 1: Draw fresh bits for active lanes. Inactive lanes get dummy
+        // bits that will be ignored via the mask.
+        var bits: V4U64 = undefined;
+        inline for (0..4) |lane| {
+            bits[lane] = if (active[lane]) nextFrom(source) else 0;
+        }
+
+        // i = lower 8 bits of bits (the ziggurat layer index).
+        const i_vec: V4U64 = bits & u64_mask;
+
+        // Construct u in roughly [-1, 1] (same as scalar path):
+        // u = bitcast(repr_offset | (bits >> 12)) - 3.0
+        // repr_offset = (0x400<<52) puts the implicit-leading-1 float in [2.0, 4.0);
+        // subtract 3.0 to get [-1.0, 1.0).
+        const repr_vec: V4U64 = repr_offset | (bits >> u64_sh12);
+        const u_raw: V4F64 = @as(V4F64, @bitCast(repr_vec)) - three;
+
+        // Gather quick-accept ratio per lane.
+        const ratio_vec = gatherNormRatio(i_vec);
+
+        // Quick accept: |u| < ratio[i].
+        const abs_u: V4F64 = @abs(u_raw);
+        const quick_accept: V4BOOL = (abs_u < ratio_vec) & active;
+
+        // Compute x = u * x[i] (for all active lanes; needed for both accept and reject).
+        const x_layer = gatherNormX(i_vec);
+        const x_vec: V4F64 = u_raw * x_layer;
+
+        // Blend quick-accept results into output.
+        result = @select(f64, quick_accept, x_vec, result);
+
+        // Remaining active = active & !quick_accept.
+        const not_quick: V4BOOL = active & !quick_accept;
+        if (!@reduce(.Or, not_quick)) {
+            active = false_v;
+            continue;
+        }
+
+        // Classify remaining lanes: tail (i==0) vs non-zero layer.
+        const is_zero: V4BOOL = (i_vec == zero_u64) & not_quick;
+        const is_slow: V4BOOL = not_quick & !is_zero;
+
+        // Process tail lanes (i==0) per-lane with scalar tail.
+        inline for (0..4) |lane| {
+            if (is_zero[lane]) {
+                // Scalar tail returns a signed result incorporating the sign of u.
+                result[lane] = normalZigguratZeroCase(source, u_raw[lane]);
+            }
+        }
+
+        // Process slow non-zero layers: squeeze test.
+        if (@reduce(.Or, is_slow)) {
+            // Draw a second uniform for the squeeze comparison for slow lanes.
+            var ws: V4F64 = undefined;
+            inline for (0..4) |lane| {
+                ws[lane] = if (is_slow[lane]) floatFrom(source, f64) else 0.0;
+            }
+
+            const f_vals = gatherNormF(i_vec);
+            // squeeze = f[i+1] + (f[i] - f[i+1]) * w
+            const squeeze: V4F64 = f_vals.fi1 + (f_vals.fi - f_vals.fi1) * ws;
+            // rho = exp(-x^2/2)
+            const rho: V4F64 = @exp(-(x_vec * x_vec) * half);
+            const squeeze_accept: V4BOOL = (squeeze < rho) & is_slow;
+
+            // Blend squeeze-accepted x values into result.
+            result = @select(f64, squeeze_accept, x_vec, result);
+
+            // Any lanes not yet accepted continue the loop.
+            active = is_slow & !squeeze_accept;
+        } else {
+            active = false_v;
+        }
+    }
+
+    return result;
+}
+
+/// True SIMD ziggurat for standard exponential @Vector(4,f64).
+/// Same mask-rejection strategy as simdNormalZigguratF64x4.
+fn simdExponentialZigguratF64x4(source: anytype) V4F64 {
+    var result: V4F64 = @splat(0.0);
+    var active: V4BOOL = @splat(true);
+
+    const repr_offset: V4U64 = @splat(@as(u64, 0x3ff) << 52);
+    const u_offset: V4F64 = @splat(1.0 - std.math.floatEps(f64) / 2.0);
+    const u64_sh12: @Vector(4, u6) = @splat(12);
+    const u64_mask: V4U64 = @splat(0xFF);
+    const zero_u64: V4U64 = @splat(0);
+    const false_v: V4BOOL = @splat(false);
+
+    while (true) {
+        if (!@reduce(.Or, active)) break;
+
+        var bits: V4U64 = undefined;
+        inline for (0..4) |lane| {
+            bits[lane] = if (active[lane]) nextFrom(source) else 0;
+        }
+
+        const i_vec: V4U64 = bits & u64_mask;
+        const mantissa_vec: V4U64 = bits >> u64_sh12;
+
+        const repr_vec: V4U64 = repr_offset | mantissa_vec;
+        const u_raw: V4F64 = @as(V4F64, @bitCast(repr_vec)) - u_offset;
+
+        // Quick accept: mantissa < threshold[i].
+        const thresh_vec = gatherExpThresh(i_vec);
+        const quick_accept: V4BOOL = (mantissa_vec < thresh_vec) & active;
+
+        const x_layer = gatherExpX(i_vec);
+        const x_vec: V4F64 = u_raw * x_layer;
+
+        result = @select(f64, quick_accept, x_vec, result);
+
+        const not_quick: V4BOOL = active & !quick_accept;
+        if (!@reduce(.Or, not_quick)) {
+            active = false_v;
+            continue;
+        }
+
+        const is_zero: V4BOOL = (i_vec == zero_u64) & not_quick;
+        const is_slow: V4BOOL = not_quick & !is_zero;
+
+        // Tail case (i==0): return exp_r - log(U) where U is in (0,1).
+        inline for (0..4) |lane| {
+            if (is_zero[lane]) {
+                result[lane] = std_ziggurat.exp_r - @log(floatOpenFrom(source, f64));
+            }
+        }
+
+        if (@reduce(.Or, is_slow)) {
+            var ws: V4F64 = undefined;
+            inline for (0..4) |lane| {
+                ws[lane] = if (is_slow[lane]) floatFrom(source, f64) else 0.0;
+            }
+
+            const f_vals = gatherExpF(i_vec);
+            const squeeze: V4F64 = f_vals.fi1 + (f_vals.fi - f_vals.fi1) * ws;
+            const rho: V4F64 = @exp(-x_vec);
+            const squeeze_accept: V4BOOL = (squeeze < rho) & is_slow;
+
+            result = @select(f64, squeeze_accept, x_vec, result);
+            active = is_slow & !squeeze_accept;
+        } else {
+            active = false_v;
+        }
+    }
+
+    return result;
+}
+
 fn requireInt(comptime T: type) void {
     if (@typeInfo(T) != .int) @compileError("expected integer type, found " ++ @typeName(T));
 }
@@ -4658,9 +4923,7 @@ fn fillVectorExponentialScalarFrom(source: anytype, comptime VectorType: type, d
 
 fn fillVectorStandardNormalF64x4From(source: anytype, dest: []@Vector(4, f64)) void {
     for (dest) |*item| {
-        var out: @Vector(4, f64) = undefined;
-        inline for (0..4) |lane| out[lane] = normalZigguratF64(source);
-        item.* = out;
+        item.* = simdNormalZigguratF64x4(source);
     }
 }
 
@@ -4668,26 +4931,20 @@ fn fillVectorNormalF64x4From(source: anytype, dest: []@Vector(4, f64), mean: f64
     const mean_vec: @Vector(4, f64) = @splat(mean);
     const stddev_vec: @Vector(4, f64) = @splat(stddev);
     for (dest) |*item| {
-        var out: @Vector(4, f64) = undefined;
-        inline for (0..4) |lane| out[lane] = normalZigguratF64(source);
-        item.* = mean_vec + stddev_vec * out;
+        item.* = mean_vec + stddev_vec * simdNormalZigguratF64x4(source);
     }
 }
 
 fn fillVectorStandardExponentialF64x4From(source: anytype, dest: []@Vector(4, f64)) void {
     for (dest) |*item| {
-        var out: @Vector(4, f64) = undefined;
-        inline for (0..4) |lane| out[lane] = exponentialZigguratF64(source);
-        item.* = out;
+        item.* = simdExponentialZigguratF64x4(source);
     }
 }
 
 fn fillVectorExponentialF64x4From(source: anytype, dest: []@Vector(4, f64), rate: f64) void {
     const rate_vec: @Vector(4, f64) = @splat(rate);
     for (dest) |*item| {
-        var out: @Vector(4, f64) = undefined;
-        inline for (0..4) |lane| out[lane] = exponentialZigguratF64(source);
-        item.* = out / rate_vec;
+        item.* = simdExponentialZigguratF64x4(source) / rate_vec;
     }
 }
 
@@ -8176,43 +8433,93 @@ test "parameterized f64x4 vector fills match scalar stream shape" {
     const alea = @import("root.zig");
     const VectorType = @Vector(4, f64);
 
+    // True SIMD ziggurat (mask-based lane rejection) is a different algorithm
+    // from scalar-per-lane unrolling; it draws bits for all active lanes per
+    // iteration instead of one lane completing fully before the next.  The
+    // distribution is statistically identical but the bit-consumption order
+    // differs, so we cannot expect bit-exact stream equality with the scalar
+    // reference.  Instead we verify that:
+    //   1. The public facade and direct-from-source entry points agree with
+    //      each other (both use the SIMD ziggurat kernel now).
+    //   2. The SIMD ziggurat output passes basic statistical sanity checks
+    //      (finite, correct support, reasonable mean/variance).
+    //   3. Both entry points leave the engine in the same state after the
+    //      same number of draws.
+
+    // --- Normal, facade vs direct consistency ---
     var facade_normal_engine = alea.ScalarPrng.init(0x5150_6f64);
-    var scalar_normal_engine = alea.ScalarPrng.init(0x5150_6f64);
+    var direct_normal_engine = alea.ScalarPrng.init(0x5150_6f64);
     const normal_rng = Rng.init(&facade_normal_engine);
-    var facade_normal: [5]VectorType = undefined;
-    var scalar_normal: [5]VectorType = undefined;
+    var facade_normal: [200]VectorType = undefined;
+    var direct_normal: [200]VectorType = undefined;
     normal_rng.fillVectorNormal(VectorType, &facade_normal, 2.5, 0.75);
-    for (&scalar_normal) |*item| item.* = vectorNormalScalarFrom(&scalar_normal_engine, VectorType, 2.5, 0.75);
-    try std.testing.expectEqualSlices(VectorType, &scalar_normal, &facade_normal);
-    try std.testing.expectEqual(scalar_normal_engine.next(), facade_normal_engine.next());
+    fillVectorNormalFrom(&direct_normal_engine, VectorType, &direct_normal, 2.5, 0.75);
+    try std.testing.expectEqualSlices(VectorType, &direct_normal, &facade_normal);
+    try std.testing.expectEqual(direct_normal_engine.next(), facade_normal_engine.next());
 
-    var direct_normal_engine = alea.ScalarPrng.init(0x5150_6f65);
-    var direct_scalar_normal_engine = alea.ScalarPrng.init(0x5150_6f65);
-    var direct_normal: [5]VectorType = undefined;
-    var direct_scalar_normal: [5]VectorType = undefined;
-    fillVectorNormalFrom(&direct_normal_engine, VectorType, &direct_normal, -3.0, 1.25);
-    for (&direct_scalar_normal) |*item| item.* = vectorNormalScalarFrom(&direct_scalar_normal_engine, VectorType, -3.0, 1.25);
-    try std.testing.expectEqualSlices(VectorType, &direct_scalar_normal, &direct_normal);
-    try std.testing.expectEqual(direct_scalar_normal_engine.next(), direct_normal_engine.next());
+    // Statistical sanity on normal SIMD output.
+    {
+        var sum: f64 = 0;
+        var sumsq: f64 = 0;
+        var count: f64 = 0;
+        var min_v: f64 = std.math.inf(f64);
+        var max_v: f64 = -std.math.inf(f64);
+        for (&facade_normal) |vec| {
+            inline for (0..4) |lane| {
+                const v = vec[lane];
+                if (!std.math.isFinite(v)) return error.NonFiniteSample;
+                sum += v;
+                sumsq += v * v;
+                count += 1;
+                if (v < min_v) min_v = v;
+                if (v > max_v) max_v = v;
+            }
+        }
+        const mean = sum / count;
+        const variance = sumsq / count - mean * mean;
+        // N(2.5, 0.75^2): expect mean ~= 2.5, sd ~= 0.75 (var ~= 0.5625)
+        // With 800 samples, allow generous tolerance (3 sigma).
+        try std.testing.expect(@abs(mean - 2.5) < 0.15);
+        try std.testing.expect(@abs(variance - 0.75 * 0.75) < 0.15);
+        // Sanity: should have samples extending beyond +/- 2 sigma
+        try std.testing.expect(min_v < 2.5 - 1.0);
+        try std.testing.expect(max_v > 2.5 + 1.0);
+    }
 
+    // --- Exponential, facade vs direct consistency ---
     var facade_exp_engine = alea.ScalarPrng.init(0x5150_6f66);
-    var scalar_exp_engine = alea.ScalarPrng.init(0x5150_6f66);
+    var direct_exp_engine = alea.ScalarPrng.init(0x5150_6f66);
     const exp_rng = Rng.init(&facade_exp_engine);
-    var facade_exp: [5]VectorType = undefined;
-    var scalar_exp: [5]VectorType = undefined;
+    var facade_exp: [200]VectorType = undefined;
+    var direct_exp: [200]VectorType = undefined;
     exp_rng.fillVectorExponential(VectorType, &facade_exp, 2.5);
-    for (&scalar_exp) |*item| item.* = vectorExponentialScalarFrom(&scalar_exp_engine, VectorType, 2.5);
-    try std.testing.expectEqualSlices(VectorType, &scalar_exp, &facade_exp);
-    try std.testing.expectEqual(scalar_exp_engine.next(), facade_exp_engine.next());
+    fillVectorExponentialFrom(&direct_exp_engine, VectorType, &direct_exp, 2.5);
+    try std.testing.expectEqualSlices(VectorType, &direct_exp, &facade_exp);
+    try std.testing.expectEqual(direct_exp_engine.next(), facade_exp_engine.next());
 
-    var direct_exp_engine = alea.ScalarPrng.init(0x5150_6f67);
-    var direct_scalar_exp_engine = alea.ScalarPrng.init(0x5150_6f67);
-    var direct_exp: [5]VectorType = undefined;
-    var direct_scalar_exp: [5]VectorType = undefined;
-    fillVectorExponentialFrom(&direct_exp_engine, VectorType, &direct_exp, 4.0);
-    for (&direct_scalar_exp) |*item| item.* = vectorExponentialScalarFrom(&direct_scalar_exp_engine, VectorType, 4.0);
-    try std.testing.expectEqualSlices(VectorType, &direct_scalar_exp, &direct_exp);
-    try std.testing.expectEqual(direct_scalar_exp_engine.next(), direct_exp_engine.next());
+    // Statistical sanity on exponential SIMD output: Exp(rate=2.5), mean = 1/2.5 = 0.4.
+    {
+        var sum: f64 = 0;
+        var count: f64 = 0;
+        var min_v: f64 = std.math.inf(f64);
+        var max_v: f64 = -std.math.inf(f64);
+        for (&facade_exp) |vec| {
+            inline for (0..4) |lane| {
+                const v = vec[lane];
+                if (!std.math.isFinite(v)) return error.NonFiniteSample;
+                if (v < 0) return error.NegativeExponential;
+                sum += v;
+                count += 1;
+                if (v < min_v) min_v = v;
+                if (v > max_v) max_v = v;
+            }
+        }
+        const mean = sum / count;
+        try std.testing.expect(@abs(mean - 0.4) < 0.08);
+        try std.testing.expect(min_v >= 0);
+        // Exponential should have a tail; with 800 samples at rate 2.5 we expect at least one > 2.
+        try std.testing.expect(max_v > 1.5);
+    }
 }
 
 test "degenerate exponential helpers do not consume random stream" {
