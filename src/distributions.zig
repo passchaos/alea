@@ -8529,6 +8529,253 @@ pub fn fillWatsonCheckedFrom(source: anytype, comptime T: type, comptime n: usiz
     dist.fillFrom(source, dest);
 }
 
+// ============================================================================
+// Modified Bessel functions of the first kind, used by Rice/Nakagami/Rician
+// fading distributions. I₀(z) is the exponentially scaled version-free
+// modified Bessel; we implement a polynomial/rational approximation accurate
+// to ~1e-7 relative error across all z ≥ 0 for f64 (Abramowitz & Stegun 9.8.1
+// for the small-z region, and the asymptotic expansion 9.7.1 for large z).
+// ============================================================================
+
+/// Modified Bessel function of the first kind, order 0: I₀(z).
+/// Supports z ≥ 0 (for real arguments, I₀ is even: I₀(−z) = I₀(z)).
+/// Uses Abramowitz & Stegun approximations accurate to ~1e-7 for f32/f64.
+fn besselI0(z: anytype) @TypeOf(z) {
+    const T = @TypeOf(z);
+    const abs_z = @abs(z);
+    if (abs_z == 0) return @as(T, 1);
+
+    // For small |z| ≤ 3.75: polynomial approximation (A&S 9.8.1).
+    if (abs_z <= 3.75) {
+        const t = (z / 3.75) * (z / 3.75);
+        return 1 + t * (3.5156229 + t * (3.0899424 + t * (1.2067492 +
+            t * (0.2659732 + t * (0.0360768 + t * 0.0045813)))));
+    }
+
+    // For |z| > 3.75: asymptotic expansion (A&S 9.8.2), I₀(z) ≈ exp(z)/√(2πz)
+    // multiplied by a correction polynomial in y = 3.75/z.
+    const y = 3.75 / abs_z;
+    const corr = 0.39894228 + y * (0.01328592 + y * (0.00225319 +
+        y * (-0.00157565 + y * (0.00916281 + y * (-0.02057706 +
+        y * (0.02635537 + y * (-0.01647633 + y * 0.00392377)))))));
+    return @exp(abs_z) / @sqrt(abs_z) * corr;
+}
+
+/// Log of the modified Bessel I₀ function: log(I₀(z)).
+/// Uses the asymptotic expansion directly for large z to avoid overflow.
+fn logBesselI0(z: anytype) @TypeOf(z) {
+    const T = @TypeOf(z);
+    if (@abs(z) <= 30) {
+        return @log(besselI0(z));
+    }
+    // Asymptotic: log(I₀(z)) ≈ z − 0.5·log(2πz) + log(1 + 1/(8z) + ...)
+    // For large z (z > 30) we can use this directly without overflow.
+    const abs_z = @abs(z);
+    return abs_z - 0.5 * @log(2 * @as(T, @floatCast(std.math.pi)) * abs_z) +
+        1 / (8 * abs_z) - 1 / (16 * abs_z * abs_z);
+}
+
+// ============================================================================
+// Rice (Rician) distribution — non-central chi with 2 degrees of freedom.
+//
+// X ~ Rice(ν, σ) iff X = √((Z₁ + ν)² + Z₂²) where Z₁, Z₂ ~ N(0, σ²) i.i.d.
+// Equivalently, X = σ · √((N(ν/σ, 1))² + (N(0,1))²) (scaled by σ from unit-
+// noise Rician with noncentrality parameter k = ν/σ, often called the K-factor
+// in fading-channel literature). ν=0 reduces to Rayleigh(σ). σ→0 collapses to
+// a point mass at ν. Distribution is supported on [0, ∞).
+//
+// PDF: f(x; ν, σ) = (x/σ²) · exp(−(x²+ν²)/(2σ²)) · I₀(xν/σ²)  for x ≥ 0
+// Mean: σ · √(π/2) · L_{1/2}(−ν²/(2σ²))  (generalized Laguerre), but in
+//   practice computed via E[X] = σ · √(π/2) · exp(−ν²/(4σ²)) ·
+//   ((1+ν²/(2σ²))·I₀(ν²/(4σ²)) + (ν²/(2σ²))·I₁(ν²/(4σ²)))
+//   which simplifies to σ·√(π/2)·₁F₁(−1/2; 1; −ν²/(2σ²)).
+// Variance: 2σ² + ν² − (E[X])².
+// Mode: ν for ν ≥ σ; exact form ν·√(1−(σ/ν)²) for ν > σ (approximate,
+//   exact solution of x·I₀(xν/σ²)/(ν·I₁(xν/σ²)) = 1).
+//
+// Sampling is straightforward and rejection-free (two normals + sqrt + sums),
+// making Rice a high-quality addition with no rejection-loop overhead.
+// ============================================================================
+
+/// Rice distribution error set.
+pub const RiceError = Error;
+
+/// Sample a single Rice-distributed value with noncentrality nu ≥ 0 and
+/// noise scale sigma > 0: √((N(nu, sigma²))² + (N(0, sigma²))²).
+fn ricePointFrom(source: anytype, comptime T: type, nu: T, sigma: T) T {
+    if (sigma == 0) return nu; // degenerate point mass
+    const x = Rng.normalFastFrom(source, T, nu, sigma);
+    const y = Rng.normalFastFrom(source, T, 0, sigma);
+    return @sqrt(x * x + y * y);
+}
+
+/// Fill a slice with Rice-distributed values.
+fn fillRicePointsFrom(source: anytype, comptime T: type, dest: []T, nu: T, sigma: T) void {
+    if (sigma == 0) {
+        @memset(dest, nu);
+        return;
+    }
+    for (dest) |*item| {
+        item.* = ricePointFrom(source, T, nu, sigma);
+    }
+}
+
+/// Rice (Rician) distribution — magnitude of a 2D Gaussian offset from origin
+/// by nu along one axis, with i.i.d. components of standard deviation sigma.
+/// nu ≥ 0, sigma > 0; nu=0 gives Rayleigh(sigma).
+pub fn Rice(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        nu: T,
+        sigma: T,
+
+        /// Construct a Rice distribution. Validates nu ≥ 0, sigma > 0, and
+        /// that both parameters are finite. sigma = 0 is accepted (degenerate
+        /// point mass at nu), consistent with the zero-scale convention used
+        /// by other distributions in alea.
+        pub fn init(nu: T, sigma: T) RiceError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(nu) or nu < 0) return error.InvalidParameter;
+            if (!std.math.isFinite(sigma) or sigma < 0) return error.InvalidParameter;
+            return .{ .nu = nu, .sigma = sigma };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(nu: T, sigma: T) Self {
+            return Self.init(nu, sigma) catch |e| {
+                std.debug.panic("Rice.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn noncentralityValue(self: Self) T { return self.nu; }
+        pub fn scaleValue(self: Self) T { return self.sigma; }
+
+        /// K-factor K = ν²/(2σ²) (fading-channel convention).
+        pub fn kFactor(self: Self) T {
+            if (self.sigma == 0) return std.math.inf(T);
+            return (self.nu * self.nu) / (2 * self.sigma * self.sigma);
+        }
+
+        /// Expected value: E[X] = σ·√(π/2) · exp(−t) ·
+        ///   ((1+2t)·I₀(t) + 2t·I₁(t))
+        /// where t = ν²/(4σ²) (half the K-factor K = ν²/(2σ²)).
+        /// For Rayleigh (ν=0) this reduces to σ·√(π/2); for σ=0 it returns ν.
+        pub fn expectedValue(self: Self) T {
+            if (self.sigma == 0) return self.nu;
+            if (self.nu == 0) {
+                // Rayleigh case: σ·√(π/2).
+                return self.sigma * @sqrt(@as(T, @floatCast(std.math.pi)) / 2);
+            }
+            const t = (self.nu * self.nu) / (4 * self.sigma * self.sigma);
+            const log_i0 = logBesselI0(t);
+            // For large t, I₁(t)/I₀(t) → 1; besselI1Ratio gives I₁/I₀.
+            const i1_ratio = if (t > 30) @as(T, 1) - 1 / (2 * t) else besselI1Ratio(t);
+            // exp(-t)·I₀(t)·((1+2t) + 2t·(I₁/I₀))
+            const factor = @exp(-t + log_i0) * ((1 + 2 * t) + 2 * t * i1_ratio);
+            return self.sigma * @sqrt(@as(T, @floatCast(std.math.pi)) / 2) * factor;
+        }
+
+        /// Variance: 2σ² + ν² − (E[X])².
+        pub fn varianceValue(self: Self) T {
+            if (self.sigma == 0) return 0;
+            const m = self.expectedValue();
+            return 2 * self.sigma * self.sigma + self.nu * self.nu - m * m;
+        }
+
+        /// Mode: approximately ν for ν ≫ σ; for small ν/σ we use the
+        /// Rayleigh mode (σ), and in between the numeric root
+        ///   mode ≈ σ·√(K − 1 + √(K² − 1))  where K = ν/σ... but the
+        /// exact mode satisfies x·I₀(xν/σ²)/(ν·I₁(xν/σ²)) = 1. We return
+        /// the simpler bound max(σ, √(|ν²−σ²|)) which is accurate at
+        /// both limits and within a few percent across the transition.
+        pub fn modeValue(self: Self) T {
+            if (self.sigma == 0) return self.nu;
+            if (self.nu == 0) return self.sigma; // Rayleigh mode
+            // For large SNR: mode → ν; for small SNR: mode → σ.
+            const snr = self.nu / self.sigma;
+            if (snr > 10) return self.nu * (1 - 1 / (2 * snr * snr));
+            if (snr < 0.3) return self.sigma;
+            return @sqrt(@max(self.sigma * self.sigma, self.nu * self.nu - self.sigma * self.sigma));
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            return if (self.isDegenerate()) self.nu else null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return ricePointFrom(source, T, self.nu, self.sigma);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillRicePointsFrom(source, T, dest, self.nu, self.sigma);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.sigma == 0;
+        }
+    };
+}
+
+/// Sample a Rice-distributed value (Rician fading), panics on invalid
+/// parameters in debug builds.
+pub fn rice(rng: Rng, comptime T: type, nu: T, sigma: T) T {
+    return riceFrom(rng, T, nu, sigma);
+}
+
+/// Source-accepting variant of `rice`.
+pub fn riceFrom(source: anytype, comptime T: type, nu: T, sigma: T) T {
+    const dist = Rice(T).new(nu, sigma);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn riceChecked(rng: Rng, comptime T: type, nu: T, sigma: T) RiceError!T {
+    return riceCheckedFrom(rng, T, nu, sigma);
+}
+
+/// Checked source-accepting variant.
+pub fn riceCheckedFrom(source: anytype, comptime T: type, nu: T, sigma: T) RiceError!T {
+    const dist = try Rice(T).init(nu, sigma);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Rice-distributed values (panics on invalid parameters in debug).
+pub fn fillRice(rng: Rng, comptime T: type, dest: []T, nu: T, sigma: T) void {
+    fillRiceFrom(rng, T, dest, nu, sigma);
+}
+
+/// Source-accepting variant of `fillRice` (panics on invalid parameters in debug).
+pub fn fillRiceFrom(source: anytype, comptime T: type, dest: []T, nu: T, sigma: T) void {
+    const dist = Rice(T).new(nu, sigma);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillRiceChecked(rng: Rng, comptime T: type, dest: []T, nu: T, sigma: T) RiceError!void {
+    return fillRiceCheckedFrom(rng, T, dest, nu, sigma);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillRiceCheckedFrom(source: anytype, comptime T: type, dest: []T, nu: T, sigma: T) RiceError!void {
+    if (dest.len == 0) return;
+    const dist = try Rice(T).init(nu, sigma);
+    dist.fillFrom(source, dest);
+}
+
 // Standard Cauchy sampling helpers: median=0, scale=1
 fn standardCauchy(rng: Rng, comptime T: type) T {
     return standardCauchyFrom(rng, T);
@@ -45635,5 +45882,109 @@ test "kummerM hypergeometric sanity checks" {
     const z: f64 = 0.5;
     const m_val = kummerM(@as(f64, 1), @as(f64, 1), z, 100);
     try std.testing.expect(@abs(m_val - @exp(z)) < 1e-8);
+}
+
+// Rice distribution tests.
+test "Rice constructor validates parameters" {
+    try std.testing.expectError(error.InvalidParameter, Rice(f64).init(-1, 1));
+    try std.testing.expectError(error.InvalidParameter, Rice(f64).init(1, -1));
+    try std.testing.expectError(error.InvalidParameter, Rice(f64).init(std.math.nan(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, Rice(f64).init(1, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, Rice(f64).init(1, std.math.inf(f64)));
+    // nu=0 (Rayleigh case) is valid; sigma=0 (point mass) is valid.
+    const d0 = try Rice(f64).init(0, 1);
+    try std.testing.expectEqual(@as(f64, 0), d0.noncentralityValue());
+    const d1 = try Rice(f64).init(5, 0);
+    try std.testing.expectEqual(@as(f64, 0), d1.scaleValue());
+}
+
+test "Rice nu=0 reduces to Rayleigh moments" {
+    // When ν=0, Rice(0,σ) = Rayleigh(σ). Check mean and variance match.
+    const d = try Rice(f64).init(0, 1);
+    const expected_mean = @sqrt(@as(f64, @floatCast(std.math.pi)) / 2);
+    try std.testing.expectApproxEqAbs(expected_mean, d.expectedValue(), 1e-12);
+    const expected_var = (4 - @as(f64, @floatCast(std.math.pi))) / 2;
+    try std.testing.expectApproxEqAbs(expected_var, d.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.modeValue(), 1e-12);
+}
+
+test "Rice sigma=0 is a point mass at nu" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead);
+    const rng = Rng.init(&engine);
+    const d = try Rice(f64).init(7, 0);
+    try std.testing.expectEqual(@as(f64, 7), d.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), d.varianceValue());
+    for (0..8) |_| try std.testing.expectEqual(@as(f64, 7), d.sample(rng));
+}
+
+test "Rice samples are non-negative" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234);
+    const rng = Rng.init(&engine);
+    const d = try Rice(f64).init(2, 1);
+    for (0..500) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0 and std.math.isFinite(x));
+    }
+}
+
+test "Rice high-SNR (nu >> sigma) samples concentrate near nu" {
+    // At high SNR K = ν²/(2σ²) = 200, mean ≈ ν and variance ≈ σ².
+    const d = try Rice(f64).init(20, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 20), d.expectedValue(), 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.varianceValue(), 0.1);
+
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5678);
+    const rng = Rng.init(&engine);
+    var sum: f64 = 0;
+    const n = 2000;
+    for (0..n) |_| {
+        sum += d.sample(rng);
+    }
+    const mean = sum / @as(f64, @floatFromInt(n));
+    try std.testing.expectApproxEqAbs(@as(f64, 20), mean, 0.1);
+}
+
+test "Rice free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9abc);
+    const rng = Rng.init(&engine);
+
+    // Checked variants reject bad input.
+    try std.testing.expectError(error.InvalidParameter, riceChecked(rng, f64, -1, 1));
+
+    var buf: [100]f64 = undefined;
+    try fillRiceChecked(rng, f64, &buf, 3, 1);
+    for (buf) |x| try std.testing.expect(x >= 0);
+
+    const one_val = rice(rng, f64, 3, 1);
+    try std.testing.expect(one_val >= 0);
+}
+
+test "Rice f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32c);
+    const rng = Rng.init(&engine);
+    const d = try Rice(f32).init(2, 1);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0 and std.math.isFinite(x));
+    }
+}
+
+test "besselI0 sanity checks" {
+    // I₀(0) = 1.
+    try std.testing.expectApproxEqAbs(@as(f64, 1), besselI0(@as(f64, 0)), 1e-12);
+    // I₀(1) ≈ 1.26606587775...
+    try std.testing.expectApproxEqAbs(@as(f64, 1.26606587775), besselI0(@as(f64, 1)), 1e-6);
+    // I₀(3) ≈ 4.88079258586...
+    try std.testing.expectApproxEqAbs(@as(f64, 4.88079258586), besselI0(@as(f64, 3)), 1e-5);
+    // Evenness: I₀(-z) = I₀(z).
+    try std.testing.expectApproxEqAbs(besselI0(@as(f64, 2.5)), besselI0(@as(f64, -2.5)), 1e-12);
+    // Large z asymptotic sanity: I₀(50) should be large and finite.
+    const big_i0 = besselI0(@as(f64, 50));
+    try std.testing.expect(big_i0 > 1e20 and std.math.isFinite(big_i0));
 }
 

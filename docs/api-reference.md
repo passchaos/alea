@@ -556,7 +556,7 @@ self-forking.
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
-  `VonMisesFisherError`, `WatsonError`;
+  `VonMisesFisherError`, `WatsonError`, `RiceError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
@@ -666,6 +666,13 @@ self-forking.
   `Watson(T,n).fillFrom`,
   `watson`, `watsonFrom`, `watsonChecked`, `watsonCheckedFrom`,
   `fillWatson`, `fillWatsonFrom`, `fillWatsonChecked`, `fillWatsonCheckedFrom`,
+  `Rice(T)`, `Rice(T).init`, `Rice(T).new`, `Rice(T).noncentralityValue`,
+  `Rice(T).scaleValue`, `Rice(T).kFactor`, `Rice(T).expectedValue`,
+  `Rice(T).varianceValue`, `Rice(T).modeValue`, `Rice(T).minValue`,
+  `Rice(T).maxValue`, `Rice(T).sample`, `Rice(T).sampleFrom`,
+  `Rice(T).fill`, `Rice(T).fillFrom`,
+  `rice`, `riceFrom`, `riceChecked`, `riceCheckedFrom`,
+  `fillRice`, `fillRiceFrom`, `fillRiceChecked`, `fillRiceCheckedFrom`,
   `unitSphereSurface`, `unitSphereSurfaceFrom`, `fillUnitSphereSurface`,
   `fillUnitSphereSurfaceFrom`, `unitBallVolume`, `unitBallVolumeFrom`,
   `fillUnitBallVolume`, `fillUnitBallVolumeFrom`, `UnitSphereSurface`,
