@@ -8848,6 +8848,137 @@ pub fn fillRiceCheckedFrom(source: anytype, comptime T: type, dest: []T, nu: T, 
     dist.fillFrom(source, dest);
 }
 
+// --- Rice vector sampling ---------------------------------------------------
+
+/// Sample a vector of Rice-distributed values (panics on invalid parameters).
+pub fn vectorRice(rng: Rng, comptime VectorType: type, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) VectorType {
+    return vectorRiceFrom(rng, VectorType, nu, sigma);
+}
+
+/// Source-accepting variant of `vectorRice`.
+pub fn vectorRiceFrom(source: anytype, comptime VectorType: type, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) VectorType {
+    const dist = VectorRice(VectorType).new(nu, sigma);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorRiceChecked(rng: Rng, comptime VectorType: type, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) RiceError!VectorType {
+    return vectorRiceCheckedFrom(rng, VectorType, nu, sigma);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorRiceCheckedFrom(source: anytype, comptime VectorType: type, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) RiceError!VectorType {
+    const dist = try VectorRice(VectorType).init(nu, sigma);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with Rice-distributed values (panics on invalid parameters).
+pub fn fillVectorRice(rng: Rng, comptime VectorType: type, dest: []VectorType, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) void {
+    fillVectorRiceFrom(rng, VectorType, dest, nu, sigma);
+}
+
+/// Source-accepting variant of `fillVectorRice`.
+pub fn fillVectorRiceFrom(source: anytype, comptime VectorType: type, dest: []VectorType, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) void {
+    const dist = VectorRice(VectorType).new(nu, sigma);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorRiceChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) RiceError!void {
+    return fillVectorRiceCheckedFrom(rng, VectorType, dest, nu, sigma);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorRiceCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) RiceError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorRice(VectorType).init(nu, sigma);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Rice distribution: magnitude of a 2D Gaussian offset from origin
+/// by nu along one axis, with i.i.d. components of standard deviation sigma.
+/// Uses true vector-lane SIMD: two independent standard-normal vectors are
+/// shifted/scaled to give the two components; result = sqrt(x² + y²).
+pub fn VectorRice(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: Rice(Child),
+
+        pub fn init(nu: Child, sigma: Child) RiceError!Self {
+            return .{ .sampler = try Rice(Child).init(nu, sigma) };
+        }
+        pub fn new(nu: Child, sigma: Child) Self {
+            return Self.init(nu, sigma) catch |e| {
+                std.debug.panic("VectorRice.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn noncentralityValue(self: Self) Child {
+            return self.sampler.noncentralityValue();
+        }
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+        pub fn kFactor(self: Self) Child {
+            return self.sampler.kFactor();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.sigma == 0) return @splat(self.sampler.nu);
+            const z1 = vectorStandardNormal(rng, VectorType);
+            const z2 = vectorStandardNormal(rng, VectorType);
+            return riceFromNormalVectors(VectorType, z1, z2, self.sampler.nu, self.sampler.sigma);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.sigma == 0) return @splat(self.sampler.nu);
+            const z1 = vectorStandardNormalFrom(source, VectorType);
+            const z2 = vectorStandardNormalFrom(source, VectorType);
+            return riceFromNormalVectors(VectorType, z1, z2, self.sampler.nu, self.sampler.sigma);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.sigma == 0) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.nu)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.sigma == 0) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.nu)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Compose two standard-normal vectors into a Rice vector:
+/// x = nu + sigma*z1, y = sigma*z2; out = sqrt(x² + y²).
+fn riceFromNormalVectors(comptime VectorType: type, z1: VectorType, z2: VectorType, nu: vectorChild(VectorType), sigma: vectorChild(VectorType)) VectorType {
+    const nu_v: VectorType = @splat(nu);
+    const sigma_v: VectorType = @splat(sigma);
+    const x = nu_v + sigma_v * z1;
+    const y = sigma_v * z2;
+    return @sqrt(x * x + y * y);
+}
+
 // Nakagami-m distribution -----------------------------------------------------
 
 pub const NakagamiError = Error;
@@ -9036,6 +9167,139 @@ pub fn fillNakagamiCheckedFrom(source: anytype, comptime T: type, dest: []T, m_p
     dist.fillFrom(source, dest);
 }
 
+// --- Nakagami vector sampling -----------------------------------------------
+
+/// Sample a vector of Nakagami-m distributed values (panics on invalid parameters).
+pub fn vectorNakagami(rng: Rng, comptime VectorType: type, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) VectorType {
+    return vectorNakagamiFrom(rng, VectorType, m_param, omega);
+}
+
+/// Source-accepting variant of `vectorNakagami`.
+pub fn vectorNakagamiFrom(source: anytype, comptime VectorType: type, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) VectorType {
+    const dist = VectorNakagami(VectorType).new(m_param, omega);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorNakagamiChecked(rng: Rng, comptime VectorType: type, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) NakagamiError!VectorType {
+    return vectorNakagamiCheckedFrom(rng, VectorType, m_param, omega);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorNakagamiCheckedFrom(source: anytype, comptime VectorType: type, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) NakagamiError!VectorType {
+    const dist = try VectorNakagami(VectorType).init(m_param, omega);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with Nakagami-m distributed values (panics on invalid parameters).
+pub fn fillVectorNakagami(rng: Rng, comptime VectorType: type, dest: []VectorType, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) void {
+    fillVectorNakagamiFrom(rng, VectorType, dest, m_param, omega);
+}
+
+/// Source-accepting variant of `fillVectorNakagami`.
+pub fn fillVectorNakagamiFrom(source: anytype, comptime VectorType: type, dest: []VectorType, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) void {
+    const dist = VectorNakagami(VectorType).new(m_param, omega);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorNakagamiChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) NakagamiError!void {
+    return fillVectorNakagamiCheckedFrom(rng, VectorType, dest, m_param, omega);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorNakagamiCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, m_param: vectorChild(VectorType), omega: vectorChild(VectorType)) NakagamiError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorNakagami(VectorType).init(m_param, omega);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Nakagami-m distribution: X = sqrt(Gamma(m, Ω/m)).
+/// Constructs an internal Gamma(shape=m, scale=Ω/m) sampler via Gamma.init
+/// so that the true SIMD fast paths (shape=1 = exponential, point masses)
+/// in VectorGamma are exercised; general shapes fall back to per-lane
+/// scalar sampling consistent with VectorGamma.
+pub fn VectorNakagami(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: Nakagami(Child),
+        gamma_sampler: Gamma(Child),
+
+        pub fn init(m_param: Child, omega: Child) NakagamiError!Self {
+            const base = try Nakagami(Child).init(m_param, omega);
+            const g_scale: Child = if (omega == 0 or m_param == 0) @as(Child, 0) else omega / m_param;
+            const gs = if (omega == 0)
+                Gamma(Child).init(1, 0) catch unreachable
+            else
+                Gamma(Child).init(m_param, g_scale) catch unreachable;
+            return .{ .sampler = base, .gamma_sampler = gs };
+        }
+        pub fn new(m_param: Child, omega: Child) Self {
+            return Self.init(m_param, omega) catch |e| {
+                std.debug.panic("VectorNakagami.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+        pub fn mValue(self: Self) Child {
+            return self.sampler.mValue();
+        }
+        pub fn spreadValue(self: Self) Child {
+            return self.sampler.spreadValue();
+        }
+        pub fn omegaValue(self: Self) Child {
+            return self.sampler.omegaValue();
+        }
+        pub fn equivalentRayleighScale(self: Self) Child {
+            return self.sampler.equivalentRayleighScale();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.omega == 0) return @splat(@as(Child, 0));
+            return @sqrt((VectorGamma(VectorType){ .sampler = self.gamma_sampler }).sample(rng));
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.omega == 0) return @splat(@as(Child, 0));
+            return @sqrt((VectorGamma(VectorType){ .sampler = self.gamma_sampler }).sampleFrom(source));
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.omega == 0) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            (VectorGamma(VectorType){ .sampler = self.gamma_sampler }).fill(rng, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.omega == 0) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            (VectorGamma(VectorType){ .sampler = self.gamma_sampler }).fillFrom(source, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
+        }
+    };
+}
+
 // Inverse Gamma distribution -------------------------------------------------
 
 pub const InverseGammaError = Error;
@@ -9193,6 +9457,122 @@ pub fn fillInverseGammaCheckedFrom(source: anytype, comptime T: type, dest: []T,
     if (dest.len == 0) return;
     const dist = try InverseGamma(T).init(shape, scale);
     dist.fillFrom(source, dest);
+}
+
+// --- Inverse Gamma vector sampling ------------------------------------------
+
+/// Sample a vector of Inverse-Gamma-distributed values (panics on invalid parameters).
+pub fn vectorInverseGamma(rng: Rng, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    return vectorInverseGammaFrom(rng, VectorType, shape, scale);
+}
+
+/// Source-accepting variant of `vectorInverseGamma`.
+pub fn vectorInverseGammaFrom(source: anytype, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
+    const dist = VectorInverseGamma(VectorType).new(shape, scale);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorInverseGammaChecked(rng: Rng, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) InverseGammaError!VectorType {
+    return vectorInverseGammaCheckedFrom(rng, VectorType, shape, scale);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorInverseGammaCheckedFrom(source: anytype, comptime VectorType: type, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) InverseGammaError!VectorType {
+    const dist = try VectorInverseGamma(VectorType).init(shape, scale);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with Inverse-Gamma-distributed values (panics on invalid parameters).
+pub fn fillVectorInverseGamma(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    fillVectorInverseGammaFrom(rng, VectorType, dest, shape, scale);
+}
+
+/// Source-accepting variant of `fillVectorInverseGamma`.
+pub fn fillVectorInverseGammaFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) void {
+    const dist = VectorInverseGamma(VectorType).new(shape, scale);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorInverseGammaChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) InverseGammaError!void {
+    return fillVectorInverseGammaCheckedFrom(rng, VectorType, dest, shape, scale);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorInverseGammaCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, shape: vectorChild(VectorType), scale: vectorChild(VectorType)) InverseGammaError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorInverseGamma(VectorType).init(shape, scale);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Inverse Gamma distribution: X = 1/Gamma(α, 1/β).
+/// Uses VectorGamma for the underlying Gamma samples (which itself uses
+/// SIMD for the shape=1 exponential case and per-lane scalar fallback
+/// for general shapes), then reciprocates each lane.
+pub fn VectorInverseGamma(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: InverseGamma(Child),
+        gamma_sampler: Gamma(Child),
+
+        pub fn init(shape: Child, scale: Child) InverseGammaError!Self {
+            const base = try InverseGamma(Child).init(shape, scale);
+            // Gamma(shape=α, scale=1/β) per reciprocal-Gamma identity.
+            const gs = Gamma(Child).init(shape, 1 / scale) catch unreachable;
+            return .{ .sampler = base, .gamma_sampler = gs };
+        }
+        pub fn new(shape: Child, scale: Child) Self {
+            return Self.init(shape, scale) catch |e| {
+                std.debug.panic("VectorInverseGamma.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            const g = (VectorGamma(VectorType){ .sampler = self.gamma_sampler }).sample(rng);
+            const one: VectorType = @splat(@as(Child, 1));
+            return one / g;
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const g = (VectorGamma(VectorType){ .sampler = self.gamma_sampler }).sampleFrom(source);
+            const one: VectorType = @splat(@as(Child, 1));
+            return one / g;
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            (VectorGamma(VectorType){ .sampler = self.gamma_sampler }).fill(rng, dest);
+            const one: VectorType = @splat(@as(Child, 1));
+            for (dest) |*item| item.* = one / item.*;
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            (VectorGamma(VectorType){ .sampler = self.gamma_sampler }).fillFrom(source, dest);
+            const one: VectorType = @splat(@as(Child, 1));
+            for (dest) |*item| item.* = one / item.*;
+        }
+    };
 }
 
 // Exponentially Modified Gaussian (ExGaussian / EMG) distribution -----------
@@ -9388,6 +9768,143 @@ pub fn fillExGaussianCheckedFrom(source: anytype, comptime T: type, dest: []T, m
     dist.fillFrom(source, dest);
 }
 
+// --- ExGaussian vector sampling ---------------------------------------------
+
+/// Sample a vector of ExGaussian-distributed values (panics on invalid parameters).
+pub fn vectorExGaussian(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) VectorType {
+    return vectorExGaussianFrom(rng, VectorType, mu, sigma, tau);
+}
+
+/// Source-accepting variant of `vectorExGaussian`.
+pub fn vectorExGaussianFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) VectorType {
+    const dist = VectorExGaussian(VectorType).new(mu, sigma, tau);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorExGaussianChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) ExGaussianError!VectorType {
+    return vectorExGaussianCheckedFrom(rng, VectorType, mu, sigma, tau);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorExGaussianCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) ExGaussianError!VectorType {
+    const dist = try VectorExGaussian(VectorType).init(mu, sigma, tau);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with ExGaussian-distributed values (panics on invalid parameters).
+pub fn fillVectorExGaussian(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) void {
+    fillVectorExGaussianFrom(rng, VectorType, dest, mu, sigma, tau);
+}
+
+/// Source-accepting variant of `fillVectorExGaussian`.
+pub fn fillVectorExGaussianFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) void {
+    const dist = VectorExGaussian(VectorType).new(mu, sigma, tau);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorExGaussianChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) ExGaussianError!void {
+    return fillVectorExGaussianCheckedFrom(rng, VectorType, dest, mu, sigma, tau);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorExGaussianCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) ExGaussianError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorExGaussian(VectorType).init(mu, sigma, tau);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Exponentially Modified Gaussian: X = μ + σ·Z + τ·E where Z~N(0,1)
+/// and E~Exp(1) (i.e., E is a standard exponential; exponential mean = 1 gives
+/// rate 1/τ when scaled by τ). Uses two independent vector primitives per sample.
+pub fn VectorExGaussian(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: ExGaussian(Child),
+
+        pub fn init(mu: Child, sigma: Child, tau: Child) ExGaussianError!Self {
+            return .{ .sampler = try ExGaussian(Child).init(mu, sigma, tau) };
+        }
+        pub fn new(mu: Child, sigma: Child, tau: Child) Self {
+            return Self.init(mu, sigma, tau) catch |e| {
+                std.debug.panic("VectorExGaussian.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+        pub fn muValue(self: Self) Child {
+            return self.sampler.muValue();
+        }
+        pub fn gaussianScaleValue(self: Self) Child {
+            return self.sampler.gaussianScaleValue();
+        }
+        pub fn sigmaValue(self: Self) Child {
+            return self.sampler.sigmaValue();
+        }
+        pub fn exponentialMeanValue(self: Self) Child {
+            return self.sampler.exponentialMeanValue();
+        }
+        pub fn tauValue(self: Self) Child {
+            return self.sampler.tauValue();
+        }
+        pub fn rateValue(self: Self) Child {
+            return self.sampler.rateValue();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn standardDeviationValue(self: Self) Child {
+            return self.sampler.standardDeviationValue();
+        }
+        pub fn skewnessValue(self: Self) Child {
+            return self.sampler.skewnessValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            const z = vectorStandardNormal(rng, VectorType);
+            // Standard exponential (mean=1), scaled by τ; this is equivalent to Exp(rate=1/τ).
+            const e = vectorStandardExponential(rng, VectorType);
+            return exGaussianFromVectors(VectorType, z, e, self.sampler.mu, self.sampler.sigma, self.sampler.tau);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const z = vectorStandardNormalFrom(source, VectorType);
+            const e = vectorStandardExponentialFrom(source, VectorType);
+            return exGaussianFromVectors(VectorType, z, e, self.sampler.mu, self.sampler.sigma, self.sampler.tau);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Compose Z~N(0,1) and E~Exp(1) vectors into ExGaussian: μ + σ·Z + τ·E.
+fn exGaussianFromVectors(comptime VectorType: type, z: VectorType, e: VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), tau: vectorChild(VectorType)) VectorType {
+    const mu_v: VectorType = @splat(mu);
+    const sigma_v: VectorType = @splat(sigma);
+    const tau_v: VectorType = @splat(tau);
+    return mu_v + sigma_v * z + tau_v * e;
+}
+
 // Generalized Pareto Distribution (GPD) ---------------------------------------
 
 pub const GeneralizedParetoError = Error;
@@ -9569,6 +10086,153 @@ pub fn fillGeneralizedParetoCheckedFrom(source: anytype, comptime T: type, dest:
     dist.fillFrom(source, dest);
 }
 
+// --- Generalized Pareto vector sampling -------------------------------------
+
+/// Sample a vector of GPD-distributed values (panics on invalid parameters).
+pub fn vectorGeneralizedPareto(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
+    return vectorGeneralizedParetoFrom(rng, VectorType, mu, sigma, xi);
+}
+
+/// Source-accepting variant of `vectorGeneralizedPareto`.
+pub fn vectorGeneralizedParetoFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
+    const dist = VectorGeneralizedPareto(VectorType).new(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorGeneralizedParetoChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedParetoError!VectorType {
+    return vectorGeneralizedParetoCheckedFrom(rng, VectorType, mu, sigma, xi);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorGeneralizedParetoCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedParetoError!VectorType {
+    const dist = try VectorGeneralizedPareto(VectorType).init(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with GPD-distributed values (panics on invalid parameters).
+pub fn fillVectorGeneralizedPareto(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) void {
+    fillVectorGeneralizedParetoFrom(rng, VectorType, dest, mu, sigma, xi);
+}
+
+/// Source-accepting variant of `fillVectorGeneralizedPareto`.
+pub fn fillVectorGeneralizedParetoFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) void {
+    const dist = VectorGeneralizedPareto(VectorType).new(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorGeneralizedParetoChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedParetoError!void {
+    return fillVectorGeneralizedParetoCheckedFrom(rng, VectorType, dest, mu, sigma, xi);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorGeneralizedParetoCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedParetoError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorGeneralizedPareto(VectorType).init(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Generalized Pareto distribution using inverse-CDF sampling:
+/// X = μ + σ·(U^{-ξ} - 1)/ξ for ξ ≠ 0; X = μ - σ·ln U for ξ = 0, with U~Uniform(0,1).
+/// True SIMD: all lanes share the same scalar parameters and are computed in parallel.
+pub fn VectorGeneralizedPareto(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: GeneralizedPareto(Child),
+
+        pub fn init(mu: Child, sigma: Child, xi: Child) GeneralizedParetoError!Self {
+            return .{ .sampler = try GeneralizedPareto(Child).init(mu, sigma, xi) };
+        }
+        pub fn new(mu: Child, sigma: Child, xi: Child) Self {
+            return Self.init(mu, sigma, xi) catch |e| {
+                std.debug.panic("VectorGeneralizedPareto.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+        pub fn muValue(self: Self) Child {
+            return self.sampler.muValue();
+        }
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+        pub fn sigmaValue(self: Self) Child {
+            return self.sampler.sigmaValue();
+        }
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+        pub fn xiValue(self: Self) Child {
+            return self.sampler.xiValue();
+        }
+        pub fn tailIndexValue(self: Self) Child {
+            return self.sampler.tailIndexValue();
+        }
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.sigma == 0) return @splat(self.sampler.mu);
+            const u = rng.vectorOpen(VectorType);
+            return generalizedParetoFromUniformVector(VectorType, u, self.sampler.mu, self.sampler.sigma, self.sampler.xi);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.sigma == 0) return @splat(self.sampler.mu);
+            const u = Rng.vectorOpenFrom(source, VectorType);
+            return generalizedParetoFromUniformVector(VectorType, u, self.sampler.mu, self.sampler.sigma, self.sampler.xi);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.sigma == 0) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.mu)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.sigma == 0) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.mu)));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Apply GPD inverse-CDF to a uniform(0,1) vector.
+/// X = μ - σ·ln U for ξ = 0; X = μ + σ·(U^{-ξ} - 1)/ξ for ξ ≠ 0.
+fn generalizedParetoFromUniformVector(comptime VectorType: type, u: VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const mu_v: VectorType = @splat(mu);
+    const sigma_v: VectorType = @splat(sigma);
+    if (xi == 0) {
+        return mu_v - sigma_v * @log(u);
+    }
+    const xi_v: VectorType = @splat(xi);
+    const one: VectorType = @splat(@as(Child, 1));
+    return mu_v + sigma_v * (@exp(-xi_v * @log(u)) - one) / xi_v;
+}
+
 // Scaled Inverse Chi-Squared distribution (adapter over InverseGamma) ---------
 
 pub const ScaledInverseChiSquaredError = Error;
@@ -9721,6 +10385,118 @@ pub fn fillScaledInverseChiSquaredCheckedFrom(source: anytype, comptime T: type,
     if (dest.len == 0) return;
     const dist = try ScaledInverseChiSquared(T).init(df, scale_squared);
     dist.fillFrom(source, dest);
+}
+
+// --- Scaled Inverse Chi-Squared vector sampling -----------------------------
+
+/// Sample a vector of ScaledInvChiSq-distributed values (panics on invalid parameters).
+pub fn vectorScaledInverseChiSquared(rng: Rng, comptime VectorType: type, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) VectorType {
+    return vectorScaledInverseChiSquaredFrom(rng, VectorType, df, scale_squared);
+}
+
+/// Source-accepting variant of `vectorScaledInverseChiSquared`.
+pub fn vectorScaledInverseChiSquaredFrom(source: anytype, comptime VectorType: type, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) VectorType {
+    const dist = VectorScaledInverseChiSquared(VectorType).new(df, scale_squared);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorScaledInverseChiSquaredChecked(rng: Rng, comptime VectorType: type, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) ScaledInverseChiSquaredError!VectorType {
+    return vectorScaledInverseChiSquaredCheckedFrom(rng, VectorType, df, scale_squared);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorScaledInverseChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) ScaledInverseChiSquaredError!VectorType {
+    const dist = try VectorScaledInverseChiSquared(VectorType).init(df, scale_squared);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with ScaledInvChiSq-distributed values (panics on invalid parameters).
+pub fn fillVectorScaledInverseChiSquared(rng: Rng, comptime VectorType: type, dest: []VectorType, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) void {
+    fillVectorScaledInverseChiSquaredFrom(rng, VectorType, dest, df, scale_squared);
+}
+
+/// Source-accepting variant of `fillVectorScaledInverseChiSquared`.
+pub fn fillVectorScaledInverseChiSquaredFrom(source: anytype, comptime VectorType: type, dest: []VectorType, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) void {
+    const dist = VectorScaledInverseChiSquared(VectorType).new(df, scale_squared);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorScaledInverseChiSquaredChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) ScaledInverseChiSquaredError!void {
+    return fillVectorScaledInverseChiSquaredCheckedFrom(rng, VectorType, dest, df, scale_squared);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorScaledInverseChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, df: vectorChild(VectorType), scale_squared: vectorChild(VectorType)) ScaledInverseChiSquaredError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorScaledInverseChiSquared(VectorType).init(df, scale_squared);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Scaled Inverse Chi-Squared distribution: delegates to
+/// VectorInverseGamma via the identity ScaledInvChiSq(ν, τ²) = InverseGamma(ν/2, ντ²/2).
+/// Reuses the InverseGamma SIMD path (which itself reuses VectorGamma SIMD for shape=1).
+pub fn VectorScaledInverseChiSquared(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: ScaledInverseChiSquared(Child),
+        inv_gamma: VectorInverseGamma(VectorType),
+
+        pub fn init(df: Child, scale_squared: Child) ScaledInverseChiSquaredError!Self {
+            const base = try ScaledInverseChiSquared(Child).init(df, scale_squared);
+            const ig = try VectorInverseGamma(VectorType).init(df / 2, df * scale_squared / 2);
+            return .{ .sampler = base, .inv_gamma = ig };
+        }
+        pub fn new(df: Child, scale_squared: Child) Self {
+            return Self.init(df, scale_squared) catch |e| {
+                std.debug.panic("VectorScaledInverseChiSquared.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) Child {
+            return self.sampler.degreesOfFreedomValue();
+        }
+        pub fn dfValue(self: Self) Child {
+            return self.sampler.dfValue();
+        }
+        pub fn scaleSquaredValue(self: Self) Child {
+            return self.sampler.scaleSquaredValue();
+        }
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.inv_gamma.sample(rng);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return self.inv_gamma.sampleFrom(source);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.inv_gamma.fill(rng, dest);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            self.inv_gamma.fillFrom(source, dest);
+        }
+    };
 }
 
 // Hoyt (Nakagami-q) fading distribution ---------------------------------------
@@ -9925,6 +10701,143 @@ pub fn fillHoytCheckedFrom(source: anytype, comptime T: type, dest: []T, q: T, o
     dist.fillFrom(source, dest);
 }
 
+// --- Hoyt vector sampling ---------------------------------------------------
+
+/// Sample a vector of Hoyt-distributed values (panics on invalid parameters).
+pub fn vectorHoyt(rng: Rng, comptime VectorType: type, q: vectorChild(VectorType), omega: vectorChild(VectorType)) VectorType {
+    return vectorHoytFrom(rng, VectorType, q, omega);
+}
+
+/// Source-accepting variant of `vectorHoyt`.
+pub fn vectorHoytFrom(source: anytype, comptime VectorType: type, q: vectorChild(VectorType), omega: vectorChild(VectorType)) VectorType {
+    const dist = VectorHoyt(VectorType).new(q, omega);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorHoytChecked(rng: Rng, comptime VectorType: type, q: vectorChild(VectorType), omega: vectorChild(VectorType)) HoytError!VectorType {
+    return vectorHoytCheckedFrom(rng, VectorType, q, omega);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorHoytCheckedFrom(source: anytype, comptime VectorType: type, q: vectorChild(VectorType), omega: vectorChild(VectorType)) HoytError!VectorType {
+    const dist = try VectorHoyt(VectorType).init(q, omega);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with Hoyt-distributed values (panics on invalid parameters).
+pub fn fillVectorHoyt(rng: Rng, comptime VectorType: type, dest: []VectorType, q: vectorChild(VectorType), omega: vectorChild(VectorType)) void {
+    fillVectorHoytFrom(rng, VectorType, dest, q, omega);
+}
+
+/// Source-accepting variant of `fillVectorHoyt`.
+pub fn fillVectorHoytFrom(source: anytype, comptime VectorType: type, dest: []VectorType, q: vectorChild(VectorType), omega: vectorChild(VectorType)) void {
+    const dist = VectorHoyt(VectorType).new(q, omega);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorHoytChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, q: vectorChild(VectorType), omega: vectorChild(VectorType)) HoytError!void {
+    return fillVectorHoytCheckedFrom(rng, VectorType, dest, q, omega);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorHoytCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, q: vectorChild(VectorType), omega: vectorChild(VectorType)) HoytError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorHoyt(VectorType).init(q, omega);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Hoyt (Nakagami-q) distribution: X = σ·√(Z₁² + (q·Z₂)²) for
+/// Z₁,Z₂ ~ N(0,1) i.i.d., σ = √(Ω/(1+q²)). True SIMD using two standard-normal
+/// vector draws per sample.
+pub fn VectorHoyt(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: Hoyt(Child),
+
+        pub fn init(q_param: Child, omega: Child) HoytError!Self {
+            return .{ .sampler = try Hoyt(Child).init(q_param, omega) };
+        }
+        pub fn new(q_param: Child, omega: Child) Self {
+            return Self.init(q_param, omega) catch |e| {
+                std.debug.panic("VectorHoyt.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn qValue(self: Self) Child {
+            return self.sampler.qValue();
+        }
+        pub fn fadingParameterValue(self: Self) Child {
+            return self.sampler.fadingParameterValue();
+        }
+        pub fn spreadValue(self: Self) Child {
+            return self.sampler.spreadValue();
+        }
+        pub fn omegaValue(self: Self) Child {
+            return self.sampler.omegaValue();
+        }
+        pub fn sigmaValue(self: Self) Child {
+            return self.sampler.sigmaValue();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn standardDeviationValue(self: Self) Child {
+            return self.sampler.standardDeviationValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.omega == 0) return @splat(@as(Child, 0));
+            const z1 = vectorStandardNormal(rng, VectorType);
+            const z2 = vectorStandardNormal(rng, VectorType);
+            return hoytFromNormalVectors(VectorType, z1, z2, self.sampler.q, self.sampler.omega);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.omega == 0) return @splat(@as(Child, 0));
+            const z1 = vectorStandardNormalFrom(source, VectorType);
+            const z2 = vectorStandardNormalFrom(source, VectorType);
+            return hoytFromNormalVectors(VectorType, z1, z2, self.sampler.q, self.sampler.omega);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.omega == 0) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.omega == 0) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Compose two standard-normal vectors into a Hoyt vector:
+/// σ·√(z1² + (q·z2)²) where σ = √(Ω/(1+q²)).
+fn hoytFromNormalVectors(comptime VectorType: type, z1: VectorType, z2: VectorType, q: vectorChild(VectorType), omega: vectorChild(VectorType)) VectorType {
+    const q_v: VectorType = @splat(q);
+    const sigma_v: VectorType = @splat(@sqrt(omega / (1 + q * q)));
+    return sigma_v * @sqrt(z1 * z1 + (q_v * z2) * (q_v * z2));
+}
+
 // Noncentral chi-squared distribution: χ'²(k, λ) where k = degrees of freedom, λ = noncentrality parameter.
 // Sampling is rejection-free: K ~ Poisson(λ/2), then X ~ χ²(k + 2K) (Poisson mixture of central chi-squareds).
 // Moments: E[X] = k + λ; Var[X] = 2(k + 2λ); Mode = max(0, k + λ - 2).
@@ -9971,10 +10884,18 @@ pub fn NoncentralChiSquared(comptime T: type) type {
             return Self.init(k, lambda);
         }
 
-        pub fn degreesOfFreedomValue(self: Self) T { return self.k; }
-        pub fn dofValue(self: Self) T { return self.k; }
-        pub fn noncentralityValue(self: Self) T { return self.lambda; }
-        pub fn ncpValue(self: Self) T { return self.lambda; }
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.k;
+        }
+        pub fn dofValue(self: Self) T {
+            return self.k;
+        }
+        pub fn noncentralityValue(self: Self) T {
+            return self.lambda;
+        }
+        pub fn ncpValue(self: Self) T {
+            return self.lambda;
+        }
 
         /// Degenerate cases: k=0,λ=0 → 0 (point mass at 0). Otherwise k=0,λ>0 → noncentral with one dof.
         fn isDegenerate(self: Self) bool {
@@ -10017,7 +10938,10 @@ pub fn NoncentralChiSquared(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) { @memset(dest, 0); return; }
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = noncentralChiSquaredPointFrom(rng, T, self.k, self.lambda);
         }
 
@@ -10076,6 +11000,150 @@ pub fn fillNoncentralChiSquaredCheckedFrom(source: anytype, comptime T: type, de
     dist.fillFrom(source, dest);
 }
 
+// --- Noncentral Chi-Squared vector sampling --------------------------------
+//
+// The general Poisson-mixture algorithm (K~Poisson(λ/2), X~χ²(k+2K)) is
+// per-lane conditioned on K, so it does not admit a flat SIMD transform the
+// way compositions of fixed-distribution primitives do. Instead, we use
+// per-lane scalar sampling (via inline-unrolled lanes) consistent with how
+// VectorGamma handles non-shape-1 cases. When λ=0 we delegate directly to
+// VectorChiSquared, which carries its own SIMD fast paths.
+
+/// Sample a vector of NCχ²-distributed values (panics on invalid parameters).
+pub fn vectorNoncentralChiSquared(rng: Rng, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) VectorType {
+    return vectorNoncentralChiSquaredFrom(rng, VectorType, k, lambda);
+}
+
+/// Source-accepting variant of `vectorNoncentralChiSquared`.
+pub fn vectorNoncentralChiSquaredFrom(source: anytype, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) VectorType {
+    const dist = VectorNoncentralChiSquared(VectorType).new(k, lambda);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorNoncentralChiSquaredChecked(rng: Rng, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiSquaredError!VectorType {
+    return vectorNoncentralChiSquaredCheckedFrom(rng, VectorType, k, lambda);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorNoncentralChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiSquaredError!VectorType {
+    const dist = try VectorNoncentralChiSquared(VectorType).init(k, lambda);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with NCχ²-distributed values (panics on invalid parameters).
+pub fn fillVectorNoncentralChiSquared(rng: Rng, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) void {
+    fillVectorNoncentralChiSquaredFrom(rng, VectorType, dest, k, lambda);
+}
+
+/// Source-accepting variant of `fillVectorNoncentralChiSquared`.
+pub fn fillVectorNoncentralChiSquaredFrom(source: anytype, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) void {
+    const dist = VectorNoncentralChiSquared(VectorType).new(k, lambda);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorNoncentralChiSquaredChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiSquaredError!void {
+    return fillVectorNoncentralChiSquaredCheckedFrom(rng, VectorType, dest, k, lambda);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorNoncentralChiSquaredCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiSquaredError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorNoncentralChiSquared(VectorType).init(k, lambda);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Noncentral Chi-Squared distribution. When λ=0, delegates to
+/// VectorChiSquared (which carries SIMD fast paths for the Gamma shape=1
+/// case); otherwise samples per lane via the scalar Poisson-mixture path.
+pub fn VectorNoncentralChiSquared(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: NoncentralChiSquared(Child),
+
+        pub fn init(k: Child, lambda: Child) NoncentralChiSquaredError!Self {
+            return .{ .sampler = try NoncentralChiSquared(Child).init(k, lambda) };
+        }
+        pub fn new(k: Child, lambda: Child) Self {
+            return Self.init(k, lambda) catch |e| {
+                std.debug.panic("VectorNoncentralChiSquared.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) Child {
+            return self.sampler.degreesOfFreedomValue();
+        }
+        pub fn dofValue(self: Self) Child {
+            return self.sampler.dofValue();
+        }
+        pub fn noncentralityValue(self: Self) Child {
+            return self.sampler.noncentralityValue();
+        }
+        pub fn ncpValue(self: Self) Child {
+            return self.sampler.ncpValue();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(_: Self) ?Child {
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(@as(Child, 0));
+            if (self.sampler.lambda == 0) {
+                return (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.k) catch unreachable }).sample(rng);
+            }
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(@as(Child, 0));
+            if (self.sampler.lambda == 0) {
+                return (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.k) catch unreachable }).sampleFrom(source);
+            }
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            if (self.sampler.lambda == 0) {
+                (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.k) catch unreachable }).fill(rng, dest);
+                return;
+            }
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            if (self.sampler.lambda == 0) {
+                (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.k) catch unreachable }).fillFrom(source, dest);
+                return;
+            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 // Noncentral t distribution: t'(ν, μ) = (Z + μ) / √(V/ν) where Z~N(0,1), V~χ²(ν).
 // Used for t-test power analysis, detection theory, two-group experiments.
 // E[T] = μ·√(ν/2)·Γ((ν-1)/2)/Γ(ν/2) for ν > 1, else undefined.
@@ -10120,11 +11188,21 @@ pub fn NoncentralT(comptime T: type) type {
             return Self.init(dof, mu);
         }
 
-        pub fn degreesOfFreedomValue(self: Self) T { return self.dof; }
-        pub fn dofValue(self: Self) T { return self.dof; }
-        pub fn noncentralityValue(self: Self) T { return self.mu; }
-        pub fn ncpValue(self: Self) T { return self.mu; }
-        pub fn muValue(self: Self) T { return self.mu; }
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.dof;
+        }
+        pub fn dofValue(self: Self) T {
+            return self.dof;
+        }
+        pub fn noncentralityValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn ncpValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn muValue(self: Self) T {
+            return self.mu;
+        }
 
         pub fn expectedValue(self: Self) ?T {
             if (self.dof == std.math.inf(T)) return self.mu;
@@ -10140,8 +11218,12 @@ pub fn NoncentralT(comptime T: type) type {
             return self.dof / (self.dof - 2) * (1 + self.mu * self.mu) - self.mu * self.mu * c * c;
         }
 
-        pub fn minValue(_: Self) ?T { return null; }
-        pub fn maxValue(_: Self) ?T { return null; }
+        pub fn minValue(_: Self) ?T {
+            return null;
+        }
+        pub fn maxValue(_: Self) ?T {
+            return null;
+        }
 
         pub fn sample(self: Self, rng: Rng) T {
             return noncentralTPointFrom(rng, T, self.dof, self.mu);
@@ -10206,6 +11288,144 @@ pub fn fillNoncentralTCheckedFrom(source: anytype, comptime T: type, dest: []T, 
     dist.fillFrom(source, dest);
 }
 
+// --- Noncentral t vector sampling ------------------------------------------
+//
+// Noncentral t is (Z + μ) / √(V/ν) where Z~N(0,1) and V~χ²(ν). For ν = ∞
+// the denominator becomes 1 and we reduce to N(μ,1), which is pure SIMD.
+// For finite ν, V is a chi-squared vector via VectorChiSquared. The normal
+// numerator Z+μ is trivially SIMD. The combination is a pointwise arithmetic
+// composition of vectors, so all three paths are true vector lane SIMD.
+
+/// Sample a vector of Noncentral-t-distributed values (panics on invalid parameters).
+pub fn vectorNoncentralT(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) VectorType {
+    return vectorNoncentralTFrom(rng, VectorType, dof, mu);
+}
+
+/// Source-accepting variant of `vectorNoncentralT`.
+pub fn vectorNoncentralTFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) VectorType {
+    const dist = VectorNoncentralT(VectorType).new(dof, mu);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorNoncentralTChecked(rng: Rng, comptime VectorType: type, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) NoncentralTError!VectorType {
+    return vectorNoncentralTCheckedFrom(rng, VectorType, dof, mu);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorNoncentralTCheckedFrom(source: anytype, comptime VectorType: type, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) NoncentralTError!VectorType {
+    const dist = try VectorNoncentralT(VectorType).init(dof, mu);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with Noncentral-t-distributed values (panics on invalid parameters).
+pub fn fillVectorNoncentralT(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) void {
+    fillVectorNoncentralTFrom(rng, VectorType, dest, dof, mu);
+}
+
+/// Source-accepting variant of `fillVectorNoncentralT`.
+pub fn fillVectorNoncentralTFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) void {
+    const dist = VectorNoncentralT(VectorType).new(dof, mu);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorNoncentralTChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) NoncentralTError!void {
+    return fillVectorNoncentralTCheckedFrom(rng, VectorType, dest, dof, mu);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorNoncentralTCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) NoncentralTError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorNoncentralT(VectorType).init(dof, mu);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Noncentral t: (Z+μ) / √(V/ν) with Z~N(0,1), V~χ²(ν).
+/// For ν=∞, V is effectively infinite so V/ν→1 and t→N(μ,1) (pure SIMD).
+/// For finite ν, V is drawn via VectorChiSquared and combined pointwise.
+pub fn VectorNoncentralT(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: NoncentralT(Child),
+
+        pub fn init(dof: Child, mu: Child) NoncentralTError!Self {
+            return .{ .sampler = try NoncentralT(Child).init(dof, mu) };
+        }
+        pub fn new(dof: Child, mu: Child) Self {
+            return Self.init(dof, mu) catch |e| {
+                std.debug.panic("VectorNoncentralT.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) Child {
+            return self.sampler.degreesOfFreedomValue();
+        }
+        pub fn dofValue(self: Self) Child {
+            return self.sampler.dofValue();
+        }
+        pub fn noncentralityValue(self: Self) Child {
+            return self.sampler.noncentralityValue();
+        }
+        pub fn ncpValue(self: Self) Child {
+            return self.sampler.ncpValue();
+        }
+        pub fn muValue(self: Self) Child {
+            return self.sampler.muValue();
+        }
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn minValue(_: Self) ?Child {
+            return null;
+        }
+        pub fn maxValue(_: Self) ?Child {
+            return null;
+        }
+
+        fn isNormalLimit(self: Self) bool {
+            return self.sampler.dof == std.math.inf(Child);
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.isNormalLimit()) {
+                const mu_v: VectorType = @splat(self.sampler.mu);
+                return mu_v + vectorStandardNormal(rng, VectorType);
+            }
+            const z = vectorStandardNormal(rng, VectorType);
+            const v = (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.dof) catch unreachable }).sample(rng);
+            return noncentralTFromVectors(VectorType, z, v, self.sampler.dof, self.sampler.mu);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.isNormalLimit()) {
+                const mu_v: VectorType = @splat(self.sampler.mu);
+                return mu_v + vectorStandardNormalFrom(source, VectorType);
+            }
+            const z = vectorStandardNormalFrom(source, VectorType);
+            const v = (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.dof) catch unreachable }).sampleFrom(source);
+            return noncentralTFromVectors(VectorType, z, v, self.sampler.dof, self.sampler.mu);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Compose z~N(0,1) vector and v~χ²(ν) vector into noncentral t: (z+μ)/√(v/ν).
+fn noncentralTFromVectors(comptime VectorType: type, z: VectorType, v: VectorType, dof: vectorChild(VectorType), mu: vectorChild(VectorType)) VectorType {
+    const mu_v: VectorType = @splat(mu);
+    const dof_v: VectorType = @splat(dof);
+    return (z + mu_v) * @sqrt(dof_v / v);
+}
+
 // Noncentral F distribution: F'(df1, df2, λ) = (X/df1) / (Y/df2) where X ~ χ'²(df1, λ), Y ~ χ²(df2).
 // Used for ANOVA/regression F-test power analysis.
 // E[F] = df2/(df2-2) · (df1+λ)/df1 for df2 > 2, else undefined.
@@ -10242,10 +11462,18 @@ pub fn NoncentralF(comptime T: type) type {
             return Self.init(d1, d2, lambda);
         }
 
-        pub fn d1Value(self: Self) T { return self.d1; }
-        pub fn d2Value(self: Self) T { return self.d2; }
-        pub fn noncentralityValue(self: Self) T { return self.lambda; }
-        pub fn ncpValue(self: Self) T { return self.lambda; }
+        pub fn d1Value(self: Self) T {
+            return self.d1;
+        }
+        pub fn d2Value(self: Self) T {
+            return self.d2;
+        }
+        pub fn noncentralityValue(self: Self) T {
+            return self.lambda;
+        }
+        pub fn ncpValue(self: Self) T {
+            return self.lambda;
+        }
 
         pub fn expectedValue(self: Self) ?T {
             if (self.d2 <= 2) return null;
@@ -10264,8 +11492,12 @@ pub fn NoncentralF(comptime T: type) type {
             return 2 * (term1 + term2) * d2 * d2 / (d1 * (d2 - 2) * (d2 - 2) * (d2 - 4));
         }
 
-        pub fn minValue(_: Self) T { return 0; }
-        pub fn maxValue(_: Self) ?T { return null; }
+        pub fn minValue(_: Self) T {
+            return 0;
+        }
+        pub fn maxValue(_: Self) ?T {
+            return null;
+        }
 
         pub fn sample(self: Self, rng: Rng) T {
             return noncentralFPointFrom(rng, T, self.d1, self.d2, self.lambda);
@@ -10330,6 +11562,143 @@ pub fn fillNoncentralFCheckedFrom(source: anytype, comptime T: type, dest: []T, 
     dist.fillFrom(source, dest);
 }
 
+// --- Noncentral F vector sampling ------------------------------------------
+//
+// Noncentral F is (X/d1)/(Y/d2) with X~χ'²(d1,λ), Y~χ²(d2). When λ=0, X
+// is central χ²(d1) and we can delegate both numerator and denominator to
+// VectorChiSquared (true SIMD); when λ>0, X requires per-lane Poisson
+// conditioning so we fall back to per-lane scalar sampling.
+
+/// Sample a vector of Noncentral-F-distributed values (panics on invalid parameters).
+pub fn vectorNoncentralF(rng: Rng, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) VectorType {
+    return vectorNoncentralFFrom(rng, VectorType, d1, d2, lambda);
+}
+
+/// Source-accepting variant of `vectorNoncentralF`.
+pub fn vectorNoncentralFFrom(source: anytype, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) VectorType {
+    const dist = VectorNoncentralF(VectorType).new(d1, d2, lambda);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorNoncentralFChecked(rng: Rng, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralFError!VectorType {
+    return vectorNoncentralFCheckedFrom(rng, VectorType, d1, d2, lambda);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorNoncentralFCheckedFrom(source: anytype, comptime VectorType: type, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralFError!VectorType {
+    const dist = try VectorNoncentralF(VectorType).init(d1, d2, lambda);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with Noncentral-F-distributed values (panics on invalid parameters).
+pub fn fillVectorNoncentralF(rng: Rng, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) void {
+    fillVectorNoncentralFFrom(rng, VectorType, dest, d1, d2, lambda);
+}
+
+/// Source-accepting variant of `fillVectorNoncentralF`.
+pub fn fillVectorNoncentralFFrom(source: anytype, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) void {
+    const dist = VectorNoncentralF(VectorType).new(d1, d2, lambda);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorNoncentralFChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralFError!void {
+    return fillVectorNoncentralFCheckedFrom(rng, VectorType, dest, d1, d2, lambda);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorNoncentralFCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralFError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorNoncentralF(VectorType).init(d1, d2, lambda);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Noncentral F: (X/d1)/(Y/d2) with X~NCχ²(d1,λ), Y~χ²(d2).
+/// Central (λ=0) uses pure SIMD via VectorChiSquared for both X and Y;
+/// noncentral falls back to per-lane scalar sampling consistent with
+/// VectorNoncentralChiSquared.
+pub fn VectorNoncentralF(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: NoncentralF(Child),
+
+        pub fn init(d1: Child, d2: Child, lambda: Child) NoncentralFError!Self {
+            return .{ .sampler = try NoncentralF(Child).init(d1, d2, lambda) };
+        }
+        pub fn new(d1: Child, d2: Child, lambda: Child) Self {
+            return Self.init(d1, d2, lambda) catch |e| {
+                std.debug.panic("VectorNoncentralF.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn d1Value(self: Self) Child {
+            return self.sampler.d1Value();
+        }
+        pub fn d2Value(self: Self) Child {
+            return self.sampler.d2Value();
+        }
+        pub fn noncentralityValue(self: Self) Child {
+            return self.sampler.noncentralityValue();
+        }
+        pub fn ncpValue(self: Self) Child {
+            return self.sampler.ncpValue();
+        }
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn minValue(_: Self) Child {
+            return 0;
+        }
+        pub fn maxValue(_: Self) ?Child {
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.lambda == 0) {
+                const x = (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.d1) catch unreachable }).sample(rng);
+                const y = (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.d2) catch unreachable }).sample(rng);
+                return noncentralFFromChiSquaredVectors(VectorType, x, y, self.sampler.d1, self.sampler.d2);
+            }
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.lambda == 0) {
+                const x = (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.d1) catch unreachable }).sampleFrom(source);
+                const y = (VectorChiSquared(VectorType){ .sampler = ChiSquared(Child).init(self.sampler.d2) catch unreachable }).sampleFrom(source);
+                return noncentralFFromChiSquaredVectors(VectorType, x, y, self.sampler.d1, self.sampler.d2);
+            }
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.lambda == 0) {
+                for (dest) |*item| item.* = self.sample(rng);
+                return;
+            }
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Compose χ² vectors into F-ratio: (x/d1) / (y/d2).
+fn noncentralFFromChiSquaredVectors(comptime VectorType: type, x: VectorType, y: VectorType, d1: vectorChild(VectorType), d2: vectorChild(VectorType)) VectorType {
+    const d1_v: VectorType = @splat(d1);
+    const d2_v: VectorType = @splat(d2);
+    return (x / d1_v) / (y / d2_v);
+}
+
 // Noncentral chi distribution: χ'(k, λ) = √(χ'²(k, λ)), i.e. the sqrt of noncentral chi-squared.
 // k=2 with ncp=ν² gives a Rice distribution spread σ=1 (the standard Rician envelope).
 // Expected value uses the confluent hypergeometric ₁F₁:
@@ -10385,10 +11754,18 @@ pub fn NoncentralChi(comptime T: type) type {
             return Self.init(k, lambda);
         }
 
-        pub fn degreesOfFreedomValue(self: Self) T { return self.k; }
-        pub fn dofValue(self: Self) T { return self.k; }
-        pub fn noncentralityValue(self: Self) T { return self.lambda; }
-        pub fn ncpValue(self: Self) T { return self.lambda; }
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.k;
+        }
+        pub fn dofValue(self: Self) T {
+            return self.k;
+        }
+        pub fn noncentralityValue(self: Self) T {
+            return self.lambda;
+        }
+        pub fn ncpValue(self: Self) T {
+            return self.lambda;
+        }
 
         fn isDegenerate(self: Self) bool {
             return self.k == 0 and self.lambda == 0;
@@ -10412,7 +11789,9 @@ pub fn NoncentralChi(comptime T: type) type {
             return 0;
         }
 
-        pub fn maxValue(_: Self) ?T { return null; }
+        pub fn maxValue(_: Self) ?T {
+            return null;
+        }
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return 0;
@@ -10425,7 +11804,10 @@ pub fn NoncentralChi(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) { @memset(dest, 0); return; }
+            if (self.isDegenerate()) {
+                @memset(dest, 0);
+                return;
+            }
             for (dest) |*item| item.* = noncentralChiPointFrom(rng, T, self.k, self.lambda);
         }
 
@@ -10482,6 +11864,143 @@ pub fn fillNoncentralChiCheckedFrom(source: anytype, comptime T: type, dest: []T
     if (dest.len == 0) return;
     const dist = try NoncentralChi(T).init(k, lambda);
     dist.fillFrom(source, dest);
+}
+
+// Vector Noncentral Chi distribution -------------------------------------------
+
+/// Sample a vector of noncentral-chi-distributed values from raw primitive vectors.
+/// Inputs: nc2 = vector of noncentral-chi-squared samples (positive).
+/// Returns sqrt(nc2) per lane.
+fn noncentralChiFromChiSquaredVector(comptime VectorType: type, nc2: VectorType) VectorType {
+    return @sqrt(nc2);
+}
+
+pub fn vectorNoncentralChi(rng: Rng, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) VectorType {
+    return vectorNoncentralChiFrom(rng, VectorType, k, lambda);
+}
+
+pub fn vectorNoncentralChiFrom(source: anytype, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    std.debug.assert(noncentralChiParametersValid(Child, k, lambda));
+    if (k == 0 and lambda == 0) return @splat(@as(Child, 0));
+    const nc2 = (VectorNoncentralChiSquared(VectorType){ .sampler = NoncentralChiSquared(Child).init(k, lambda) catch unreachable }).sampleFrom(source);
+    return noncentralChiFromChiSquaredVector(VectorType, nc2);
+}
+
+pub fn vectorNoncentralChiChecked(rng: Rng, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiError!VectorType {
+    const dist = try VectorNoncentralChi(VectorType).init(k, lambda);
+    return dist.sample(rng);
+}
+
+pub fn vectorNoncentralChiCheckedFrom(source: anytype, comptime VectorType: type, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiError!VectorType {
+    const dist = try VectorNoncentralChi(VectorType).init(k, lambda);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorNoncentralChi(rng: Rng, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) void {
+    fillVectorNoncentralChiFrom(rng, VectorType, dest, k, lambda);
+}
+
+pub fn fillVectorNoncentralChiFrom(source: anytype, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) void {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    std.debug.assert(noncentralChiParametersValid(Child, k, lambda));
+    if (k == 0 and lambda == 0) {
+        @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+        return;
+    }
+    (VectorNoncentralChiSquared(VectorType){ .sampler = NoncentralChiSquared(Child).init(k, lambda) catch unreachable }).fillFrom(source, dest);
+    for (dest) |*item| item.* = @sqrt(item.*);
+}
+
+pub fn fillVectorNoncentralChiChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiError!void {
+    return fillVectorNoncentralChiCheckedFrom(rng, VectorType, dest, k, lambda);
+}
+
+pub fn fillVectorNoncentralChiCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, k: vectorChild(VectorType), lambda: vectorChild(VectorType)) NoncentralChiError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorNoncentralChi(VectorType).init(k, lambda);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Noncentral Chi distribution sampler.
+/// Each lane follows χ'(k, λ) = √(χ'²(k, λ)) where χ'² is noncentral chi-squared.
+/// For λ=0, delegates to VectorChiSquared (SIMD fast path via VectorGamma shape=1).
+/// For λ>0, uses per-lane scalar fallback for the Poisson-mixture NCχ² sampler,
+/// then applies pointwise sqrt — consistent with VectorGamma's non-shape-1 policy.
+pub fn VectorNoncentralChi(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: NoncentralChi(Child),
+        nc_chi_squared: VectorNoncentralChiSquared(VectorType),
+
+        pub fn init(k: Child, lambda: Child) NoncentralChiError!Self {
+            const base = try NoncentralChi(Child).init(k, lambda);
+            const ncx2 = try VectorNoncentralChiSquared(VectorType).init(k, lambda);
+            return .{ .sampler = base, .nc_chi_squared = ncx2 };
+        }
+        pub fn new(k: Child, lambda: Child) Self {
+            return Self.init(k, lambda) catch |e| {
+                std.debug.panic("VectorNoncentralChi.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) Child {
+            return self.sampler.degreesOfFreedomValue();
+        }
+        pub fn dofValue(self: Self) Child {
+            return self.sampler.dofValue();
+        }
+        pub fn noncentralityValue(self: Self) Child {
+            return self.sampler.noncentralityValue();
+        }
+        pub fn ncpValue(self: Self) Child {
+            return self.sampler.ncpValue();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(_: Self) ?Child {
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(@as(Child, 0));
+            return @sqrt(self.nc_chi_squared.sample(rng));
+        }
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(@as(Child, 0));
+            return @sqrt(self.nc_chi_squared.sampleFrom(source));
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            self.nc_chi_squared.fill(rng, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(@as(Child, 0))));
+                return;
+            }
+            self.nc_chi_squared.fillFrom(source, dest);
+            for (dest) |*item| item.* = @sqrt(item.*);
+        }
+    };
 }
 
 // Standard Cauchy sampling helpers: median=0, scale=1
@@ -48747,4 +50266,326 @@ test "NoncentralChi f32 support" {
         try std.testing.expect(x >= 0);
         try std.testing.expect(std.math.isFinite(x));
     }
+}
+
+// Vector distribution tests for 11 new SIMD distributions.
+test "VectorRice basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec1);
+    const rng = Rng.init(&engine);
+
+    // Valid parameters
+    const d = try VectorRice(V).init(2.0, 1.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.noncentralityValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), d.scaleValue(), 1e-9);
+
+    // Invalid parameters
+    try std.testing.expectError(error.InvalidParameter, VectorRice(V).init(-1, 1));
+    try std.testing.expectError(error.InvalidParameter, VectorRice(V).init(2, -1));
+
+    // Sampling produces valid non-negative finite values
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // Fill works
+    var buf: [8]V = undefined;
+    d.fill(rng, &buf);
+    for (buf) |vec| {
+        inline for (0..4) |lane| {
+            try std.testing.expect(vec[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(vec[lane]));
+        }
+    }
+
+    // Free functions work
+    const v_free = vectorRice(rng, V, 2.0, 1.0);
+    inline for (0..4) |lane| {
+        try std.testing.expect(v_free[lane] >= 0);
+        try std.testing.expect(std.math.isFinite(v_free[lane]));
+    }
+}
+
+test "VectorNakagami basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec2);
+    const rng = Rng.init(&engine);
+
+    // Valid parameters (m >= 0.5, omega > 0)
+    const d = try VectorNakagami(V).init(1.0, 2.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), d.mValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.omegaValue(), 1e-9);
+
+    // Degenerate case: omega = 0 returns all zeros
+    const d0 = try VectorNakagami(V).init(1.0, 0.0);
+    const v0 = d0.sample(rng);
+    inline for (0..4) |lane| try std.testing.expectEqual(@as(f64, 0), v0[lane]);
+
+    // Sampling produces valid non-negative finite values
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // Fill works
+    var buf: [8]V = undefined;
+    d.fill(rng, &buf);
+    for (buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0);
+}
+
+test "VectorInverseGamma basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec3);
+    const rng = Rng.init(&engine);
+
+    const d = try VectorInverseGamma(V).init(3.0, 2.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.0), d.shapeValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.scaleValue(), 1e-9);
+
+    // Invalid parameters
+    try std.testing.expectError(error.InvalidParameter, VectorInverseGamma(V).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, VectorInverseGamma(V).init(3, -1));
+
+    // Sampling produces positive finite values
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] > 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+}
+
+test "VectorExGaussian basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec4);
+    const rng = Rng.init(&engine);
+
+    const d = try VectorExGaussian(V).init(0.0, 1.0, 2.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0), d.muValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), d.sigmaValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.tauValue(), 1e-9);
+
+    // Invalid parameters (tau must be > 0)
+    try std.testing.expectError(error.InvalidParameter, VectorExGaussian(V).init(0, 1, 0));
+
+    // Sampling produces finite values
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(v[lane]));
+    }
+}
+
+test "VectorGeneralizedPareto basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec5);
+    const rng = Rng.init(&engine);
+
+    // xi = 0 case (exponential/GPD limit)
+    const d0 = try VectorGeneralizedPareto(V).init(0.0, 1.0, 0.0);
+    for (0..32) |_| {
+        const v = d0.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // xi = 0.2 case (heavy tail)
+    const d = try VectorGeneralizedPareto(V).init(0.0, 1.0, 0.2);
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+}
+
+test "VectorScaledInverseChiSquared basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec6);
+    const rng = Rng.init(&engine);
+
+    // init takes (df, scale_squared); scaleValue() returns sqrt(scale_squared)
+    const d = try VectorScaledInverseChiSquared(V).init(5.0, 4.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0), d.dfValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.scaleValue(), 1e-9); // sqrt(4) = 2
+
+    // Invalid parameters
+    try std.testing.expectError(error.InvalidParameter, VectorScaledInverseChiSquared(V).init(0, 1));
+
+    // Sampling produces positive finite values
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] > 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+}
+
+test "VectorHoyt basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec7);
+    const rng = Rng.init(&engine);
+
+    // q in (0,1], omega > 0
+    const d = try VectorHoyt(V).init(0.5, 2.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), d.qValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.omegaValue(), 1e-9);
+
+    // q=1 case reduces to Rayleigh
+    const d1 = try VectorHoyt(V).init(1.0, 1.0);
+    for (0..32) |_| {
+        const v = d1.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+}
+
+test "VectorNoncentralChiSquared basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x5ec8);
+    const rng = Rng.init(&engine);
+
+    const d = try VectorNoncentralChiSquared(V).init(3.0, 4.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.0), d.dofValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 4.0), d.ncpValue(), 1e-9);
+
+    // λ=0 fast path (central chi-squared)
+    const d0 = try VectorNoncentralChiSquared(V).init(5.0, 0.0);
+    for (0..32) |_| {
+        const v = d0.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // Degenerate case k=0,λ=0 returns zeros
+    const ddeg = try VectorNoncentralChiSquared(V).init(0.0, 0.0);
+    const vdeg = ddeg.sample(rng);
+    inline for (0..4) |lane| try std.testing.expectEqual(@as(f64, 0), vdeg[lane]);
+
+    // λ>0 per-lane fallback
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+}
+
+test "VectorNoncentralT basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x0ec9);
+    const rng = Rng.init(&engine);
+
+    const d = try VectorNoncentralT(V).init(5.0, 1.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0), d.dofValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), d.ncpValue(), 1e-9);
+
+    // ν=∞ normal limit
+    const dinf = try VectorNoncentralT(V).init(std.math.inf(f64), 1.0);
+    for (0..32) |_| {
+        const v = dinf.sample(rng);
+        inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(v[lane]));
+    }
+
+    // Sampling produces finite values
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(v[lane]));
+    }
+}
+
+test "VectorNoncentralF basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x0eca);
+    const rng = Rng.init(&engine);
+
+    const d = try VectorNoncentralF(V).init(3.0, 5.0, 2.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.0), d.d1Value(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0), d.d2Value(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0), d.ncpValue(), 1e-9);
+
+    // λ=0 fast path (central F)
+    const d0 = try VectorNoncentralF(V).init(3.0, 5.0, 0.0);
+    for (0..32) |_| {
+        const v = d0.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // λ>0 per-lane fallback
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+}
+
+test "VectorNoncentralChi basic functionality" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    var engine = alea.DefaultPrng.init(0x0ecb);
+    const rng = Rng.init(&engine);
+
+    const d = try VectorNoncentralChi(V).init(3.0, 4.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.0), d.dofValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 4.0), d.ncpValue(), 1e-9);
+
+    // λ=0 fast path (central chi)
+    const d0 = try VectorNoncentralChi(V).init(5.0, 0.0);
+    for (0..32) |_| {
+        const v = d0.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // Degenerate case k=0,λ=0 returns zeros
+    const ddeg = try VectorNoncentralChi(V).init(0.0, 0.0);
+    const vdeg = ddeg.sample(rng);
+    inline for (0..4) |lane| try std.testing.expectEqual(@as(f64, 0), vdeg[lane]);
+
+    // λ>0 per-lane fallback produces sqrt of NCχ² (non-negative)
+    for (0..32) |_| {
+        const v = d.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(v[lane] >= 0);
+            try std.testing.expect(std.math.isFinite(v[lane]));
+        }
+    }
+
+    // Free functions work
+    var buf: [8]V = undefined;
+    fillVectorNoncentralChi(rng, V, &buf, 3.0, 4.0);
+    for (buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0);
 }
