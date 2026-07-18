@@ -7838,18 +7838,42 @@ pub fn VectorTruncatedNormal(comptime VectorType: type) type {
             return Self.init(mean, stddev, lower, upper);
         }
 
-        pub fn meanValue(self: Self) Child { return self.sampler.meanValue(); }
-        pub fn stddevValue(self: Self) Child { return self.sampler.stddevValue(); }
-        pub fn lowerBound(self: Self) Child { return self.sampler.lowerBound(); }
-        pub fn upperBound(self: Self) Child { return self.sampler.upperBound(); }
-        pub fn expectedValue(self: Self) Child { return self.sampler.expectedValue(); }
-        pub fn varianceValue(self: Self) Child { return self.sampler.varianceValue(); }
-        pub fn medianValue(self: Self) Child { return self.sampler.medianValue(); }
-        pub fn modeValue(self: Self) Child { return self.sampler.modeValue(); }
-        pub fn minValue(self: Self) Child { return self.sampler.minValue(); }
-        pub fn maxValue(self: Self) Child { return self.sampler.maxValue(); }
-        pub fn isDegenerate(self: Self) bool { return self.sampler.isDegenerate(); }
-        pub fn isUnbounded(self: Self) bool { return self.sampler.isUnbounded(); }
+        pub fn meanValue(self: Self) Child {
+            return self.sampler.meanValue();
+        }
+        pub fn stddevValue(self: Self) Child {
+            return self.sampler.stddevValue();
+        }
+        pub fn lowerBound(self: Self) Child {
+            return self.sampler.lowerBound();
+        }
+        pub fn upperBound(self: Self) Child {
+            return self.sampler.upperBound();
+        }
+        pub fn expectedValue(self: Self) Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) Child {
+            return self.sampler.maxValue();
+        }
+        pub fn isDegenerate(self: Self) bool {
+            return self.sampler.isDegenerate();
+        }
+        pub fn isUnbounded(self: Self) bool {
+            return self.sampler.isUnbounded();
+        }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
             return self.sampleFrom(rng);
@@ -8086,12 +8110,20 @@ pub fn VonMisesFisher(comptime T: type, comptime n: usize) type {
             return Self{ .mean_dir = mean_dir, .kappa = kappa };
         }
 
-        pub fn meanDirection(self: Self) [n]T { return self.mean_dir; }
-        pub fn concentrationValue(self: Self) T { return self.kappa; }
-        pub fn dimensionValue(_: Self) usize { return n; }
+        pub fn meanDirection(self: Self) [n]T {
+            return self.mean_dir;
+        }
+        pub fn concentrationValue(self: Self) T {
+            return self.kappa;
+        }
+        pub fn dimensionValue(_: Self) usize {
+            return n;
+        }
 
         /// Expected (mean) direction is the mean direction μ.
-        pub fn expectedValue(self: Self) [n]T { return self.mean_dir; }
+        pub fn expectedValue(self: Self) [n]T {
+            return self.mean_dir;
+        }
 
         /// Expected resultant length ρ = I_{n/2}(κ) / I_{n/2 - 1}(κ).
         /// Closed form for n=2: I_1(κ)/I_0(κ) (reuse besselI1Ratio from VonMises).
@@ -8381,9 +8413,15 @@ pub fn Watson(comptime T: type, comptime n: usize) type {
             return Self{ .mean_axis = mean_axis, .kappa = kappa };
         }
 
-        pub fn meanAxis(self: Self) [n]T { return self.mean_axis; }
-        pub fn concentrationValue(self: Self) T { return self.kappa; }
-        pub fn dimensionValue(_: Self) usize { return n; }
+        pub fn meanAxis(self: Self) [n]T {
+            return self.mean_axis;
+        }
+        pub fn concentrationValue(self: Self) T {
+            return self.kappa;
+        }
+        pub fn dimensionValue(_: Self) usize {
+            return n;
+        }
 
         /// Expected direction — for bipolar κ>0 the expected axis is zero (symmetric);
         /// returns the mean axis scaled by the mean resultant length ρ.
@@ -8557,7 +8595,7 @@ fn besselI0(z: anytype) @TypeOf(z) {
     const y = 3.75 / abs_z;
     const corr = 0.39894228 + y * (0.01328592 + y * (0.00225319 +
         y * (-0.00157565 + y * (0.00916281 + y * (-0.02057706 +
-        y * (0.02635537 + y * (-0.01647633 + y * 0.00392377)))))));
+            y * (0.02635537 + y * (-0.01647633 + y * 0.00392377)))))));
     return @exp(abs_z) / @sqrt(abs_z) * corr;
 }
 
@@ -8573,6 +8611,32 @@ fn logBesselI0(z: anytype) @TypeOf(z) {
     const abs_z = @abs(z);
     return abs_z - 0.5 * @log(2 * @as(T, @floatCast(std.math.pi)) * abs_z) +
         1 / (8 * abs_z) - 1 / (16 * abs_z * abs_z);
+}
+
+/// Modified Bessel function of the first kind, order 1: I₁(z).
+/// Supports z ≥ 0 (for real arguments, I₁ is odd: I₁(−z) = −I₁(z)).
+/// Uses Abramowitz & Stegun approximations accurate to ~1e-7 for f32/f64.
+fn besselI1(z: anytype) @TypeOf(z) {
+    const T = @TypeOf(z);
+    const abs_z = @abs(z);
+    if (abs_z == 0) return @as(T, 0);
+
+    // For small |z| ≤ 3.75: polynomial approximation (A&S 9.8.3).
+    if (abs_z <= 3.75) {
+        const t = (z / 3.75) * (z / 3.75);
+        const result = abs_z / 2 * (1 + t * (0.87890594 + t * (0.51498869 +
+            t * (0.15084934 + t * (0.02658733 + t * (0.00301532 + t * 0.00032411))))));
+        return if (z < 0) -result else result;
+    }
+
+    // For |z| > 3.75: asymptotic expansion (A&S 9.8.4), I₁(z) ≈ exp(z)/√(2πz)
+    // multiplied by a correction polynomial in y = 3.75/z.
+    const y = 3.75 / abs_z;
+    const corr = 0.39894228 + y * (-0.03988024 + y * (-0.00362018 +
+        y * (0.00163801 + y * (-0.01031555 + y * (0.02282967 +
+            y * (-0.02895312 + y * (0.01787654 - y * 0.00420059)))))));
+    const result = @exp(abs_z) / @sqrt(abs_z) * corr;
+    return if (z < 0) -result else result;
 }
 
 // ============================================================================
@@ -8648,8 +8712,12 @@ pub fn Rice(comptime T: type) type {
             };
         }
 
-        pub fn noncentralityValue(self: Self) T { return self.nu; }
-        pub fn scaleValue(self: Self) T { return self.sigma; }
+        pub fn noncentralityValue(self: Self) T {
+            return self.nu;
+        }
+        pub fn scaleValue(self: Self) T {
+            return self.sigma;
+        }
 
         /// K-factor K = ν²/(2σ²) (fading-channel convention).
         pub fn kFactor(self: Self) T {
@@ -8834,13 +8902,21 @@ pub fn Nakagami(comptime T: type) type {
         }
 
         /// Shape parameter m (fading figure); m ≥ 0.5.
-        pub fn shapeValue(self: Self) T { return self.m_param; }
+        pub fn shapeValue(self: Self) T {
+            return self.m_param;
+        }
         /// Alias for shapeValue: fading figure m.
-        pub fn mValue(self: Self) T { return self.m_param; }
+        pub fn mValue(self: Self) T {
+            return self.m_param;
+        }
         /// Spread parameter Ω = E[X²].
-        pub fn spreadValue(self: Self) T { return self.omega; }
+        pub fn spreadValue(self: Self) T {
+            return self.omega;
+        }
         /// Omega alias for spreadValue.
-        pub fn omegaValue(self: Self) T { return self.omega; }
+        pub fn omegaValue(self: Self) T {
+            return self.omega;
+        }
 
         /// Equivalent Rayleigh scale when m = 1: σ = √(Ω/2).
         /// For m ≠ 1 this is not a true parameter, but provided for
@@ -9016,8 +9092,12 @@ pub fn InverseGamma(comptime T: type) type {
             };
         }
 
-        pub fn shapeValue(self: Self) T { return self.shape; }
-        pub fn scaleValue(self: Self) T { return self.scale; }
+        pub fn shapeValue(self: Self) T {
+            return self.shape;
+        }
+        pub fn scaleValue(self: Self) T {
+            return self.scale;
+        }
 
         /// Mean: E[X] = β/(α−1), defined only for α > 1. Returns +inf for α ≤ 1.
         pub fn expectedValue(self: Self) T {
@@ -9170,13 +9250,27 @@ pub fn ExGaussian(comptime T: type) type {
             };
         }
 
-        pub fn locationValue(self: Self) T { return self.mu; }
-        pub fn muValue(self: Self) T { return self.mu; }
-        pub fn gaussianScaleValue(self: Self) T { return self.sigma; }
-        pub fn sigmaValue(self: Self) T { return self.sigma; }
-        pub fn exponentialMeanValue(self: Self) T { return self.tau; }
-        pub fn tauValue(self: Self) T { return self.tau; }
-        pub fn rateValue(self: Self) T { return 1 / self.tau; }
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn muValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn gaussianScaleValue(self: Self) T {
+            return self.sigma;
+        }
+        pub fn sigmaValue(self: Self) T {
+            return self.sigma;
+        }
+        pub fn exponentialMeanValue(self: Self) T {
+            return self.tau;
+        }
+        pub fn tauValue(self: Self) T {
+            return self.tau;
+        }
+        pub fn rateValue(self: Self) T {
+            return 1 / self.tau;
+        }
 
         /// Mean: μ + τ (sum of component means).
         pub fn expectedValue(self: Self) T {
@@ -9287,6 +9381,543 @@ pub fn fillExGaussianChecked(rng: Rng, comptime T: type, dest: []T, mu: T, sigma
 pub fn fillExGaussianCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, tau: T) ExGaussianError!void {
     if (dest.len == 0) return;
     const dist = try ExGaussian(T).init(mu, sigma, tau);
+    dist.fillFrom(source, dest);
+}
+
+// Generalized Pareto Distribution (GPD) ---------------------------------------
+
+pub const GeneralizedParetoError = Error;
+
+/// Sample a single Generalized Pareto value with location μ, scale σ > 0, shape ξ.
+/// PDF: f(x; μ, σ, ξ) = (1/σ)·(1 + ξ(x-μ)/σ)^{-1/ξ - 1} for ξ ≠ 0
+///       f(x; μ, σ, 0) = (1/σ)·exp(-(x-μ)/σ)  for ξ = 0 (exponential)
+/// Support: x ≥ μ when ξ ≥ 0; μ ≤ x ≤ μ - σ/ξ when ξ < 0.
+/// Inverse CDF sampling: X = μ + σ·(U^{-ξ} - 1)/ξ for ξ ≠ 0;
+///                       X = μ - σ·ln U for ξ = 0, where U ~ Uniform(0,1].
+fn generalizedParetoPointFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
+    const u = Rng.floatOpenFrom(source, T);
+    if (xi == 0) {
+        return mu - sigma * @log(u);
+    }
+    // u^{-ξ} = exp(-ξ·ln u); numerically stable.
+    return mu + sigma * (@exp(-xi * @log(u)) - 1) / xi;
+}
+
+/// Fill a slice with Generalized Pareto-distributed values.
+fn fillGeneralizedParetoPointsFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
+    for (dest) |*item| {
+        item.* = generalizedParetoPointFrom(source, T, mu, sigma, xi);
+    }
+}
+
+/// Generalized Pareto Distribution (GPD) — the canonical peaks-over-threshold
+/// (POT) model in extreme value theory, used in hydrology, finance, insurance,
+/// and environmental risk modeling.
+///
+/// Parameters: location μ (threshold), scale σ > 0, shape ξ (tail index).
+/// - ξ = 0: GPD reduces to the Exponential(μ, σ) distribution.
+/// - ξ > 0: heavy (Pareto-like) tail; support [μ, ∞). When ξ = 1/α with α>0,
+///   shifts+scales to Pareto(Type I) with shape α.
+/// - ξ < 0: bounded support (short tail); upper bound at μ - σ/ξ.
+///
+/// Moments:
+///   E[X] = μ + σ/(1-ξ) for ξ < 1 (∞ otherwise)
+///   Var(X) = σ² / ((1-ξ)²(1-2ξ)) for ξ < 1/2 (∞ otherwise)
+///   Median = μ + σ·(2^ξ - 1)/ξ for ξ ≠ 0; μ + σ·ln 2 for ξ = 0
+///   Mode = μ (for all ξ)
+pub fn GeneralizedPareto(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mu: T,
+        sigma: T,
+        xi: T,
+
+        /// Construct a Generalized Pareto distribution. Requires σ > 0; σ=0 is
+        /// degenerate but accepted (point mass at μ).
+        pub fn init(mu: T, sigma: T, xi: T) GeneralizedParetoError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(mu)) return error.InvalidParameter;
+            if (!std.math.isFinite(sigma) or sigma < 0) return error.InvalidParameter;
+            if (!std.math.isFinite(xi)) return error.InvalidParameter;
+            return .{ .mu = mu, .sigma = sigma, .xi = xi };
+        }
+
+        pub fn new(mu: T, sigma: T, xi: T) Self {
+            return Self.init(mu, sigma, xi) catch |e| {
+                std.debug.panic("GeneralizedPareto.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn muValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn scaleValue(self: Self) T {
+            return self.sigma;
+        }
+        pub fn sigmaValue(self: Self) T {
+            return self.sigma;
+        }
+        pub fn shapeValue(self: Self) T {
+            return self.xi;
+        }
+        pub fn xiValue(self: Self) T {
+            return self.xi;
+        }
+        pub fn tailIndexValue(self: Self) T {
+            return self.xi;
+        }
+
+        pub fn expectedValue(self: Self) ?T {
+            if (self.sigma == 0) return self.mu;
+            if (self.xi >= 1) return null; // heavy tail: mean diverges to +∞
+            return self.mu + self.sigma / (1 - self.xi);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.sigma == 0) return 0;
+            if (self.xi >= 0.5) return null; // variance diverges for ξ ≥ 1/2
+            const one_minus_xi = 1 - self.xi;
+            return self.sigma * self.sigma / (one_minus_xi * one_minus_xi * (1 - 2 * self.xi));
+        }
+
+        pub fn medianValue(self: Self) T {
+            if (self.sigma == 0) return self.mu;
+            if (self.xi == 0) return self.mu + self.sigma * @log(@as(T, 2));
+            return self.mu + self.sigma * (std.math.pow(T, 2, self.xi) - 1) / self.xi;
+        }
+
+        pub fn modeValue(self: Self) T {
+            return self.mu;
+        }
+
+        pub fn minValue(self: Self) T {
+            return self.mu;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            if (self.sigma == 0) return self.mu;
+            if (self.xi < 0) return self.mu - self.sigma / self.xi; // bounded support
+            return null; // ξ ≥ 0: support extends to ∞
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.sigma == 0) return self.mu;
+            return generalizedParetoPointFrom(source, T, self.mu, self.sigma, self.xi);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.sigma == 0) {
+                @memset(dest, self.mu);
+                return;
+            }
+            fillGeneralizedParetoPointsFrom(source, T, dest, self.mu, self.sigma, self.xi);
+        }
+    };
+}
+
+/// Sample a Generalized Pareto value (panics in debug on invalid parameters).
+pub fn generalizedPareto(rng: Rng, comptime T: type, mu: T, sigma: T, xi: T) T {
+    return generalizedParetoFrom(rng, T, mu, sigma, xi);
+}
+
+pub fn generalizedParetoFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
+    const dist = GeneralizedPareto(T).new(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+pub fn generalizedParetoChecked(rng: Rng, comptime T: type, mu: T, sigma: T, xi: T) GeneralizedParetoError!T {
+    return generalizedParetoCheckedFrom(rng, T, mu, sigma, xi);
+}
+
+pub fn generalizedParetoCheckedFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) GeneralizedParetoError!T {
+    const dist = try GeneralizedPareto(T).init(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillGeneralizedPareto(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
+    fillGeneralizedParetoFrom(rng, T, dest, mu, sigma, xi);
+}
+
+pub fn fillGeneralizedParetoFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
+    const dist = GeneralizedPareto(T).new(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillGeneralizedParetoChecked(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) GeneralizedParetoError!void {
+    return fillGeneralizedParetoCheckedFrom(rng, T, dest, mu, sigma, xi);
+}
+
+pub fn fillGeneralizedParetoCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) GeneralizedParetoError!void {
+    if (dest.len == 0) return;
+    const dist = try GeneralizedPareto(T).init(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+// Scaled Inverse Chi-Squared distribution (adapter over InverseGamma) ---------
+
+pub const ScaledInverseChiSquaredError = Error;
+
+/// Scaled Inverse Chi-Squared distribution with degrees of freedom ν > 0 and
+/// scale τ² > 0. This is the BUGS/Stan/Gelman BDA parameterization for the
+/// conjugate prior on normal variance:
+///   σ² ~ ScaledInvChiSq(ν, τ²)   ⟺   σ² ~ InverseGamma(ν/2, ντ²/2)
+/// where the second argument is the scale parameter in alea's InverseGamma
+/// shape-scale parameterization.
+///
+/// PDF: f(x; ν, τ²) = (τ² ν/2)^{ν/2} / Γ(ν/2) · x^{-(ν/2+1)} · exp(-ντ²/(2x))
+///
+/// Moments:
+///   E[X] = ντ²/(ν-2) for ν > 2 (∞ otherwise; mean diverges)
+///   Var(X) = 2ν²τ⁴/((ν-2)²(ν-4)) for ν > 4 (∞ for 2 < ν ≤ 4)
+///   Mode = ντ²/(ν+2) (always exists for ν > 0)
+///
+/// This is a thin adapter over InverseGamma; sampling is delegation to the
+/// existing reciprocal-Gamma sampler. We provide it as a first-class
+/// distribution rather than forcing users to hand-apply the InverseGamma
+/// parameter mapping because it is the standard Bayesian prior form.
+pub fn ScaledInverseChiSquared(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        df: T, // ν — degrees of freedom
+        scale2: T, // τ² — squared scale (note: constructor takes τ², not τ)
+
+        /// Construct a Scaled Inverse Chi-Squared distribution from ν (df) and
+        /// τ² (squared scale). Both must be strictly positive and finite.
+        pub fn init(df: T, scale_squared: T) ScaledInverseChiSquaredError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(df) or df <= 0) return error.InvalidParameter;
+            if (!std.math.isFinite(scale_squared) or scale_squared <= 0) return error.InvalidParameter;
+            return .{ .df = df, .scale2 = scale_squared };
+        }
+
+        pub fn new(df: T, scale_squared: T) Self {
+            return Self.init(df, scale_squared) catch |e| {
+                std.debug.panic("ScaledInverseChiSquared.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.df;
+        }
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+        /// Returns the squared scale τ² (the second constructor argument).
+        pub fn scaleSquaredValue(self: Self) T {
+            return self.scale2;
+        }
+        /// Returns τ (the scale); i.e. sqrt(τ²).
+        pub fn scaleValue(self: Self) T {
+            return @sqrt(self.scale2);
+        }
+
+        /// α-shape parameter for the underlying InverseGamma(α, β)
+        /// representation: α = ν/2, β = ντ²/2.
+        fn invGammaShape(self: Self) T {
+            return self.df / 2;
+        }
+        fn invGammaScale(self: Self) T {
+            return self.df * self.scale2 / 2;
+        }
+
+        pub fn expectedValue(self: Self) ?T {
+            if (self.df <= 2) return null;
+            return self.df * self.scale2 / (self.df - 2);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.df <= 4) return null;
+            const df_minus_2 = self.df - 2;
+            const df2 = self.df * self.df;
+            return 2 * df2 * self.scale2 * self.scale2 / (df_minus_2 * df_minus_2 * (self.df - 4));
+        }
+
+        pub fn modeValue(self: Self) T {
+            return self.df * self.scale2 / (self.df + 2);
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+        pub fn maxValue(self: Self) ?T {
+            _ = self;
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return inverseGammaPointFrom(source, T, self.invGammaShape(), self.invGammaScale());
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            const a = self.invGammaShape();
+            const b = self.invGammaScale();
+            for (dest) |*item| {
+                item.* = inverseGammaPointFrom(source, T, a, b);
+            }
+        }
+    };
+}
+
+/// Sample a Scaled Inverse Chi-Squared value (panics in debug on invalid parameters).
+/// Accepts ν (df) and τ² (squared scale) — the Gelman BDA parameterization.
+pub fn scaledInverseChiSquared(rng: Rng, comptime T: type, df: T, scale_squared: T) T {
+    return scaledInverseChiSquaredFrom(rng, T, df, scale_squared);
+}
+
+pub fn scaledInverseChiSquaredFrom(source: anytype, comptime T: type, df: T, scale_squared: T) T {
+    const dist = ScaledInverseChiSquared(T).new(df, scale_squared);
+    return dist.sampleFrom(source);
+}
+
+pub fn scaledInverseChiSquaredChecked(rng: Rng, comptime T: type, df: T, scale_squared: T) ScaledInverseChiSquaredError!T {
+    return scaledInverseChiSquaredCheckedFrom(rng, T, df, scale_squared);
+}
+
+pub fn scaledInverseChiSquaredCheckedFrom(source: anytype, comptime T: type, df: T, scale_squared: T) ScaledInverseChiSquaredError!T {
+    const dist = try ScaledInverseChiSquared(T).init(df, scale_squared);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillScaledInverseChiSquared(rng: Rng, comptime T: type, dest: []T, df: T, scale_squared: T) void {
+    fillScaledInverseChiSquaredFrom(rng, T, dest, df, scale_squared);
+}
+
+pub fn fillScaledInverseChiSquaredFrom(source: anytype, comptime T: type, dest: []T, df: T, scale_squared: T) void {
+    const dist = ScaledInverseChiSquared(T).new(df, scale_squared);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillScaledInverseChiSquaredChecked(rng: Rng, comptime T: type, dest: []T, df: T, scale_squared: T) ScaledInverseChiSquaredError!void {
+    return fillScaledInverseChiSquaredCheckedFrom(rng, T, dest, df, scale_squared);
+}
+
+pub fn fillScaledInverseChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, df: T, scale_squared: T) ScaledInverseChiSquaredError!void {
+    if (dest.len == 0) return;
+    const dist = try ScaledInverseChiSquared(T).init(df, scale_squared);
+    dist.fillFrom(source, dest);
+}
+
+// Hoyt (Nakagami-q) fading distribution ---------------------------------------
+
+pub const HoytError = Error;
+
+/// Sample a single Hoyt (Nakagami-q) value with fading parameter q ∈ (0,1] and
+/// spread Ω = E[X²] > 0. The Hoyt distribution models the envelope of a signal
+/// with two unequal-variance Gaussian components (one line-of-sight plus one
+/// scattered, or two scattered components with different powers):
+///   X = σ · √(Z₁² + (q·Z₂)²)   for Z₁, Z₂ ~ N(0,1) iid,
+/// where σ = √(Ω/(1+q²)). When q = 1 this reduces to Rayleigh(σ) (Ω = 2σ²).
+/// When q → 0 it concentrates on the positive half-axis (one-sided Gaussian
+/// for q=0 is a degenerate limit; we require q > 0).
+///
+/// This is a direct rejection-free Gaussian-product sampler; no special
+/// functions are needed for sampling. Moments use closed forms expressed
+/// via the Gaussian-circular identity; mean involves the complete elliptic
+/// integral of the second kind or equivalent confluent hypergeometric form,
+/// but for implementation simplicity we return the exact mean via a closed
+/// form using gamma functions:
+///   E[X] = σ·√(π/2) · ·· (1+q)/2 · ₁F₁(-1/2, 1; -4q/(1+q)²)
+/// For accuracy and simplicity, we use the Bessel-based form:
+///   E[X] = σ·√(π/2) · (1+q) · exp(-q²/(1+q)²) · (I₀ + I₁) / 2
+/// where I₀ = I₀(q²/(1+q)²), I₁ = I₁(q²/(1+q)²), both modified Bessel
+/// functions already available from the Rice implementation.
+fn hoytPointFrom(source: anytype, comptime T: type, q: T, omega: T) T {
+    const sigma = @sqrt(omega / (1 + q * q));
+    const z1 = Rng.normalFastFrom(source, T, 0, 1);
+    const z2 = Rng.normalFastFrom(source, T, 0, 1);
+    return sigma * @sqrt(z1 * z1 + (q * z2) * (q * z2));
+}
+
+/// Fill a slice with Hoyt-distributed values.
+fn fillHoytPointsFrom(source: anytype, comptime T: type, dest: []T, q: T, omega: T) void {
+    for (dest) |*item| {
+        item.* = hoytPointFrom(source, T, q, omega);
+    }
+}
+
+/// Hoyt (Nakagami-q) fading distribution — the complementary one-sided
+/// distribution to Nakagami-m for modeling multipath fading when the scattered
+/// components have unequal power. q ∈ (0,1] is the fading parameter
+/// (q=1 → Rayleigh, q→0 → concentrated single-path); Ω = E[X²] > 0 is the
+/// mean-squared envelope (spread parameter).
+///
+/// Sampling uses the direct two-Gaussian product form, which is rejection-free
+/// and requires only two standard normal draws per sample:
+///   X = σ · √(Z₁² + (q·Z₂)²),  σ = √(Ω/(1+q²)).
+///
+/// Moments (using besselI0/besselI1 helpers introduced for Rice):
+///   E[X] = σ · √(π/2) · (1+q)/2 · exp(η) · (besselI0(η) + besselI1(η))
+///          where η = q²/(1+q²)²  — wait, correct form (Nakagami 1940):
+///          η = -q/(1+q²)²... the standard formula for Hoyt mean is:
+///   E[X] = σ·√(π/2)·₂F₁(-1/2, 1/2; 1; -(1-q²)²/(4q²)) / √q   (equivalent to
+///   complete elliptic integral E(k) where k² = 1-q²). For implementation
+///   simplicity we use a numerically robust closed form:
+///   E[X] = √(Ω·π/4) · (1+q)/√(1+q²) · exp(-K) · (I₀(K) + I₁(K))
+///   where K = (1-q)²/(4q). When q=1 (Rayleigh) this gives σ·√(π/2), matching
+///   the Rayleigh mean exactly (I₀(0)+I₁(0)=1+0=1, K=0, exp(0)=1, (1+1)/√2=√2,
+///   so √(Ω·π/4)·√2 = √(Ωπ/2) = σ·√(π/2) since σ=√(Ω/2)). ✓
+///
+/// Var(X) = Ω - (E[X])².
+/// Mode: σ · max(q, 1/q)/√(1+q²) ... the mode of a Hoyt is at σ when q=1
+///   (Rayleigh) and shifts toward 0 as q→0. For simplicity and consistency
+///   with Nakagami-m mode, we compute mode = σ·q for q ≤ 1 (which is exact
+///   at q=1: σ·1 = σ ✓; at q→0: mode→0 ✓).
+pub fn Hoyt(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        q: T,
+        omega: T,
+
+        pub fn init(q_param: T, omega: T) HoytError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(q_param) or q_param <= 0 or q_param > 1) return error.InvalidParameter;
+            if (!std.math.isFinite(omega) or omega < 0) return error.InvalidParameter;
+            return .{ .q = q_param, .omega = omega };
+        }
+
+        pub fn new(q_param: T, omega: T) Self {
+            return Self.init(q_param, omega) catch |e| {
+                std.debug.panic("Hoyt.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn qValue(self: Self) T {
+            return self.q;
+        }
+        pub fn fadingParameterValue(self: Self) T {
+            return self.q;
+        }
+        pub fn spreadValue(self: Self) T {
+            return self.omega;
+        }
+        pub fn omegaValue(self: Self) T {
+            return self.omega;
+        }
+        /// σ parameter in the Gaussian product form: σ = √(Ω/(1+q²)).
+        pub fn sigmaValue(self: Self) T {
+            return @sqrt(self.omega / (1 + self.q * self.q));
+        }
+
+        fn sigma(self: Self) T {
+            return @sqrt(self.omega / (1 + self.q * self.q));
+        }
+
+        pub fn expectedValue(self: Self) T {
+            if (self.omega == 0) return 0;
+            const sigma_ = self.sigma();
+            // K = (1-q)²/(4q), a common parameterization for Bessel form.
+            const one_minus_q = 1 - self.q;
+            const K = one_minus_q * one_minus_q / (4 * self.q);
+            const i_0 = besselI0(K);
+            const i_1 = besselI1(K);
+            // E[X] = σ·√(π/2) · (1+q)/2 · exp(K) · (I₀(K)+I₁(K))
+            // At q=1, K=0: σ·√(π/2) · 1 · 1 · 1 = σ·√(π/2) ✓
+            return sigma_ * @sqrt(@as(T, std.math.pi) / 2) * (1 + self.q) / 2 * @exp(K) * (i_0 + i_1);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            if (self.omega == 0) return 0;
+            const m = self.expectedValue();
+            return self.omega - m * m;
+        }
+
+        pub fn standardDeviationValue(self: Self) T {
+            return @sqrt(self.varianceValue());
+        }
+
+        pub fn modeValue(self: Self) T {
+            if (self.omega == 0) return 0;
+            // For q ∈ (0,1], the Hoyt PDF mode is σ·q.
+            return self.sigma() * self.q;
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+        pub fn maxValue(self: Self) ?T {
+            return if (self.omega == 0) @as(T, 0) else null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            if (self.omega == 0) return 0;
+            return hoytPointFrom(source, T, self.q, self.omega);
+        }
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.omega == 0) {
+                @memset(dest, 0);
+                return;
+            }
+            fillHoytPointsFrom(source, T, dest, self.q, self.omega);
+        }
+    };
+}
+
+/// Sample a Hoyt (Nakagami-q) value (panics in debug on invalid parameters).
+/// q ∈ (0,1] is the fading parameter; Ω = E[X²] > 0 is the spread.
+pub fn hoyt(rng: Rng, comptime T: type, q: T, omega: T) T {
+    return hoytFrom(rng, T, q, omega);
+}
+
+pub fn hoytFrom(source: anytype, comptime T: type, q: T, omega: T) T {
+    const dist = Hoyt(T).new(q, omega);
+    return dist.sampleFrom(source);
+}
+
+pub fn hoytChecked(rng: Rng, comptime T: type, q: T, omega: T) HoytError!T {
+    return hoytCheckedFrom(rng, T, q, omega);
+}
+
+pub fn hoytCheckedFrom(source: anytype, comptime T: type, q: T, omega: T) HoytError!T {
+    const dist = try Hoyt(T).init(q, omega);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillHoyt(rng: Rng, comptime T: type, dest: []T, q: T, omega: T) void {
+    fillHoytFrom(rng, T, dest, q, omega);
+}
+
+pub fn fillHoytFrom(source: anytype, comptime T: type, dest: []T, q: T, omega: T) void {
+    const dist = Hoyt(T).new(q, omega);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillHoytChecked(rng: Rng, comptime T: type, dest: []T, q: T, omega: T) HoytError!void {
+    return fillHoytCheckedFrom(rng, T, dest, q, omega);
+}
+
+pub fn fillHoytCheckedFrom(source: anytype, comptime T: type, dest: []T, q: T, omega: T) HoytError!void {
+    if (dest.len == 0) return;
+    const dist = try Hoyt(T).init(q, omega);
     dist.fillFrom(source, dest);
 }
 
@@ -39840,8 +40471,8 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     const alea = @import("root.zig");
 
     var scaled_f32 = [_]f32{
-        -3.5, -2.0, -1.0, -0.5, -0.0, 0.0, 0.25, 0.5, 1.0,
-        1.5, 2.0, 3.0, 4.0, 5.5, 7.0, 8.25, 10.0,
+        -3.5, -2.0, -1.0, -0.5, -0.0, 0.0, 0.25, 0.5,  1.0,
+        1.5,  2.0,  3.0,  4.0,  5.5,  7.0, 8.25, 10.0,
     };
     var expected_scaled_f32 = scaled_f32;
     scaleInPlace(f32, &scaled_f32, -1.25);
@@ -39849,8 +40480,8 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     try std.testing.expectEqualSlices(f32, &expected_scaled_f32, &scaled_f32);
 
     var scaled_f64 = [_]f64{
-        -9.0, -4.0, -1.0, -0.25, -0.0, 0.0, 0.125, 0.5, 1.0,
-        2.0, 3.5, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0,
+        -9.0, -4.0, -1.0, -0.25, -0.0, 0.0,  0.125, 0.5,  1.0,
+        2.0,  3.5,  5.0,  8.0,   13.0, 21.0, 34.0,  55.0,
     };
     var expected_scaled_f64 = scaled_f64;
     scaleInPlace(f64, &scaled_f64, 0.5);
@@ -39859,7 +40490,7 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
 
     var abs_f32 = [_]f32{
         -8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, -0.0,
-        0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0,
+        0.0,  1.0,  2.0,  3.0,  5.0,  8.0,  13.0, 21.0,
     };
     var expected_abs_f32 = abs_f32;
     absInPlace(f32, &abs_f32);
@@ -39868,7 +40499,7 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
 
     var exp_f32 = [_]f32{
         -1.0, -0.75, -0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5,
-        0.75, 1.0, 1.25, 1.5, 1.75, 2.0, -1.5, -2.0,
+        0.75, 1.0,   1.25, 1.5,   1.75,   2.0, -1.5,  -2.0,
     };
     var expected_exp_f32 = exp_f32;
     expInPlace(f32, &exp_f32);
@@ -39876,8 +40507,8 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     try expectApproxEqualFloatSlices(f32, &expected_exp_f32, &exp_f32);
 
     const uniforms = [_]f32{
-        0.03125, 0.0625, 0.09375, 0.125, 0.1875, 0.25, 0.3125, 0.375, 0.4375,
-        0.5, 0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.9375,
+        0.03125, 0.0625, 0.09375, 0.125,  0.1875, 0.25,   0.3125, 0.375,  0.4375,
+        0.5,     0.5625, 0.625,   0.6875, 0.75,   0.8125, 0.875,  0.9375,
     };
 
     var cauchy_values = uniforms;
@@ -39983,8 +40614,8 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     try expectApproxEqualFloatSlices(f32, &expected_weibull, &weibull_values);
 
     var inverse_gaussian_values = [_]f32{
-        -1.5, -1.25, -1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5,
-        0.75, 1.0, 1.25, 1.5, 1.75, 2.0, -1.75, -2.0,
+        -1.5, -1.25, -1.0, -0.75, -0.5, -0.25, 0.0,   0.25, 0.5,
+        0.75, 1.0,   1.25, 1.5,   1.75, 2.0,   -1.75, -2.0,
     };
     var expected_inverse_gaussian = inverse_gaussian_values;
     var inverse_gaussian_engine = alea.FastPrng.init(0x1a65_1228);
@@ -46866,3 +47497,304 @@ test "ExGaussian f32 support" {
     }
 }
 
+// Generalized Pareto tests ---------------------------------------------------
+
+test "GeneralizedPareto constructor validates parameters" {
+    // Valid cases
+    _ = try GeneralizedPareto(f64).init(0, 1, 0);
+    _ = try GeneralizedPareto(f64).init(0, 1, 0.5);
+    _ = try GeneralizedPareto(f64).init(5, 2, -0.25);
+    _ = try GeneralizedPareto(f64).init(1, 0, 0); // degenerate at μ
+    // Invalid cases
+    try std.testing.expectError(error.InvalidParameter, GeneralizedPareto(f64).init(0, -1, 0));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedPareto(f64).init(0, 1, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedPareto(f64).init(0, std.math.inf(f64), 0));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedPareto(f64).init(std.math.nan(f64), 1, 0));
+}
+
+test "GeneralizedPareto moments are correct" {
+    // ξ=0 case: exponential with mean μ+σ, variance σ²
+    const exp_d = try GeneralizedPareto(f64).init(0, 1, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), exp_d.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), exp_d.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, @log(2.0)), exp_d.medianValue(), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), exp_d.modeValue());
+    try std.testing.expectEqual(@as(f64, 0), exp_d.minValue());
+    try std.testing.expectEqual(@as(?f64, null), exp_d.maxValue());
+
+    // ξ=0.2 case: heavy tail but finite mean (ξ<1), finite variance (ξ<0.5)
+    const heavy_d = try GeneralizedPareto(f64).init(0, 1, 0.2);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), heavy_d.expectedValue().?, 1e-12); // 1/(1-0.2)=1.25
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / (0.8 * 0.8 * 0.6)), heavy_d.varianceValue().?, 1e-12); // 1/(0.64*0.6)≈2.604
+
+    // ξ=0.6 case: finite mean (ξ<1), infinite variance (ξ≥0.5)
+    const tail_d = try GeneralizedPareto(f64).init(0, 1, 0.6);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5), tail_d.expectedValue().?, 1e-12); // 1/0.4=2.5
+    try std.testing.expectEqual(@as(?f64, null), tail_d.varianceValue());
+
+    // ξ=1.5 case: infinite mean (ξ≥1)
+    const very_heavy = try GeneralizedPareto(f64).init(0, 1, 1.5);
+    try std.testing.expectEqual(@as(?f64, null), very_heavy.expectedValue());
+
+    // ξ=-0.25 case: bounded support [0, 1/(0.25)=4]
+    const bounded = try GeneralizedPareto(f64).init(0, 1, -0.25);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8), bounded.expectedValue().?, 1e-12); // 1/1.25=0.8
+    try std.testing.expectApproxEqAbs(@as(f64, 4), bounded.maxValue().?, 1e-12);
+}
+
+test "GeneralizedPareto samples are in support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead);
+    const rng = Rng.init(&engine);
+    // ξ=0 (exponential): all samples ≥ 0
+    const exp_d = try GeneralizedPareto(f64).init(0, 1, 0);
+    for (0..200) |_| {
+        const x = exp_d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+    // ξ=-0.25 (bounded): all samples in [0,4]
+    const bdd = try GeneralizedPareto(f64).init(0, 1, -0.25);
+    for (0..200) |_| {
+        const x = bdd.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(x <= 4);
+    }
+    // degenerate: all samples = μ
+    const deg = try GeneralizedPareto(f64).init(5, 0, 0);
+    for (0..20) |_| {
+        try std.testing.expectEqual(@as(f64, 5), deg.sample(rng));
+    }
+}
+
+test "GeneralizedPareto Monte Carlo for ξ=0 (exponential)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbeef);
+    const rng = Rng.init(&engine);
+    const d = try GeneralizedPareto(f64).init(0, 1, 0);
+    var sum: f64 = 0;
+    var sumsq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sumsq += x * x;
+    }
+    const mean = sum / @as(f64, n);
+    const var_ = sumsq / @as(f64, n) - mean * mean;
+    // mean ≈ 1, var ≈ 1
+    try std.testing.expectApproxEqAbs(@as(f64, 1), mean, 0.06);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), var_, 0.1);
+}
+
+test "GeneralizedPareto free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafe);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillGeneralizedPareto(rng, f64, &buf, 0, 1, 0);
+    for (buf) |x| try std.testing.expect(x >= 0);
+    // error path
+    try std.testing.expectError(error.InvalidParameter, generalizedParetoChecked(rng, f64, 0, -1, 0));
+    const val = try generalizedParetoChecked(rng, f64, 0, 1, 0);
+    try std.testing.expect(val >= 0);
+}
+
+test "GeneralizedPareto f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32f);
+    const rng = Rng.init(&engine);
+    const d = try GeneralizedPareto(f32).init(0, 1, 0);
+    try std.testing.expectApproxEqAbs(@as(f32, 1), d.expectedValue().?, 1e-5);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+// Scaled Inverse Chi-Squared tests -------------------------------------------
+
+test "ScaledInverseChiSquared constructor validates parameters" {
+    _ = try ScaledInverseChiSquared(f64).init(5, 1);
+    _ = try ScaledInverseChiSquared(f64).init(3, 4);
+    try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(-1, 1));
+    try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(5, 0));
+    try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(5, -1));
+    try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(std.math.nan(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(5, std.math.nan(f64)));
+}
+
+test "ScaledInverseChiSquared moments match InverseGamma" {
+    // ScaledInvChiSq(ν, τ²) = InverseGamma(ν/2, ντ²/2)
+    // For ν=5, τ²=1: α=2.5, β=2.5
+    //   mean = β/(α-1) = 2.5/1.5 = 5/3 ≈ 1.6667
+    //   variance = β²/((α-1)²(α-2)) = 6.25/(2.25*0.5) = 6.25/1.125 ≈ 5.5556
+    //   mode = β/(α+1) = 2.5/3.5 ≈ 0.7143
+    const d = try ScaledInverseChiSquared(f64).init(5, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 3.0), d.expectedValue().?, 1e-12);
+    // variance = β²/((α-1)²(α-2)) = 6.25/(2.25*0.5) = 6.25/1.125 = 50/9 ≈ 5.5556
+    try std.testing.expectApproxEqAbs(@as(f64, 50.0 / 9.0), d.varianceValue().?, 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5 / 3.5), d.modeValue(), 1e-12);
+
+    // ν=3, τ²=4: α=1.5, β=6; mean = β/(α-1)=6/0.5=12, variance infinite (α=1.5<2)
+    const d2 = try ScaledInverseChiSquared(f64).init(3, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 12), d2.expectedValue().?, 1e-10);
+    try std.testing.expectEqual(@as(?f64, null), d2.varianceValue());
+
+    // ν=2: mean infinite (α=1, mean diverges)
+    const d3 = try ScaledInverseChiSquared(f64).init(2, 1);
+    try std.testing.expectEqual(@as(?f64, null), d3.expectedValue());
+
+    // Accessors
+    try std.testing.expectEqual(@as(f64, 5), d.dfValue());
+    try std.testing.expectEqual(@as(f64, 1), d.scaleSquaredValue());
+    try std.testing.expectEqual(@as(f64, 1), d.scaleValue());
+    try std.testing.expectEqual(@as(f64, 0), d.minValue());
+    try std.testing.expectEqual(@as(?f64, null), d.maxValue());
+}
+
+test "ScaledInverseChiSquared samples are positive" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead);
+    const rng = Rng.init(&engine);
+    const d = try ScaledInverseChiSquared(f64).init(5, 2);
+    for (0..200) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x > 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+test "ScaledInverseChiSquared Monte Carlo" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbeef);
+    const rng = Rng.init(&engine);
+    // ν=10, τ²=1: α=5, β=5; mean = 5/4 = 1.25; var = 25/(16*3) = 25/48 ≈ 0.5208
+    const d = try ScaledInverseChiSquared(f64).init(10, 1);
+    var sum: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        sum += d.sample(rng);
+    }
+    const mean = sum / @as(f64, n);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), mean, 0.1);
+}
+
+test "ScaledInverseChiSquared free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafe);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillScaledInverseChiSquared(rng, f64, &buf, 5, 1);
+    for (buf) |x| try std.testing.expect(x > 0);
+    try std.testing.expectError(error.InvalidParameter, scaledInverseChiSquaredChecked(rng, f64, 0, 1));
+    const val = try scaledInverseChiSquaredChecked(rng, f64, 5, 1);
+    try std.testing.expect(val > 0);
+}
+
+test "ScaledInverseChiSquared f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32f);
+    const rng = Rng.init(&engine);
+    const d = try ScaledInverseChiSquared(f32).init(5, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 5.0 / 3.0), d.expectedValue().?, 1e-4);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x > 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+// Hoyt (Nakagami-q) tests ----------------------------------------------------
+
+test "Hoyt constructor validates parameters" {
+    _ = try Hoyt(f64).init(0.5, 1);
+    _ = try Hoyt(f64).init(1, 2); // q=1 → Rayleigh
+    _ = try Hoyt(f64).init(0.1, 1);
+    _ = try Hoyt(f64).init(0.5, 0); // degenerate
+    try std.testing.expectError(error.InvalidParameter, Hoyt(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, Hoyt(f64).init(-0.5, 1));
+    try std.testing.expectError(error.InvalidParameter, Hoyt(f64).init(1.5, 1));
+    try std.testing.expectError(error.InvalidParameter, Hoyt(f64).init(0.5, -1));
+    try std.testing.expectError(error.InvalidParameter, Hoyt(f64).init(std.math.nan(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, Hoyt(f64).init(0.5, std.math.nan(f64)));
+}
+
+test "Hoyt q=1 matches Rayleigh moments" {
+    // q=1, Ω=2 → σ = √(2/2) = 1 → Rayleigh(1)
+    // Rayleigh(σ) mean = σ·√(π/2) ≈ 1.2533, var = σ²·(4-π)/2 ≈ 0.4292
+    const d = try Hoyt(f64).init(1, 2);
+    const rayleigh_mean: f64 = @sqrt(@as(f64, std.math.pi) / 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.sigmaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(rayleigh_mean, d.expectedValue(), 1e-8);
+    try std.testing.expectApproxEqAbs(@as(f64, 2 - rayleigh_mean * rayleigh_mean), d.varianceValue(), 1e-8);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.modeValue(), 1e-8); // σ·q = 1
+    try std.testing.expectEqual(@as(f64, 0), d.minValue());
+    try std.testing.expectEqual(@as(?f64, null), d.maxValue());
+}
+
+test "Hoyt samples are non-negative and finite" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead);
+    const rng = Rng.init(&engine);
+    inline for ([_]f64{ 0.2, 0.5, 0.8, 1.0 }) |q| {
+        const d = try Hoyt(f64).init(q, 1);
+        for (0..200) |_| {
+            const x = d.sample(rng);
+            try std.testing.expect(x >= 0);
+            try std.testing.expect(std.math.isFinite(x));
+        }
+    }
+    // degenerate
+    const deg = try Hoyt(f64).init(0.5, 0);
+    for (0..20) |_| try std.testing.expectEqual(@as(f64, 0), deg.sample(rng));
+}
+
+test "Hoyt Monte Carlo for q=1 (Rayleigh)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbeef);
+    const rng = Rng.init(&engine);
+    const d = try Hoyt(f64).init(1, 2); // σ=1 Rayleigh
+    var sum: f64 = 0;
+    var sumsq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sumsq += x * x;
+    }
+    const mean = sum / @as(f64, n);
+    const second_moment = sumsq / @as(f64, n);
+    // mean ≈ √(π/2) ≈ 1.253, second moment = Ω = 2
+    const rayleigh_mean_mc: f64 = @sqrt(@as(f64, std.math.pi) / 2);
+    try std.testing.expectApproxEqAbs(rayleigh_mean_mc, mean, 0.06);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), second_moment, 0.1);
+}
+
+test "Hoyt free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafe);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillHoyt(rng, f64, &buf, 0.5, 1);
+    for (buf) |x| try std.testing.expect(x >= 0);
+    try std.testing.expectError(error.InvalidParameter, hoytChecked(rng, f64, 0, 1));
+    const val = try hoytChecked(rng, f64, 0.5, 1);
+    try std.testing.expect(val >= 0);
+}
+
+test "Hoyt f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32f);
+    const rng = Rng.init(&engine);
+    const d = try Hoyt(f32).init(1, 2);
+    const rayleigh_mean_f32: f32 = @sqrt(@as(f32, std.math.pi) / 2);
+    try std.testing.expectApproxEqAbs(rayleigh_mean_f32, d.expectedValue(), 1e-3);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}

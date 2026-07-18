@@ -1251,6 +1251,9 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1254", .path = "compare/results/s4-m1254-nakagami-m-fading-distribution.md" },
     .{ .milestone = "S4-M1255", .path = "compare/results/s4-m1255-inverse-gamma-distribution.md" },
     .{ .milestone = "S4-M1256", .path = "compare/results/s4-m1256-exgaussian-distribution.md" },
+    .{ .milestone = "S4-M1257", .path = "compare/results/s4-m1257-generalized-pareto-distribution.md" },
+    .{ .milestone = "S4-M1258", .path = "compare/results/s4-m1258-scaled-inverse-chi-squared-distribution.md" },
+    .{ .milestone = "S4-M1259", .path = "compare/results/s4-m1259-hoyt-nakagami-q-fading-distribution.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1269,6 +1272,9 @@ const required_tokens = [_][]const u8{
     "S4-M1254",
     "S4-M1255",
     "S4-M1256",
+    "S4-M1257",
+    "S4-M1258",
+    "S4-M1259",
     "S4-M1245",
     "S4-M1244",
     "S4-M1243",
@@ -2193,6 +2199,18 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1256 closure row\n", .{});
         missing += 1;
     }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1257 | Generalized Pareto") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1257 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1258 | Scaled Inverse Chi-Squared") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1258 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1259 | Hoyt (Nakagami-q)") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1259 closure row\n", .{});
+        missing += 1;
+    }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1164 closure row\n", .{});
         missing += 1;
@@ -2563,6 +2581,18 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, audit, "S4-M1256 adds an Exponentially Modified Gaussian") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1256 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1257 adds a Generalized Pareto") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1257 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1258 adds a Scaled Inverse Chi-Squared") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1258 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1259 adds a Hoyt (Nakagami-q)") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1259 closure\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {
