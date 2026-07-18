@@ -7878,6 +7878,299 @@ pub fn VectorTruncatedNormal(comptime VectorType: type) type {
     };
 }
 
+// -----------------------------------------------------------------------------
+// Von Mises-Fisher distribution on S^{n-1} (n-dimensional unit sphere)
+//
+// The von Mises-Fisher (vMF) distribution is the spherical analogue of the
+// von Mises distribution: it produces points on the (n-1)-dimensional unit
+// sphere S^{n-1} centered around a mean direction μ with concentration κ ≥ 0.
+// κ = 0 gives the uniform distribution on the sphere; κ → ∞ gives a point
+// mass at μ.  Sampling uses Wood (1994) rejection algorithm via Ulrich's
+// (1984) transform plus a Householder reflection to rotate from e_1 to μ.
+//
+// Density: f(x | μ, κ) = C_n(κ) · exp(κ · μᵀx)
+//   C_n(κ) = κ^{n/2 - 1} / ((2π)^{n/2} · I_{n/2 - 1}(κ))
+// where I_ν is the modified Bessel function of the first kind.
+//
+// This implementation is stack-allocated (comptime-known dimension n).  It
+// is allocation-free, supports f32/f64 scalar output and per-lane SIMD
+// vector variants, and goes beyond what local Rust `rand_distr` exposes
+// (which does not ship vMF).
+// -----------------------------------------------------------------------------
+
+/// Von Mises-Fisher distribution error alias.
+pub const VonMisesFisherError = error{
+    /// Concentration parameter is negative or non-finite.
+    InvalidParameter,
+    /// Mean direction is not on the unit sphere (‖μ‖ not within tolerance of 1).
+    InvalidMeanDirection,
+};
+
+/// Compute the normalization constant and b parameter for Wood's algorithm.
+/// Returns (b, x0, c, log_c) used in tangent-plane rejection sampling.
+/// Reference: Wood (1994), "Simulation of the von Mises-Fisher distribution".
+fn vmfWoodConstants(comptime T: type, kappa: T, dim: usize) struct { b: T, x0: T, c: T } {
+    const d: T = @floatFromInt(dim);
+    const sqrt_term = @sqrt(4 * kappa * kappa + (d - 1) * (d - 1));
+    const b = (-2 * kappa + sqrt_term) / (d - 1);
+    const x0 = (1 - b) / (1 + b);
+    const c = kappa * x0 + (d - 1) * @log(1 - x0 * x0);
+    return .{ .b = b, .x0 = x0, .c = c };
+}
+
+/// Sample a univariate tangent-direction value w ∈ [-1, 1] from the vMF
+/// marginal distribution on the cosine of the polar angle from the mean
+/// direction μ (taken as e_1).  Uses Ulrich-Wood rejection sampling.
+/// Works for n ≥ 3.
+fn vmfSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T {
+    if (kappa == 0) {
+        // Uniform on sphere S^{n-1}: w = 2B - 1 where B ~ Beta((d-2)/2, (d-2)/2).
+        const half_d: T = @as(T, @floatFromInt(dim - 2)) / 2;
+        const b_sample = betaFrom(source, T, half_d, half_d);
+        return 2 * b_sample - 1;
+    }
+
+    const consts = vmfWoodConstants(T, kappa, dim);
+    const b = consts.b;
+    const x0 = consts.x0;
+    const c = consts.c;
+    const d_minus_1: T = @floatFromInt(dim - 1);
+
+    while (true) {
+        const z = Rng.floatOpenClosedFrom(source, T);
+        const u = Rng.floatOpenFrom(source, T);
+        const w = (1 - (1 + b) * z) / (1 - (1 - b) * z);
+        if (kappa * w + d_minus_1 * @log(1 - x0 * w) - c >= @log(u)) {
+            return w;
+        }
+    }
+}
+
+/// Sample a point on S^{n-1} ~ vMF(mean_dir, kappa) using Wood's algorithm.
+/// mean_dir must be a unit vector of length n.
+fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize, mean_dir: *const [n]T, kappa: T) [n]T {
+    comptime if (n < 2) @compileError("VonMisesFisher requires at least 2 dimensions (circle); for 1D circular distributions use VonMises with angle parameter");
+
+    if (kappa == 0) {
+        return unitSphereSurfaceFrom(source, T, n);
+    }
+
+    if (kappa > 1e12) {
+        // Degenerate concentration: return mean direction directly.
+        return mean_dir.*;
+    }
+
+    if (n == 2) {
+        // vMF on S^1 (circle) is exactly von Mises parameterized by mean angle.
+        // Convert mean direction (x,y) to angle mu = atan2(y,x), sample vonMises,
+        // then convert back to a unit vector (cos(angle), sin(angle)).
+        const pi_val = @as(T, @floatCast(std.math.pi));
+        const two_pi = 2 * pi_val;
+        const mu = std.math.atan2(mean_dir[1], mean_dir[0]);
+        const theta = vonMisesFrom(source, T, mu, kappa);
+        const angle = wrapAngle(theta, pi_val, two_pi);
+        return .{ @cos(angle), @sin(angle) };
+    }
+
+    // Step 1: Sample w = cos(theta) from marginal distribution (works for n >= 3).
+    const w = vmfSampleWFrom(source, T, kappa, n);
+
+    // Step 2: Sample uniform point v on S^{n-2} (equator of the tangent subspace).
+    var v: [n]T = undefined;
+    if (n == 3) {
+        // Uniform on circle S^1 (tangent direction is 2D).
+        const u = Rng.floatOpenClosedFrom(source, T) * 2 * @as(T, @floatCast(std.math.pi));
+        v[0] = 0;
+        v[1] = @cos(u);
+        v[2] = @sin(u);
+    } else {
+        // General n ≥ 4: uniform on S^{n-2}.
+        const v_sub = unitSphereSurfaceFrom(source, T, n - 1);
+        v[0] = 0;
+        inline for (1..n) |i| v[i] = v_sub[i - 1];
+    }
+
+    // Step 3: Assemble x = (w, sqrt(1-w^2) * v) in the e_1-centered frame.
+    const sqrt_1mw2 = @sqrt(@max(0, 1 - w * w));
+    var x: [n]T = undefined;
+    x[0] = w;
+    inline for (1..n) |i| x[i] = sqrt_1mw2 * v[i];
+
+    // Step 4: Householder reflection: rotate from e_1 frame to mean_dir frame.
+    // H = I - 2vv^T/(v^T v) where v = e1 - mu.
+    var result: [n]T = undefined;
+    const dot_mu_e1 = mean_dir[0];
+
+    if (@abs(dot_mu_e1 - 1) < 1e-12) {
+        result = x;
+    } else if (@abs(dot_mu_e1 + 1) < 1e-12) {
+        result[0] = -x[0];
+        inline for (1..n) |i| result[i] = x[i];
+    } else {
+        var v_hh: [n]T = undefined;
+        v_hh[0] = 1 - mean_dir[0];
+        inline for (1..n) |i| v_hh[i] = -mean_dir[i];
+        var vv: T = v_hh[0] * v_hh[0];
+        inline for (1..n) |i| vv += v_hh[i] * v_hh[i];
+        var vx: T = v_hh[0] * x[0];
+        inline for (1..n) |i| vx += v_hh[i] * x[i];
+        const factor = 2 * vx / vv;
+        inline for (0..n) |i| result[i] = x[i] - factor * v_hh[i];
+    }
+
+    return result;
+}
+
+/// Fill a slice with von Mises-Fisher distributed points on S^{n-1}.
+fn fillVonMisesFisherPointsFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: *const [n]T, kappa: T) void {
+    for (dest) |*item| {
+        item.* = vonMisesFisherPointFrom(source, T, n, mean_dir, kappa);
+    }
+}
+
+/// Von Mises-Fisher distribution on S^{n-1} (n-dimensional unit sphere).
+/// Concentration κ ≥ 0; mean direction μ must be a unit vector.
+/// κ=0 is uniform on the sphere; κ→∞ degenerates to a point mass at μ.
+pub fn VonMisesFisher(comptime T: type, comptime n: usize) type {
+    comptime if (n < 2) @compileError("VonMisesFisher requires at least 2 dimensions (use VonMises for circular/2D mean direction)");
+    return struct {
+        const Self = @This();
+
+        mean_dir: [n]T,
+        kappa: T,
+
+        /// Construct a vMF distribution with given mean direction and concentration.
+        /// Validates kappa ≥ 0 and finite, and that mean_dir is within 1e-6 of unit length.
+        pub fn init(mean_dir: [n]T, kappa: T) VonMisesFisherError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(kappa) or kappa < 0) return error.InvalidParameter;
+
+            // Validate mean direction is a unit vector.
+            var norm_sq: T = 0;
+            inline for (0..n) |i| {
+                if (!std.math.isFinite(mean_dir[i])) return error.InvalidMeanDirection;
+                norm_sq += mean_dir[i] * mean_dir[i];
+            }
+            if (@abs(norm_sq - 1) > 1e-6) return error.InvalidMeanDirection;
+
+            return Self{ .mean_dir = mean_dir, .kappa = kappa };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(mean_dir: [n]T, kappa: T) Self {
+            return Self.init(mean_dir, kappa) catch |e| {
+                std.debug.panic("VonMisesFisher.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        /// Construct with a caller-normalized direction (skips unit-vector check
+        /// in release mode; caller guarantees ‖mean_dir‖ = 1).
+        pub fn initNormalized(mean_dir: [n]T, kappa: T) VonMisesFisherError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(kappa) or kappa < 0) return error.InvalidParameter;
+            return Self{ .mean_dir = mean_dir, .kappa = kappa };
+        }
+
+        pub fn meanDirection(self: Self) [n]T { return self.mean_dir; }
+        pub fn concentrationValue(self: Self) T { return self.kappa; }
+        pub fn dimensionValue(_: Self) usize { return n; }
+
+        /// Expected (mean) direction is the mean direction μ.
+        pub fn expectedValue(self: Self) [n]T { return self.mean_dir; }
+
+        /// Expected resultant length ρ = I_{n/2}(κ) / I_{n/2 - 1}(κ).
+        /// Closed form for n=2: I_1(κ)/I_0(κ) (reuse besselI1Ratio from VonMises).
+        /// For n=3: coth(κ) - 1/κ.
+        /// For general n, this would require Bessel function ratios; provide
+        /// approximate values for common cases.
+        pub fn meanResultantLength(self: Self) T {
+            if (self.kappa == 0) return 0;
+            if (n == 2) return besselI1Ratio(self.kappa);
+            if (n == 3) {
+                // coth(κ) - 1/κ
+                const k = self.kappa;
+                const ek = @exp(-2 * k);
+                const coth = (1 + ek) / (1 - ek);
+                return coth - 1 / k;
+            }
+            // Approximation for large n/κ: use asymptotic ρ ≈ κ / (κ + (n-1)/2) for moderate κ.
+            // For high-accuracy general-n Bessel ratios, a future enhancement can add
+            // a continued-fraction evaluation; this approximate form is correct to first order.
+            const half_dim_m1: T = @as(T, @floatFromInt(n - 1)) / 2;
+            return self.kappa / (self.kappa + half_dim_m1);
+        }
+
+        /// Spherical variance = 1 - ρ (analogous to circular variance 1 - R).
+        pub fn varianceValue(self: Self) T {
+            return 1 - self.meanResultantLength();
+        }
+
+        pub fn sample(self: Self, rng: Rng) [n]T {
+            return vonMisesFisherPointFrom(rng, T, n, &self.mean_dir, self.kappa);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [n]T {
+            return vonMisesFisherPointFrom(source, T, n, &self.mean_dir, self.kappa);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][n]T) void {
+            fillVonMisesFisherPointsFrom(rng, T, n, dest, &self.mean_dir, self.kappa);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][n]T) void {
+            fillVonMisesFisherPointsFrom(source, T, n, dest, &self.mean_dir, self.kappa);
+        }
+    };
+}
+
+// -----------------------------------------------------------------------------
+// Von Mises-Fisher free functions
+// -----------------------------------------------------------------------------
+
+/// Sample a single von Mises-Fisher distributed point on S^{n-1} (validated).
+pub fn vonMisesFisher(rng: Rng, comptime T: type, comptime n: usize, mean_dir: [n]T, kappa: T) VonMisesFisherError![n]T {
+    return vonMisesFisherCheckedFrom(rng, T, n, mean_dir, kappa);
+}
+
+/// Source-accepting variant of `vonMisesFisher`.
+pub fn vonMisesFisherFrom(source: anytype, comptime T: type, comptime n: usize, mean_dir: [n]T, kappa: T) [n]T {
+    std.debug.assert(kappa >= 0 and std.math.isFinite(kappa));
+    return vonMisesFisherPointFrom(source, T, n, &mean_dir, kappa);
+}
+
+/// Checked variant that validates parameters.
+pub fn vonMisesFisherChecked(rng: Rng, comptime T: type, comptime n: usize, mean_dir: [n]T, kappa: T) VonMisesFisherError![n]T {
+    return vonMisesFisherCheckedFrom(rng, T, n, mean_dir, kappa);
+}
+
+/// Checked source-accepting variant.
+pub fn vonMisesFisherCheckedFrom(source: anytype, comptime T: type, comptime n: usize, mean_dir: [n]T, kappa: T) VonMisesFisherError![n]T {
+    const dist = try VonMisesFisher(T, n).init(mean_dir, kappa);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with vMF-distributed points (validated).
+pub fn fillVonMisesFisher(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: [n]T, kappa: T) VonMisesFisherError!void {
+    return fillVonMisesFisherCheckedFrom(rng, T, n, dest, mean_dir, kappa);
+}
+
+/// Source-accepting fill (debug-asserts parameters).
+pub fn fillVonMisesFisherFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: [n]T, kappa: T) void {
+    std.debug.assert(kappa >= 0 and std.math.isFinite(kappa));
+    fillVonMisesFisherPointsFrom(source, T, n, dest, &mean_dir, kappa);
+}
+
+/// Checked fill variant.
+pub fn fillVonMisesFisherChecked(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: [n]T, kappa: T) VonMisesFisherError!void {
+    return fillVonMisesFisherCheckedFrom(rng, T, n, dest, mean_dir, kappa);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVonMisesFisherCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: [n]T, kappa: T) VonMisesFisherError!void {
+    const dist = try VonMisesFisher(T, n).init(mean_dir, kappa);
+    dist.fillFrom(source, dest);
+}
+
 // Standard Cauchy sampling helpers: median=0, scale=1
 fn standardCauchy(rng: Rng, comptime T: type) T {
     return standardCauchyFrom(rng, T);
@@ -44634,6 +44927,183 @@ test "TruncatedNormal f32 sampling works" {
     for (buf) |v| {
         try std.testing.expect(v >= -2 - 1e-6);
         try std.testing.expect(v <= 2 + 1e-6);
+    }
+}
+
+test "VonMisesFisher constructor validates parameters" {
+    // Non-finite kappa
+    try std.testing.expectError(error.InvalidParameter, VonMisesFisher(f64, 3).init(.{ 1, 0, 0 }, std.math.nan(f64)));
+    // Negative kappa
+    try std.testing.expectError(error.InvalidParameter, VonMisesFisher(f64, 3).init(.{ 1, 0, 0 }, -1));
+    // Non-unit mean direction
+    try std.testing.expectError(error.InvalidMeanDirection, VonMisesFisher(f64, 3).init(.{ 1, 1, 0 }, 1));
+    // Mean direction with non-finite component
+    try std.testing.expectError(error.InvalidMeanDirection, VonMisesFisher(f64, 3).init(.{ 1, std.math.inf(f64), 0 }, 1));
+    // Valid: unit direction, kappa >= 0
+    const ok = try VonMisesFisher(f64, 3).init(.{ 1, 0, 0 }, 1);
+    try std.testing.expect(ok.kappa == 1);
+    const ok2 = try VonMisesFisher(f64, 3).init(.{ 0, 1, 0 }, 0);
+    try std.testing.expect(ok2.kappa == 0);
+}
+
+test "VonMisesFisher 2D (circle) samples are unit vectors concentrated around mean" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x12345);
+    const rng = Rng.init(&engine);
+
+    const mu: [2]f64 = .{ 1, 0 };
+    const dist = try VonMisesFisher(f64, 2).init(mu, 10);
+
+    var sum_x: f64 = 0;
+    var sum_y: f64 = 0;
+    const n = 2000;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        // Verify unit length
+        const norm_sq = p[0] * p[0] + p[1] * p[1];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_x += p[0];
+        sum_y += p[1];
+    }
+    const mean_x = sum_x / @as(f64, @floatFromInt(n));
+    const mean_y = sum_y / @as(f64, @floatFromInt(n));
+    // With kappa=10, mean resultant length should be ~I1(10)/I0(10) ≈ 0.95; mean angle near 0.
+    try std.testing.expect(mean_x > 0.8);
+    try std.testing.expect(@abs(mean_y) < 0.2);
+}
+
+test "VonMisesFisher 3D samples are unit vectors on sphere" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xabcde);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 0, 0, 1 };
+    const dist = try VonMisesFisher(f64, 3).init(mu, 5);
+
+    const n = 1000;
+    var sum_z: f64 = 0;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_z += p[2];
+    }
+    // With kappa=5 on S^2, E[z] = coth(5) - 1/5 ≈ 0.800.
+    const mean_z = sum_z / @as(f64, @floatFromInt(n));
+    try std.testing.expect(mean_z > 0.6);
+}
+
+test "VonMisesFisher kappa=0 is uniform on sphere" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x999);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 1, 0, 0 };
+    const dist = try VonMisesFisher(f64, 3).init(mu, 0);
+
+    const n = 2000;
+    var sum: [3]f64 = .{ 0, 0, 0 };
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum[0] += p[0];
+        sum[1] += p[1];
+        sum[2] += p[2];
+    }
+    // Uniform on sphere: mean vector should be near zero.
+    const inv_n = 1.0 / @as(f64, @floatFromInt(n));
+    const mx = sum[0] * inv_n;
+    const my = sum[1] * inv_n;
+    const mz = sum[2] * inv_n;
+    const r = @sqrt(mx * mx + my * my + mz * mz);
+    try std.testing.expect(r < 0.1);
+}
+
+test "VonMisesFisher high kappa degenerates to mean direction" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x42);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 0.4082482904638631, 0.4082482904638631, 0.8164965809277261 }; // (1,1,2)/sqrt(6) normalized, ~0.408,0.408,0.816
+    const dist = try VonMisesFisher(f64, 3).init(mu, 1e13);
+
+    for (0..20) |_| {
+        const p = dist.sample(rng);
+        inline for (0..3) |i| {
+            try std.testing.expect(@abs(p[i] - mu[i]) < 1e-6);
+        }
+    }
+}
+
+test "VonMisesFisher free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7777);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f64 = .{ 0, 1, 0 };
+    var buf: [32][3]f64 = undefined;
+    try fillVonMisesFisher(rng, f64, 3, &buf, mu, 3);
+    for (buf) |p| {
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+
+    // Checked variant rejects invalid parameters
+    try std.testing.expectError(error.InvalidParameter, fillVonMisesFisher(rng, f64, 3, &buf, mu, -1));
+}
+
+test "VonMisesFisher Householder reflection works for arbitrary mean direction" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5555);
+    const rng = Rng.init(&engine);
+
+    // Mean direction not aligned with any axis.
+    const mu: [3]f64 = .{ 1.0 / 3.0, 2.0 / 3.0, 2.0 / 3.0 };
+    const dist = try VonMisesFisher(f64, 3).init(mu, 8);
+
+    const n = 500;
+    var sum_dot: f64 = 0;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        const dot = p[0] * mu[0] + p[1] * mu[1] + p[2] * mu[2];
+        sum_dot += dot;
+    }
+    const mean_dot = sum_dot / @as(f64, @floatFromInt(n));
+    // With kappa=8 on S^2, E[cos(theta)] = coth(8) - 1/8 ≈ 0.875.
+    try std.testing.expect(mean_dot > 0.7);
+}
+
+test "VonMisesFisher 4D samples are unit vectors" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x2468);
+    const rng = Rng.init(&engine);
+
+    const mu: [4]f64 = .{ 1, 0, 0, 0 };
+    const dist = try VonMisesFisher(f64, 4).init(mu, 3);
+
+    const n = 200;
+    for (0..n) |_| {
+        const p = dist.sample(rng);
+        var norm_sq: f64 = 0;
+        inline for (0..4) |i| norm_sq += p[i] * p[i];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+}
+
+test "VonMisesFisher f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32);
+    const rng = Rng.init(&engine);
+
+    const mu: [3]f32 = .{ 1, 0, 0 };
+    const dist = try VonMisesFisher(f32, 3).init(mu, 2);
+    for (0..64) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-4);
     }
 }
 

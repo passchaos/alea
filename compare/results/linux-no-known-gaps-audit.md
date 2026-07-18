@@ -15,11 +15,12 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, and S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API. The active post-S4-M1250 bar is
-S4-M1251: additional directional/spherical distributions (von Mises-Fisher,
-Kent, Bingham), copula methods, string generation expansion, longer
-validation runs, broader platform evidence, or newly discovered core
-random-workflow gaps.
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API, and S4-M1251 adds Von Mises-Fisher spherical directional distribution on Sⁿ⁻¹ for comptime n≥2 using Wood (1994) Ulrich-transform rejection for n≥3 and S¹ delegation for n=2, extending directional-statistics coverage from the circle to arbitrary-dimensional spheres beyond local Rust `rand_distr`. The active post-S4-M1251 bar is
+additional directional/multivariate distributions (Bingham, Watson, Matrix von
+Mises-Fisher, Kent), copula methods, SIMD spherical bulk sampling paths,
+weighted/alias sampling advances, string generation expansion, longer
+statistical validation runs, broader platform evidence, or newly discovered
+core random-workflow gaps.
 
 ## Scope
 
@@ -6333,10 +6334,41 @@ scalar/vector sample/fill entry points with Checked/From variants; `vonMises`
 and `wrappedCauchy` are promoted from internal `fn` to `pub` with their full
 Checked/vector/fill variant families and `VectorVonMises`/`VectorWrappedCauchy`
 structs completing their public API surface. `zig build validate` passes all
-checks (614 tests, all apicheck/readmecheck/roadmapcheck/examplecheck/
-toolingcheck/distcheck/practrand gates).
+checks.
 
-The next product bar after S4-M1250 covers additional directional/spherical
-distributions (von Mises-Fisher, Kent, Bingham), copula methods, string
-generation expansion, longer statistical validation runs, broader platform
-evidence, or newly discovered core random-workflow gaps.
+S4-M1251 adds a Von Mises-Fisher (vMF) spherical directional distribution on
+the n-dimensional unit sphere Sⁿ⁻¹ for comptime n≥2
+(`compare/results/s4-m1251-von-mises-fisher-spherical-distribution.md`):
+`VonMisesFisher(T, n)` is parameterized by a unit mean direction μ and
+concentration κ≥0. For n=2 (circle S¹) sampling delegates to the existing
+Von Mises angle sampler then converts (cosθ,sinθ) to a unit vector. For n≥3
+Wood (1994) Ulrich-transform rejection sampling is used: constants
+(b,x0,c) = `vmfWoodConstants(κ,dim)` are computed once at init; w is drawn
+via Beta rejection (shape (dim-2)/2, (dim-2)/2 for the cosine marginal); a
+uniform point on Sⁿ⁻² is drawn (normal variates normalized) for the
+tangent-plane component; the sample is assembled in the e1-centered frame as
+(w, sqrt(1-w²)·v) and rotated to the mean direction μ via a Householder
+reflection H = I − 2vvᵀ/(vᵀv) where v = e1 − μ (handles ±e1 near-degenerate
+cases with a 1e-12 tolerance). Fast paths: κ=0 delegates to
+`unitSphereSurfaceFrom` for uniform sampling; κ>1e12 returns the mean
+direction as a point mass. Statistical accessors: `meanResultantLength` is
+exact for n=2 (Bessel ratio I₁(κ)/I₀(κ)) and n=3 (coth κ − 1/κ) and uses a
+first-order continued-fraction approximation for higher dimensions;
+`expectedValue` returns ρ·μ and `varianceValue` returns 1 − ρ² (scalar
+concentration). A complete scalar/fill free-function family includes
+`vonMisesFisher{,From,Checked,CheckedFrom}` and
+`fillVonMisesFisher{,From,Checked,CheckedFrom}`; `initNormalized` skips
+unit-norm validation for caller-guaranteed unit directions;
+`VonMisesFisherError` aliases `error.InvalidParameter` (κ<0) and
+`error.InvalidMeanDirection` (μ not unit). Nine tests cover constructor
+validation, 2D concentration, 3D unit-norm and sphere-surface properties,
+κ=0 uniformity (mean resultant length <0.05), high-κ degeneracy (collapses
+to μ), free-function/fill bulk entry points, Householder arbitrary-mean
+correctness (mean direction matches μ within 0.05 at κ=50), 4D unit vectors,
+and f32 support. All 642 tests pass; `zig build validate` passes all gates.
+
+The next product bar after S4-M1251 covers additional directional/
+multivariate distributions (Bingham, Watson, Matrix von Mises-Fisher, Kent),
+copula methods, SIMD spherical bulk sampling paths, weighted/alias sampling
+advances, string generation expansion, longer statistical validation runs,
+broader platform evidence, or newly discovered core random-workflow gaps.

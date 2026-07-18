@@ -555,7 +555,8 @@ self-forking.
   `GeoError`, `GumbelError`, `HyperGeoError`, `InverseGaussianError`,
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
-  `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`;
+  `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
+  `VonMisesFisherError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
@@ -647,6 +648,15 @@ self-forking.
   `VectorTruncatedNormal(T).isDegenerate`, `VectorTruncatedNormal(T).isUnbounded`,
   `VectorTruncatedNormal(T).sample`, `VectorTruncatedNormal(T).sampleFrom`,
   `VectorTruncatedNormal(T).fill`, `VectorTruncatedNormal(T).fillFrom`,
+  `VonMisesFisher(T,n)`, `VonMisesFisher(T,n).init`, `VonMisesFisher(T,n).new`,
+  `VonMisesFisher(T,n).initNormalized`, `VonMisesFisher(T,n).meanDirection`,
+  `VonMisesFisher(T,n).concentrationValue`, `VonMisesFisher(T,n).dimensionValue`,
+  `VonMisesFisher(T,n).expectedValue`, `VonMisesFisher(T,n).meanResultantLength`,
+  `VonMisesFisher(T,n).varianceValue`, `VonMisesFisher(T,n).sample`,
+  `VonMisesFisher(T,n).sampleFrom`, `VonMisesFisher(T,n).fill`,
+  `VonMisesFisher(T,n).fillFrom`,
+  `vonMisesFisher`, `vonMisesFisherFrom`, `vonMisesFisherChecked`, `vonMisesFisherCheckedFrom`,
+  `fillVonMisesFisher`, `fillVonMisesFisherFrom`, `fillVonMisesFisherChecked`, `fillVonMisesFisherCheckedFrom`,
   `unitSphereSurface`, `unitSphereSurfaceFrom`, `fillUnitSphereSurface`,
   `fillUnitSphereSurfaceFrom`, `unitBallVolume`, `unitBallVolumeFrom`,
   `fillUnitBallVolume`, `fillUnitBallVolumeFrom`, `UnitSphereSurface`,

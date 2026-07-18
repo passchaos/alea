@@ -1245,6 +1245,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1248", .path = "compare/results/s4-m1248-dense-simd-f64x4-ziggurat.md" },
     .{ .milestone = "S4-M1249", .path = "compare/results/s4-m1249-dense-simd-f32x8-native-ziggurat.md" },
     .{ .milestone = "S4-M1250", .path = "compare/results/s4-m1250-truncated-normal-distribution.md" },
+    .{ .milestone = "S4-M1251", .path = "compare/results/s4-m1251-von-mises-fisher-spherical-distribution.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1257,6 +1258,7 @@ const required_tokens = [_][]const u8{
     "S4-M1248",
     "S4-M1249",
     "S4-M1250",
+    "S4-M1251",
     "S4-M1245",
     "S4-M1244",
     "S4-M1243",
@@ -2157,6 +2159,10 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1250 closure row\n", .{});
         missing += 1;
     }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1251 | Von Mises-Fisher spherical directional distribution") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1251 closure row\n", .{});
+        missing += 1;
+    }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1164 closure row\n", .{});
         missing += 1;
@@ -2499,6 +2505,14 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, audit, "S4-M1249 extends true mask-rejection SIMD") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1249 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1250 adds a Truncated Normal distribution") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1250 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1251 adds a Von Mises-Fisher") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1251 closure\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {
