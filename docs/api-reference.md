@@ -556,7 +556,7 @@ self-forking.
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
-  `VonMisesFisherError`, `WatsonError`, `RiceError`;
+  `VonMisesFisherError`, `WatsonError`, `RiceError`, `NakagamiError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
@@ -673,6 +673,14 @@ self-forking.
   `Rice(T).fill`, `Rice(T).fillFrom`,
   `rice`, `riceFrom`, `riceChecked`, `riceCheckedFrom`,
   `fillRice`, `fillRiceFrom`, `fillRiceChecked`, `fillRiceCheckedFrom`,
+  `Nakagami(T)`, `Nakagami(T).init`, `Nakagami(T).new`, `Nakagami(T).shapeValue`,
+  `Nakagami(T).mValue`, `Nakagami(T).spreadValue`, `Nakagami(T).omegaValue`,
+  `Nakagami(T).equivalentRayleighScale`, `Nakagami(T).expectedValue`,
+  `Nakagami(T).varianceValue`, `Nakagami(T).modeValue`, `Nakagami(T).minValue`,
+  `Nakagami(T).maxValue`, `Nakagami(T).sample`, `Nakagami(T).sampleFrom`,
+  `Nakagami(T).fill`, `Nakagami(T).fillFrom`,
+  `nakagami`, `nakagamiFrom`, `nakagamiChecked`, `nakagamiCheckedFrom`,
+  `fillNakagami`, `fillNakagamiFrom`, `fillNakagamiChecked`, `fillNakagamiCheckedFrom`,
   `unitSphereSurface`, `unitSphereSurfaceFrom`, `fillUnitSphereSurface`,
   `fillUnitSphereSurfaceFrom`, `unitBallVolume`, `unitBallVolumeFrom`,
   `fillUnitBallVolume`, `fillUnitBallVolumeFrom`, `UnitSphereSurface`,

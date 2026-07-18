@@ -15,9 +15,10 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API, S4-M1251 adds Von Mises-Fisher spherical directional distribution on Sⁿ⁻¹ for comptime n≥2 using Wood (1994) Ulrich-transform rejection for n≥3 and S¹ delegation for n=2, extending directional-statistics coverage from the circle to arbitrary-dimensional spheres beyond local Rust `rand_distr`, S4-M1252 adds a Watson axial spherical directional distribution on Sⁿ⁻¹ for comptime n≥2, the antipodally symmetric counterpart to vMF supporting bipolar/girdle/uniform regimes with Beta-rejection sampling, Kummer ₁F₁ moment computation, and fast paths for extreme κ, and S4-M1253 adds a Rice (Rician) fading distribution — noncentral chi with 2 degrees of freedom — for signal-processing/MRI/radar/optics workloads, with rejection-free two-Gaussian sampling, internal besselI0/logBesselI0 helpers, K-factor accessor, and exact Bessel-form moments. The active post-S4-M1253 bar is
-additional directional/multivariate distributions (Nakagami-m, Noncentral
-chi/chi-squared, Bingham, Matrix von Mises-Fisher, Kent), Rice vector/SIMD
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API, S4-M1251 adds Von Mises-Fisher spherical directional distribution on Sⁿ⁻¹ for comptime n≥2 using Wood (1994) Ulrich-transform rejection for n≥3 and S¹ delegation for n=2, extending directional-statistics coverage from the circle to arbitrary-dimensional spheres beyond local Rust `rand_distr`, S4-M1252 adds a Watson axial spherical directional distribution on Sⁿ⁻¹ for comptime n≥2, the antipodally symmetric counterpart to vMF supporting bipolar/girdle/uniform regimes with Beta-rejection sampling, Kummer ₁F₁ moment computation, and fast paths for extreme κ, S4-M1253 adds a Rice (Rician) fading distribution — noncentral chi with 2 degrees of freedom — for signal-processing/MRI/radar/optics workloads, with rejection-free two-Gaussian sampling, internal besselI0/logBesselI0 helpers, K-factor accessor, and exact Bessel-form moments, and S4-M1254 adds a Nakagami-m fading distribution — the canonical multipath fading envelope model for wireless/RF communications — with shape m ≥ 0.5 (m=1 Rayleigh, m=0.5 half-normal, m>1 approximates Rician), rejection-free √(Gamma(m, Ω/m)) sampling, exact lgamma-based moments with Rayleigh fast paths, mode and equivalent-Rayleigh-scale accessors, and Ω=0 point mass. The active post-S4-M1254 bar is
+additional directional/multivariate distributions (Noncentral chi/chi-squared,
+Inverse Gamma, Exponentially Modified Gaussian, Generalized Pareto, Hoyt/
+Nakagami-q, Bingham, Matrix von Mises-Fisher, Kent), Rice/Nakagami vector/SIMD
 sampling, copula methods, SIMD spherical bulk sampling paths, weighted/alias
 sampling advances, string generation expansion, longer statistical validation
 runs, broader platform evidence, or newly discovered core random-workflow gaps.
@@ -6433,3 +6434,55 @@ noncentral chi/chi-squared, additional directional/multivariate distributions
 methods, SIMD spherical bulk sampling paths, weighted/alias sampling advances,
 string generation expansion, longer statistical validation runs, broader
 platform evidence, or newly discovered core random-workflow gaps.
+
+### S4-M1254 — Nakagami-m fading distribution
+
+S4-M1254 (`compare/results/s4-m1254-nakagami-m-fading-distribution.md`) adds a Nakagami-m distribution, the canonical multipath fading
+envelope model for wireless/RF communications. Nakagami-m fills a practical
+gap in continuous fading-family distributions alongside Rayleigh (m=1) and
+Rice (which it approximates for m > 1):
+
+- Shape parameter m ≥ 0.5 controls fading severity: m = 0.5 gives the
+  half-normal (one-sided Gaussian, "worse-than-Rayleigh" severe fading),
+  m = 1 exactly recovers Rayleigh(√(Ω/2)), m > 1 approximates Rician
+  fading with an equivalent K-factor, and m → ∞ converges to a Gaussian
+  concentrated near √Ω with variance Ω/(4m).
+- Spread parameter Ω = E[X²] > 0 is the second moment, matching the
+  second-moment parameterization used across RF/wireless literature.
+
+Sampling is rejection-free via X = √(Gamma(m, Ω/m)) directly leveraging the
+existing Gamma sampler — no new special functions are required beyond
+`std.math.lgamma` for moment computation (already used throughout alea for
+Student-t, Fisher-F, Beta, and Chi-squared). Moment formulas use the log-gamma
+ratio exp(lgamma(m+1/2) − lgamma(m)) to avoid overflow, with exact fast paths
+for the m=1 Rayleigh case:
+
+- Expected value: (Γ(m+½)/Γ(m))·√(Ω/m), or √(πΩ)/2 when m=1.
+- Variance: Ω·(1 − (Γ(m+½)/Γ(m))²/m), or Ω·(4−π)/4 when m=1.
+- Mode: √(Ω·(m−1)/m) for m ≥ 1 (0 for m < 1), or √(Ω/2) when m=1.
+- equivalentRayleighScale: √(Ω/2) for comparison with Rayleigh/Rice σ.
+
+Fast paths handle Ω = 0 (point mass at 0) and m=1 (exact Rayleigh moments).
+The standard 8-function free-function family (nakagami/nakagamiFrom/
+nakagamiChecked/nakagamiCheckedFrom/fillNakagami/fillNakagamiFrom/
+fillNakagamiChecked/fillNakagamiCheckedFrom) is provided alongside the
+`Nakagami(T)` struct with init/new/accessors/sample/sampleFrom/fill/fillFrom.
+
+Tests cover constructor validation (m < 0.5 rejected, Ω < 0 rejected, NaN/Inf
+rejected, m=0.5 boundary accepted), m=1 Rayleigh moment equivalence (mean,
+variance, mode, equivalentRayleighScale all match), Ω=0 point mass at 0,
+non-negativity and finiteness of 1200 samples across shape values
+m ∈ {0.5, 0.75, 1, 2, 5, 10}, m=0.5 half-normal moment correctness with
+5000-sample Monte Carlo verification (mean ≈ √(2/π) within 0.04, variance
+≈ 1−2/π within 0.05), large-m concentration at m=50, Ω=4 (mean ≈ 2 within
+0.01, variance < 0.03, mode ≈ 2 within 0.03, Monte Carlo mean within 0.05),
+free-function/fill correctness with error rejection, and f32 support.
+All 668 tests pass; `zig build validate` passes all gates.
+
+The next product bar after S4-M1254 covers noncentral chi/chi-squared,
+Inverse Gamma, Exponentially Modified Gaussian, Generalized Pareto,
+Hoyt (Nakagami-q) fading, additional directional/multivariate distributions
+(Bingham, Matrix von Mises-Fisher, Kent), Rice/Nakagami vector/SIMD sampling,
+copula methods, SIMD spherical bulk sampling paths, weighted/alias sampling
+advances, string generation expansion, longer statistical validation runs,
+broader platform evidence, or newly discovered core random-workflow gaps.

@@ -8776,6 +8776,186 @@ pub fn fillRiceCheckedFrom(source: anytype, comptime T: type, dest: []T, nu: T, 
     dist.fillFrom(source, dest);
 }
 
+// Nakagami-m distribution -----------------------------------------------------
+
+pub const NakagamiError = Error;
+
+/// Sample a single Nakagami-m distributed value with shape m ≥ 0.5 and
+/// spread Ω = E[X²] > 0: √(Gamma(m, Ω/m)).
+fn nakagamiPointFrom(source: anytype, comptime T: type, m_param: T, omega: T) T {
+    if (omega == 0) return 0; // degenerate point mass at 0
+    // Y ~ Gamma(shape=m, scale=Ω/m) ⇒ X = √Y ~ Nakagami(m, Ω)
+    const y = gammaFrom(source, T, m_param, omega / m_param);
+    return @sqrt(y);
+}
+
+/// Fill a slice with Nakagami-m distributed values.
+fn fillNakagamiPointsFrom(source: anytype, comptime T: type, dest: []T, m_param: T, omega: T) void {
+    if (omega == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    for (dest) |*item| {
+        item.* = nakagamiPointFrom(source, T, m_param, omega);
+    }
+}
+
+/// Nakagami-m fading distribution — models multipath fading envelope in
+/// wireless communications with shape parameter m ≥ 0.5 and spread Ω > 0
+/// where Ω = E[X²]. m = 1 recovers Rayleigh(√(Ω/2)); m → ∞ approximates
+/// Rician fading (and converges to a Gaussian); 0.5 ≤ m < 1 models
+/// "worse-than-Rayleigh" severe fading.
+///
+/// Sampling uses a Gamma transform: X = √(Gamma(m, Ω/m)), which is exact
+/// and rejection-free.
+pub fn Nakagami(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        m_param: T,
+        omega: T,
+
+        /// Construct a Nakagami-m distribution. Validates m ≥ 0.5,
+        /// Ω ≥ 0, and that both parameters are finite. Ω = 0 is accepted
+        /// (degenerate point mass at 0), consistent with the zero-scale
+        /// convention used by other distributions in alea.
+        pub fn init(m_param: T, omega: T) NakagamiError!Self {
+            comptime requireFloat(T);
+            if (!std.math.isFinite(m_param) or m_param < 0.5) return error.InvalidParameter;
+            if (!std.math.isFinite(omega) or omega < 0) return error.InvalidParameter;
+            return .{ .m_param = m_param, .omega = omega };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(m_param: T, omega: T) Self {
+            return Self.init(m_param, omega) catch |e| {
+                std.debug.panic("Nakagami.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        /// Shape parameter m (fading figure); m ≥ 0.5.
+        pub fn shapeValue(self: Self) T { return self.m_param; }
+        /// Alias for shapeValue: fading figure m.
+        pub fn mValue(self: Self) T { return self.m_param; }
+        /// Spread parameter Ω = E[X²].
+        pub fn spreadValue(self: Self) T { return self.omega; }
+        /// Omega alias for spreadValue.
+        pub fn omegaValue(self: Self) T { return self.omega; }
+
+        /// Equivalent Rayleigh scale when m = 1: σ = √(Ω/2).
+        /// For m ≠ 1 this is not a true parameter, but provided for
+        /// comparison with Rayleigh/Rice fading parameterizations.
+        pub fn equivalentRayleighScale(self: Self) T {
+            return @sqrt(self.omega / 2);
+        }
+
+        /// Expected value: E[X] = (Γ(m + 1/2)/Γ(m)) · √(Ω/m).
+        pub fn expectedValue(self: Self) T {
+            if (self.omega == 0) return 0;
+            if (self.m_param == 1) {
+                // Rayleigh case: √(Ω/2) · √(π/2) = √(Ω·π/4) = (√(πΩ))/2.
+                return @sqrt(self.omega * @as(T, @floatCast(std.math.pi))) / 2;
+            }
+            const ratio = @exp(std.math.lgamma(T, self.m_param + 0.5) - std.math.lgamma(T, self.m_param));
+            return ratio * @sqrt(self.omega / self.m_param);
+        }
+
+        /// Variance: Var[X] = Ω · (1 − (1/m) · (Γ(m+1/2)/Γ(m))²).
+        pub fn varianceValue(self: Self) T {
+            if (self.omega == 0) return 0;
+            if (self.m_param == 1) {
+                // Rayleigh variance: Ω·(4−π)/4 = Ω/2 · (2−π/2)... let's compute directly.
+                return self.omega * (4 - @as(T, @floatCast(std.math.pi))) / 4;
+            }
+            const ratio = @exp(std.math.lgamma(T, self.m_param + 0.5) - std.math.lgamma(T, self.m_param));
+            return self.omega * (1 - ratio * ratio / self.m_param);
+        }
+
+        /// Mode: √(Ω·(m−1)/m) for m ≥ 1; 0 for 0.5 ≤ m < 1.
+        pub fn modeValue(self: Self) T {
+            if (self.omega == 0) return 0;
+            if (self.m_param < 1) return 0;
+            if (self.m_param == 1) return @sqrt(self.omega / 2); // Rayleigh mode: σ = √(Ω/2)
+            return @sqrt(self.omega * (self.m_param - 1) / self.m_param);
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            return if (self.isDegenerate()) @as(T, 0) else null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return nakagamiPointFrom(source, T, self.m_param, self.omega);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillNakagamiPointsFrom(source, T, dest, self.m_param, self.omega);
+        }
+
+        fn isDegenerate(self: Self) bool {
+            return self.omega == 0;
+        }
+    };
+}
+
+/// Sample a Nakagami-m distributed value (Nakagami fading), panics on invalid
+/// parameters in debug builds.
+pub fn nakagami(rng: Rng, comptime T: type, m_param: T, omega: T) T {
+    return nakagamiFrom(rng, T, m_param, omega);
+}
+
+/// Source-accepting variant of `nakagami`.
+pub fn nakagamiFrom(source: anytype, comptime T: type, m_param: T, omega: T) T {
+    const dist = Nakagami(T).new(m_param, omega);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn nakagamiChecked(rng: Rng, comptime T: type, m_param: T, omega: T) NakagamiError!T {
+    return nakagamiCheckedFrom(rng, T, m_param, omega);
+}
+
+/// Checked source-accepting variant.
+pub fn nakagamiCheckedFrom(source: anytype, comptime T: type, m_param: T, omega: T) NakagamiError!T {
+    const dist = try Nakagami(T).init(m_param, omega);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Nakagami-m distributed values (panics on invalid parameters in debug).
+pub fn fillNakagami(rng: Rng, comptime T: type, dest: []T, m_param: T, omega: T) void {
+    fillNakagamiFrom(rng, T, dest, m_param, omega);
+}
+
+/// Source-accepting variant of `fillNakagami` (panics on invalid parameters in debug).
+pub fn fillNakagamiFrom(source: anytype, comptime T: type, dest: []T, m_param: T, omega: T) void {
+    const dist = Nakagami(T).new(m_param, omega);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillNakagamiChecked(rng: Rng, comptime T: type, dest: []T, m_param: T, omega: T) NakagamiError!void {
+    return fillNakagamiCheckedFrom(rng, T, dest, m_param, omega);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillNakagamiCheckedFrom(source: anytype, comptime T: type, dest: []T, m_param: T, omega: T) NakagamiError!void {
+    if (dest.len == 0) return;
+    const dist = try Nakagami(T).init(m_param, omega);
+    dist.fillFrom(source, dest);
+}
+
 // Standard Cauchy sampling helpers: median=0, scale=1
 fn standardCauchy(rng: Rng, comptime T: type) T {
     return standardCauchyFrom(rng, T);
@@ -45986,5 +46166,136 @@ test "besselI0 sanity checks" {
     // Large z asymptotic sanity: I₀(50) should be large and finite.
     const big_i0 = besselI0(@as(f64, 50));
     try std.testing.expect(big_i0 > 1e20 and std.math.isFinite(big_i0));
+}
+
+// Nakagami-m distribution tests.
+test "Nakagami constructor validates parameters" {
+    try std.testing.expectError(error.InvalidParameter, Nakagami(f64).init(0.4, 1)); // m < 0.5
+    try std.testing.expectError(error.InvalidParameter, Nakagami(f64).init(1, -1)); // Ω < 0
+    try std.testing.expectError(error.InvalidParameter, Nakagami(f64).init(std.math.nan(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, Nakagami(f64).init(1, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, Nakagami(f64).init(1, std.math.inf(f64)));
+    // m=1 (Rayleigh case) is valid; Ω=0 (point mass) is valid; m=0.5 boundary is valid.
+    const d0 = try Nakagami(f64).init(1, 2);
+    try std.testing.expectEqual(@as(f64, 1), d0.shapeValue());
+    try std.testing.expectEqual(@as(f64, 2), d0.spreadValue());
+    const d1 = try Nakagami(f64).init(5, 0);
+    try std.testing.expectEqual(@as(f64, 0), d1.omegaValue());
+    const d2 = try Nakagami(f64).init(0.5, 1);
+    try std.testing.expectEqual(@as(f64, 0.5), d2.mValue());
+}
+
+test "Nakagami m=1 reduces to Rayleigh moments" {
+    // When m=1 with spread Ω, Nakagami(1, Ω) = Rayleigh(σ) where σ = √(Ω/2).
+    const omega: f64 = 2; // σ = 1 → standard Rayleigh
+    const d = try Nakagami(f64).init(1, omega);
+    const expected_mean = @sqrt(@as(f64, @floatCast(std.math.pi)) / 2);
+    try std.testing.expectApproxEqAbs(expected_mean, d.expectedValue(), 1e-12);
+    const expected_var = (4 - @as(f64, @floatCast(std.math.pi))) / 2;
+    try std.testing.expectApproxEqAbs(expected_var, d.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), d.equivalentRayleighScale(), 1e-12);
+}
+
+test "Nakagami omega=0 is a point mass at 0" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead);
+    const rng = Rng.init(&engine);
+    const d = try Nakagami(f64).init(3, 0);
+    try std.testing.expectEqual(@as(f64, 0), d.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), d.varianceValue());
+    try std.testing.expectEqual(@as(f64, 0), d.modeValue());
+    for (0..8) |_| try std.testing.expectEqual(@as(f64, 0), d.sample(rng));
+}
+
+test "Nakagami samples are non-negative and finite" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1234);
+    const rng = Rng.init(&engine);
+    // Test a range of shape parameters: one-sided Gaussian (m=0.5), Rayleigh (m=1), and high-m.
+    const shapes = [_]f64{ 0.5, 0.75, 1, 2, 5, 10 };
+    for (shapes) |m_val| {
+        const dist = try Nakagami(f64).init(m_val, 4);
+        for (0..200) |_| {
+            const x = dist.sample(rng);
+            try std.testing.expect(x >= 0 and std.math.isFinite(x));
+        }
+    }
+}
+
+test "Nakagami m=0.5 is one-sided Gaussian: half-normal with matching moments" {
+    // Nakagami(m=0.5, Ω=σ²) is the half-normal distribution: X = |Z| where Z ~ N(0, σ²).
+    // Mean = σ·√(2/π), Var = σ²·(1 − 2/π). With Ω = 1, σ = 1.
+    const d = try Nakagami(f64).init(0.5, 1);
+    const expected_mean = @sqrt(2 / @as(f64, @floatCast(std.math.pi)));
+    try std.testing.expectApproxEqAbs(expected_mean, d.expectedValue(), 1e-12);
+    const expected_var = 1 - 2 / @as(f64, @floatCast(std.math.pi));
+    try std.testing.expectApproxEqAbs(expected_var, d.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), d.modeValue());
+
+    // Monte Carlo check: sample mean and variance should be close.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5678);
+    const rng = Rng.init(&engine);
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sum_sq += x * x;
+    }
+    const mc_mean = sum / @as(f64, @floatFromInt(n));
+    const mc_var = sum_sq / @as(f64, @floatFromInt(n)) - mc_mean * mc_mean;
+    try std.testing.expectApproxEqAbs(expected_mean, mc_mean, 0.04);
+    try std.testing.expectApproxEqAbs(expected_var, mc_var, 0.05);
+}
+
+test "Nakagami large m concentrates tightly near sqrt(Ω) with low variance" {
+    // For large m, Nakagami(m, Ω) ≈ N(√Ω, Ω/(4m)) approximately.
+    const omega: f64 = 4;
+    const m_val: f64 = 50;
+    const d = try Nakagami(f64).init(m_val, omega);
+    try std.testing.expectApproxEqAbs(@sqrt(omega), d.expectedValue(), 0.01);
+    try std.testing.expect(d.varianceValue() < 0.03); // Ω/(4m) = 4/200 = 0.02
+    try std.testing.expectApproxEqAbs(@sqrt(omega), d.modeValue(), 0.03);
+
+    // Monte Carlo check.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9abc);
+    const rng = Rng.init(&engine);
+    var sum: f64 = 0;
+    const n = 2000;
+    for (0..n) |_| sum += d.sample(rng);
+    const mc_mean = sum / @as(f64, @floatFromInt(n));
+    try std.testing.expectApproxEqAbs(@sqrt(omega), mc_mean, 0.05);
+}
+
+test "Nakagami free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdef0);
+    const rng = Rng.init(&engine);
+
+    // Checked variants reject bad input.
+    try std.testing.expectError(error.InvalidParameter, nakagamiChecked(rng, f64, 0.3, 1));
+
+    var buf: [100]f64 = undefined;
+    try fillNakagamiChecked(rng, f64, &buf, 2, 4);
+    for (buf) |x| try std.testing.expect(x >= 0);
+
+    const one_val = nakagami(rng, f64, 2, 4);
+    try std.testing.expect(one_val >= 0);
+}
+
+test "Nakagami f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32d);
+    const rng = Rng.init(&engine);
+    const d = try Nakagami(f32).init(1, 2); // m=1, Ω=2: standard Rayleigh, mean = √(π/2) ≈ 1.253
+    try std.testing.expectApproxEqAbs(@as(f32, @sqrt(@as(f32, @floatCast(std.math.pi)) / 2)), d.expectedValue(), 1e-4);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0 and std.math.isFinite(x));
+    }
 }
 
