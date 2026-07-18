@@ -6265,7 +6265,28 @@ S4-M1245 completes additional Rust `rand` API parity and geometry sampling cover
   both supporting scalar f32/f64 and full SIMD vector types through the standard
   distribution interface.
 
-S4-M1246 remains active for
+S4-M1246 adds the Von Mises circular distribution
+(`compare/results/s4-m1246-von-mises-circular-directional-distribution.md`):
+`VonMises(T)` and `StandardVonMises{}` implement the circular normal /
+maximum-entropy distribution on S¹ using the exact Best & Fisher (1979)
+rejection algorithm with fast squeeze and exact log-ratio tests, extending
+alea's circular/directional coverage beyond what local `rand_distr` exposes.
+A `wrapAngle` utility provides scalar circular wrapping and a Bessel-function
+ratio via continued-fraction expansion reports circular variance metadata.
+
+S4-M1247 adds the Wrapped Cauchy circular distribution
+(`compare/results/s4-m1247-wrapped-cauchy-circular-distribution.md`):
+`WrappedCauchy(T)` and `StandardWrappedCauchy{}` implement a heavy-tailed
+circular distribution using a closed-form inverse-CDF that natively supports
+both scalar f32/f64 and SIMD vector types without a rejection loop. The
+inverse-CDF is `θ = μ + 2·atan(((1−ρ)/(1+ρ))·tan(π·(U−0.5)))`, giving
+correct edge cases ρ=0 (uniform) and ρ=1 (point mass). A `wrapAngleGeneric`
+helper uses branchless per-lane `@select` corrective passes for SIMD vectors.
+Alea now provides two circular distributions (Von Mises, Wrapped Cauchy)
+versus zero in local `rand_distr`, extending directional-statistics coverage
+beyond parity.
+
+S4-M1248 remains active for
 exact/default dense SIMD, broader runtime, longer validation, further
-semantics-preserving performance work, circular/directional distributions, or newly
-discovered core workflow gaps.
+circular/spherical directional distributions (e.g., von Mises-Fisher for the
+N-sphere, wrapped normal), or newly discovered core workflow gaps.

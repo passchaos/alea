@@ -6314,6 +6314,156 @@ pub const StandardVonMises = struct {
     }
 };
 
+/// Wrapped Cauchy circular distribution on (-π, π].
+///
+/// The Wrapped Cauchy distribution is a heavy-tailed circular distribution
+/// obtained by wrapping a Cauchy distribution around the unit circle. It
+/// has a closed-form inverse CDF which makes it extremely efficient to
+/// sample (including vectorized SIMD sampling) without rejection loops.
+///
+/// Parameters:
+///   mu  - location parameter (mean / median / mode direction) in (-π, π]
+///   rho - mean resultant length (concentration), in [0, 1]
+///         rho = 0: uniform on (-π, π]
+///         rho = 1: deterministic point mass at mu
+///
+/// Inverse CDF (used for sampling):
+///   θ = μ + 2 * atan( ((1-ρ)/(1+ρ)) * tan(π*(U - 0.5)) )
+///   where U ~ Uniform(0, 1)
+///
+/// Circular variance = 1 - ρ (exact, no special function needed).
+pub fn WrappedCauchy(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        mu: T,
+        rho: T,
+
+        const Self = @This();
+
+        /// Create a new Wrapped Cauchy distribution with given mean direction
+        /// (radians) and concentration rho ∈ [0, 1].
+        pub fn new(mu: T, rho: T) Rng.Error!Self {
+            if (!std.math.isFinite(mu)) return error.InvalidParameter;
+            if (!std.math.isFinite(rho) or rho < 0 or rho > 1) return error.InvalidParameter;
+            return Self{ .mu = mu, .rho = rho };
+        }
+
+        /// Mean direction (location parameter) in radians.
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Mean resultant length (concentration parameter) in [0, 1].
+        pub fn concentrationValue(self: Self) T {
+            return self.rho;
+        }
+
+        /// Circular mean = μ.
+        pub fn expectedValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Circular variance = 1 - ρ (exact closed form).
+        pub fn varianceValue(self: Self) T {
+            return 1 - self.rho;
+        }
+
+        /// Median direction = μ (symmetric).
+        pub fn medianValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Mode direction = μ.
+        pub fn modeValue(self: Self) T {
+            return self.mu;
+        }
+
+        pub fn minValue(_: Self) T {
+            return -@as(T, @floatCast(std.math.pi));
+        }
+
+        pub fn maxValue(_: Self) T {
+            return @as(T, @floatCast(std.math.pi));
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return wrappedCauchyFrom(rng, T, self.mu, self.rho);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return wrappedCauchyFrom(source, T, self.mu, self.rho);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            fillWrappedCauchyFrom(rng, T, dest, self.mu, self.rho);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillWrappedCauchyFrom(source, T, dest, self.mu, self.rho);
+        }
+    };
+}
+
+/// Standard Wrapped Cauchy distribution (μ=0, ρ=0.5, variance = 0.5).
+/// This is the analog of StandardCauchy for the circular domain.
+pub const StandardWrappedCauchy = struct {
+    pub fn locationValue(_: StandardWrappedCauchy, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn concentrationValue(_: StandardWrappedCauchy, comptime T: type) T {
+        return splatOrScalar(T, 0.5);
+    }
+
+    pub fn expectedValue(_: StandardWrappedCauchy, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn varianceValue(_: StandardWrappedCauchy, comptime T: type) T {
+        return splatOrScalar(T, 0.5);
+    }
+
+    pub fn medianValue(_: StandardWrappedCauchy, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn modeValue(_: StandardWrappedCauchy, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn minValue(_: StandardWrappedCauchy, comptime T: type) ?T {
+        return @as(T, @floatCast(-std.math.pi));
+    }
+
+    pub fn maxValue(_: StandardWrappedCauchy, comptime T: type) ?T {
+        return @as(T, @floatCast(std.math.pi));
+    }
+
+    pub fn sample(_: StandardWrappedCauchy, rng: Rng, comptime T: type) T {
+        const mu = zeroOf(T);
+        const half = splatOrScalar(T, 0.5);
+        return wrappedCauchyFrom(rng, T, mu, half);
+    }
+
+    pub fn sampleFrom(_: StandardWrappedCauchy, source: anytype, comptime T: type) T {
+        const mu = zeroOf(T);
+        const half = splatOrScalar(T, 0.5);
+        return wrappedCauchyFrom(source, T, mu, half);
+    }
+
+    pub fn fill(_: StandardWrappedCauchy, rng: Rng, comptime T: type, dest: []T) void {
+        const mu = zeroOf(T);
+        const half = splatOrScalar(T, 0.5);
+        fillWrappedCauchyFrom(rng, T, dest, mu, half);
+    }
+
+    pub fn fillFrom(_: StandardWrappedCauchy, source: anytype, comptime T: type, dest: []T) void {
+        const mu = zeroOf(T);
+        const half = splatOrScalar(T, 0.5);
+        fillWrappedCauchyFrom(source, T, dest, mu, half);
+    }
+};
+
 // Von Mises sampling helpers using Best & Fisher's (1979) rejection algorithm.
 fn vonMises(rng: Rng, comptime T: type, mu: T, kappa: T) T {
     return vonMisesFrom(rng, T, mu, kappa);
@@ -6402,6 +6552,102 @@ inline fn besselI1Ratio(k: anytype) @TypeOf(k) {
         a = 1 / (@as(@TypeOf(k), @floatFromInt(n)) * z_inv + a);
     }
     return a;
+}
+
+// Wrapped Cauchy sampling helpers using closed-form inverse CDF.
+// Inverse CDF: θ = μ + 2 * atan( ((1-ρ)/(1+ρ)) * tan(π*(U - 0.5)) )
+//
+// This formula is component-wise valid for both scalar floats and SIMD
+// float vectors, giving vectorized sampling for free without any
+// rejection loop. Works for all ρ ∈ [0, 1]; the edge cases are handled
+// mathematically:
+//   ρ = 0: (1-0)/(1+0) = 1, so atan(tan(π*(U-0.5))) = π*(U-0.5),
+//          giving θ = μ + 2π(U-0.5) = μ + Uniform(-π, π), i.e. uniform.
+//   ρ → 1: (1-ρ)/(1+ρ) → 0, so tan(...) is scaled toward 0, giving atan→0,
+//          so θ → μ (point mass).
+fn wrappedCauchyFrom(source: anytype, comptime T: type, mu: T, rho: T) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => blk: {
+            const pi_val: T = @floatCast(std.math.pi);
+            const u = Rng.floatOpenClosedFrom(source, T);
+            break :blk wrappedCauchyInverse(u, mu, rho, pi_val);
+        },
+        .vector => blk: {
+            const Child = vectorChild(T);
+            const pi_vec: T = @splat(@as(Child, @floatCast(std.math.pi)));
+            const u_vec = Rng.vectorOpenClosedFrom(source, T);
+            // mu and rho are already vectors when T is a vector (callers pass
+            // zeroOf/splatOrScalar results which produce vectors for vector T).
+            break :blk wrappedCauchyInverse(u_vec, mu, rho, pi_vec);
+        },
+        else => unreachable,
+    };
+}
+
+fn fillWrappedCauchyFrom(source: anytype, comptime T: type, dest: []T, mu: T, rho: T) void {
+    for (dest) |*item| {
+        item.* = wrappedCauchyFrom(source, T, mu, rho);
+    }
+}
+
+// Apply the Wrapped Cauchy inverse CDF component-wise.
+// Works for both scalar T and SIMD vector T since the arithmetic
+// operations all lift element-wise over vectors.
+inline fn wrappedCauchyInverse(u: anytype, mu: @TypeOf(u), rho: @TypeOf(u), pi_val: @TypeOf(u)) @TypeOf(u) {
+    const T = @TypeOf(u);
+
+    const half: T = switch (@typeInfo(T)) {
+        .float => 0.5,
+        .vector => @splat(@as(vectorChild(T), 0.5)),
+        else => unreachable,
+    };
+    const one_val: T = switch (@typeInfo(T)) {
+        .float => 1.0,
+        .vector => @splat(@as(vectorChild(T), 1.0)),
+        else => unreachable,
+    };
+    const two_val: T = switch (@typeInfo(T)) {
+        .float => 2.0,
+        .vector => @splat(@as(vectorChild(T), 2.0)),
+        else => unreachable,
+    };
+
+    // Scale ratio: s = (1 - ρ) / (1 + ρ); bounded in (0, 1] for ρ ∈ [0,1).
+    const s = (one_val - rho) / (one_val + rho);
+    // tan(π * (U - 0.5)); U is open-closed (0,1] so argument is (-0.5π, 0.5π]
+    const tan_arg = pi_val * (u - half);
+    const w = @tan(tan_arg);
+    // θ = μ + 2 * atan(s * w); result is in (μ - π, μ + π], then wrap.
+    const raw = mu + two_val * std.math.atan(s * w);
+    // Wrap to (-π, π] if needed; for vectors we wrap each lane.
+    return wrapAngleGeneric(raw, pi_val, two_val * pi_val);
+}
+
+// Generic angle wrap that works for both scalar floats and SIMD vectors.
+// For vectors, atan output is bounded in (-π/2, π/2], so 2*atan(...) ∈ (-π, π];
+// with μ shift we can be at most ~2π from center. Two corrective passes
+// deterministically bring all lanes into (-π, π] without per-lane branching.
+// All three arguments (theta, pi_val, two_pi) must be the same type T
+// (either scalar float or SIMD float vector of the same width).
+inline fn wrapAngleGeneric(theta: anytype, pi_val: anytype, two_pi: anytype) @TypeOf(theta) {
+    const T = @TypeOf(theta);
+    if (@typeInfo(T) == .float) {
+        return wrapAngle(theta, pi_val, two_pi);
+    }
+    const Child = vectorChild(T);
+    var t = theta;
+    const zero_vec: T = @splat(@as(Child, 0));
+    // two_pi is already a vector when T is a vector (caller computed it as
+    // two_val * pi_val, both vector-typed), no additional splat needed.
+    comptime var pass = 0;
+    inline while (pass < 2) : (pass += 1) {
+        const too_big = t > pi_val;
+        const too_small = t <= -pi_val;
+        t = t - @select(Child, too_big, two_pi, zero_vec);
+        t = t + @select(Child, too_small, two_pi, zero_vec);
+    }
+    return t;
 }
 
 // Standard Cauchy sampling helpers: median=0, scale=1
@@ -42756,5 +43002,165 @@ test "besselI1Ratio has correct limits and monotonicity" {
     // Large k: approaches 1
     try std.testing.expect(besselI1Ratio(@as(f64, 50)) > 0.97);
     try std.testing.expect(besselI1Ratio(@as(f64, 100)) > 0.98);
+}
+
+test "WrappedCauchy constructor validates parameters" {
+    // Invalid rho out of [0,1] must fail
+    try std.testing.expectError(error.InvalidParameter, WrappedCauchy(f64).new(0, -0.1));
+    try std.testing.expectError(error.InvalidParameter, WrappedCauchy(f64).new(0, 1.1));
+    try std.testing.expectError(error.InvalidParameter, WrappedCauchy(f64).new(0, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, WrappedCauchy(f64).new(0, std.math.nan(f64)));
+    // Invalid mu must fail
+    try std.testing.expectError(error.InvalidParameter, WrappedCauchy(f64).new(std.math.inf(f64), 0.5));
+    try std.testing.expectError(error.InvalidParameter, WrappedCauchy(f64).new(std.math.nan(f64), 0.5));
+
+    // Valid cases: rho = 0, 0.5, 1 and edges
+    const wc0 = try WrappedCauchy(f64).new(0, 0);
+    try std.testing.expectEqual(@as(f64, 0), wc0.mu);
+    try std.testing.expectEqual(@as(f64, 0), wc0.rho);
+
+    const wc1 = try WrappedCauchy(f64).new(1.5, 1.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), wc1.mu, 1e-12);
+    try std.testing.expectEqual(@as(f64, 1.0), wc1.rho);
+}
+
+test "WrappedCauchy samples stay within (-pi, pi] bounds" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5678_1234);
+    const rng = Rng.init(&engine);
+
+    const mu: f64 = 1.0;
+    const wc = try WrappedCauchy(f64).new(mu, 0.7);
+
+    var buf: [4096]f64 = undefined;
+    wc.fill(rng, &buf);
+    for (buf) |val| {
+        try std.testing.expect(std.math.isFinite(val));
+        // After sampling, result must be in (-π, π]
+        try std.testing.expect(val > -std.math.pi);
+        try std.testing.expect(val <= std.math.pi);
+    }
+}
+
+test "WrappedCauchy rho=0 produces uniform distribution on circle" {
+    // When rho=0, the distribution reduces to Uniform(-π, π].
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead_beef);
+    const rng = Rng.init(&engine);
+
+    const wc = try WrappedCauchy(f64).new(0, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), wc.varianceValue(), 1e-12); // variance = 1
+
+    const n = 20_000;
+    var sum_sin: f64 = 0;
+    var sum_cos: f64 = 0;
+    for (0..n) |_| {
+        const x = wc.sample(rng);
+        try std.testing.expect(x > -std.math.pi);
+        try std.testing.expect(x <= std.math.pi);
+        sum_sin += @sin(x);
+        sum_cos += @cos(x);
+    }
+    const mean_sin = sum_sin / @as(f64, @floatFromInt(n));
+    const mean_cos = sum_cos / @as(f64, @floatFromInt(n));
+    // Uniform circular: mean resultant length ~ 0; allow 3 sigma.
+    const r_len = @sqrt(mean_sin * mean_sin + mean_cos * mean_cos);
+    try std.testing.expect(r_len < 0.05);
+}
+
+test "WrappedCauchy rho=1 produces point mass at mu" {
+    // When rho=1, (1-ρ)/(1+ρ) = 0 so samples collapse to mu exactly
+    // (modulo any wrap).
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xfeed_f00d);
+    const rng = Rng.init(&engine);
+
+    const mu: f64 = 0.7;
+    const wc = try WrappedCauchy(f64).new(mu, 1.0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0), wc.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(mu, wc.expectedValue(), 1e-12);
+
+    for (0..100) |_| {
+        const x = wc.sample(rng);
+        try std.testing.expectApproxEqAbs(mu, x, 1e-10);
+    }
+}
+
+test "WrappedCauchy samples concentrate around mu for high rho" {
+    // As rho approaches 1, samples should concentrate tightly around mu.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafe_babe);
+    const rng = Rng.init(&engine);
+
+    const mu: f64 = -0.8;
+    const rho: f64 = 0.95;
+    const wc = try WrappedCauchy(f64).new(mu, rho);
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - rho), wc.varianceValue(), 1e-12);
+
+    const n = 5_000;
+    var sum_sin: f64 = 0;
+    var sum_cos: f64 = 0;
+    for (0..n) |_| {
+        const x = wc.sample(rng);
+        sum_sin += @sin(x);
+        sum_cos += @cos(x);
+    }
+    const mean_sin = sum_sin / @as(f64, @floatFromInt(n));
+    const mean_cos = sum_cos / @as(f64, @floatFromInt(n));
+    const mean_angle = std.math.atan2(mean_sin, mean_cos);
+    // Mean direction close to mu
+    const diff = @abs(wrapAngle(mean_angle - mu, @as(f64, @floatCast(std.math.pi)), 2 * @as(f64, @floatCast(std.math.pi))));
+    try std.testing.expect(diff < 0.1);
+    // Mean resultant length should be ~ rho
+    const r_len = @sqrt(mean_sin * mean_sin + mean_cos * mean_cos);
+    try std.testing.expect(r_len > 0.9);
+}
+
+test "StandardWrappedCauchy unit struct has correct parameters" {
+    const dist = StandardWrappedCauchy{};
+    try std.testing.expectEqual(@as(f64, 0), dist.locationValue(f64));
+    try std.testing.expectEqual(@as(f64, 0.5), dist.concentrationValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.expectedValue(f64));
+    try std.testing.expectEqual(@as(f64, 0.5), dist.varianceValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.modeValue(f64));
+    try std.testing.expectApproxEqAbs(-std.math.pi, dist.minValue(f64).?, 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi, dist.maxValue(f64).?, 1e-12);
+
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xabc_def0);
+    const rng = Rng.init(&engine);
+    const x = dist.sample(rng, f64);
+    try std.testing.expect(x > -std.math.pi);
+    try std.testing.expect(x <= std.math.pi);
+
+    var buf: [64]f64 = undefined;
+    dist.fill(rng, f64, &buf);
+    for (buf) |val| {
+        try std.testing.expect(val > -std.math.pi);
+        try std.testing.expect(val <= std.math.pi);
+        try std.testing.expect(std.math.isFinite(val));
+    }
+}
+
+test "WrappedCauchy vector sampling produces valid circular values" {
+    // SIMD vector sampling should produce finite values in (-π, π] in every lane.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1337_c0de);
+    const rng = Rng.init(&engine);
+
+    const dist = StandardWrappedCauchy{};
+    const Vec4 = @Vector(4, f32);
+    var buf: [32]Vec4 = undefined;
+    dist.fill(rng, Vec4, &buf);
+    const pi_f32: f32 = @floatCast(std.math.pi);
+    for (buf) |vec| {
+        inline for (0..4) |lane| {
+            const v = vec[lane];
+            try std.testing.expect(std.math.isFinite(v));
+            try std.testing.expect(v > -pi_f32);
+            try std.testing.expect(v <= pi_f32);
+        }
+    }
 }
 
