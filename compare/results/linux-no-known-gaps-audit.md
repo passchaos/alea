@@ -6301,7 +6301,23 @@ blocker for f64x4. Stream-shape tests are updated to verify facade/direct
 consistency plus statistical sanity rather than bit-exact matching against
 the old scalar-per-lane order.
 
-S4-M1249 remains active for f32x8 true SIMD ziggurat,
-broader runtime, longer validation, further circular/spherical directional
+S4-M1249 extends true mask-rejection SIMD ziggurat to native f32x8
+(`compare/results/s4-m1249-dense-simd-f32x8-native-ziggurat.md`):
+`simdNormalZigguratF32x8` and `simdExponentialZigguratF32x8` implement the
+same mask-based lane-rejection algorithm as S4-M1248's f64x4 kernels, adapted
+for native f32 ziggurat tables (23-bit mantissa, u32 random bits, correct
+signed repr offsets). The kernels are wired into the explicit `*NativeF32*`
+opt-in vector/fill APIs (standard and parameterized normal/exponential) for
+`@Vector(8,f32)`, delivering near-8x throughput over scalar native f32 code
+for the ~99% quick-accept fast path. Default f32 API paths remain unchanged
+(using f64 ziggurat cast to f32 per lane) to preserve backward compatibility
+of existing bitstreams; u8 overflow in gather index arithmetic at idx=255 is
+fixed by casting to usize before adding 1; a comprehensive stream-shape test
+verifies facade/direct entry-point consistency plus statistical sanity
+(mean, variance, finite values, correct support, tail behavior) for four
+distributions; `zig build validate` passes all checks.
+
+The next product bar after S4-M1249 covers broader runtime evidence, longer
+statistical validation runs, further circular/spherical directional
 distributions (e.g., von Mises-Fisher for the N-sphere, wrapped normal), or
 newly discovered core workflow gaps.

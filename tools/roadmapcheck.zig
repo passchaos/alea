@@ -1243,6 +1243,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1246", .path = "compare/results/s4-m1246-von-mises-circular-directional-distribution.md" },
     .{ .milestone = "S4-M1247", .path = "compare/results/s4-m1247-wrapped-cauchy-circular-distribution.md" },
     .{ .milestone = "S4-M1248", .path = "compare/results/s4-m1248-dense-simd-f64x4-ziggurat.md" },
+    .{ .milestone = "S4-M1249", .path = "compare/results/s4-m1249-dense-simd-f32x8-native-ziggurat.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -2146,8 +2147,8 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1248 closure row\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, roadmap, "| S4-M1249 | Next post-S4-M1248 product bar") == null) {
-        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1249 next-gap row\n", .{});
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1249 | Extend true SIMD ziggurat to f32x8 native precision profiles") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1249 closure row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
@@ -2490,8 +2491,8 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: active audit missing S4-M1248 closure\n", .{});
         missing += 1;
     }
-    if (std.mem.indexOf(u8, audit, "remain as S4-M1249") == null) {
-        try stderr.print("roadmapcheck: active audit missing S4-M1249 next-gap line\n", .{});
+    if (std.mem.indexOf(u8, audit, "S4-M1249 extends true mask-rejection SIMD") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1249 closure\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

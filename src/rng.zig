@@ -2503,6 +2503,7 @@ pub fn vectorStandardNormal(self: Rng, comptime VectorType: type) VectorType {
 pub fn vectorStandardNormalFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (info.child == f64 and info.len == 4) return simdNormalZigguratF64x4(source);
     var out: VectorType = undefined;
     inline for (0..info.len) |lane| out[lane] = standardNormalFastFrom(source, info.child);
     return out;
@@ -2530,6 +2531,13 @@ pub fn vectorNormalFrom(source: anytype, comptime VectorType: type, mean: vector
     if (stddev == 0) return @splat(mean);
     if (info.child == f32 or info.child == f64) {
         if (mean == 0 and stddev == 1) return vectorStandardNormalFrom(source, VectorType);
+        if (info.child == f64 and info.len == 4) {
+            // f64x4: SIMD ziggurat + affine transform
+            const standard = simdNormalZigguratF64x4(source);
+            const stddev_v: V4F64 = @splat(stddev);
+            const mean_v: V4F64 = @splat(mean);
+            return @as(VectorType, standard * stddev_v + mean_v);
+        }
         return vectorNormalScalarFrom(source, VectorType, mean, stddev);
     }
     var out: VectorType = undefined;
@@ -2561,6 +2569,12 @@ pub fn vectorExponentialFrom(source: anytype, comptime VectorType: type, rate: v
     if (rate == std.math.inf(info.child)) return @splat(0);
     if (info.child == f32 or info.child == f64) {
         if (rate == 1) return vectorStandardExponentialFrom(source, VectorType);
+        if (info.child == f64 and info.len == 4) {
+            // f64x4: SIMD ziggurat + rate scaling
+            const standard = simdExponentialZigguratF64x4(source);
+            const inv_rate: V4F64 = @splat(1.0 / rate);
+            return @as(VectorType, standard * inv_rate);
+        }
         return vectorExponentialScalarFrom(source, VectorType, rate);
     }
     var out: VectorType = undefined;
@@ -2576,6 +2590,7 @@ pub fn vectorStandardExponential(self: Rng, comptime VectorType: type) VectorTyp
 pub fn vectorStandardExponentialFrom(source: anytype, comptime VectorType: type) VectorType {
     const info = vectorInfo(VectorType);
     comptime requireFloat(info.child);
+    if (info.child == f64 and info.len == 4) return simdExponentialZigguratF64x4(source);
     var out: VectorType = undefined;
     inline for (0..info.len) |lane| out[lane] = standardExponentialFastFrom(source, info.child);
     return out;
