@@ -557,7 +557,7 @@ self-forking.
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
   `VonMisesFisherError`, `WatsonError`, `RiceError`, `NakagamiError`,
-  `InverseGammaError`;
+  `InverseGammaError`, `ExGaussianError`;
   uniform/range APIs distinguish
   `EmptyRange` from `NonFinite` for non-finite floating-point endpoints or
   widths, while static weighted samplers distinguish `InvalidInput`,
@@ -689,6 +689,15 @@ self-forking.
   `InverseGamma(T).fillFrom`,
   `inverseGamma`, `inverseGammaFrom`, `inverseGammaChecked`, `inverseGammaCheckedFrom`,
   `fillInverseGamma`, `fillInverseGammaFrom`, `fillInverseGammaChecked`, `fillInverseGammaCheckedFrom`,
+  `ExGaussian(T)`, `ExGaussian(T).init`, `ExGaussian(T).new`, `ExGaussian(T).locationValue`,
+  `ExGaussian(T).muValue`, `ExGaussian(T).gaussianScaleValue`, `ExGaussian(T).sigmaValue`,
+  `ExGaussian(T).exponentialMeanValue`, `ExGaussian(T).tauValue`, `ExGaussian(T).rateValue`,
+  `ExGaussian(T).expectedValue`, `ExGaussian(T).varianceValue`, `ExGaussian(T).standardDeviationValue`,
+  `ExGaussian(T).skewnessValue`, `ExGaussian(T).modeValue`, `ExGaussian(T).minValue`,
+  `ExGaussian(T).maxValue`, `ExGaussian(T).sample`, `ExGaussian(T).sampleFrom`,
+  `ExGaussian(T).fill`, `ExGaussian(T).fillFrom`,
+  `exGaussian`, `exGaussianFrom`, `exGaussianChecked`, `exGaussianCheckedFrom`,
+  `fillExGaussian`, `fillExGaussianFrom`, `fillExGaussianChecked`, `fillExGaussianCheckedFrom`,
   `unitSphereSurface`, `unitSphereSurfaceFrom`, `fillUnitSphereSurface`,
   `fillUnitSphereSurfaceFrom`, `unitBallVolume`, `unitBallVolumeFrom`,
   `fillUnitBallVolume`, `fillUnitBallVolumeFrom`, `UnitSphereSurface`,
