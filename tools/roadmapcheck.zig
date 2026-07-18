@@ -1244,6 +1244,7 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1247", .path = "compare/results/s4-m1247-wrapped-cauchy-circular-distribution.md" },
     .{ .milestone = "S4-M1248", .path = "compare/results/s4-m1248-dense-simd-f64x4-ziggurat.md" },
     .{ .milestone = "S4-M1249", .path = "compare/results/s4-m1249-dense-simd-f32x8-native-ziggurat.md" },
+    .{ .milestone = "S4-M1250", .path = "compare/results/s4-m1250-truncated-normal-distribution.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1255,6 +1256,7 @@ const required_tokens = [_][]const u8{
     "S4-M1247",
     "S4-M1248",
     "S4-M1249",
+    "S4-M1250",
     "S4-M1245",
     "S4-M1244",
     "S4-M1243",
@@ -2149,6 +2151,10 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, roadmap, "| S4-M1249 | Extend true SIMD ziggurat to f32x8 native precision profiles") == null) {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1249 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1250 | Truncated Normal distribution") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1250 closure row\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {

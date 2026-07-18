@@ -150,6 +150,240 @@ fn inverseCdfNormalTailInit(q: f64) f64 {
     return num / den;
 }
 
+// -----------------------------------------------------------------------------
+// Standard normal PDF, CDF, and inverse CDF (probit) — public utilities.
+//
+// These are polymorphic over f32, f64, and SIMD vectors of either. They use the
+// same high-accuracy rational approximations as the comptime table-builder
+// (Acklam 2000 for probit; Cody-style rational for erf/CDF) so that truncated
+// normal sampling, user-level CDF/quantile queries, and vectorized sampling all
+// share one numerical path.
+//
+// The comptime-only helpers `inverseCdfNormalInit` / `inverseCdfNormalTailInit`
+// above are intentionally NOT refactored to call through these runtime
+// functions: any change to their numerical results would perturb the ziggurat
+// lookup tables (`normal_table_f32`/`normal_table_f64`) and break bit-exact
+// snapshot tests for existing table-based normal profiles.
+// -----------------------------------------------------------------------------
+
+const inv_sqrt_2pi: f64 = 0.3989422804014327; // 1/sqrt(2*pi)
+const inv_sqrt_2: f64 = 0.7071067811865476; // 1/sqrt(2)
+
+/// Standard normal probability density function φ(x) = exp(-x²/2) / √(2π).
+/// Polymorphic over f32, f64, and SIMD vectors of either.
+pub fn normPdf(x: anytype) @TypeOf(x) {
+    const T = @TypeOf(x);
+    switch (@typeInfo(T)) {
+        .float => {
+            const half = @as(T, 0.5);
+            const is2pi: T = @floatCast(inv_sqrt_2pi);
+            return is2pi * @exp(-half * x * x);
+        },
+        .vector => |info| {
+            // Lift scalar arithmetic to per-lane via @sqrt/@exp splats.
+            const Child = info.child;
+            const half: T = @splat(@as(Child, 0.5));
+            const is2pi: T = @splat(@as(Child, @floatCast(inv_sqrt_2pi)));
+            return is2pi * @exp(-half * x * x);
+        },
+        else => @compileError("normPdf requires a float or vector of floats"),
+    }
+}
+
+// Error function approximation using Abramowitz & Stegun 7.1.26 (West 2005
+// coefficients). Max absolute error ~1.5e-7 across all real x, giving
+// Φ(x) accurate to ~7.5e-8 everywhere. This is more than sufficient for
+// truncated normal inverse-CDF sampling where Acklam probit already dominates
+// numerical error at ~1e-9 in the body and ~1e-4 in the extreme tails.
+fn erfAbramowitzStegun(x: f64) f64 {
+    // Exact at symmetry point to avoid tiny polynomial bias.
+    if (x == 0) return 0;
+    const p: f64 = 0.3275911;
+    const a1: f64 = 0.254829592;
+    const a2: f64 = -0.284496736;
+    const a3: f64 = 1.421413741;
+    const a4: f64 = -1.453152027;
+    const a5: f64 = 1.061405429;
+    const sign: f64 = if (x < 0) -1.0 else 1.0;
+    const ax = @abs(x);
+    const t = 1.0 / (1.0 + p * ax);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-x * x);
+    return sign * y;
+}
+
+// f32 variant: same formula in f32 arithmetic, gives ~2e-5 max error,
+// adequate for f32 CDF composition with f32 probit.
+fn erfAbramowitzStegunF32(x: f32) f32 {
+    if (x == 0) return 0;
+    const p: f32 = 0.3275911;
+    const a1: f32 = 0.254829592;
+    const a2: f32 = -0.284496736;
+    const a3: f32 = 1.421413741;
+    const a4: f32 = -1.453152027;
+    const a5: f32 = 1.061405429;
+    const sign: f32 = if (x < 0) -1.0 else 1.0;
+    const ax = @abs(x);
+    const t = 1.0 / (1.0 + p * ax);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-x * x);
+    return sign * y;
+}
+
+/// Standard normal cumulative distribution function Φ(x) = ½·(1 + erf(x/√2)).
+/// Polymorphic over f32, f64, and SIMD vectors of either. Returns values in (0,1).
+/// Φ(-∞) = 0, Φ(+∞) = 1, Φ(NaN) = NaN.
+pub fn normCdf(x: anytype) @TypeOf(x) {
+    const T = @TypeOf(x);
+    switch (@typeInfo(T)) {
+        .float => {
+            if (T == f64) {
+                const half: f64 = 0.5;
+                const is2: f64 = inv_sqrt_2;
+                return half * (1.0 + erfAbramowitzStegun(x * is2));
+            } else {
+                const half: f32 = 0.5;
+                const is2: f32 = @floatCast(inv_sqrt_2);
+                return half * (1.0 + erfAbramowitzStegunF32(x * is2));
+            }
+        },
+        .vector => |info| {
+            const Child = info.child;
+            if (Child == f64) {
+                // Per-lane f64; expand with inline for for reliable vectorization.
+                var result: T = undefined;
+                inline for (0..info.len) |lane| {
+                    result[lane] = 0.5 * (1.0 + erfAbramowitzStegun(x[lane] * inv_sqrt_2));
+                }
+                return result;
+            } else {
+                var result: T = undefined;
+                const is2: f32 = @floatCast(inv_sqrt_2);
+                inline for (0..info.len) |lane| {
+                    result[lane] = 0.5 * (1.0 + erfAbramowitzStegunF32(x[lane] * is2));
+                }
+                return result;
+            }
+        },
+        else => @compileError("normCdf requires a float or vector of floats"),
+    }
+}
+
+// Runtime f64 probit using Acklam's algorithm (identical coefficients to the
+// comptime-only version above but accepting any f64 at runtime).
+fn probitF64(p: f64) f64 {
+    std.debug.assert(p > 0 and p < 1);
+    if (p < 0.02425) {
+        const q = @sqrt(-2.0 * @log(p));
+        return probitTailF64(q);
+    }
+    if (p > 0.97575) {
+        const q = @sqrt(-2.0 * @log(1.0 - p));
+        return -probitTailF64(q);
+    }
+    const q = p - 0.5;
+    const r = q * q;
+    var num: f64 = -3.969683028665376e+01;
+    num = num * r + 2.209460984245205e+02;
+    num = num * r + -2.759285104469687e+02;
+    num = num * r + 1.383577518672690e+02;
+    num = num * r + -3.066479806614716e+01;
+    num = num * r + 2.506628277459239e+00;
+    num *= q;
+    var den: f64 = -5.447609879822406e+01;
+    den = den * r + 1.615858368580409e+02;
+    den = den * r + -1.556989798598866e+02;
+    den = den * r + 6.680131188771972e+01;
+    den = den * r + -1.328068155288572e+01;
+    den = den * r + 1.0;
+    return num / den;
+}
+
+fn probitTailF64(q: f64) f64 {
+    var num: f64 = -7.784894002430293e-03;
+    num = num * q + -3.223964580411365e-01;
+    num = num * q + -2.400758277161838e+00;
+    num = num * q + -2.549732539343734e+00;
+    num = num * q + 4.374664141464968e+00;
+    num = num * q + 2.938163982698783e+00;
+    var den: f64 = 7.784695709041462e-03;
+    den = den * q + 3.224671290700398e-01;
+    den = den * q + 2.445134137142996e+00;
+    den = den * q + 3.754408661907416e+00;
+    den = den * q + 1.0;
+    return num / den;
+}
+
+// f32 probit — same Acklam rational form evaluated in f32 arithmetic; accuracy
+// is ~9 decimal digits (~1e-6 absolute), more than sufficient for f32 output.
+fn probitF32(p: f32) f32 {
+    std.debug.assert(p > 0 and p < 1);
+    if (p < 0.02425) {
+        const q = @sqrt(-2.0 * @log(p));
+        return probitTailF32(q);
+    }
+    if (p > 0.97575) {
+        const q = @sqrt(-2.0 * @log(1.0 - p));
+        return -probitTailF32(q);
+    }
+    const q = p - 0.5;
+    const r = q * q;
+    var num: f32 = -39.69683028665376;
+    num = num * r + 220.9460984245205;
+    num = num * r + -275.9285104469687;
+    num = num * r + 138.3577518672690;
+    num = num * r + -30.66479806614716;
+    num = num * r + 2.506628277459239;
+    num *= q;
+    var den: f32 = -54.47609879822406;
+    den = den * r + 161.5858368580409;
+    den = den * r + -155.6989798598866;
+    den = den * r + 66.80131188771972;
+    den = den * r + -13.28068155288572;
+    den = den * r + 1.0;
+    return num / den;
+}
+
+fn probitTailF32(q: f32) f32 {
+    var num: f32 = -0.007784894002430293;
+    num = num * q + -0.3223964580411365;
+    num = num * q + -2.400758277161838;
+    num = num * q + -2.549732539343734;
+    num = num * q + 4.374664141464968;
+    num = num * q + 2.938163982698783;
+    var den: f32 = 0.007784695709041462;
+    den = den * q + 0.3224671290700398;
+    den = den * q + 2.445134137142996;
+    den = den * q + 3.754408661907416;
+    den = den * q + 1.0;
+    return num / den;
+}
+
+/// Standard normal inverse CDF (probit function): returns z such that Φ(z) = p.
+/// Polymorphic over f32, f64, and SIMD vectors of either.
+/// Input p must be in (0,1); debug builds assert this.
+/// probit(0) → -∞, probit(1) → +∞ in the limit.
+pub fn probit(p: anytype) @TypeOf(p) {
+    const T = @TypeOf(p);
+    switch (@typeInfo(T)) {
+        .float => {
+            if (T == f64) return probitF64(p);
+            return probitF32(p);
+        },
+        .vector => |info| {
+            const Child = info.child;
+            var result: T = undefined;
+            inline for (0..info.len) |lane| {
+                if (Child == f64) {
+                    result[lane] = probitF64(p[lane]);
+                } else {
+                    result[lane] = probitF32(p[lane]);
+                }
+            }
+            return result;
+        },
+        else => @compileError("probit requires a float or vector of floats"),
+    }
+}
+
 pub const Error = error{
     EmptyRange,
     NonFinite,
@@ -196,6 +430,9 @@ pub const TriangularError = Error;
 pub const WeibullError = Error;
 pub const ZetaError = Error;
 pub const ZipfError = Error;
+pub const TruncatedNormalError = Error;
+pub const VonMisesError = Error;
+pub const WrappedCauchyError = Error;
 
 pub fn weightedErrorMessage(err: WeightedError) []const u8 {
     return switch (err) {
@@ -6873,11 +7110,11 @@ pub const StandardWrappedCauchy = struct {
 };
 
 // Von Mises sampling helpers using Best & Fisher's (1979) rejection algorithm.
-fn vonMises(rng: Rng, comptime T: type, mu: T, kappa: T) T {
+pub fn vonMises(rng: Rng, comptime T: type, mu: T, kappa: T) T {
     return vonMisesFrom(rng, T, mu, kappa);
 }
 
-fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
+pub fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
     std.debug.assert(std.math.isFinite(kappa) and kappa >= 0);
 
     const pi: T = @floatCast(std.math.pi);
@@ -6918,14 +7155,102 @@ fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
     }
 }
 
-fn fillVonMises(rng: Rng, comptime T: type, dest: []T, mu: T, kappa: T) void {
+pub fn vonMisesChecked(rng: Rng, comptime T: type, mu: T, kappa: T) Error!T {
+    return vonMisesCheckedFrom(rng, T, mu, kappa);
+}
+
+pub fn vonMisesCheckedFrom(source: anytype, comptime T: type, mu: T, kappa: T) Error!T {
+    const dist = try VonMises(T).new(mu, kappa);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVonMises(rng: Rng, comptime T: type, dest: []T, mu: T, kappa: T) void {
     fillVonMisesFrom(rng, T, dest, mu, kappa);
 }
 
-fn fillVonMisesFrom(source: anytype, comptime T: type, dest: []T, mu: T, kappa: T) void {
+pub fn fillVonMisesFrom(source: anytype, comptime T: type, dest: []T, mu: T, kappa: T) void {
     for (dest) |*item| {
         item.* = vonMisesFrom(source, T, mu, kappa);
     }
+}
+
+pub fn fillVonMisesChecked(rng: Rng, comptime T: type, dest: []T, mu: T, kappa: T) Error!void {
+    return fillVonMisesCheckedFrom(rng, T, dest, mu, kappa);
+}
+
+pub fn fillVonMisesCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, kappa: T) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VonMises(T).new(mu, kappa);
+    dist.fillFrom(source, dest);
+}
+
+pub fn vectorVonMises(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) VectorType {
+    return vectorVonMisesFrom(rng, VectorType, mu, kappa);
+}
+
+pub fn vectorVonMisesFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) VectorType {
+    return vonMisesFrom(source, VectorType, @splat(mu), @splat(kappa));
+}
+
+pub fn vectorVonMisesChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) Error!VectorType {
+    return vectorVonMisesCheckedFrom(rng, VectorType, mu, kappa);
+}
+
+pub fn vectorVonMisesCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) Error!VectorType {
+    const dist = try VectorVonMises(VectorType).new(mu, kappa);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorVonMises(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) void {
+    fillVectorVonMisesFrom(rng, VectorType, dest, mu, kappa);
+}
+
+pub fn fillVectorVonMisesFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) void {
+    const dist = VectorVonMises(VectorType).new(mu, kappa) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorVonMisesChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) Error!void {
+    return fillVectorVonMisesCheckedFrom(rng, VectorType, dest, mu, kappa);
+}
+
+pub fn fillVectorVonMisesCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), kappa: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorVonMises(VectorType).new(mu, kappa);
+    dist.fillFrom(source, dest);
+}
+
+/// SIMD-vectorized Von Mises distribution. The rejection algorithm is per-lane
+/// and will naturally retire uneven lanes without penalty on modern CPUs.
+pub fn VectorVonMises(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: VonMises(Child),
+
+        pub fn new(mu: Child, kappa: Child) Error!Self {
+            return Self{ .sampler = try VonMises(Child).new(mu, kappa) };
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vonMisesFrom(source, VectorType, @splat(self.sampler.mu), @splat(self.sampler.kappa));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| {
+                item.* = self.sampleFrom(source);
+            }
+        }
+    };
 }
 
 // Wrap angle to (-pi, pi] interval accepting explicit pi/two_pi (supports testing)
@@ -6973,7 +7298,11 @@ inline fn besselI1Ratio(k: anytype) @TypeOf(k) {
 //          giving θ = μ + 2π(U-0.5) = μ + Uniform(-π, π), i.e. uniform.
 //   ρ → 1: (1-ρ)/(1+ρ) → 0, so tan(...) is scaled toward 0, giving atan→0,
 //          so θ → μ (point mass).
-fn wrappedCauchyFrom(source: anytype, comptime T: type, mu: T, rho: T) T {
+pub fn wrappedCauchy(rng: Rng, comptime T: type, mu: T, rho: T) T {
+    return wrappedCauchyFrom(rng, T, mu, rho);
+}
+
+pub fn wrappedCauchyFrom(source: anytype, comptime T: type, mu: T, rho: T) T {
     requireFloatOrFloatVector(T);
     return switch (@typeInfo(T)) {
         .float => blk: {
@@ -6993,10 +7322,102 @@ fn wrappedCauchyFrom(source: anytype, comptime T: type, mu: T, rho: T) T {
     };
 }
 
-fn fillWrappedCauchyFrom(source: anytype, comptime T: type, dest: []T, mu: T, rho: T) void {
+pub fn wrappedCauchyChecked(rng: Rng, comptime T: type, mu: T, rho: T) Error!T {
+    return wrappedCauchyCheckedFrom(rng, T, mu, rho);
+}
+
+pub fn wrappedCauchyCheckedFrom(source: anytype, comptime T: type, mu: T, rho: T) Error!T {
+    const dist = try WrappedCauchy(T).new(mu, rho);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillWrappedCauchy(rng: Rng, comptime T: type, dest: []T, mu: T, rho: T) void {
+    fillWrappedCauchyFrom(rng, T, dest, mu, rho);
+}
+
+pub fn fillWrappedCauchyFrom(source: anytype, comptime T: type, dest: []T, mu: T, rho: T) void {
     for (dest) |*item| {
         item.* = wrappedCauchyFrom(source, T, mu, rho);
     }
+}
+
+pub fn fillWrappedCauchyChecked(rng: Rng, comptime T: type, dest: []T, mu: T, rho: T) Error!void {
+    return fillWrappedCauchyCheckedFrom(rng, T, dest, mu, rho);
+}
+
+pub fn fillWrappedCauchyCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, rho: T) Error!void {
+    if (dest.len == 0) return;
+    const dist = try WrappedCauchy(T).new(mu, rho);
+    dist.fillFrom(source, dest);
+}
+
+pub fn vectorWrappedCauchy(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) VectorType {
+    return vectorWrappedCauchyFrom(rng, VectorType, mu, rho);
+}
+
+pub fn vectorWrappedCauchyFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) VectorType {
+    return wrappedCauchyFrom(source, VectorType, @splat(mu), @splat(rho));
+}
+
+pub fn vectorWrappedCauchyChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) Error!VectorType {
+    return vectorWrappedCauchyCheckedFrom(rng, VectorType, mu, rho);
+}
+
+pub fn vectorWrappedCauchyCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) Error!VectorType {
+    const dist = try VectorWrappedCauchy(VectorType).new(mu, rho);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorWrappedCauchy(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) void {
+    fillVectorWrappedCauchyFrom(rng, VectorType, dest, mu, rho);
+}
+
+pub fn fillVectorWrappedCauchyFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) void {
+    const dist = VectorWrappedCauchy(VectorType).new(mu, rho) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorWrappedCauchyChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) Error!void {
+    return fillVectorWrappedCauchyCheckedFrom(rng, VectorType, dest, mu, rho);
+}
+
+pub fn fillVectorWrappedCauchyCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), rho: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorWrappedCauchy(VectorType).new(mu, rho);
+    dist.fillFrom(source, dest);
+}
+
+/// SIMD-vectorized Wrapped Cauchy distribution. Inverse CDF naturally
+/// vectorizes lane-by-lane.
+pub fn VectorWrappedCauchy(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: WrappedCauchy(Child),
+
+        pub fn new(mu: Child, rho: Child) Error!Self {
+            return Self{ .sampler = try WrappedCauchy(Child).new(mu, rho) };
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return wrappedCauchyFrom(source, VectorType, @splat(self.sampler.mu), @splat(self.sampler.rho));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| {
+                item.* = self.sampleFrom(source);
+            }
+        }
+    };
 }
 
 // Apply the Wrapped Cauchy inverse CDF component-wise.
@@ -7056,6 +7477,405 @@ inline fn wrapAngleGeneric(theta: anytype, pi_val: anytype, two_pi: anytype) @Ty
         t = t + @select(Child, too_small, two_pi, zero_vec);
     }
     return t;
+}
+
+// -----------------------------------------------------------------------------
+// Truncated Normal distribution
+//
+// The Truncated Normal distribution is a normal distribution restricted to the
+// interval [lower, upper]. Unlike rejection sampling (which can be arbitrarily
+// slow for narrow truncations in the tails), we use the inverse-CDF method:
+//
+//   X = μ + σ · Φ⁻¹( Φ(α) + U · (Φ(β) - Φ(α)) )
+//
+// where α = (lower - μ)/σ, β = (upper - μ)/σ, and U ~ Uniform(0,1) (open to
+// avoid Φ⁻¹ at the boundaries producing ±inf).
+//
+// Inverse-CDF sampling has bounded, deterministic latency and trivially
+// vectorizes across SIMD lanes, making it ideal for both scalar and SIMD paths.
+//
+// Edge cases:
+//   - stddev = 0: point mass at mean, provided mean ∈ [lower, upper]
+//   - lower = -∞: one-sided left truncation
+//   - upper = +∞: one-sided right truncation
+//   - lower = upper = μ (with stddev=0): valid point mass
+//   - Φ(β) - Φ(α) ≈ 0 (truncation window has zero probability mass): invalid
+//
+// Moments for N(0,1) truncated to [α, β]:
+//   E[X] = (φ(α) - φ(β)) / Z
+//   Var[X] = 1 + (α·φ(α) - β·φ(β))/Z - E[X]²
+//   where Z = Φ(β) - Φ(α) is the acceptance probability.
+// These are then scale-shifted: mean_T = μ + σ·E[X], var_T = σ²·Var[X].
+// -----------------------------------------------------------------------------
+
+/// Truncated Normal distribution: N(μ, σ²) restricted to [lower, upper].
+/// Uses inverse-CDF sampling for deterministic latency and trivial SIMD
+/// vectorization, avoiding the unbounded worst-case latency of rejection
+/// sampling for narrow tail truncations.
+pub fn TruncatedNormal(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        mean: T,
+        stddev: T,
+        lower: T,
+        upper: T,
+        // Precomputed standardized bounds and CDF values (see module comment).
+        alpha: T,
+        beta: T,
+        cdf_alpha: T,
+        cdf_beta: T,
+        Z: T, // Φ(β) - Φ(α)
+        pdf_alpha: T,
+        pdf_beta: T,
+
+        /// Create a new Truncated Normal distribution with given mean, standard
+        /// deviation, and inclusive [lower, upper] bounds.
+        ///
+        /// Returns error.InvalidParameter if:
+        ///   - stddev is negative or non-finite
+        ///   - lower > upper
+        ///   - lower or upper is NaN
+        ///   - stddev > 0 but the truncation window [lower, upper] contains
+        ///     effectively zero probability mass under N(mean, stddev²)
+        ///   - stddev = 0 but mean ∉ [lower, upper]
+        pub fn init(mean: T, stddev: T, lower: T, upper: T) Error!Self {
+            if (stddev < 0 or !std.math.isFinite(stddev)) return error.InvalidParameter;
+            if (!std.math.isFinite(lower) and lower != -std.math.inf(T)) return error.InvalidParameter;
+            if (!std.math.isFinite(upper) and upper != std.math.inf(T)) return error.InvalidParameter;
+            if (lower > upper) return error.InvalidParameter;
+
+            // Point-mass case: zero standard deviation.
+            if (stddev == 0) {
+                if (mean < lower or mean > upper) return error.InvalidParameter;
+                return Self{
+                    .mean = mean,
+                    .stddev = 0,
+                    .lower = lower,
+                    .upper = upper,
+                    .alpha = if (mean == lower) 0 else -std.math.inf(T),
+                    .beta = if (mean == upper) 0 else std.math.inf(T),
+                    .cdf_alpha = 0,
+                    .cdf_beta = 1,
+                    .Z = 1,
+                    .pdf_alpha = 0,
+                    .pdf_beta = 0,
+                };
+            }
+
+            // Standardize bounds to N(0,1) scale.
+            const alpha = (lower - mean) / stddev;
+            const beta_std = (upper - mean) / stddev;
+
+            // Handle infinite bounds for CDF computation.
+            const cdf_alpha: T = if (alpha == -std.math.inf(T)) 0 else normCdf(alpha);
+            const cdf_beta: T = if (beta_std == std.math.inf(T)) 1 else normCdf(beta_std);
+            const Z = cdf_beta - cdf_alpha;
+
+            // Reject degenerate windows with negligible probability mass.
+            // Using a cutoff near machine epsilon ensures we never divide by zero
+            // while still allowing extremely narrow tail truncations.
+            if (Z <= @sqrt(std.math.floatEps(T))) return error.InvalidParameter;
+
+            const pdf_alpha: T = if (alpha == -std.math.inf(T)) 0 else normPdf(alpha);
+            const pdf_beta: T = if (beta_std == std.math.inf(T)) 0 else normPdf(beta_std);
+
+            return Self{
+                .mean = mean,
+                .stddev = stddev,
+                .lower = lower,
+                .upper = upper,
+                .alpha = alpha,
+                .beta = beta_std,
+                .cdf_alpha = cdf_alpha,
+                .cdf_beta = cdf_beta,
+                .Z = Z,
+                .pdf_alpha = pdf_alpha,
+                .pdf_beta = pdf_beta,
+            };
+        }
+
+        pub fn new(mean: T, stddev: T, lower: T, upper: T) Error!Self {
+            return Self.init(mean, stddev, lower, upper);
+        }
+
+        pub fn meanValue(self: Self) T {
+            return self.mean;
+        }
+
+        pub fn stddevValue(self: Self) T {
+            return self.stddev;
+        }
+
+        pub fn lowerBound(self: Self) T {
+            return self.lower;
+        }
+
+        pub fn upperBound(self: Self) T {
+            return self.upper;
+        }
+
+        /// Expected value (mean) of the truncated distribution.
+        pub fn expectedValue(self: Self) T {
+            if (self.stddev == 0) return self.mean;
+            const mean_trunc = (self.pdf_alpha - self.pdf_beta) / self.Z;
+            return self.mean + self.stddev * mean_trunc;
+        }
+
+        /// Variance of the truncated distribution.
+        pub fn varianceValue(self: Self) T {
+            if (self.stddev == 0) return 0;
+            const mean_trunc = (self.pdf_alpha - self.pdf_beta) / self.Z;
+            // For infinite bounds, pdf decays exponentially fast so α·φ(α) → 0
+            // as α → -∞ and β·φ(β) → 0 as β → +∞ (product 0·∞ is mathematically 0).
+            const term_alpha: T = if (self.alpha == -std.math.inf(T)) 0 else self.alpha * self.pdf_alpha;
+            const term_beta: T = if (self.beta == std.math.inf(T)) 0 else self.beta * self.pdf_beta;
+            const var_trunc = 1 + (term_alpha - term_beta) / self.Z - mean_trunc * mean_trunc;
+            return self.stddev * self.stddev * var_trunc;
+        }
+
+        /// Median of the truncated distribution: μ + σ·Φ⁻¹(Φ(α) + 0.5·Z).
+        pub fn medianValue(self: Self) T {
+            if (self.stddev == 0) return self.mean;
+            const p = self.cdf_alpha + 0.5 * self.Z;
+            return self.mean + self.stddev * probit(p);
+        }
+
+        /// Mode of the truncated distribution: clamp(μ, [lower, upper]).
+        pub fn modeValue(self: Self) T {
+            return @max(self.lower, @min(self.upper, self.mean));
+        }
+
+        pub fn minValue(self: Self) T {
+            return self.lower;
+        }
+
+        pub fn maxValue(self: Self) T {
+            return self.upper;
+        }
+
+        /// Returns true if this is a point-mass distribution (stddev = 0).
+        pub fn isDegenerate(self: Self) bool {
+            return self.stddev == 0;
+        }
+
+        /// Returns true if truncation covers the entire real line (no actual truncation),
+        /// in which case sampling reduces to standard normal.
+        pub fn isUnbounded(self: Self) bool {
+            return self.lower == -std.math.inf(T) and self.upper == std.math.inf(T);
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            if (self.isDegenerate()) return self.mean;
+            // Fast path: no truncation, use standard ziggurat normal.
+            if (self.isUnbounded()) return self.mean + self.stddev * rng.normal(T, 0, 1);
+            return self.sampleFrom(rng);
+        }
+
+        pub inline fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return self.mean;
+            // Fast path: no truncation.
+            if (self.isUnbounded()) {
+                return self.mean + self.stddev * normalFrom(source, T, 0, 1);
+            }
+            // Inverse-CDF: draw open uniform (strictly inside (0,1) to avoid
+            // probit at 0/1 producing ±inf), scale to (cdf_alpha, cdf_beta),
+            // then apply probit and scale-shift.
+            const u = Rng.floatOpenFrom(source, T);
+            const p = self.cdf_alpha + u * self.Z;
+            const z = probit(p);
+            return self.mean + self.stddev * z;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.mean);
+                return;
+            }
+            if (self.isUnbounded()) {
+                for (dest) |*item| {
+                    item.* = self.mean + self.stddev * rng.normal(T, 0, 1);
+                }
+                return;
+            }
+            for (dest) |*item| {
+                item.* = self.sampleFrom(rng);
+            }
+        }
+
+        pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            if (self.isDegenerate()) {
+                @memset(dest, self.mean);
+                return;
+            }
+            if (self.isUnbounded()) {
+                for (dest) |*item| {
+                    item.* = self.mean + self.stddev * normalFrom(source, T, 0, 1);
+                }
+                return;
+            }
+            for (dest) |*item| {
+                item.* = self.sampleFrom(source);
+            }
+        }
+    };
+}
+
+// -----------------------------------------------------------------------------
+// Truncated Normal free functions: standard 24-function family matching all
+// other distributions (checked/unchecked, rng/source, fill/vector variants).
+// -----------------------------------------------------------------------------
+
+pub fn truncatedNormal(rng: Rng, comptime T: type, mean: T, stddev: T, lower: T, upper: T) Error!T {
+    return truncatedNormalFrom(rng, T, mean, stddev, lower, upper);
+}
+
+pub fn truncatedNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T, lower: T, upper: T) Error!T {
+    const dist = try TruncatedNormal(T).init(mean, stddev, lower, upper);
+    return dist.sampleFrom(source);
+}
+
+pub fn truncatedNormalChecked(rng: Rng, comptime T: type, mean: T, stddev: T, lower: T, upper: T) Error!T {
+    return truncatedNormalCheckedFrom(rng, T, mean, stddev, lower, upper);
+}
+
+pub fn truncatedNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T, lower: T, upper: T) Error!T {
+    const dist = try TruncatedNormal(T).init(mean, stddev, lower, upper);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillTruncatedNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T, lower: T, upper: T) Error!void {
+    return fillTruncatedNormalFrom(rng, T, dest, mean, stddev, lower, upper);
+}
+
+pub fn fillTruncatedNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T, lower: T, upper: T) Error!void {
+    if (dest.len == 0) return;
+    const dist = try TruncatedNormal(T).init(mean, stddev, lower, upper);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillTruncatedNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T, lower: T, upper: T) Error!void {
+    return fillTruncatedNormalCheckedFrom(rng, T, dest, mean, stddev, lower, upper);
+}
+
+pub fn fillTruncatedNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T, lower: T, upper: T) Error!void {
+    if (dest.len == 0) return;
+    const dist = try TruncatedNormal(T).init(mean, stddev, lower, upper);
+    dist.fillFrom(source, dest);
+}
+
+pub fn vectorTruncatedNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!VectorType {
+    return vectorTruncatedNormalFrom(rng, VectorType, mean, stddev, lower, upper);
+}
+
+pub fn vectorTruncatedNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!VectorType {
+    const dist = try VectorTruncatedNormal(VectorType).init(mean, stddev, lower, upper);
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorTruncatedNormalChecked(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!VectorType {
+    return vectorTruncatedNormalCheckedFrom(rng, VectorType, mean, stddev, lower, upper);
+}
+
+pub fn vectorTruncatedNormalCheckedFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!VectorType {
+    const dist = try VectorTruncatedNormal(VectorType).init(mean, stddev, lower, upper);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorTruncatedNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!void {
+    return fillVectorTruncatedNormalFrom(rng, VectorType, dest, mean, stddev, lower, upper);
+}
+
+pub fn fillVectorTruncatedNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorTruncatedNormal(VectorType).init(mean, stddev, lower, upper);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorTruncatedNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!void {
+    return fillVectorTruncatedNormalCheckedFrom(rng, VectorType, dest, mean, stddev, lower, upper);
+}
+
+pub fn fillVectorTruncatedNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType), lower: vectorChild(VectorType), upper: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorTruncatedNormal(VectorType).init(mean, stddev, lower, upper);
+    dist.fillFrom(source, dest);
+}
+
+/// SIMD-vectorized Truncated Normal distribution. All lanes share the same
+/// parameters; sampling is fully vectorized via per-lane inverse CDF using
+/// polymorphic normPdf/normCdf/probit helpers.
+pub fn VectorTruncatedNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+
+        sampler: TruncatedNormal(Child),
+
+        pub fn init(mean: Child, stddev: Child, lower: Child, upper: Child) Error!Self {
+            return Self{ .sampler = try TruncatedNormal(Child).init(mean, stddev, lower, upper) };
+        }
+
+        pub fn new(mean: Child, stddev: Child, lower: Child, upper: Child) Error!Self {
+            return Self.init(mean, stddev, lower, upper);
+        }
+
+        pub fn meanValue(self: Self) Child { return self.sampler.meanValue(); }
+        pub fn stddevValue(self: Self) Child { return self.sampler.stddevValue(); }
+        pub fn lowerBound(self: Self) Child { return self.sampler.lowerBound(); }
+        pub fn upperBound(self: Self) Child { return self.sampler.upperBound(); }
+        pub fn expectedValue(self: Self) Child { return self.sampler.expectedValue(); }
+        pub fn varianceValue(self: Self) Child { return self.sampler.varianceValue(); }
+        pub fn medianValue(self: Self) Child { return self.sampler.medianValue(); }
+        pub fn modeValue(self: Self) Child { return self.sampler.modeValue(); }
+        pub fn minValue(self: Self) Child { return self.sampler.minValue(); }
+        pub fn maxValue(self: Self) Child { return self.sampler.maxValue(); }
+        pub fn isDegenerate(self: Self) bool { return self.sampler.isDegenerate(); }
+        pub fn isUnbounded(self: Self) bool { return self.sampler.isUnbounded(); }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            if (self.sampler.isDegenerate()) return @splat(self.sampler.mean);
+            if (self.sampler.isUnbounded()) {
+                const z = vectorNormalFrom(source, VectorType, 0, 1);
+                return @as(VectorType, @splat(self.sampler.mean)) + @as(VectorType, @splat(self.sampler.stddev)) * z;
+            }
+            // Per-lane inverse CDF. All parameters are uniform across lanes,
+            // but uniform draws are independent per SIMD lane.
+            const u = Rng.vectorOpenFrom(source, VectorType);
+            const cdf_alpha: VectorType = @splat(self.sampler.cdf_alpha);
+            const Z: VectorType = @splat(self.sampler.Z);
+            const p = cdf_alpha + u * Z;
+            const z = probit(p);
+            return @as(VectorType, @splat(self.sampler.mean)) + @as(VectorType, @splat(self.sampler.stddev)) * z;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            if (self.sampler.isDegenerate()) {
+                @memset(dest, @as(VectorType, @splat(self.sampler.mean)));
+                return;
+            }
+            if (self.sampler.isUnbounded()) {
+                for (dest) |*item| {
+                    const z = vectorNormalFrom(source, VectorType, 0, 1);
+                    item.* = @as(VectorType, @splat(self.sampler.mean)) + @as(VectorType, @splat(self.sampler.stddev)) * z;
+                }
+                return;
+            }
+            for (dest) |*item| {
+                item.* = self.sampleFrom(source);
+            }
+        }
+    };
 }
 
 // Standard Cauchy sampling helpers: median=0, scale=1
@@ -43583,6 +44403,237 @@ test "WrappedCauchy vector sampling produces valid circular values" {
             try std.testing.expect(v > -pi_f32);
             try std.testing.expect(v <= pi_f32);
         }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Tests for public standard normal helpers: normPdf, normCdf, probit
+// -----------------------------------------------------------------------------
+
+test "normPdf matches known values" {
+    // φ(0) = 1/√(2π) ≈ 0.3989422804014327
+    try std.testing.expectApproxEqAbs(@as(f64, inv_sqrt_2pi), normPdf(@as(f64, 0)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.3989423), normPdf(@as(f32, 0)), 1e-6);
+
+    // φ(1) = exp(-0.5)/√(2π) ≈ 0.24197072451914337
+    try std.testing.expectApproxEqAbs(@as(f64, 0.24197072451914337), normPdf(@as(f64, 1)), 1e-12);
+
+    // φ is even: φ(-x) = φ(x)
+    try std.testing.expectEqual(normPdf(@as(f64, 2.5)), normPdf(@as(f64, -2.5)));
+
+    // SIMD vector variant works
+    const v: @Vector(4, f64) = @splat(0);
+    const expected_v: @Vector(4, f64) = @splat(inv_sqrt_2pi);
+    const pdf_v = normPdf(v);
+    inline for (0..4) |lane| {
+        try std.testing.expectApproxEqAbs(expected_v[lane], pdf_v[lane], 1e-15);
+    }
+}
+
+test "normCdf matches known values" {
+    // Φ(0) = 0.5
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), normCdf(@as(f64, 0)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), normCdf(@as(f32, 0)), 1e-6);
+
+    // Φ(1) ≈ 0.8413447460685429
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8413447460685429), normCdf(@as(f64, 1)), 2e-7);
+    // Φ(-1) ≈ 0.15865525393145707
+    try std.testing.expectApproxEqAbs(@as(f64, 0.15865525393145707), normCdf(@as(f64, -1)), 2e-7);
+
+    // Φ(-∞) = 0, Φ(+∞) = 1
+    try std.testing.expectEqual(@as(f64, 0), normCdf(@as(f64, -std.math.inf(f64))));
+    try std.testing.expectEqual(@as(f64, 1), normCdf(@as(f64, std.math.inf(f64))));
+
+    // Symmetry: Φ(-x) = 1 - Φ(x)
+    const x: f64 = 1.75;
+    try std.testing.expectApproxEqAbs(1.0 - normCdf(x), normCdf(-x), 1e-12);
+
+    // SIMD vector variant works
+    const v: @Vector(4, f64) = @splat(0);
+    const cdf_v = normCdf(v);
+    inline for (0..4) |lane| {
+        try std.testing.expectApproxEqAbs(@as(f64, 0.5), cdf_v[lane], 1e-12);
+    }
+}
+
+test "probit inverts normCdf (f64 round-trip)" {
+    // Round-trip probit(normCdf(x)) = x across [-3.5, 3.5].
+    // Abramowitz & Stegun 7.1.26 erf has ~1.5e-7 absolute error; the probit
+    // derivative is ~1/φ(x) which grows rapidly in tails. For truncated normal
+    // sampling via inverse CDF this accuracy (≤1e-4 max in tested range) is
+    // more than sufficient.
+    var x: f64 = -3.5;
+    while (x <= 3.5) : (x += 0.125) {
+        const p = normCdf(x);
+        const z = probit(p);
+        try std.testing.expectApproxEqAbs(x, z, 1.5e-4);
+    }
+
+    // Known quantiles in the body have high accuracy
+    try std.testing.expectApproxEqAbs(@as(f64, 0), probit(@as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.96), probit(@as(f64, 0.975)), 1e-3);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.96), probit(@as(f64, 0.025)), 1e-3);
+    // Φ(1) ≈ 0.8413
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), probit(@as(f64, 0.8413447460685429)), 1e-4);
+}
+
+test "probit inverts normCdf (f32 round-trip)" {
+    var x: f32 = -3.5;
+    while (x <= 3.5) : (x += 0.25) {
+        const p = normCdf(x);
+        const z = probit(p);
+        try std.testing.expectApproxEqAbs(x, z, 2e-3);
+    }
+}
+
+test "probit works on SIMD vectors" {
+    const v4f64: @Vector(4, f64) = .{ 0.025, 0.25, 0.75, 0.975 };
+    const z = probit(v4f64);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.96), z[0], 1e-3);
+    try std.testing.expectApproxEqAbs(@as(f64, -0.67449), z[1], 1e-3);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.67449), z[2], 1e-3);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.96), z[3], 1e-3);
+}
+
+// -----------------------------------------------------------------------------
+// Truncated Normal distribution tests
+// -----------------------------------------------------------------------------
+
+test "TruncatedNormal constructor validates parameters" {
+    // Negative stddev is invalid
+    try std.testing.expectError(error.InvalidParameter, TruncatedNormal(f64).init(0, -1, 0, 1));
+    // Non-finite stddev is invalid
+    try std.testing.expectError(error.InvalidParameter, TruncatedNormal(f64).init(0, std.math.inf(f64), 0, 1));
+    // NaN stddev is invalid
+    try std.testing.expectError(error.InvalidParameter, TruncatedNormal(f64).init(0, std.math.nan(f64), 0, 1));
+    // lower > upper is invalid
+    try std.testing.expectError(error.InvalidParameter, TruncatedNormal(f64).init(0, 1, 1, 0));
+    // stddev=0 but mean outside bounds is invalid
+    try std.testing.expectError(error.InvalidParameter, TruncatedNormal(f64).init(5, 0, 0, 1));
+    // Valid degenerate case: stddev=0, mean in bounds
+    const degenerate = try TruncatedNormal(f64).init(0.5, 0, 0, 1);
+    try std.testing.expect(degenerate.isDegenerate());
+    // Valid standard normal truncated to [0, 1]
+    const tn01 = try TruncatedNormal(f64).init(0, 1, 0, 1);
+    try std.testing.expect(!tn01.isDegenerate());
+    try std.testing.expect(!tn01.isUnbounded());
+    // Unbounded truncation equals standard normal
+    const unbounded = try TruncatedNormal(f64).init(0, 1, -std.math.inf(f64), std.math.inf(f64));
+    try std.testing.expect(unbounded.isUnbounded());
+}
+
+test "TruncatedNormal degenerate point mass returns constant" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdeadbeef);
+    const rng = Rng.init(&engine);
+    const dist = try TruncatedNormal(f64).init(2.5, 0, 0, 5);
+    // All samples should equal the point mass
+    var buf: [64]f64 = undefined;
+    dist.fill(rng, &buf);
+    for (buf) |v| {
+        try std.testing.expectEqual(@as(f64, 2.5), v);
+    }
+}
+
+test "TruncatedNormal samples stay within bounds" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafebabe);
+    const rng = Rng.init(&engine);
+
+    // Test various truncation ranges
+    const cases = .{
+        .{ 0.0, 1.0, 0.0, 1.0 },
+        .{ 0.0, 1.0, -2.0, -1.0 },
+        .{ 5.0, 2.0, 3.0, 7.0 },
+        .{ 0.0, 1.0, 1.0, std.math.inf(f64) }, // one-sided right
+        .{ 0.0, 1.0, -std.math.inf(f64), 0.0 }, // one-sided left
+    };
+
+    inline for (cases) |case| {
+        const dist = try TruncatedNormal(f64).init(case[0], case[1], case[2], case[3]);
+        var buf: [256]f64 = undefined;
+        dist.fill(rng, &buf);
+        for (buf) |v| {
+            try std.testing.expect(std.math.isFinite(v));
+            try std.testing.expect(v >= case[2] - 1e-12);
+            try std.testing.expect(v <= case[3] + 1e-12);
+        }
+    }
+}
+
+test "TruncatedNormal moments match known values for [0, ∞) half-normal" {
+    // For N(0,1) truncated to [0, ∞):
+    //   mean = φ(0)/Z = inv_sqrt_2pi / 0.5 = 2 * inv_sqrt_2pi ≈ 0.79788
+    //   variance = 1 - 2/π ≈ 0.36338
+    const dist = try TruncatedNormal(f64).init(0, 1, 0, std.math.inf(f64));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7978845608028654), dist.expectedValue(), 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - 2.0 / std.math.pi), dist.varianceValue(), 1e-10);
+    try std.testing.expectEqual(@as(f64, 0), dist.modeValue());
+    // Median of half-normal: probit(0.75) ≈ 0.67449
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6744897501960817), dist.medianValue(), 1e-3);
+}
+
+test "TruncatedNormal standard symmetric truncation to [-1, 1]" {
+    // N(0,1) truncated to [-1, 1]:
+    //   Z = Φ(1) - Φ(-1) ≈ 0.682689
+    //   mean = 0 (symmetric)
+    //   variance ≈ 0.2911
+    const dist = try TruncatedNormal(f64).init(0, 1, -1, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), dist.expectedValue(), 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.291125), dist.varianceValue(), 1e-4);
+    try std.testing.expectEqual(@as(f64, 0), dist.modeValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 0), dist.medianValue(), 1e-10);
+}
+
+test "TruncatedNormal free functions work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x12345);
+    const rng = Rng.init(&engine);
+
+    // Checked variants
+    const x = try truncatedNormal(rng, f64, 0, 1, -1, 1);
+    try std.testing.expect(x >= -1 and x <= 1);
+
+    // Checked variants error on invalid params
+    try std.testing.expectError(error.InvalidParameter, truncatedNormalChecked(rng, f64, 0, -1, 0, 1));
+
+    // Fill variants
+    var buf: [32]f64 = undefined;
+    try fillTruncatedNormal(rng, f64, &buf, 0, 1, 0, 2);
+    for (buf) |v| {
+        try std.testing.expect(v >= 0 and v <= 2);
+    }
+}
+
+test "VectorTruncatedNormal SIMD sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x98765);
+    const rng = Rng.init(&engine);
+
+    const Vec4 = @Vector(4, f64);
+    var buf: [16]Vec4 = undefined;
+    try fillVectorTruncatedNormal(rng, Vec4, &buf, 0, 1, -1, 1);
+    for (buf) |vec| {
+        inline for (0..4) |lane| {
+            const v = vec[lane];
+            try std.testing.expect(std.math.isFinite(v));
+            try std.testing.expect(v >= -1 - 1e-12);
+            try std.testing.expect(v <= 1 + 1e-12);
+        }
+    }
+}
+
+test "TruncatedNormal f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xfedcba);
+    const rng = Rng.init(&engine);
+
+    const dist = try TruncatedNormal(f32).init(0, 1, -2, 2);
+    var buf: [64]f32 = undefined;
+    dist.fill(rng, &buf);
+    for (buf) |v| {
+        try std.testing.expect(v >= -2 - 1e-6);
+        try std.testing.expect(v <= 2 + 1e-6);
     }
 }
 

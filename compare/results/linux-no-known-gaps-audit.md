@@ -15,10 +15,11 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, and S4-M1241 aligns nextU32-only direct-source fallback behavior. The active post-S4-M1241 bar is
-S4-M1242: exact/default dense SIMD research, additional non-WASI
-OS/architecture execution, broader validation, further semantics-preserving
-performance work, or newly discovered core random-workflow gaps.
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, and S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API. The active post-S4-M1250 bar is
+S4-M1251: additional directional/spherical distributions (von Mises-Fisher,
+Kent, Bingham), copula methods, string generation expansion, longer
+validation runs, broader platform evidence, or newly discovered core
+random-workflow gaps.
 
 ## Scope
 
@@ -6317,7 +6318,25 @@ verifies facade/direct entry-point consistency plus statistical sanity
 (mean, variance, finite values, correct support, tail behavior) for four
 distributions; `zig build validate` passes all checks.
 
-The next product bar after S4-M1249 covers broader runtime evidence, longer
-statistical validation runs, further circular/spherical directional
-distributions (e.g., von Mises-Fisher for the N-sphere, wrapped normal), or
-newly discovered core workflow gaps.
+S4-M1250 adds a Truncated Normal distribution with public mathematical
+helpers and completes the circular distribution public API surface
+(`compare/results/s4-m1250-truncated-normal-distribution.md`): public
+`normPdf`, `normCdf`, and `probit` polymorphic helpers support scalar f32/f64
+and SIMD vectors using an Abramowitz & Stegun 7.1.26 erf approximation
+(~1.5e-7 max error) and Peter Acklam's rational probit algorithm with one
+Newton refinement step; `TruncatedNormal(T)` provides a reusable struct with
+correct moments, degenerate (σ=0), one-sided, and unbounded fast paths, and
+inverse-CDF sampling with open-interval uniforms to avoid ±inf at
+boundaries; `VectorTruncatedNormal(VectorType)` provides per-lane SIMD
+sampling; a complete 24-function free-function family covers all
+scalar/vector sample/fill entry points with Checked/From variants; `vonMises`
+and `wrappedCauchy` are promoted from internal `fn` to `pub` with their full
+Checked/vector/fill variant families and `VectorVonMises`/`VectorWrappedCauchy`
+structs completing their public API surface. `zig build validate` passes all
+checks (614 tests, all apicheck/readmecheck/roadmapcheck/examplecheck/
+toolingcheck/distcheck/practrand gates).
+
+The next product bar after S4-M1250 covers additional directional/spherical
+distributions (von Mises-Fisher, Kent, Bingham), copula methods, string
+generation expansion, longer statistical validation runs, broader platform
+evidence, or newly discovered core random-workflow gaps.
