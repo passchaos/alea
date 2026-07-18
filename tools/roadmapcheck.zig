@@ -1254,6 +1254,10 @@ const evidence = [_]Evidence{
     .{ .milestone = "S4-M1257", .path = "compare/results/s4-m1257-generalized-pareto-distribution.md" },
     .{ .milestone = "S4-M1258", .path = "compare/results/s4-m1258-scaled-inverse-chi-squared-distribution.md" },
     .{ .milestone = "S4-M1259", .path = "compare/results/s4-m1259-hoyt-nakagami-q-fading-distribution.md" },
+    .{ .milestone = "S4-M1260", .path = "compare/results/s4-m1260-noncentral-chi-squared-distribution.md" },
+    .{ .milestone = "S4-M1261", .path = "compare/results/s4-m1261-noncentral-t-distribution.md" },
+    .{ .milestone = "S4-M1262", .path = "compare/results/s4-m1262-noncentral-f-distribution.md" },
+    .{ .milestone = "S4-M1263", .path = "compare/results/s4-m1263-noncentral-chi-distribution.md" },
 };
 
 const required_tokens = [_][]const u8{
@@ -1275,6 +1279,10 @@ const required_tokens = [_][]const u8{
     "S4-M1257",
     "S4-M1258",
     "S4-M1259",
+    "S4-M1260",
+    "S4-M1261",
+    "S4-M1262",
+    "S4-M1263",
     "S4-M1245",
     "S4-M1244",
     "S4-M1243",
@@ -2211,6 +2219,22 @@ pub fn main(init: std.process.Init) !void {
         try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1259 closure row\n", .{});
         missing += 1;
     }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1260 | Noncentral Chi-Squared") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1260 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1261 | Noncentral t") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1261 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1262 | Noncentral F") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1262 closure row\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, roadmap, "| S4-M1263 | Noncentral Chi") == null) {
+        try stderr.print("roadmapcheck: core-rand-coverage.md missing S4-M1263 closure row\n", .{});
+        missing += 1;
+    }
     if (std.mem.indexOf(u8, audit, "| S4-M1164 weighted-tree zero-total compatibility") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1164 closure row\n", .{});
         missing += 1;
@@ -2593,6 +2617,22 @@ pub fn main(init: std.process.Init) !void {
     }
     if (std.mem.indexOf(u8, audit, "S4-M1259 adds a Hoyt (Nakagami-q)") == null) {
         try stderr.print("roadmapcheck: active audit missing S4-M1259 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1260 adds a Noncentral Chi-Squared") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1260 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1261 adds a Noncentral t") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1261 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1262 adds a Noncentral F") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1262 closure\n", .{});
+        missing += 1;
+    }
+    if (std.mem.indexOf(u8, audit, "S4-M1263 adds a Noncentral Chi") == null) {
+        try stderr.print("roadmapcheck: active audit missing S4-M1263 closure\n", .{});
         missing += 1;
     }
     if (std.mem.indexOf(u8, audit, "S4-M11 is closed for the current bar") == null) {

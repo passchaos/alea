@@ -15,13 +15,12 @@ S4-M10 musl execution is closed by `2026-07-04-s4-m10-profilelong-musl.md`, and
 S4-M11 is closed for the current bar by direct Wasmtime 31.0.0 accepted-profile
 long-sweep evidence in `compare/results/s4-m1123-wasmtime-profilelongcheck.md`.
 S4-M1220 raises the feature bar beyond local Rust with a reusable,
-full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API, S4-M1251 adds Von Mises-Fisher spherical directional distribution on Sⁿ⁻¹ for comptime n≥2 using Wood (1994) Ulrich-transform rejection for n≥3 and S¹ delegation for n=2, extending directional-statistics coverage from the circle to arbitrary-dimensional spheres beyond local Rust `rand_distr`, S4-M1252 adds a Watson axial spherical directional distribution on Sⁿ⁻¹ for comptime n≥2, the antipodally symmetric counterpart to vMF supporting bipolar/girdle/uniform regimes with Beta-rejection sampling, Kummer ₁F₁ moment computation, and fast paths for extreme κ, S4-M1253 adds a Rice (Rician) fading distribution — noncentral chi with 2 degrees of freedom — for signal-processing/MRI/radar/optics workloads, with rejection-free two-Gaussian sampling, internal besselI0/logBesselI0 helpers, K-factor accessor, and exact Bessel-form moments, and S4-M1254 adds a Nakagami-m fading distribution — the canonical multipath fading envelope model for wireless/RF communications — with shape m ≥ 0.5 (m=1 Rayleigh, m=0.5 half-normal, m>1 approximates Rician), rejection-free √(Gamma(m, Ω/m)) sampling, exact lgamma-based moments with Rayleigh fast paths, mode and equivalent-Rayleigh-scale accessors, and Ω=0 point mass, and S4-M1255 adds an Inverse Gamma distribution — the conjugate prior for normal variance in Bayesian statistics — with shape α > 0, scale β > 0, rejection-free reciprocal-Gamma sampling X=1/Gamma(α,1/β), correct infinite mean/variance for α≤1 and α≤2 respectively, closed-form mode β/(α+1), and a complete scalar/fill free-function family, and S4-M1256 adds an Exponentially Modified Gaussian (ExGaussian/EMG) distribution — the sum μ + σ·N(0,1) + Exp(1/τ) — the canonical response-time distribution in cognitive psychology, neuroscience, and psycholinguistics, with rejection-free compositional sampling from existing normal+exponential primitives, closed-form moments E[X]=μ+τ, Var=σ²+τ², Skew=2τ³/(σ²+τ²)^{3/2}, rate-parameter accessor (1/τ), σ=0 fast path to shifted exponential, and a complete scalar/fill free-function family, and S4-M1257 adds a Generalized Pareto Distribution (GPD) — the three-regime peaks-over-threshold extreme-value model for hydrology/finance/insurance — with location μ, scale σ>0, shape ξ (tail index) covering ξ=0 (exponential), ξ>0 (heavy Pareto-like tail with ∞ mean for ξ≥1 and ∞ variance for ξ≥0.5), and ξ<0 (bounded short tail on [μ, μ−σ/ξ]), with rejection-free inverse-CDF sampling and correct infinite-moment null returns, and S4-M1258 adds a Scaled Inverse Chi-Squared distribution — the Gelman BDA/BUGS/Stan conjugate prior for normal variance, exactly InverseGamma(ν/2, ντ²/2) — as a thin first-class adapter over the existing InverseGamma sampler, sparing Bayesian users the manual parameter mapping with correct ν≤2/ν≤4 infinite-moment handling, and S4-M1259 adds a Hoyt (Nakagami-q) fading distribution — the complementary multipath fading model to Nakagami-m for unequal scattered-power components — with fading parameter q∈(0,1] (q=1 Rayleigh, q→0 severe single-path), spread Ω=E[X²]>0, rejection-free two-Gaussian product sampling, Bessel-form mean reusing besselI0 and a new standalone besselI1 (Abramowitz & Stegun approximations), and mode=σ·q. The active post-S4-M1259 bar is
-additional directional/multivariate distributions (Noncentral chi/chi-squared,
-Bingham, Matrix von Mises-Fisher, Kent), GeneralizedPareto/ScaledInvChiSq/Hoyt/
-Rice/Nakagami/InverseGamma/ExGaussian vector/SIMD sampling, copula methods,
-SIMD spherical bulk sampling paths, weighted/alias sampling advances,
-string generation expansion, longer statistical validation runs, broader
-platform evidence, or newly discovered core random-workflow gaps.
+full-covariance `MultivariateNormal(T)` sampler. S4-M1221 closes the first multivariate-normal performance follow-up. S4-M1222 adds static allocation-free multivariate-normal sampling. S4-M1223 fixes ordinary f64 StandardUniform grid consistency, S4-M1224 recovers throughput without changing that grid, S4-M1225 improves the low-bit/vector8 hot path, S4-M1226 refactors vectorized float fill lane stores, S4-M1227 refactors distribution vector lane stores, S4-M1228 completes the remaining distribution transform lane-store sweep, S4-M1229 completes the vector sampler lane-count sweep, S4-M1230 refactors the rng normal affine lane-store helper, S4-M1231 hardens rng byte-fill / reader refill correctness, S4-M1232 hardens owned byte allocation fallbacks, S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape, S4-M1234 hardens root alphanumeric string preallocation, S4-M1235 aligns fallible direct-source raw-u32 fallback behavior, S4-M1236 aligns direct-source native-u64 fallback behavior, S4-M1237 aligns direct-source byte-helper fallback behavior, S4-M1238 aligns generic direct-source native-u64 fallback behavior, S4-M1239 aligns seed/fork native-u64 fallback behavior, S4-M1240 aligns `Rng.init` raw-alias source fallback behavior, S4-M1241 aligns nextU32-only direct-source fallback behavior, S4-M1243 fixes stable iterator choice semantics, S4-M1244 converts StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support, S4-M1245 adds Standard alias, N-dimensional unit sphere/ball, and StandardCauchy/StandardLogistic unit structs, S4-M1246 adds Von Mises circular distribution with Best–Fisher rejection sampling, S4-M1247 adds Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling, S4-M1248 lands true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential, S4-M1249 extends true SIMD ziggurat to native f32x8 precision profiles, S4-M1250 adds Truncated Normal distribution with public normPdf/normCdf/probit helpers and promotes vonMises/wrappedCauchy to full public API, S4-M1251 adds Von Mises-Fisher spherical directional distribution on Sⁿ⁻¹ for comptime n≥2 using Wood (1994) Ulrich-transform rejection for n≥3 and S¹ delegation for n=2, extending directional-statistics coverage from the circle to arbitrary-dimensional spheres beyond local Rust `rand_distr`, S4-M1252 adds a Watson axial spherical directional distribution on Sⁿ⁻¹ for comptime n≥2, the antipodally symmetric counterpart to vMF supporting bipolar/girdle/uniform regimes with Beta-rejection sampling, Kummer ₁F₁ moment computation, and fast paths for extreme κ, S4-M1253 adds a Rice (Rician) fading distribution — noncentral chi with 2 degrees of freedom — for signal-processing/MRI/radar/optics workloads, with rejection-free two-Gaussian sampling, internal besselI0/logBesselI0 helpers, K-factor accessor, and exact Bessel-form moments, and S4-M1254 adds a Nakagami-m fading distribution — the canonical multipath fading envelope model for wireless/RF communications — with shape m ≥ 0.5 (m=1 Rayleigh, m=0.5 half-normal, m>1 approximates Rician), rejection-free √(Gamma(m, Ω/m)) sampling, exact lgamma-based moments with Rayleigh fast paths, mode and equivalent-Rayleigh-scale accessors, and Ω=0 point mass, and S4-M1255 adds an Inverse Gamma distribution — the conjugate prior for normal variance in Bayesian statistics — with shape α > 0, scale β > 0, rejection-free reciprocal-Gamma sampling X=1/Gamma(α,1/β), correct infinite mean/variance for α≤1 and α≤2 respectively, closed-form mode β/(α+1), and a complete scalar/fill free-function family, and S4-M1256 adds an Exponentially Modified Gaussian (ExGaussian/EMG) distribution — the sum μ + σ·N(0,1) + Exp(1/τ) — the canonical response-time distribution in cognitive psychology, neuroscience, and psycholinguistics, with rejection-free compositional sampling from existing normal+exponential primitives, closed-form moments E[X]=μ+τ, Var=σ²+τ², Skew=2τ³/(σ²+τ²)^{3/2}, rate-parameter accessor (1/τ), σ=0 fast path to shifted exponential, and a complete scalar/fill free-function family, and S4-M1257 adds a Generalized Pareto Distribution (GPD) — the three-regime peaks-over-threshold extreme-value model for hydrology/finance/insurance — with location μ, scale σ>0, shape ξ (tail index) covering ξ=0 (exponential), ξ>0 (heavy Pareto-like tail with ∞ mean for ξ≥1 and ∞ variance for ξ≥0.5), and ξ<0 (bounded short tail on [μ, μ−σ/ξ]), with rejection-free inverse-CDF sampling and correct infinite-moment null returns, and S4-M1258 adds a Scaled Inverse Chi-Squared distribution — the Gelman BDA/BUGS/Stan conjugate prior for normal variance, exactly InverseGamma(ν/2, ντ²/2) — as a thin first-class adapter over the existing InverseGamma sampler, sparing Bayesian users the manual parameter mapping with correct ν≤2/ν≤4 infinite-moment handling, and S4-M1259 adds a Hoyt (Nakagami-q) fading distribution — the complementary multipath fading model to Nakagami-m for unequal scattered-power components — with fading parameter q∈(0,1] (q=1 Rayleigh, q→0 severe single-path), spread Ω=E[X²]>0, rejection-free two-Gaussian product sampling, Bessel-form mean reusing besselI0 and a new standalone besselI1 (Abramowitz & Stegun approximations), and mode=σ·q, and S4-M1260 adds a Noncentral Chi-Squared distribution χ'²(k,λ) — the fundamental noncentral distribution for chi-squared/ANOVA power analysis and Rician fading power — with rejection-free Poisson-mixture sampling K~Poisson(λ/2), X~χ²(k+2K) composing existing Poisson and ChiSquared, closed-form moments E=k+λ, Var=2(k+2λ), mode=max(0,k+λ−2), and S4-M1261 adds a Noncentral t distribution t'(ν,μ) — for one-sample/two-sample t-test power and detection theory — with rejection-free ratio sampling (Z+μ)/√(V/ν) composing Normal and ChiSquared, Γ-ratio moments via std.math.lgamma, ν=∞ normal limit, and S4-M1262 adds a Noncentral F distribution F'(d1,d2,λ) — for ANOVA/regression F-test power — with rejection-free ratio sampling (X/d1)/(Y/d2) where X~χ'²(d1,λ), Y~χ²(d2), closed-form moments, and S4-M1263 adds a Noncentral Chi distribution χ'(k,λ) — sqrt of noncentral chi-squared generalizing Rayleigh/Rice to arbitrary dof — with kummerM/lgamma expected value reusing the existing ₁F₁ helper and a folded-normal k=0 branch. The active post-S4-M1263 bar is
+additional directional/multivariate distributions (Bingham, Matrix von Mises-Fisher,
+Kent), Noncentral/GeneralizedPareto/ScaledInvChiSq/Hoyt/ExGaussian/Rice/Nakagami/InverseGamma
+vector/SIMD sampling, copula methods, SIMD spherical bulk sampling paths, weighted/alias
+sampling advances, string generation expansion, longer statistical validation runs,
+broader platform evidence, or newly discovered core random-workflow gaps.
 
 ## Scope
 
@@ -6719,10 +6718,77 @@ extend beyond local Rust `rand_distr` 0.6.0, which provides neither GPD nor
 ScaledInvChiSq nor Hoyt. All 702 tests pass; `zig build validate` passes
 all gates.
 
-The next product bar after S4-M1259 covers noncentral chi/chi-squared,
-additional directional/multivariate distributions (Bingham, Matrix von
-Mises-Fisher, Kent), GeneralizedPareto/ScaledInvChiSq/Hoyt/Rice/Nakagami/
-InverseGamma/ExGaussian vector/SIMD sampling, copula methods, SIMD spherical
-bulk sampling paths, weighted/alias sampling advances, string generation
-expansion, longer statistical validation runs, broader platform evidence,
-or newly discovered core random-workflow gaps.
+## S4-M1260: Noncentral Chi-Squared Distribution
+
+S4-M1260 (`compare/results/s4-m1260-noncentral-chi-squared-distribution.md`) adds a Noncentral Chi-Squared distribution χ'²(k, λ) with dof k ≥ 0
+and noncentrality λ ≥ 0 — the fundamental noncentral distribution for
+chi-squared/ANOVA power analysis, Rician fading power, radar, and
+communications — using a rejection-free Poisson-mixture algorithm (K~Poisson(λ/2),
+X~χ²(k+2K)) composing existing `poissonFrom` and `chiSquaredFrom` with no new
+special functions. Moments are closed-form: E[X]=k+λ, Var=2(k+2λ),
+mode=max(0,k+λ−2). Implementation covers `NoncentralChiSquared(T)` with
+`init`/`new`/accessors/`sample`/`sampleFrom`/`fill`/`fillFrom`, the standard
+8-function free-function family, and 7 new tests covering constructor
+validation, analytic moments (including λ=0 central-χ² reduction and the k=0
+degenerate), 200-sample non-negativity, 5000-sample k=0 MC mean check,
+5000-sample k=3,λ=4 mean/variance MC, free-function/fill error rejection,
+and f32 support.
+
+## S4-M1261: Noncentral t Distribution
+
+S4-M1261 (`compare/results/s4-m1261-noncentral-t-distribution.md`) adds a Noncentral t distribution t'(ν, μ) with dof ν > 0 (accepting
+ν=∞ for the normal limit) and noncentrality μ — the canonical distribution
+for one-sample/two-sample t-test power analysis and detection theory — using
+rejection-free ratio sampling (Z+μ)/√(V/ν) composing existing Normal and
+ChiSquared. Moments use a Γ-function ratio c(ν)=√(ν/2)·Γ((ν−1)/2)/Γ(ν/2)
+computed via `std.math.lgamma`, with null returns for ν≤1 (undefined mean,
+Cauchy-like tails) and ν≤2 (undefined variance). Implementation covers
+`NoncentralT(T)` with `init`/`new`/accessors (including `muValue`)/
+`sample`/`sampleFrom`/`fill`/`fillFrom`, the standard 8-function free-function
+family, and 7 new tests covering constructor validation, μ=0 central-t
+moment reductions (including nulls for ν≤1/ν≤2 and the ν=∞ normal limit),
+200-sample finiteness, 5000-sample MC for ν=∞ (N(2,1)) and μ=0,ν=10,
+free-function/fill error rejection, and f32 support.
+
+## S4-M1262: Noncentral F Distribution
+
+S4-M1262 (`compare/results/s4-m1262-noncentral-f-distribution.md`) adds a Noncentral F distribution F'(d1, d2, λ) with numerator df
+d1>0, denominator df d2>0, noncentrality λ≥0 — the canonical distribution for
+ANOVA/regression F-test power analysis — using rejection-free ratio sampling
+(X/d1)/(Y/d2) composing the new NoncentralChiSquared with existing ChiSquared.
+Closed-form moments return null for d2≤2 (undefined mean) and d2≤4 (undefined
+variance). Implementation covers `NoncentralF(T)` with `init`/`new`/accessors/
+`sample`/`sampleFrom`/`fill`/`fillFrom`, the standard 8-function free-function
+family, and 6 new tests covering constructor validation, λ=0 central-FisherF
+moment reductions (including nulls for heavy-tail cases), 200-sample
+non-negativity, 5000-sample MC for λ=0 large-d2, 5000-sample MC with λ>0
+mean match, free-function/fill error rejection, and f32 support.
+
+## S4-M1263: Noncentral Chi Distribution
+
+S4-M1263 (`compare/results/s4-m1263-noncentral-chi-distribution.md`) adds a Noncentral Chi distribution χ'(k, λ) with dof k≥0,
+noncentrality λ≥0 — sqrt of noncentral chi-squared generalizing Rayleigh
+(k=2,λ=0) and Rice (k=2,λ=ν²) to arbitrary dof for communications, radar,
+and directional statistics — using rejection-free sqrt sampling composing
+the new NoncentralChiSquared. Expected value uses a kummerM ₁F₁ series
+(reusing the existing helper introduced for Watson) combined with an
+lgamma Γ-ratio for E[X]=√2·Γ((k+1)/2)/Γ(k/2)·exp(−λ/2)·₁F₁(1/2;k/2;λ/2),
+with a folded-normal k=0 branch using `erfAbramowitzStegun`. Variance is
+computed as k+λ−(E[X])². Implementation covers `NoncentralChi(T)` with
+`init`/`new`/accessors/`sample`/`sampleFrom`/`fill`/`fillFrom`, the standard
+8-function free-function family, and 6 new tests covering constructor
+validation, λ=0 central-Chi moment reductions (matching the existing Chi
+expected value to 1e-9 for k=5 and √(π/2) for k=2 Rayleigh), k=2,λ=ν²
+Rice consistency, 200-sample non-negativity/finiteness, 5000-sample MC
+second moment = k+λ, free-function/fill error rejection, and f32 support.
+
+All four noncentral distributions extend beyond local Rust `rand_distr` 0.6.0,
+which provides no noncentral distributions. All 730 tests pass (28 new tests
+across the batch); `zig build validate` passes all gates.
+
+The next product bar after S4-M1263 covers additional directional/multivariate
+distributions (Bingham, Matrix von Mises-Fisher, Kent), Noncentral/GeneralizedPareto/
+ScaledInvChiSq/Hoyt/ExGaussian/Rice/Nakagami/InverseGamma vector/SIMD sampling,
+copula methods, SIMD spherical bulk sampling paths, weighted/alias sampling
+advances, string generation expansion, longer statistical validation runs,
+broader platform evidence, or newly discovered core random-workflow gaps.

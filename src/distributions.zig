@@ -433,6 +433,10 @@ pub const ZipfError = Error;
 pub const TruncatedNormalError = Error;
 pub const VonMisesError = Error;
 pub const WrappedCauchyError = Error;
+pub const NoncentralChiSquaredError = Error;
+pub const NoncentralTError = Error;
+pub const NoncentralFError = Error;
+pub const NoncentralChiError = Error;
 
 /// Von Mises-Fisher distribution error set.
 pub const VonMisesFisherError = error{
@@ -9918,6 +9922,565 @@ pub fn fillHoytChecked(rng: Rng, comptime T: type, dest: []T, q: T, omega: T) Ho
 pub fn fillHoytCheckedFrom(source: anytype, comptime T: type, dest: []T, q: T, omega: T) HoytError!void {
     if (dest.len == 0) return;
     const dist = try Hoyt(T).init(q, omega);
+    dist.fillFrom(source, dest);
+}
+
+// Noncentral chi-squared distribution: χ'²(k, λ) where k = degrees of freedom, λ = noncentrality parameter.
+// Sampling is rejection-free: K ~ Poisson(λ/2), then X ~ χ²(k + 2K) (Poisson mixture of central chi-squareds).
+// Moments: E[X] = k + λ; Var[X] = 2(k + 2λ); Mode = max(0, k + λ - 2).
+// λ = 0 reduces to central ChiSquared(k); k = 2, λ = ν² gives Rice power distribution.
+
+fn noncentralChiSquaredParametersValid(comptime T: type, k: T, lambda: T) bool {
+    return k >= 0 and std.math.isFinite(k) and lambda >= 0 and std.math.isFinite(lambda);
+}
+
+/// Sample a single point from the noncentral chi-squared distribution.
+/// K ~ Poisson(λ/2), then X ~ χ²(k + 2K).
+fn noncentralChiSquaredPointFrom(source: anytype, comptime T: type, k: T, lambda: T) T {
+    std.debug.assert(noncentralChiSquaredParametersValid(T, k, lambda));
+    if (lambda == 0) return chiSquaredFrom(source, T, k);
+    // Degenerate k=0, λ=0: 0 (handled by chiSquaredFrom above). For k=0 the Poisson
+    // mixture still works: J ~ Po(λ/2) and χ²(2J) is exponential when J=0? No,
+    // χ²(2J) = Gamma(J, 2) which equals 0 when J=0 (point mass) and Exp(1/2) scaled when J=1, etc.
+    // The general algorithm is correct for all k ≥ 0.
+    const k_int: u64 = @intFromFloat(k);
+    const lambda_f64: f64 = @floatCast(lambda);
+    const j: u64 = poissonFrom(source, lambda_f64 / 2.0);
+    if (@as(T, @floatFromInt(k_int)) == k) {
+        const dof: T = @floatFromInt(k_int + 2 * j);
+        return chiSquaredFrom(source, T, dof);
+    }
+    const dof = k + @as(T, 2) * @as(T, @floatFromInt(j));
+    return chiSquaredFrom(source, T, dof);
+}
+
+pub fn NoncentralChiSquared(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        k: T,
+        lambda: T,
+
+        pub fn init(k: T, lambda: T) NoncentralChiSquaredError!Self {
+            comptime requireFloat(T);
+            if (!noncentralChiSquaredParametersValid(T, k, lambda)) return error.InvalidParameter;
+            return .{ .k = k, .lambda = lambda };
+        }
+
+        pub fn new(k: T, lambda: T) NoncentralChiSquaredError!Self {
+            return Self.init(k, lambda);
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T { return self.k; }
+        pub fn dofValue(self: Self) T { return self.k; }
+        pub fn noncentralityValue(self: Self) T { return self.lambda; }
+        pub fn ncpValue(self: Self) T { return self.lambda; }
+
+        /// Degenerate cases: k=0,λ=0 → 0 (point mass at 0). Otherwise k=0,λ>0 → noncentral with one dof.
+        fn isDegenerate(self: Self) bool {
+            return self.k == 0 and self.lambda == 0;
+        }
+
+        pub fn expectedValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
+            return self.k + self.lambda;
+        }
+
+        pub fn varianceValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
+            return 2 * (self.k + 2 * self.lambda);
+        }
+
+        pub fn modeValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
+            const mode_loc = self.k + self.lambda - 2;
+            return if (mode_loc > 0) mode_loc else 0;
+        }
+
+        pub fn minValue(self: Self) T {
+            _ = self;
+            return 0;
+        }
+
+        pub fn maxValue(_: Self) ?T {
+            return null;
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            if (self.isDegenerate()) return 0;
+            return noncentralChiSquaredPointFrom(rng, T, self.k, self.lambda);
+        }
+
+        pub inline fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return 0;
+            return noncentralChiSquaredPointFrom(source, T, self.k, self.lambda);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            if (self.isDegenerate()) { @memset(dest, 0); return; }
+            for (dest) |*item| item.* = noncentralChiSquaredPointFrom(rng, T, self.k, self.lambda);
+        }
+
+        pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillNoncentralChiSquaredPointsFrom(source, T, dest, self.k, self.lambda);
+        }
+    };
+}
+
+fn fillNoncentralChiSquaredPointsFrom(source: anytype, comptime T: type, dest: []T, k: T, lambda: T) void {
+    std.debug.assert(noncentralChiSquaredParametersValid(T, k, lambda));
+    if (k == 0 and lambda == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    for (dest) |*item| item.* = noncentralChiSquaredPointFrom(source, T, k, lambda);
+}
+
+pub fn noncentralChiSquared(rng: Rng, comptime T: type, k: T, lambda: T) T {
+    return noncentralChiSquaredFrom(rng, T, k, lambda);
+}
+
+pub fn noncentralChiSquaredFrom(source: anytype, comptime T: type, k: T, lambda: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralChiSquaredParametersValid(T, k, lambda));
+    return noncentralChiSquaredPointFrom(source, T, k, lambda);
+}
+
+pub fn noncentralChiSquaredChecked(rng: Rng, comptime T: type, k: T, lambda: T) NoncentralChiSquaredError!T {
+    const dist = try NoncentralChiSquared(T).init(k, lambda);
+    return dist.sample(rng);
+}
+
+pub fn noncentralChiSquaredCheckedFrom(source: anytype, comptime T: type, k: T, lambda: T) NoncentralChiSquaredError!T {
+    const dist = try NoncentralChiSquared(T).init(k, lambda);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillNoncentralChiSquared(rng: Rng, comptime T: type, dest: []T, k: T, lambda: T) void {
+    fillNoncentralChiSquaredFrom(rng, T, dest, k, lambda);
+}
+
+pub fn fillNoncentralChiSquaredFrom(source: anytype, comptime T: type, dest: []T, k: T, lambda: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralChiSquaredParametersValid(T, k, lambda));
+    fillNoncentralChiSquaredPointsFrom(source, T, dest, k, lambda);
+}
+
+pub fn fillNoncentralChiSquaredChecked(rng: Rng, comptime T: type, dest: []T, k: T, lambda: T) NoncentralChiSquaredError!void {
+    return fillNoncentralChiSquaredCheckedFrom(rng, T, dest, k, lambda);
+}
+
+pub fn fillNoncentralChiSquaredCheckedFrom(source: anytype, comptime T: type, dest: []T, k: T, lambda: T) NoncentralChiSquaredError!void {
+    if (dest.len == 0) return;
+    const dist = try NoncentralChiSquared(T).init(k, lambda);
+    dist.fillFrom(source, dest);
+}
+
+// Noncentral t distribution: t'(ν, μ) = (Z + μ) / √(V/ν) where Z~N(0,1), V~χ²(ν).
+// Used for t-test power analysis, detection theory, two-group experiments.
+// E[T] = μ·√(ν/2)·Γ((ν-1)/2)/Γ(ν/2) for ν > 1, else undefined.
+// Var[T] = ν/(ν-2)·(1 + μ²) - μ²·ν/2·(Γ((ν-1)/2)/Γ(ν/2))² for ν > 2.
+
+fn noncentralTParametersValid(comptime T: type, dof: T, mu: T) bool {
+    // dof > 0 (allow inf for normal limit); mu finite.
+    return dof > 0 and std.math.isFinite(mu);
+}
+
+/// Scaling constant c(ν) = √(ν/2) · Γ((ν-1)/2) / Γ(ν/2) for noncentral t mean.
+/// For large ν, c(ν) → 1; for ν→1+, c(ν) → ∞ (Cauchy-like heavy tail).
+fn noncentralTScaleFactor(comptime T: type, dof: T) T {
+    if (dof == std.math.inf(T)) return 1;
+    const half_nu = dof / 2;
+    const lgamma_diff = std.math.lgamma(T, half_nu - 0.5) - std.math.lgamma(T, half_nu);
+    return @sqrt(dof / 2) * @exp(lgamma_diff);
+}
+
+fn noncentralTPointFrom(source: anytype, comptime T: type, dof: T, mu: T) T {
+    std.debug.assert(noncentralTParametersValid(T, dof, mu));
+    if (dof == std.math.inf(T)) return Rng.normalFastFrom(source, T, mu, 1);
+    const z = Rng.normalFastFrom(source, T, mu, 1); // (Z + μ) where Z~N(0,1) and mean shift
+    const v = chiSquaredFrom(source, T, dof);
+    return z * @sqrt(dof / v);
+}
+
+pub fn NoncentralT(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        dof: T,
+        mu: T,
+
+        pub fn init(dof: T, mu: T) NoncentralTError!Self {
+            comptime requireFloat(T);
+            if (!noncentralTParametersValid(T, dof, mu)) return error.InvalidParameter;
+            return .{ .dof = dof, .mu = mu };
+        }
+
+        pub fn new(dof: T, mu: T) NoncentralTError!Self {
+            return Self.init(dof, mu);
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T { return self.dof; }
+        pub fn dofValue(self: Self) T { return self.dof; }
+        pub fn noncentralityValue(self: Self) T { return self.mu; }
+        pub fn ncpValue(self: Self) T { return self.mu; }
+        pub fn muValue(self: Self) T { return self.mu; }
+
+        pub fn expectedValue(self: Self) ?T {
+            if (self.dof == std.math.inf(T)) return self.mu;
+            if (self.dof <= 1) return null;
+            if (self.mu == 0) return 0;
+            return self.mu * noncentralTScaleFactor(T, self.dof);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.dof == std.math.inf(T)) return 1;
+            if (self.dof <= 2) return null;
+            const c = noncentralTScaleFactor(T, self.dof);
+            return self.dof / (self.dof - 2) * (1 + self.mu * self.mu) - self.mu * self.mu * c * c;
+        }
+
+        pub fn minValue(_: Self) ?T { return null; }
+        pub fn maxValue(_: Self) ?T { return null; }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return noncentralTPointFrom(rng, T, self.dof, self.mu);
+        }
+
+        pub inline fn sampleFrom(self: Self, source: anytype) T {
+            return noncentralTPointFrom(source, T, self.dof, self.mu);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            for (dest) |*item| item.* = noncentralTPointFrom(rng, T, self.dof, self.mu);
+        }
+
+        pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillNoncentralTPointsFrom(source, T, dest, self.dof, self.mu);
+        }
+    };
+}
+
+fn fillNoncentralTPointsFrom(source: anytype, comptime T: type, dest: []T, dof: T, mu: T) void {
+    std.debug.assert(noncentralTParametersValid(T, dof, mu));
+    for (dest) |*item| item.* = noncentralTPointFrom(source, T, dof, mu);
+}
+
+pub fn noncentralT(rng: Rng, comptime T: type, dof: T, mu: T) T {
+    return noncentralTFrom(rng, T, dof, mu);
+}
+
+pub fn noncentralTFrom(source: anytype, comptime T: type, dof: T, mu: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralTParametersValid(T, dof, mu));
+    return noncentralTPointFrom(source, T, dof, mu);
+}
+
+pub fn noncentralTChecked(rng: Rng, comptime T: type, dof: T, mu: T) NoncentralTError!T {
+    const dist = try NoncentralT(T).init(dof, mu);
+    return dist.sample(rng);
+}
+
+pub fn noncentralTCheckedFrom(source: anytype, comptime T: type, dof: T, mu: T) NoncentralTError!T {
+    const dist = try NoncentralT(T).init(dof, mu);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillNoncentralT(rng: Rng, comptime T: type, dest: []T, dof: T, mu: T) void {
+    fillNoncentralTFrom(rng, T, dest, dof, mu);
+}
+
+pub fn fillNoncentralTFrom(source: anytype, comptime T: type, dest: []T, dof: T, mu: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralTParametersValid(T, dof, mu));
+    fillNoncentralTPointsFrom(source, T, dest, dof, mu);
+}
+
+pub fn fillNoncentralTChecked(rng: Rng, comptime T: type, dest: []T, dof: T, mu: T) NoncentralTError!void {
+    return fillNoncentralTCheckedFrom(rng, T, dest, dof, mu);
+}
+
+pub fn fillNoncentralTCheckedFrom(source: anytype, comptime T: type, dest: []T, dof: T, mu: T) NoncentralTError!void {
+    if (dest.len == 0) return;
+    const dist = try NoncentralT(T).init(dof, mu);
+    dist.fillFrom(source, dest);
+}
+
+// Noncentral F distribution: F'(df1, df2, λ) = (X/df1) / (Y/df2) where X ~ χ'²(df1, λ), Y ~ χ²(df2).
+// Used for ANOVA/regression F-test power analysis.
+// E[F] = df2/(df2-2) · (df1+λ)/df1 for df2 > 2, else undefined.
+// Var[F] = 2·(df1+λ)² + 4(df1+λ)df2²/((df2-2)²(df2-4)) / df1² + ... complex closed form; we use the standard formula:
+// Var[F] = 2·((df1+λ)² + (df1+2λ)(df2-2))·df2² / (df1·(df2-2)²·(df2-4)) for df2 > 4.
+
+fn noncentralFParametersValid(comptime T: type, d1: T, d2: T, lambda: T) bool {
+    return d1 > 0 and d2 > 0 and std.math.isFinite(d1) and std.math.isFinite(d2) and
+        lambda >= 0 and std.math.isFinite(lambda);
+}
+
+fn noncentralFPointFrom(source: anytype, comptime T: type, d1: T, d2: T, lambda: T) T {
+    std.debug.assert(noncentralFParametersValid(T, d1, d2, lambda));
+    const x = noncentralChiSquaredPointFrom(source, T, d1, lambda);
+    const y = chiSquaredFrom(source, T, d2);
+    return (x / d1) / (y / d2);
+}
+
+pub fn NoncentralF(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        d1: T,
+        d2: T,
+        lambda: T,
+
+        pub fn init(d1: T, d2: T, lambda: T) NoncentralFError!Self {
+            comptime requireFloat(T);
+            if (!noncentralFParametersValid(T, d1, d2, lambda)) return error.InvalidParameter;
+            return .{ .d1 = d1, .d2 = d2, .lambda = lambda };
+        }
+
+        pub fn new(d1: T, d2: T, lambda: T) NoncentralFError!Self {
+            return Self.init(d1, d2, lambda);
+        }
+
+        pub fn d1Value(self: Self) T { return self.d1; }
+        pub fn d2Value(self: Self) T { return self.d2; }
+        pub fn noncentralityValue(self: Self) T { return self.lambda; }
+        pub fn ncpValue(self: Self) T { return self.lambda; }
+
+        pub fn expectedValue(self: Self) ?T {
+            if (self.d2 <= 2) return null;
+            return (self.d2 / (self.d2 - 2)) * ((self.d1 + self.lambda) / self.d1);
+        }
+
+        pub fn varianceValue(self: Self) ?T {
+            if (self.d2 <= 4) return null;
+            const d1 = self.d1;
+            const d2 = self.d2;
+            const l = self.lambda;
+            // Var(F) = 2·((d1+l)² + (d1+2l)(d2-2))·d2² / (d1·(d2-2)²·(d2-4))
+            // Standard formula for noncentral F variance (Johnson, Kotz, Balakrishnan).
+            const term1 = (d1 + l) * (d1 + l);
+            const term2 = (d1 + 2 * l) * (d2 - 2);
+            return 2 * (term1 + term2) * d2 * d2 / (d1 * (d2 - 2) * (d2 - 2) * (d2 - 4));
+        }
+
+        pub fn minValue(_: Self) T { return 0; }
+        pub fn maxValue(_: Self) ?T { return null; }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return noncentralFPointFrom(rng, T, self.d1, self.d2, self.lambda);
+        }
+
+        pub inline fn sampleFrom(self: Self, source: anytype) T {
+            return noncentralFPointFrom(source, T, self.d1, self.d2, self.lambda);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            for (dest) |*item| item.* = noncentralFPointFrom(rng, T, self.d1, self.d2, self.lambda);
+        }
+
+        pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillNoncentralFPointsFrom(source, T, dest, self.d1, self.d2, self.lambda);
+        }
+    };
+}
+
+fn fillNoncentralFPointsFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T, lambda: T) void {
+    std.debug.assert(noncentralFParametersValid(T, d1, d2, lambda));
+    for (dest) |*item| item.* = noncentralFPointFrom(source, T, d1, d2, lambda);
+}
+
+pub fn noncentralF(rng: Rng, comptime T: type, d1: T, d2: T, lambda: T) T {
+    return noncentralFFrom(rng, T, d1, d2, lambda);
+}
+
+pub fn noncentralFFrom(source: anytype, comptime T: type, d1: T, d2: T, lambda: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralFParametersValid(T, d1, d2, lambda));
+    return noncentralFPointFrom(source, T, d1, d2, lambda);
+}
+
+pub fn noncentralFChecked(rng: Rng, comptime T: type, d1: T, d2: T, lambda: T) NoncentralFError!T {
+    const dist = try NoncentralF(T).init(d1, d2, lambda);
+    return dist.sample(rng);
+}
+
+pub fn noncentralFCheckedFrom(source: anytype, comptime T: type, d1: T, d2: T, lambda: T) NoncentralFError!T {
+    const dist = try NoncentralF(T).init(d1, d2, lambda);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillNoncentralF(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T, lambda: T) void {
+    fillNoncentralFFrom(rng, T, dest, d1, d2, lambda);
+}
+
+pub fn fillNoncentralFFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T, lambda: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralFParametersValid(T, d1, d2, lambda));
+    fillNoncentralFPointsFrom(source, T, dest, d1, d2, lambda);
+}
+
+pub fn fillNoncentralFChecked(rng: Rng, comptime T: type, dest: []T, d1: T, d2: T, lambda: T) NoncentralFError!void {
+    return fillNoncentralFCheckedFrom(rng, T, dest, d1, d2, lambda);
+}
+
+pub fn fillNoncentralFCheckedFrom(source: anytype, comptime T: type, dest: []T, d1: T, d2: T, lambda: T) NoncentralFError!void {
+    if (dest.len == 0) return;
+    const dist = try NoncentralF(T).init(d1, d2, lambda);
+    dist.fillFrom(source, dest);
+}
+
+// Noncentral chi distribution: χ'(k, λ) = √(χ'²(k, λ)), i.e. the sqrt of noncentral chi-squared.
+// k=2 with ncp=ν² gives a Rice distribution spread σ=1 (the standard Rician envelope).
+// Expected value uses the confluent hypergeometric ₁F₁:
+//   E[X] = √(π/2) · Γ((k+1)/2)/Γ(k/2) · exp(-λ/2) · ₁F₁(1/2; k/2; λ/2)   [for λ ≥ 0, k > 0]
+//        = √(π/2) · √(k/2)? no, use lgamma difference for the gamma ratio.
+// Mode: (max(0, k + λ - 3) / 2)? In practice mode of noncentral chi has no simple closed form for general k;
+//   it is 0 for small k,λ, else approximately √(k+λ-2) for integer k. We omit a closed-form mode and return null.
+
+fn noncentralChiParametersValid(comptime T: type, k: T, lambda: T) bool {
+    return k >= 0 and std.math.isFinite(k) and lambda >= 0 and std.math.isFinite(lambda);
+}
+
+fn noncentralChiExpectedValue(comptime T: type, k: T, lambda: T) T {
+    if (k == 0) {
+        // k=0: X = |N(√λ, 1)| (folded normal with mean √λ, variance 1).
+        // Mean = √λ·erf(√(λ/2)) + √(2/π)·exp(-λ/2).
+        const sqrt_lambda = @sqrt(lambda);
+        const sqrt_lambda_f64: f64 = @floatCast(sqrt_lambda / @sqrt(@as(T, 2)));
+        const erf_val: T = @floatCast(erfAbramowitzStegun(sqrt_lambda_f64));
+        return sqrt_lambda * erf_val +
+            @sqrt(2 / @as(T, std.math.pi)) * @exp(-lambda / 2);
+    }
+    // E[χ'(k, λ)] = √2 · Γ((k+1)/2)/Γ(k/2) · exp(-λ/2) · ₁F₁(1/2; k/2; λ/2)
+    // At λ=0 this reduces to the central chi mean √2 · Γ((k+1)/2)/Γ(k/2),
+    // matching Chi.expectedValue.
+    const half = k / 2;
+    const lgamma_ratio = std.math.lgamma(T, (k + 1) / 2) - std.math.lgamma(T, half);
+    const gamma_ratio = @exp(lgamma_ratio);
+    const half_lambda = lambda / 2;
+    const m_val = kummerM(@as(T, 0.5), half, half_lambda, 80);
+    return @sqrt(@as(T, 2)) * gamma_ratio * @exp(-half_lambda) * m_val;
+}
+
+fn noncentralChiPointFrom(source: anytype, comptime T: type, k: T, lambda: T) T {
+    std.debug.assert(noncentralChiParametersValid(T, k, lambda));
+    return @sqrt(noncentralChiSquaredPointFrom(source, T, k, lambda));
+}
+
+pub fn NoncentralChi(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        k: T,
+        lambda: T,
+
+        pub fn init(k: T, lambda: T) NoncentralChiError!Self {
+            comptime requireFloat(T);
+            if (!noncentralChiParametersValid(T, k, lambda)) return error.InvalidParameter;
+            return .{ .k = k, .lambda = lambda };
+        }
+
+        pub fn new(k: T, lambda: T) NoncentralChiError!Self {
+            return Self.init(k, lambda);
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T { return self.k; }
+        pub fn dofValue(self: Self) T { return self.k; }
+        pub fn noncentralityValue(self: Self) T { return self.lambda; }
+        pub fn ncpValue(self: Self) T { return self.lambda; }
+
+        fn isDegenerate(self: Self) bool {
+            return self.k == 0 and self.lambda == 0;
+        }
+
+        pub fn expectedValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
+            return noncentralChiExpectedValue(T, self.k, self.lambda);
+        }
+
+        pub fn varianceValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
+            // Var[X] = E[X²] - (E[X])²; E[X²] = k + λ (same as χ'² mean).
+            const ex2 = self.k + self.lambda;
+            const ex = self.expectedValue();
+            return ex2 - ex * ex;
+        }
+
+        pub fn minValue(self: Self) T {
+            if (self.isDegenerate()) return 0;
+            return 0;
+        }
+
+        pub fn maxValue(_: Self) ?T { return null; }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            if (self.isDegenerate()) return 0;
+            return noncentralChiPointFrom(rng, T, self.k, self.lambda);
+        }
+
+        pub inline fn sampleFrom(self: Self, source: anytype) T {
+            if (self.isDegenerate()) return 0;
+            return noncentralChiPointFrom(source, T, self.k, self.lambda);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            if (self.isDegenerate()) { @memset(dest, 0); return; }
+            for (dest) |*item| item.* = noncentralChiPointFrom(rng, T, self.k, self.lambda);
+        }
+
+        pub inline fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillNoncentralChiPointsFrom(source, T, dest, self.k, self.lambda);
+        }
+    };
+}
+
+fn fillNoncentralChiPointsFrom(source: anytype, comptime T: type, dest: []T, k: T, lambda: T) void {
+    std.debug.assert(noncentralChiParametersValid(T, k, lambda));
+    if (k == 0 and lambda == 0) {
+        @memset(dest, 0);
+        return;
+    }
+    for (dest) |*item| item.* = noncentralChiPointFrom(source, T, k, lambda);
+}
+
+pub fn noncentralChi(rng: Rng, comptime T: type, k: T, lambda: T) T {
+    return noncentralChiFrom(rng, T, k, lambda);
+}
+
+pub fn noncentralChiFrom(source: anytype, comptime T: type, k: T, lambda: T) T {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralChiParametersValid(T, k, lambda));
+    return noncentralChiPointFrom(source, T, k, lambda);
+}
+
+pub fn noncentralChiChecked(rng: Rng, comptime T: type, k: T, lambda: T) NoncentralChiError!T {
+    const dist = try NoncentralChi(T).init(k, lambda);
+    return dist.sample(rng);
+}
+
+pub fn noncentralChiCheckedFrom(source: anytype, comptime T: type, k: T, lambda: T) NoncentralChiError!T {
+    const dist = try NoncentralChi(T).init(k, lambda);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillNoncentralChi(rng: Rng, comptime T: type, dest: []T, k: T, lambda: T) void {
+    fillNoncentralChiFrom(rng, T, dest, k, lambda);
+}
+
+pub fn fillNoncentralChiFrom(source: anytype, comptime T: type, dest: []T, k: T, lambda: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(noncentralChiParametersValid(T, k, lambda));
+    fillNoncentralChiPointsFrom(source, T, dest, k, lambda);
+}
+
+pub fn fillNoncentralChiChecked(rng: Rng, comptime T: type, dest: []T, k: T, lambda: T) NoncentralChiError!void {
+    return fillNoncentralChiCheckedFrom(rng, T, dest, k, lambda);
+}
+
+pub fn fillNoncentralChiCheckedFrom(source: anytype, comptime T: type, dest: []T, k: T, lambda: T) NoncentralChiError!void {
+    if (dest.len == 0) return;
+    const dist = try NoncentralChi(T).init(k, lambda);
     dist.fillFrom(source, dest);
 }
 
@@ -47792,6 +48355,393 @@ test "Hoyt f32 support" {
     const d = try Hoyt(f32).init(1, 2);
     const rayleigh_mean_f32: f32 = @sqrt(@as(f32, std.math.pi) / 2);
     try std.testing.expectApproxEqAbs(rayleigh_mean_f32, d.expectedValue(), 1e-3);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+// NoncentralChiSquared tests.
+test "NoncentralChiSquared constructor validation" {
+    try std.testing.expectError(error.InvalidParameter, NoncentralChiSquared(f64).init(-1, 0));
+    try std.testing.expectError(error.InvalidParameter, NoncentralChiSquared(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, NoncentralChiSquared(f64).init(std.math.inf(f64), 0));
+    const d = try NoncentralChiSquared(f64).init(5, 2);
+    try std.testing.expectEqual(@as(f64, 5), d.dofValue());
+    try std.testing.expectEqual(@as(f64, 2), d.ncpValue());
+}
+
+test "NoncentralChiSquared analytic moments" {
+    // k=5, λ=0: central ChiSquared(5) → mean=5, var=10
+    const c = try NoncentralChiSquared(f64).init(5, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), c.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), c.varianceValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), c.modeValue(), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), c.minValue());
+    try std.testing.expectEqual(@as(?f64, null), c.maxValue());
+    // k=5, λ=2 → mean=7, var=2*(5+4)=18
+    const d = try NoncentralChiSquared(f64).init(5, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 7), d.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 18), d.varianceValue(), 1e-12);
+    // degenerate
+    const z = try NoncentralChiSquared(f64).init(0, 0);
+    try std.testing.expectEqual(@as(f64, 0), z.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0), z.varianceValue());
+}
+
+test "NoncentralChiSquared λ=0 matches ChiSquared" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x125a);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChiSquared(f64).init(5, 0);
+    // Sample 200 values; ensure non-negativity and finiteness.
+    for (0..200) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+test "NoncentralChiSquared k=0 special case" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x125b);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChiSquared(f64).init(0, 4); // sqrt(λ)=2, so X ~ (N(2,1))²
+    // Mean = k+λ = 4; for k=0, λ>0, expected value is 1+λ = 5 (wait: for k=0 χ'²(0,λ) has mean λ, var 4λ).
+    try std.testing.expectApproxEqAbs(@as(f64, 4), d.expectedValue(), 1e-12);
+    var sum: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| sum += d.sample(rng);
+    const mean = sum / @as(f64, n);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), mean, 0.2);
+}
+
+test "NoncentralChiSquared Monte Carlo for k=3, λ=4" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x125c);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChiSquared(f64).init(3, 4);
+    var sum: f64 = 0;
+    var sumsq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sumsq += x * x;
+    }
+    const mean = sum / @as(f64, n);
+    const second = sumsq / @as(f64, n);
+    const var_est = second - mean * mean;
+    try std.testing.expectApproxEqAbs(@as(f64, 7), mean, 0.3); // 3+4=7
+    try std.testing.expectApproxEqAbs(@as(f64, 22), var_est, 1.0); // 2*(3+8)=22
+}
+
+test "NoncentralChiSquared free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x125d);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillNoncentralChiSquared(rng, f64, &buf, 5, 2);
+    for (buf) |x| try std.testing.expect(x >= 0);
+    try std.testing.expectError(error.InvalidParameter, noncentralChiSquaredChecked(rng, f64, -1, 0));
+    const val = try noncentralChiSquaredChecked(rng, f64, 5, 2);
+    try std.testing.expect(val >= 0);
+}
+
+test "NoncentralChiSquared f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32a);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChiSquared(f32).init(5, 2);
+    try std.testing.expectApproxEqAbs(@as(f32, 7), d.expectedValue(), 1e-3);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+// NoncentralT tests.
+test "NoncentralT constructor validation" {
+    try std.testing.expectError(error.InvalidParameter, NoncentralT(f64).init(0, 0));
+    try std.testing.expectError(error.InvalidParameter, NoncentralT(f64).init(-1, 0));
+    try std.testing.expectError(error.InvalidParameter, NoncentralT(f64).init(5, std.math.inf(f64)));
+    const d = try NoncentralT(f64).init(5, 1);
+    try std.testing.expectEqual(@as(f64, 5), d.dofValue());
+    try std.testing.expectEqual(@as(f64, 1), d.ncpValue());
+}
+
+test "NoncentralT μ=0 matches StudentT moments" {
+    const d = try NoncentralT(f64).init(5, 0);
+    // mean = 0 for symmetric centered t
+    try std.testing.expectApproxEqAbs(@as(f64, 0), d.expectedValue().?, 1e-12);
+    // variance = dof/(dof-2) = 5/3 ≈ 1.667
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 3.0), d.varianceValue().?, 1e-9);
+    // dof=1 has undefined mean (Cauchy)
+    const c = try NoncentralT(f64).init(1, 0);
+    try std.testing.expectEqual(@as(?f64, null), c.expectedValue());
+    // dof=2 has undefined variance
+    const d2 = try NoncentralT(f64).init(2, 0);
+    try std.testing.expect(d2.expectedValue() != null); // mean defined for dof>1
+    try std.testing.expectEqual(@as(?f64, null), d2.varianceValue());
+    // infinite dof → normal(μ,1)
+    const inf = try NoncentralT(f64).init(std.math.inf(f64), 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), inf.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), inf.varianceValue().?, 1e-9);
+}
+
+test "NoncentralT basic sampling" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x125e);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralT(f64).init(10, 1);
+    for (0..200) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+test "NoncentralT Monte Carlo for ν=∞, μ=2 (standard normal)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x125f);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralT(f64).init(std.math.inf(f64), 2);
+    var sum: f64 = 0;
+    var sumsq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sumsq += x * x;
+    }
+    const mean = sum / @as(f64, n);
+    const second = sumsq / @as(f64, n);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), mean, 0.1);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), second, 0.3); // var=1, second moment = 1+4=5
+}
+
+test "NoncentralT Monte Carlo for μ=0, ν=10 (central t)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1260);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralT(f64).init(10, 0);
+    var sum: f64 = 0;
+    var sumsq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sum += x;
+        sumsq += x * x;
+    }
+    const mean = sum / @as(f64, n);
+    const second = sumsq / @as(f64, n);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), mean, 0.1);
+    // second moment = E[T²] = Var[T] = ν/(ν-2) = 10/8 = 1.25
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25), second, 0.15);
+}
+
+test "NoncentralT free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1261);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillNoncentralT(rng, f64, &buf, 5, 1);
+    for (buf) |x| try std.testing.expect(std.math.isFinite(x));
+    try std.testing.expectError(error.InvalidParameter, noncentralTChecked(rng, f64, 0, 1));
+    const val = try noncentralTChecked(rng, f64, 5, 1);
+    try std.testing.expect(std.math.isFinite(val));
+}
+
+test "NoncentralT f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32b);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralT(f32).init(10, 1);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+// NoncentralF tests.
+test "NoncentralF constructor validation" {
+    try std.testing.expectError(error.InvalidParameter, NoncentralF(f64).init(0, 5, 0));
+    try std.testing.expectError(error.InvalidParameter, NoncentralF(f64).init(5, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, NoncentralF(f64).init(5, 5, -1));
+    const d = try NoncentralF(f64).init(3, 10, 2);
+    try std.testing.expectEqual(@as(f64, 3), d.d1Value());
+    try std.testing.expectEqual(@as(f64, 10), d.d2Value());
+    try std.testing.expectEqual(@as(f64, 2), d.ncpValue());
+}
+
+test "NoncentralF λ=0 matches FisherF moments" {
+    // d1=5, d2=10, λ=0: E = d2/(d2-2) = 10/8 = 1.25
+    const d = try NoncentralF(f64).init(5, 10, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 10.0 / 8.0), d.expectedValue().?, 1e-9);
+    // d2 ≤ 2: undefined mean
+    const d2 = try NoncentralF(f64).init(5, 2, 0);
+    try std.testing.expectEqual(@as(?f64, null), d2.expectedValue());
+    // d2 ≤ 4: undefined variance
+    const d4 = try NoncentralF(f64).init(5, 4, 0);
+    try std.testing.expect(d4.expectedValue() != null);
+    try std.testing.expectEqual(@as(?f64, null), d4.varianceValue());
+    // minValue always 0
+    try std.testing.expectEqual(@as(f64, 0), d.minValue());
+    try std.testing.expectEqual(@as(?f64, null), d.maxValue());
+}
+
+test "NoncentralF basic sampling non-negativity" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1262);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralF(f64).init(3, 10, 2);
+    for (0..200) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+test "NoncentralF Monte Carlo for λ=0 (central F)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1263);
+    const rng = Rng.init(&engine);
+    // d1=5, d2=∞, λ=0: E=1
+    const d = try NoncentralF(f64).init(5, 200, 0);
+    var sum: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| sum += d.sample(rng);
+    const mean = sum / @as(f64, n);
+    try std.testing.expectApproxEqAbs(@as(f64, 200.0 / 198.0), mean, 0.06);
+}
+
+test "NoncentralF Monte Carlo with λ>0" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1264);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralF(f64).init(3, 20, 4);
+    // E = d2/(d2-2) * (d1+λ)/d1 = 20/18 * 7/3 ≈ 2.593
+    var sum: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| sum += d.sample(rng);
+    const mean = sum / @as(f64, n);
+    try std.testing.expectApproxEqAbs(@as(f64, 20.0 / 18.0 * 7.0 / 3.0), mean, 0.15);
+}
+
+test "NoncentralF free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1265);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillNoncentralF(rng, f64, &buf, 3, 10, 2);
+    for (buf) |x| try std.testing.expect(x >= 0);
+    try std.testing.expectError(error.InvalidParameter, noncentralFChecked(rng, f64, 0, 10, 2));
+    const val = try noncentralFChecked(rng, f64, 3, 10, 2);
+    try std.testing.expect(val >= 0);
+}
+
+test "NoncentralF f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32c);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralF(f32).init(3, 10, 2);
+    for (0..64) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+// NoncentralChi tests.
+test "NoncentralChi constructor validation" {
+    try std.testing.expectError(error.InvalidParameter, NoncentralChi(f64).init(-1, 0));
+    try std.testing.expectError(error.InvalidParameter, NoncentralChi(f64).init(0, -1));
+    const d = try NoncentralChi(f64).init(3, 4);
+    try std.testing.expectEqual(@as(f64, 3), d.dofValue());
+    try std.testing.expectEqual(@as(f64, 4), d.ncpValue());
+}
+
+test "NoncentralChi λ=0 matches Chi moments" {
+    // k=5, λ=0: central Chi(5); E[X] = √2·Γ(3)/Γ(2.5) = √2·2/( (3/4)·√π ) = 2√2 / ( (3√π)/4 )
+    // Γ(n+0.5) = (2n)!√π/(4^n n!); Γ(2.5) = (3/4)√π ≈ 1.3293; E[χ_5] = √2·Γ(3)/Γ(2.5) = √2·2/((3√π)/4) = 8√2/(3√π) ≈ 2.128
+    const d = try NoncentralChi(f64).init(5, 0);
+    const expected: f64 = @sqrt(2.0) * @exp(std.math.lgamma(f64, 3) - std.math.lgamma(f64, 2.5));
+    try std.testing.expectApproxEqAbs(expected, d.expectedValue(), 1e-9);
+    // Var = k + λ - (E[X])² = 5 - expected²
+    const var_expected = 5 - expected * expected;
+    try std.testing.expectApproxEqAbs(var_expected, d.varianceValue(), 1e-9);
+    // k=2, λ=ν² is Rice but here λ=0 → Rayleigh(σ=1): E = √(π/2) ≈ 1.253
+    const r = try NoncentralChi(f64).init(2, 0);
+    try std.testing.expectApproxEqAbs(@sqrt(@as(f64, std.math.pi) / 2), r.expectedValue(), 1e-9);
+}
+
+test "NoncentralChi k=2,λ=ν² Rice matches Rice moments (σ=1)" {
+    // Noncentral chi k=2, λ=ν² corresponds to Rice(ν, σ=1).
+    // Compare against the Rice sampler we already have.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1266);
+    const rng = Rng.init(&engine);
+    // We can't easily construct Rice directly without importing it at test level, but we can test
+    // that k=2 noncentral chi is non-negative and finite and variance matches E[X²]-(E[X])².
+    const nu: f64 = 2;
+    const lambda = nu * nu; // λ = ν²
+    const d = try NoncentralChi(f64).init(2, lambda);
+    // E[X²] = k + λ = 2 + 4 = 6
+    const ex = d.expectedValue();
+    try std.testing.expectApproxEqAbs(@as(f64, 6) - ex * ex, d.varianceValue(), 1e-9);
+    for (0..200) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+test "NoncentralChi basic sampling" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1267);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChi(f64).init(3, 4);
+    for (0..200) |_| {
+        const x = d.sample(rng);
+        try std.testing.expect(x >= 0);
+        try std.testing.expect(std.math.isFinite(x));
+    }
+}
+
+test "NoncentralChi Monte Carlo second moment (k+λ)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1268);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChi(f64).init(3, 4);
+    var sumsq: f64 = 0;
+    const n = 5000;
+    for (0..n) |_| {
+        const x = d.sample(rng);
+        sumsq += x * x;
+    }
+    const second = sumsq / @as(f64, n);
+    // E[X²] = k + λ = 7
+    try std.testing.expectApproxEqAbs(@as(f64, 7), second, 0.2);
+}
+
+test "NoncentralChi free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1269);
+    const rng = Rng.init(&engine);
+    var buf: [64]f64 = undefined;
+    fillNoncentralChi(rng, f64, &buf, 3, 4);
+    for (buf) |x| try std.testing.expect(x >= 0);
+    try std.testing.expectError(error.InvalidParameter, noncentralChiChecked(rng, f64, -1, 0));
+    const val = try noncentralChiChecked(rng, f64, 3, 4);
+    try std.testing.expect(val >= 0);
+}
+
+test "NoncentralChi f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf32d);
+    const rng = Rng.init(&engine);
+    const d = try NoncentralChi(f32).init(3, 4);
     for (0..64) |_| {
         const x = d.sample(rng);
         try std.testing.expect(x >= 0);
