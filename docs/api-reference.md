@@ -3096,6 +3096,41 @@ Reusable samplers:
 - `Dirichlet(T).sampleManyIntoCheckedFrom`
 - `WishartError`
 - `InverseWishartError`
+- `Wishart(T)`
+- `Wishart(T).init`
+- `Wishart(T).new`
+- `Wishart(T).deinit`
+- `Wishart(T).clone`
+- `Wishart(T).dfValue`
+- `Wishart(T).dimensionValue`
+- `Wishart(T).scaleValue`
+- `Wishart(T).scaleInto`
+- `Wishart(T).expectedValue`
+- `Wishart(T).expectedValueInto`
+- `Wishart(T).modeValue`
+- `Wishart(T).sample`
+- `Wishart(T).sampleFrom`
+- `Wishart(T).sampleInto`
+- `Wishart(T).sampleIntoFrom`
+- `Wishart(T).sampleIntoChecked`
+- `Wishart(T).sampleIntoCheckedFrom`
+- `InverseWishart(T)`
+- `InverseWishart(T).init`
+- `InverseWishart(T).new`
+- `InverseWishart(T).deinit`
+- `InverseWishart(T).clone`
+- `InverseWishart(T).dfValue`
+- `InverseWishart(T).dimensionValue`
+- `InverseWishart(T).scaleValue`
+- `InverseWishart(T).scaleInto`
+- `InverseWishart(T).expectedValue`
+- `InverseWishart(T).modeValue`
+- `InverseWishart(T).sample`
+- `InverseWishart(T).sampleFrom`
+- `InverseWishart(T).sampleInto`
+- `InverseWishart(T).sampleIntoFrom`
+- `InverseWishart(T).sampleIntoChecked`
+- `InverseWishart(T).sampleIntoCheckedFrom`
 - `StaticWishart(T, dimension)`
 - `StaticWishart(T, dimension).init`
 - `StaticWishart(T, dimension).new`

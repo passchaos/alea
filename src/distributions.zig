@@ -26356,6 +26356,549 @@ fn choleskyInvertMatrix(comptime T: type, comptime dim: usize, A: [dim][dim]T) [
     return Ainv;
 }
 
+// ---- Runtime (dynamic dimension) linear algebra helpers for flat row-major matrices ----
+
+/// Compute lower-triangular Cholesky factor L of a symmetric positive-definite
+/// matrix A (row-major flat slice, length dim*dim). Returns error.InvalidCovariance
+/// if A is not symmetric positive-definite. The upper triangle of L is zero.
+fn choleskyFactorizeFlat(comptime T: type, dim: usize, A: []const T, L: []T) Error!void {
+    std.debug.assert(A.len == dim * dim);
+    std.debug.assert(L.len == dim * dim);
+
+    // Zero L first
+    @memset(L, 0);
+
+    // Check symmetry
+    var i: usize = 0;
+    while (i < dim) : (i += 1) {
+        var j: usize = i + 1;
+        while (j < dim) : (j += 1) {
+            if (A[i * dim + j] != A[j * dim + i]) return error.InvalidCovariance;
+        }
+    }
+
+    // Cholesky-Banachiewicz
+    i = 0;
+    while (i < dim) : (i += 1) {
+        var j: usize = 0;
+        while (j <= i) : (j += 1) {
+            var sum: T = A[i * dim + j];
+            var k: usize = 0;
+            while (k < j) : (k += 1) {
+                sum -= L[i * dim + k] * L[j * dim + k];
+            }
+            if (i == j) {
+                if (sum <= 0) return error.InvalidCovariance;
+                L[i * dim + j] = @sqrt(sum);
+            } else {
+                L[i * dim + j] = sum / L[j * dim + j];
+            }
+        }
+    }
+}
+
+/// Invert a symmetric positive-definite matrix given its lower-triangular
+/// Cholesky factor L (flat row-major, length dim*dim). Uses caller-provided
+/// scratch `Linv` (dim*dim, overwritten). Writes X⁻¹ into out. No allocation.
+fn choleskyInvertFlatScratch(comptime T: type, dim: usize, L: []const T, Linv: []T, out: []T) void {
+    std.debug.assert(L.len == dim * dim);
+    std.debug.assert(Linv.len == dim * dim);
+    std.debug.assert(out.len == dim * dim);
+
+    @memset(Linv, 0);
+    var i: usize = 0;
+    while (i < dim) : (i += 1) {
+        Linv[i * dim + i] = 1.0 / L[i * dim + i];
+        var j: usize = 0;
+        while (j < i) : (j += 1) {
+            var sum: T = 0;
+            var k: usize = j;
+            while (k < i) : (k += 1) {
+                sum += L[i * dim + k] * Linv[k * dim + j];
+            }
+            Linv[i * dim + j] = -sum / L[i * dim + i];
+        }
+    }
+
+    // A⁻¹ = Linv' * Linv (symmetric product)
+    i = 0;
+    while (i < dim) : (i += 1) {
+        var j: usize = 0;
+        while (j < dim) : (j += 1) {
+            var sum: T = 0;
+            var k: usize = @max(i, j);
+            while (k < dim) : (k += 1) {
+                sum += Linv[k * dim + i] * Linv[k * dim + j];
+            }
+            out[i * dim + j] = sum;
+        }
+    }
+}
+
+/// Invert a symmetric positive-definite matrix given its lower-triangular
+/// Cholesky factor L (flat row-major). Allocates scratch from `allocator`.
+fn choleskyInvertFlat(comptime T: type, allocator: std.mem.Allocator, dim: usize, L: []const T, out: []T) !void {
+    std.debug.assert(L.len == dim * dim);
+    std.debug.assert(out.len == dim * dim);
+    const Linv = try allocator.alloc(T, dim * dim);
+    defer allocator.free(Linv);
+    choleskyInvertFlatScratch(T, dim, L, Linv, out);
+}
+
+/// Invert a symmetric positive-definite matrix A (flat row-major, dim*dim)
+/// by Cholesky decomposition, using caller-provided scratch buffers `L` and
+/// `Linv` (both dim*dim). No allocation.
+fn choleskyInvertMatrixFlatScratch(comptime T: type, dim: usize, A: []const T, L: []T, Linv: []T, out: []T) Error!void {
+    std.debug.assert(A.len == dim * dim);
+    std.debug.assert(L.len == dim * dim);
+    std.debug.assert(Linv.len == dim * dim);
+    std.debug.assert(out.len == dim * dim);
+    try choleskyFactorizeFlat(T, dim, A, L);
+    choleskyInvertFlatScratch(T, dim, L, Linv, out);
+}
+
+/// Invert a symmetric positive-definite matrix A (flat row-major, dim*dim)
+/// by Cholesky decomposition using `allocator` for scratch. Writes result into out.
+fn choleskyInvertMatrixFlat(comptime T: type, allocator: std.mem.Allocator, dim: usize, A: []const T, out: []T) !void {
+    std.debug.assert(A.len == dim * dim);
+    std.debug.assert(out.len == dim * dim);
+
+    const L = try allocator.alloc(T, dim * dim);
+    defer allocator.free(L);
+    try choleskyFactorizeFlat(T, dim, A, L);
+    choleskyInvertFlat(T, allocator, dim, L, out);
+}
+
+/// Compute X = L A A' L' for lower-triangular L and A (flat row-major, dim*dim).
+/// Uses caller-provided scratch `LA` (dim*dim). No allocation.
+fn wishartBartlettProductFlatScratch(comptime T: type, dim: usize, L: []const T, A: []const T, LA: []T, out: []T) void {
+    std.debug.assert(L.len == dim * dim);
+    std.debug.assert(A.len == dim * dim);
+    std.debug.assert(LA.len == dim * dim);
+    std.debug.assert(out.len == dim * dim);
+
+    var i: usize = 0;
+    while (i < dim) : (i += 1) {
+        var j: usize = 0;
+        while (j < dim) : (j += 1) {
+            var sum: T = 0;
+            var k: usize = 0;
+            while (k <= @min(i, j)) : (k += 1) {
+                sum += L[i * dim + k] * A[k * dim + j];
+            }
+            LA[i * dim + j] = sum;
+        }
+    }
+
+    i = 0;
+    while (i < dim) : (i += 1) {
+        var j: usize = 0;
+        while (j < dim) : (j += 1) {
+            var sum: T = 0;
+            var k: usize = 0;
+            while (k <= @min(i, j)) : (k += 1) {
+                sum += LA[i * dim + k] * LA[j * dim + k];
+            }
+            out[i * dim + j] = sum;
+        }
+    }
+}
+
+/// Compute X = L A A' L', allocating LA scratch from `allocator`.
+fn wishartBartlettProductFlat(comptime T: type, allocator: std.mem.Allocator, dim: usize, L: []const T, A: []const T, out: []T) !void {
+    const LA = try allocator.alloc(T, dim * dim);
+    defer allocator.free(LA);
+    wishartBartlettProductFlatScratch(T, dim, L, A, LA, out);
+}
+
+/// Dynamic (runtime-dimension, allocator-backed) Wishart distribution.
+/// Samples dim×dim positive-definite matrices from W_dim(scale, df) using
+/// rejection-free Bartlett decomposition. Matrices are stored as flat
+/// row-major slices of length dim*dim. All owned buffers (Cholesky factor
+/// and per-sample scratch) are freed on `deinit`; `sampleInto` performs no
+/// allocation.
+pub fn Wishart(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        /// Lower-triangular Cholesky factor L of the scale matrix (flat row-major, dim*dim).
+        cholesky: []T,
+        /// Scratch for the Bartlett A matrix (lower triangular, dim*dim).
+        scratch_A: []T,
+        /// Scratch for LA = L * A (dim*dim).
+        scratch_LA: []T,
+        /// Degrees of freedom ν.
+        df: T,
+        /// Matrix dimension dim.
+        dim: usize,
+        /// Allocator used for owned storage.
+        allocator: std.mem.Allocator,
+
+        /// Construct a Wishart distribution from a symmetric positive-definite scale
+        /// matrix (flat row-major, length dim*dim) and degrees of freedom ν ≥ dim.
+        /// Returns error.InvalidCovariance if the matrix is not PD or df < dim.
+        pub fn init(allocator: std.mem.Allocator, scale: []const T, df: T) !Self {
+            if (scale.len == 0) return error.InvalidCovariance;
+            const dim = std.math.sqrt(scale.len);
+            if (dim * dim != scale.len) return error.InvalidLength;
+            if (dim < 1) return error.InvalidCovariance;
+            if (std.math.isNan(df) or df < @as(T, @floatFromInt(dim))) return error.InvalidCovariance;
+
+            const L = try allocator.alloc(T, dim * dim);
+            errdefer allocator.free(L);
+            try choleskyFactorizeFlat(T, dim, scale, L);
+
+            const A = try allocator.alloc(T, dim * dim);
+            errdefer allocator.free(A);
+            const LA = try allocator.alloc(T, dim * dim);
+            errdefer allocator.free(LA);
+
+            return Self{
+                .cholesky = L,
+                .scratch_A = A,
+                .scratch_LA = LA,
+                .df = df,
+                .dim = dim,
+                .allocator = allocator,
+            };
+        }
+
+        /// Alias for init.
+        pub fn new(allocator: std.mem.Allocator, scale: []const T, df: T) !Self {
+            return init(allocator, scale, df);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.allocator.free(self.cholesky);
+            self.allocator.free(self.scratch_A);
+            self.allocator.free(self.scratch_LA);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const L = try allocator.dupe(T, self.cholesky);
+            errdefer allocator.free(L);
+            const A = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(A);
+            const LA = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(LA);
+            return Self{
+                .cholesky = L,
+                .scratch_A = A,
+                .scratch_LA = LA,
+                .df = self.df,
+                .dim = self.dim,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.dim;
+        }
+
+        /// Return the reconstructed scale matrix V = L L' as a freshly allocated
+        /// flat row-major slice. Caller owns the returned memory.
+        pub fn scaleValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            const out = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(out);
+            self.scaleInto(out);
+            return out;
+        }
+
+        pub fn scaleInto(self: Self, out: []T) void {
+            std.debug.assert(out.len == self.dim * self.dim);
+            const dim = self.dim;
+            var i: usize = 0;
+            while (i < dim) : (i += 1) {
+                var j: usize = 0;
+                while (j < dim) : (j += 1) {
+                    var sum: T = 0;
+                    var k: usize = 0;
+                    while (k <= @min(i, j)) : (k += 1) {
+                        sum += self.cholesky[i * dim + k] * self.cholesky[j * dim + k];
+                    }
+                    out[i * dim + j] = sum;
+                }
+            }
+        }
+
+        /// Expected value E[X] = ν · V as freshly allocated flat row-major.
+        pub fn expectedValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            const V = try self.scaleValue(allocator);
+            errdefer allocator.free(V);
+            for (V) |*v| v.* *= self.df;
+            return V;
+        }
+
+        pub fn expectedValueInto(self: Self, out: []T) void {
+            self.scaleInto(out);
+            for (out) |*v| v.* *= self.df;
+        }
+
+        /// Mode (ν - dim - 1) · V, valid for ν > dim + 1; returns null otherwise.
+        pub fn modeValue(self: Self, allocator: std.mem.Allocator) ?[]T {
+            const dim = self.dim;
+            if (self.df <= @as(T, @floatFromInt(dim + 1))) return null;
+            const V = self.scaleValue(allocator) catch return null;
+            const factor = self.df - @as(T, @floatFromInt(dim + 1));
+            for (V) |*v| v.* *= factor;
+            return V;
+        }
+
+        /// Sample a dim×dim PD matrix, returning a freshly allocated flat
+        /// row-major slice that the caller owns.
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dim * self.dim);
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dim * self.dim);
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dim * self.dim) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dim * self.dim) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            const dim = self.dim;
+            const A = self.scratch_A;
+            @memset(A, 0);
+
+            var i: usize = 0;
+            while (i < dim) : (i += 1) {
+                const chi_df = self.df - @as(T, @floatFromInt(i));
+                A[i * dim + i] = @sqrt(chiSquaredFrom(source, T, chi_df));
+                var j: usize = 0;
+                while (j < i) : (j += 1) {
+                    A[i * dim + j] = Rng.standardNormalFastFrom(source, T);
+                }
+            }
+
+            wishartBartlettProductFlatScratch(T, dim, self.cholesky, A, self.scratch_LA, out);
+        }
+    };
+}
+
+/// Dynamic (runtime-dimension, allocator-backed) Inverse-Wishart distribution.
+/// Samples dim×dim positive-definite covariance matrices from IW_dim(Ψ, ν).
+/// All scratch is pre-allocated at init; `sampleInto` performs no allocation.
+pub fn InverseWishart(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        /// Inner Wishart sampler on Ψ⁻¹ (the precision Wishart), pre-loaded
+        /// with its own scratch buffers.
+        wishart: Wishart(T),
+        /// Lower-triangular Cholesky factor of Ψ (flat row-major).
+        psi_chol: []T,
+        /// Scratch for Linv during matrix inversion (dim*dim).
+        scratch_Linv: []T,
+        /// Scratch for in-place Wishart draw (dim*dim).
+        scratch_X: []T,
+        /// Degrees of freedom ν.
+        df: T,
+        /// Dimension.
+        dim: usize,
+        /// Allocator.
+        allocator: std.mem.Allocator,
+
+        pub fn init(allocator: std.mem.Allocator, scale: []const T, df: T) !Self {
+            if (scale.len == 0) return error.InvalidCovariance;
+            const dim = std.math.sqrt(scale.len);
+            if (dim * dim != scale.len) return error.InvalidLength;
+            if (dim < 1) return error.InvalidCovariance;
+            if (std.math.isNan(df) or df < @as(T, @floatFromInt(dim))) return error.InvalidCovariance;
+
+            // Allocate all owned buffers up front with a single errdefer.
+            // psi_inv is a temporary and freed before return.
+            const Lpsi = try allocator.alloc(T, dim * dim);
+            errdefer allocator.free(Lpsi);
+            try choleskyFactorizeFlat(T, dim, scale, Lpsi);
+
+            const Linv = try allocator.alloc(T, dim * dim);
+            errdefer allocator.free(Linv);
+
+            const psi_inv = try allocator.alloc(T, dim * dim);
+            defer allocator.free(psi_inv);
+            choleskyInvertFlatScratch(T, dim, Lpsi, Linv, psi_inv);
+
+            const X = try allocator.alloc(T, dim * dim);
+            errdefer allocator.free(X);
+
+            // Build inner Wishart on Ψ⁻¹. wishart_sampler owns its own buffers.
+            const wishart_sampler = try Wishart(T).init(allocator, psi_inv, df);
+            errdefer wishart_sampler.deinit();
+
+            return Self{
+                .wishart = wishart_sampler,
+                .psi_chol = Lpsi,
+                .scratch_Linv = Linv,
+                .scratch_X = X,
+                .df = df,
+                .dim = dim,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(allocator: std.mem.Allocator, scale: []const T, df: T) !Self {
+            return init(allocator, scale, df);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.wishart.deinit();
+            self.allocator.free(self.psi_chol);
+            self.allocator.free(self.scratch_Linv);
+            self.allocator.free(self.scratch_X);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const wishart_clone = try self.wishart.clone(allocator);
+            errdefer wishart_clone.deinit();
+            const Lpsi = try allocator.dupe(T, self.psi_chol);
+            errdefer allocator.free(Lpsi);
+            const Linv = try allocator.dupe(T, self.scratch_Linv);
+            errdefer allocator.free(Linv);
+            const X = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(X);
+            return Self{
+                .wishart = wishart_clone,
+                .psi_chol = Lpsi,
+                .scratch_Linv = Linv,
+                .scratch_X = X,
+                .df = self.df,
+                .dim = self.dim,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.dim;
+        }
+
+        /// Reconstruct scale Ψ = Lpsi Lpsi' as freshly allocated flat row-major.
+        pub fn scaleValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            const out = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(out);
+            self.scaleInto(out);
+            return out;
+        }
+
+        pub fn scaleInto(self: Self, out: []T) void {
+            std.debug.assert(out.len == self.dim * self.dim);
+            const dim = self.dim;
+            var i: usize = 0;
+            while (i < dim) : (i += 1) {
+                var j: usize = 0;
+                while (j < dim) : (j += 1) {
+                    var sum: T = 0;
+                    var k: usize = 0;
+                    while (k <= @min(i, j)) : (k += 1) {
+                        sum += self.psi_chol[i * dim + k] * self.psi_chol[j * dim + k];
+                    }
+                    out[i * dim + j] = sum;
+                }
+            }
+        }
+
+        /// Expected value E[X] = Ψ / (ν - dim - 1), valid for ν > dim+1.
+        pub fn expectedValue(self: Self, allocator: std.mem.Allocator) ?[]T {
+            const dim = self.dim;
+            const denom = self.df - @as(T, @floatFromInt(dim + 1));
+            if (denom <= 0) return null;
+            const psi = self.scaleValue(allocator) catch return null;
+            for (psi) |*v| v.* /= denom;
+            return psi;
+        }
+
+        /// Mode Ψ / (ν + dim + 1).
+        pub fn modeValue(self: Self, allocator: std.mem.Allocator) ?[]T {
+            const dim = self.dim;
+            const denom = self.df + @as(T, @floatFromInt(dim + 1));
+            if (denom <= 0) return null;
+            const psi = self.scaleValue(allocator) catch return null;
+            for (psi) |*v| v.* /= denom;
+            return psi;
+        }
+
+        /// Sample a dim×dim PD covariance matrix as freshly allocated flat row-major.
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dim * self.dim);
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dim * self.dim);
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dim * self.dim);
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dim * self.dim) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dim * self.dim) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            const dim = self.dim;
+            // Draw X ~ Wishart(Ψ⁻¹, ν) into scratch_X
+            self.wishart.sampleIntoUnchecked(source, self.scratch_X);
+            // Invert X to get IW draw: out = X⁻¹. Reuse wishart.scratch_A for L
+            // and self.scratch_Linv for Linv; no allocation.
+            choleskyInvertMatrixFlatScratch(T, dim, self.scratch_X, self.wishart.scratch_A, self.scratch_Linv, out) catch unreachable;
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -51202,4 +51745,178 @@ test "StaticInverseWishart 3x3 Monte Carlo mean" {
             try std.testing.expectApproxEqAbs(expected[i][j], mc, 0.2 * @abs(expected[i][j]) + 0.02);
         }
     }
+}
+
+// ---- Dynamic (runtime-dim) Wishart / InverseWishart tests ----
+
+test "Wishart (dynamic) parameter validation" {
+    const allocator = std.testing.allocator;
+    // df < dim
+    const I2 = [_]f64{ 1, 0, 0, 1 };
+    try std.testing.expectError(error.InvalidCovariance, Wishart(f64).init(allocator, &I2, 1));
+    // non-square-length slice
+    const bad_len = [_]f64{ 1, 0, 0 };
+    try std.testing.expectError(error.InvalidLength, Wishart(f64).init(allocator, &bad_len, 2));
+    // non-PD (diagonal zero)
+    const bad = [_]f64{ 0, 0, 0, 1 };
+    try std.testing.expectError(error.InvalidCovariance, Wishart(f64).init(allocator, &bad, 2));
+}
+
+test "Wishart (dynamic) 2x2 samples are PD, symmetric, mean matches" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x9a2d);
+    const rng = Rng.init(&engine);
+
+    const V = [_]f64{ 2, 0, 0, 1 }; // diagonal scale
+    const df: f64 = 5;
+    var w = try Wishart(f64).init(allocator, &V, df);
+    defer w.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), w.dimensionValue());
+    try std.testing.expectEqual(df, w.dfValue());
+
+    // Reconstructed scale matches
+    const V_rec = try w.scaleValue(allocator);
+    defer allocator.free(V_rec);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), V_rec[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), V_rec[1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), V_rec[2], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), V_rec[3], 1e-9);
+
+    // Expected value = df * V
+    const E = try w.expectedValue(allocator);
+    defer allocator.free(E);
+    try std.testing.expectApproxEqAbs(df * 2, E[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), E[1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), E[2], 1e-9);
+    try std.testing.expectApproxEqAbs(df * 1, E[3], 1e-9);
+
+    // Monte Carlo mean
+    var sum = [_]f64{ 0, 0, 0, 0 };
+    const n = 3000;
+    for (0..n) |_| {
+        const X = try w.sample(allocator, rng);
+        defer allocator.free(X);
+        // Symmetry and PD check
+        try std.testing.expectApproxEqAbs(X[1], X[2], 1e-10);
+        const det = X[0] * X[3] - X[1] * X[2];
+        try std.testing.expect(det > 0);
+        try std.testing.expect(X[0] > 0);
+        try std.testing.expect(X[3] > 0);
+        for (X, 0..) |x, k| sum[k] += x;
+    }
+    // Mean should be approximately df*V = {10, 0, 0, 5}
+    try std.testing.expectApproxEqAbs(df * 2, sum[0] / @as(f64, n), 0.3 * df * 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sum[1] / @as(f64, n), 0.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sum[2] / @as(f64, n), 0.5);
+    try std.testing.expectApproxEqAbs(df * 1, sum[3] / @as(f64, n), 0.3 * df);
+}
+
+test "Wishart (dynamic) sampleInto and clone work" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x9a2e);
+    const rng = Rng.init(&engine);
+
+    const I3 = [_]f64{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+    var w = try Wishart(f64).init(allocator, &I3, 5);
+    defer w.deinit();
+
+    var w2 = try w.clone(allocator);
+    defer w2.deinit();
+    try std.testing.expectEqual(w.dim, w2.dim);
+
+    var buf: [9]f64 = undefined;
+    w.sampleInto(rng, &buf);
+    // Symmetric
+    try std.testing.expectApproxEqAbs(buf[1], buf[3], 1e-10);
+    try std.testing.expectApproxEqAbs(buf[2], buf[6], 1e-10);
+    try std.testing.expectApproxEqAbs(buf[5], buf[7], 1e-10);
+    // Leading principal minors positive (Sylvester's criterion)
+    try std.testing.expect(buf[0] > 0);
+    const det2 = buf[0] * buf[4] - buf[1] * buf[3];
+    try std.testing.expect(det2 > 0);
+    const det3 = buf[0] * (buf[4] * buf[8] - buf[5] * buf[7]) -
+        buf[1] * (buf[3] * buf[8] - buf[5] * buf[6]) +
+        buf[2] * (buf[3] * buf[7] - buf[4] * buf[6]);
+    try std.testing.expect(det3 > 0);
+}
+
+test "InverseWishart (dynamic) invalid parameters" {
+    const allocator = std.testing.allocator;
+    const I2 = [_]f64{ 1, 0, 0, 1 };
+    try std.testing.expectError(error.InvalidCovariance, InverseWishart(f64).init(allocator, &I2, 1));
+    const bad = [_]f64{ 0, 0, 0, 1 };
+    try std.testing.expectError(error.InvalidCovariance, InverseWishart(f64).init(allocator, &bad, 5));
+}
+
+test "InverseWishart (dynamic) samples are PD and mean matches formula" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x9a2f);
+    const rng = Rng.init(&engine);
+
+    const Psi = [_]f64{ 2, 0, 0, 1 };
+    const df: f64 = 10; // > d+1 = 3, mean exists
+    var iw = try InverseWishart(f64).init(allocator, &Psi, df);
+    defer iw.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), iw.dimensionValue());
+    const expected_scale = iw.expectedValue(allocator) orelse unreachable;
+    defer allocator.free(expected_scale);
+    // E = Psi / (df - d - 1) = Psi / 7
+    const denom = df - 2 - 1;
+    try std.testing.expectApproxEqAbs(2 / denom, expected_scale[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), expected_scale[1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), expected_scale[2], 1e-9);
+    try std.testing.expectApproxEqAbs(1 / denom, expected_scale[3], 1e-9);
+
+    // Samples are symmetric PD
+    var sum = [_]f64{ 0, 0, 0, 0 };
+    const n = 2000;
+    for (0..n) |_| {
+        const X = try iw.sample(allocator, rng);
+        defer allocator.free(X);
+        try std.testing.expectApproxEqAbs(X[1], X[2], 1e-9);
+        const det = X[0] * X[3] - X[1] * X[2];
+        try std.testing.expect(det > 0);
+        try std.testing.expect(X[0] > 0);
+        for (X, 0..) |x, k| sum[k] += x;
+    }
+    // Monte Carlo mean
+    try std.testing.expectApproxEqAbs(2 / denom, sum[0] / @as(f64, n), 0.3 * (2 / denom) + 0.05);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sum[1] / @as(f64, n), 0.1);
+}
+
+test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x9a30);
+    const rng = Rng.init(&engine);
+
+    const I2 = [_]f64{ 1, 0, 0, 1 };
+    var w = try Wishart(f64).init(allocator, &I2, 3);
+    defer w.deinit();
+    var iw = try InverseWishart(f64).init(allocator, &I2, 5);
+    defer iw.deinit();
+
+    var wbuf: [4]f64 = undefined;
+    var ibuf: [4]f64 = undefined;
+    w.sampleInto(rng, &wbuf);
+    iw.sampleInto(rng, &ibuf);
+
+    // Both PD
+    const wdet = wbuf[0] * wbuf[3] - wbuf[1] * wbuf[2];
+    const idet = ibuf[0] * ibuf[3] - ibuf[1] * ibuf[2];
+    try std.testing.expect(wdet > 0);
+    try std.testing.expect(idet > 0);
+
+    // f32 support
+    const I2f = [_]f32{ 1, 0, 0, 1 };
+    var wf = try Wishart(f32).init(allocator, &I2f, 3);
+    defer wf.deinit();
+    var wbuf_f32: [4]f32 = undefined;
+    wf.sampleInto(rng, &wbuf_f32);
+    try std.testing.expect(wbuf_f32[0] > 0);
 }
