@@ -80,7 +80,7 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
     if (!hasAll(text, &.{
         "Alea local rand/rand_distr status",
         "~/Work/rand",
-        "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar",
+        "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar",
         "no known unblocked local Rust core RNG gap",
         "S4-M11",
         "compare/results/s4-m420-current-rand-status.md",
@@ -96,14 +96,14 @@ fn runSelfTest(stdout: *std.Io.Writer) !void {
         "\"rand\": \"~/Work/rand\"",
         "\"validate_local_passes\": true",
         "\"opportunity_runners_available\": false",
-        "\"current_conclusion\": \"S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar\"",
+        "\"current_conclusion\": \"S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar\"",
         "\"no_known_unblocked_gap\": true",
-        "\"remaining_blocker\": \"S4-M1246",
+        "\"remaining_blocker\": \"Bingham",
         "\"s4_m11_blocked\": false",
         "\"details\": \"compare/results/s4-m420-current-rand-status.md\"",
         "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
         "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
-        "\"latest_validate_local_evidence\": \"compare/results/s4-m1244-polymorphic-standard-normal-exponential.md\"",
+        "\"latest_validate_local_evidence\": \"compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md\"",
     })) return error.SelfTestFailed;
 
     var help_buf: [1024]u8 = undefined;
@@ -140,15 +140,15 @@ fn hasAll(haystack: []const u8, needles: []const []const u8) bool {
 
 fn printStatus(stdout: *std.Io.Writer) !void {
     try stdout.print(
-        \\Alea local rand/rand_distr status (2026-07-18)
+        \\Alea local rand/rand_distr status (2026-07-19)
         \\- Baseline: ~/Work/rand plus cached rand_distr 0.6.0
         \\- Latest gate: zig build validate-local passes
-        \\- Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests
+        \\- Public surface: surfacecheck ok for rand/rand_core/rand_distr manifests; all pub-used distributions and seq helpers covered
         \\- Rust comparison: parser tests and rand-bench-smoke pass
         \\- Runtime runners: node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded
-        \\- Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar
+        \\- Current conclusion: S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar
         \\- Local Rust gap: no known unblocked local Rust core RNG gap
-        \\- Next bar: S4-M1246 post-S4-M1245 dense SIMD ziggurat, broader platform support, circular/directional distributions, performance work, or new core random-workflow gap
+        \\- Next bar: Bingham distribution, Matrix von Mises-Fisher, Kent distribution, copula methods, SIMD spherical bulk sampling, longer statistical validation runs, broader platform support, performance work, or new core random-workflow gap
         \\- Details: compare/results/s4-m420-current-rand-status.md
         \\
     , .{});
@@ -162,25 +162,25 @@ fn printJson(stdout: *std.Io.Writer) !void {
     try stdout.writeAll(
         \\{
         \\  "schema_version": 1,
-        \\  "date": "2026-07-18",
+        \\  "date": "2026-07-19",
         \\  "baseline": {
         \\    "rand": "~/Work/rand",
         \\    "rand_distr": "cached rand_distr 0.6.0"
         \\  },
         \\  "latest_gate": "zig build validate-local passes",
         \\  "validate_local_passes": true,
-        \\  "public_surface": "surfacecheck ok for rand/rand_core/rand_distr manifests",
+        \\  "public_surface": "surfacecheck ok for rand/rand_core/rand_distr manifests; all pub-used distributions and seq helpers covered",
         \\  "rust_comparison": "parser tests and rand-bench-smoke pass",
         \\  "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
         \\  "opportunity_runners_available": false,
-        \\  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar",
+        \\  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar",
         \\  "no_known_unblocked_gap": true,
-        \\  "remaining_blocker": "S4-M1246 post-S4-M1245 next product bar",
+        \\  "remaining_blocker": "Bingham/Matrix-vMF/Kent/copulas and broader-platform/longer-validation next bar",
         \\  "s4_m11_blocked": false,
         \\  "details": "compare/results/s4-m420-current-rand-status.md",
         \\  "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
         \\  "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-        \\  "latest_validate_local_evidence": "compare/results/s4-m1245-rust-api-parity-ndim-geometry-standard-distributions.md"
+        \\  "latest_validate_local_evidence": "compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md"
         \\}
         \\
     );
@@ -198,7 +198,7 @@ test "status output keeps key local rand comparison tokens" {
     try std.testing.expect(std.mem.indexOf(u8, out, "zig build validate-local passes") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "surfacecheck ok") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "rand-bench-smoke pass") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "no known unblocked local Rust core RNG gap") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "S4-M11") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "compare/results/s4-m420-current-rand-status.md") != null);
@@ -216,14 +216,14 @@ test "json output keeps stable machine-readable status keys" {
     try std.testing.expect(std.mem.indexOf(u8, out, "\"rand_distr\": \"cached rand_distr 0.6.0\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"validate_local_passes\": true") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"opportunity_runners_available\": false") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"current_conclusion\": \"S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1245 follow-ups closed for current bar\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"current_conclusion\": \"S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"no_known_unblocked_gap\": true") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"remaining_blocker\": \"S4-M1246") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"remaining_blocker\": \"Bingham") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"s4_m11_blocked\": false") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"details\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, out, "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"") != null);
-    try std.testing.expect(std.mem.indexOf(u8, out, "\"latest_validate_local_evidence\": \"compare/results/s4-m1243-stable-iterator-choice-semantics.md\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"latest_validate_local_evidence\": \"compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md\"") != null);
 }
 
 test "argument parser supports text json and help" {

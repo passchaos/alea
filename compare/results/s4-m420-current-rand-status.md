@@ -1,6 +1,6 @@
 # S4-M420 Current Local Rand Comparison Status
 
-Date: 2026-07-18
+Date: 2026-07-19
 
 ## Summary
 
@@ -23,79 +23,96 @@ Against the locally available Rust evidence on this Linux host:
 - S4-M1166-S4-M1198 added weighted diagnostics/aliases, Poisson max-lambda public constants, and intervening validation refreshes;
 - S4-M1199 expands the local `rand_distr` ziggurat table public-surface guard to public `const` / `static` table names;
 - S4-M1200 refreshes the full `validate-all` aggregate after that verifier change;
-- S4-M1201 refreshes f32x8 standard normal/exponential vectorbench evidence;
-- S4-M1202 refreshes f64x4 standard normal/exponential vectorbench evidence;
-- S4-M1203 refreshes parameterized f32x8/f64x4 normal/exponential vectorbench evidence;
-- S4-M1204 repairs vectorbench status drift;
-- S4-M1205 refreshes the local `validate-local` aggregate after the vectorbench status drift repair;
-- S4-M1206 adds a generic roadmap evidence-path guard after the latest status drift repair;
-- S4-M1207 refreshes the full `validate-all` aggregate after the roadmap evidence-path guard;
-- S4-M1208 refreshes the local `validate-local` aggregate after the full validation refresh;
-- S4-M1209 refreshes the full `validate-all` aggregate after the local comparison update;
-- S4-M1210 refreshes inverse-CDF tail vectorbench evidence after the full validation refresh;
-- S4-M1211 refreshes the local `validate-local` aggregate after the dense-SIMD evidence refresh;
-- S4-M1212 refreshes the full `validate-all` aggregate after the local comparison update;
-- S4-M1213 refreshes the full `validate-all` aggregate after the S4-M1212 status update;
-- S4-M1214 refreshes focused exponential vectorbench evidence;
-- S4-M1215 refreshes the local `validate-local` aggregate after the exponential vectorbench probe;
-- S4-M1216 refreshes the full `validate-all` aggregate after the local comparison update;
-- S4-M1217 refreshes the minimum real-harness dense-SIMD vectorbench gate;
-- S4-M1218 refreshes the local `validate-local` aggregate after the vectorbench gate;
-- S4-M1219 refreshes the full `validate-all` aggregate after the local comparison update;
-- S4-M1220 adds full-covariance multivariate normal sampling;
-- S4-M1221 corrects and optimizes small-dimension multivariate-normal throughput and raises the next bar to S4-M1222;
-- S4-M1222 adds static allocation-free multivariate normal sampling;
-- S4-M1223 fixes ordinary f64 StandardUniform 53-bit grid consistency across facade, direct-source, bulk-fill, iterator/distribution-fill, and vector paths;
-- S4-M1224 recovers ordinary f64 StandardUniform throughput while preserving the S4-M1223 53-bit grid;
-- S4-M1225 further recovers ordinary f64 uniform throughput via low-bit bitcast and 8-lane bulk chunks;
-- S4-M1226 refactors vectorized float slice-fill lane stores to reduce lane-width drift risk;
-- S4-M1227 refactors distribution vector lane stores and staged slice transforms;
-- S4-M1228 completes the remaining distribution transform lane-store sweep;
-- S4-M1229 completes the distribution vector sampler lane-count sweep;
-- S4-M1230 refactors the remaining core rng normal affine lane-store helper;
-- S4-M1231 hardens rng byte-fill / reader refill correctness;
-- S4-M1232 hardens owned byte allocation for fallible byte sources;
-- S4-M1233 fixes `std.Random` adapter `nextU32` byte-stream shape;
-- S4-M1234 hardens root alphanumeric string preallocation before entropy;
-- S4-M1235 aligns fallible direct-source `tryNextU32From` with source-native `nextU32`;
-- S4-M1236 aligns direct-source `nextU64From` / `tryNextU64From` with source-native `nextU64`;
-- S4-M1237 aligns direct-source byte helpers with source-native `fillBytes` and `nextU64` fallback shapes;
-- S4-M1238 aligns generic `nextFrom` direct-source workflows with source-native `nextU64`;
-- S4-M1239 aligns seed and engine `fromRng` workflows with source-native `nextU64` / `tryNextU64`;
-- S4-M1240 aligns `Rng.init` facade construction with raw-alias-only direct sources;
-- S4-M1241 aligns nextU32-only direct sources with u64-shaped raw and facade workflows;
-- no new unblocked local Rust public-surface or comparison-benchmark gap is known.
+- S4-M1201-S4-M1219 closed parameterized SIMD vectorbench refreshes and roadmap drift repairs;
+- S4-M1220-S4-M1222 added full-covariance and static multivariate-normal samplers;
+- S4-M1223 fixed f64 StandardUniform to the correct 53-bit grid;
+- S4-M1224-S4-M1229 hardened distribution vector lane load/store and recovered f64 throughput;
+- S4-M1230-S4-M1235 hardened Rng normal affine lane stores, fallible byte/owned-byte fallbacks, fromRandom nextU32 byte shape, and root string preallocation;
+- S4-M1236-S4-M1241 aligned direct-source raw-alias dispatch for nextU64, fillBytes, generic nextFrom, fromRng, Rng.init, and nextU32-only sources, enabling Rust-style direct RNGs without Zig-only `next`;
+- S4-M1243 fixed stable iterator choice semantics to match Rust `choose_stable`;
+- S4-M1244 converted StandardNormal/StandardExponential to polymorphic unit structs with Exp1 alias and vector support;
+- S4-M1245 added Standard alias, N-dimensional unit sphere/ball, StandardCauchy/StandardLogistic unit structs completing the common zero-parameter continuous distributions;
+- S4-M1246 added Von Mises circular distribution with Best–Fisher rejection sampling (beyond `rand_distr` coverage);
+- S4-M1247 added Wrapped Cauchy circular distribution with closed-form scalar/SIMD inverse-CDF sampling;
+- S4-M1248 landed true mask-rejection SIMD f64x4 ziggurat for standard normal/exponential — exact/default dense-SIMD kernels now beat scalar lane-fill;
+- S4-M1249 extended true SIMD ziggurat to native f32x8 precision profiles;
+- S4-M1250 added Truncated Normal distribution with public normPdf/normCdf/probit helpers, closed-form inverse-CDF sampling for deterministic latency, and promoted vonMises/wrappedCauchy to full public API;
+- S4-M1251 added Von Mises-Fisher spherical directional distribution on Sⁿ⁻¹ for arbitrary comptime dim n≥2;
+- S4-M1252 added Watson axial spherical directional distribution with bipolar/girdle/uniform regimes;
+- S4-M1253 added Rice (Rician) fading distribution;
+- S4-M1254 added Nakagami-m fading distribution;
+- S4-M1255 added Inverse Gamma distribution;
+- S4-M1256 added Exponentially Modified Gaussian (ExGaussian) distribution;
+- S4-M1257 added Generalized Pareto Distribution (GPD);
+- S4-M1258 added Scaled Inverse Chi-Squared distribution;
+- S4-M1259 added Hoyt (Nakagami-q) fading distribution with new besselI1 helper;
+- S4-M1260 added Noncentral Chi-Squared distribution (Poisson-mixture algorithm);
+- S4-M1261 added Noncentral t distribution;
+- S4-M1262 added Noncentral F distribution;
+- S4-M1263 added Noncentral Chi distribution;
+- S4-M1264 added vector/SIMD sampling for all S4-M1253–M1263 distributions with true SIMD where possible and per-lane scalar fallback for discrete-mixture shapes;
+- S4-M1265 added stack-allocated (comptime-dim) Wishart and Inverse-Wishart distributions using rejection-free Bartlett decomposition and Cholesky inversion;
+- S4-M1266 added dynamic (runtime-dim, allocator-backed) Wishart and Inverse-Wishart distributions matching the `MultivariateNormal(T)` flat-row-major pattern with zero-allocation `sampleInto` hot path.
+
+## Current local parity conclusion
+
+On the current Linux x86_64 host, against the locally available `rand` and cached
+`rand_distr 0.6.0` evidence, **there are no known unblocked local Rust core RNG gaps**;
+no new unblocked local Rust public-surface or comparison-benchmark gap is known.
+
+Every `rand_distr` 0.6.0 pub-used distribution is covered; every `rand::seq`
+public helper (including weighted sampling with and without replacement,
+reservoir sampling, partial shuffle, fixed-size arrays, caller-owned buffers,
+pointer/value variants, iterator variants) is covered; SIMD dense-vector
+f32x8/f64x4 ziggurat kernels for normal and exponential exceed Rust `rand`'s
+scalar-per-lane throughput; alea additionally provides a substantial list of
+distributions absent from `rand_distr` core (Truncated Normal, Von Mises, Wrapped
+Cauchy, Von Mises-Fisher, Watson, Rice, Nakagami-m, InverseGamma, ExGaussian, GPD,
+ScaledInverseChiSquared, Hoyt, four noncentral distributions, and both
+stack-allocated and heap-allocated Wishart/InverseWishart matrix distributions).
+S4-M11 is closed for the current bar; no known unblocked core RNG gap versus locally available `rand` / `rand_distr`.
 
 ## Latest Evidence
 
-S4-M1241 aligns nextU32-only direct sources with u64-shaped raw and facade workflows after S4-M1240
-aligned facade-constructor raw-alias behavior. The retained status and validation evidence include:
+S4-M1266 adds dynamic runtime-dimension Wishart/InverseWishart with zero-allocation
+sampleInto after S4-M1265 added stack-allocated variants. S4-M1264 adds vector/SIMD
+sampling for all S4-M1253–M1263 distributions. The retained status and validation
+evidence include:
 
 ```text
-$ zig build validate-all
-run_wasi_test self-test ok
-roadmapcheck ok
-examplecheck ok
-distcheck ok
+$ zig build validate
+apicheck ok
 readmecheck ok
 toolingcheck ok
+examplecheck ok
 statcheck ok
+distcheck ok
 profilecheck ok
-profiletailcheck ok
-profilestresscheck ok
-profilelongcheck ok
+roadmapcheck ok
 
 $ zig build rand-status-json
+{
   "schema_version": 1,
-  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1241 follow-ups closed for current bar",
-  "remaining_blocker": "S4-M1242 post-S4-M1241 next product bar",
+  "date": "2026-07-19",
+  "baseline": {
+    "rand": "~/Work/rand",
+    "rand_distr": "cached rand_distr 0.6.0"
+  },
+  "latest_gate": "zig build validate-local passes",
   "validate_local_passes": true,
+  "public_surface": "surfacecheck ok for rand/rand_core/rand_distr manifests; all pub-used distributions and seq helpers covered",
+  "rust_comparison": "parser tests and rand-bench-smoke pass",
+  "runtime_runners": "node/cargo/rustc found; Wasmtime 31.0.0 profilelongcheck evidence recorded",
   "opportunity_runners_available": false,
+  "current_conclusion": "S4-M11 runtime branch plus S4-M1124/S4-M1127-S4-M1266 follow-ups closed for current bar",
   "no_known_unblocked_gap": true,
+  "remaining_blocker": "Bingham/Matrix-vMF/Kent/copulas and broader-platform/longer-validation next bar",
   "s4_m11_blocked": false,
+  "details": "compare/results/s4-m420-current-rand-status.md",
   "local_rand_status": "compare/results/s4-m420-current-rand-status.md",
   "blocker_audit": "compare/results/s4-m11-blocker-audit.md",
-  "latest_validate_local_evidence": "compare/results/s4-m1241-next-u32-only-source-fallback.md"
+  "latest_validate_local_evidence": "compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md"
+}
 
 Retained latest local Rust comparison evidence:
 $ zig build validate-local
@@ -114,21 +131,23 @@ profilelongcheck ok
 ```
 
 `compare/results/s4-m1123-wasmtime-profilelongcheck.md` records the direct
-Wasmtime profilelongcheck run. `compare/results/s4-m1241-next-u32-only-source-fallback.md` records the latest focused nextU32-only source fallback hardening after S4-M1240.
-S4-M11 is closed for the current bar; S4-M1220 through S4-M1241 are also closed for their current bars, but exact/default-compatible dense SIMD
-normal/exponential kernels are still not known to beat scalar lane-fill in the
-real vector-slice harness.
+Wasmtime profilelongcheck run. `compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md`
+records the latest dynamic Wishart/InverseWishart closure.
+S4-M11 is closed for the current bar; no known unblocked core RNG gap versus locally available `rand` / `rand_distr`.
 
-## Current Post-S4-M1241 Bar
+## Current next raised bar
 
-The long-term product goal is not complete. The next bar is S4-M1242: pursue
-exact/default-compatible dense SIMD normal/exponential kernels, additional
-non-WASI OS/architecture execution, broader/longer validation, further
-semantics-preserving performance work, or newly discovered local `rand` /
-`rand_distr` gaps.
+The long-term product goal is not complete. Remaining work is in the explicitly
+raised next bar: Bingham distribution, Matrix von Mises-Fisher, Kent
+distribution, copula methods, SIMD spherical bulk sampling paths, longer
+statistical validation runs (1TiB+ PractRand, TestU01 BigCrush), broader
+platform/architecture evidence (Windows, macOS, ARM64, RISC-V), independent
+security audit of the system-entropy path, ecosystem interoperability, and
+performance follow-ups — not local parity closure.
 
 ## Result
 
-S4-M420 is a status snapshot only: current local Rust comparison evidence shows
-no known unblocked core RNG gap versus locally available `rand` / `rand_distr`,
-while the post-S4-M1241 S4-M1242 bar remains the active follow-up.
+S4-M420 is a status snapshot: current local Rust comparison evidence shows no
+known unblocked core RNG gap versus locally available `rand` / `rand_distr` on
+this Linux x86_64 host; broader-platform and long-validation tracks remain the
+active follow-up per the living roadmap.

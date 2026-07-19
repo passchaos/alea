@@ -1686,7 +1686,7 @@ const current_rand_status_tokens = [_][]const u8{
     "\"s4_m11_blocked\": false",
     "\"local_rand_status\": \"compare/results/s4-m420-current-rand-status.md\"",
     "\"blocker_audit\": \"compare/results/s4-m11-blocker-audit.md\"",
-    "\"latest_validate_local_evidence\": \"compare/results/s4-m1241-next-u32-only-source-fallback.md\"",
+    "\"latest_validate_local_evidence\": \"compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md\"",
     "surfacecheck local rand: files=25 expected-tokens=75 source-tokens=137",
     "surfacecheck local rand_core: files=6 expected-tokens=18 source-tokens=30",
     "surfacecheck local rand_distr: files=34 expected-tokens=72 source-tokens=185",
