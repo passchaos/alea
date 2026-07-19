@@ -25929,6 +25929,433 @@ pub fn Dirichlet(comptime T: type) type {
     };
 }
 
+// -----------------------------------------------------------------------------
+// Wishart and Inverse-Wishart distributions
+//
+// The Wishart distribution W_d(V, ν) is the multivariate generalization of the
+// chi-squared distribution: it is the distribution of the sample covariance of ν
+// independent multivariate-normal vectors with covariance V / ν. The scale
+// matrix V is d×d symmetric positive definite; degrees of freedom ν ≥ d.
+//
+// Sampling uses Bartlett's decomposition: X = L A A' L', where L is the
+// lower-triangular Cholesky factor of V, and A is lower-triangular with standard
+// normals off-diagonal and sqrt(χ²(ν-i)) on the diagonal (i = 0-indexed). This
+// gives exact, rejection-free sampling in O(d³) operations.
+//
+// Mean: E[X] = ν · V
+// Mode (for ν > d+1): (ν - d - 1) · V
+//
+// The Inverse-Wishart IW_d(Ψ, ν) is the conjugate prior for the covariance
+// matrix of a multivariate normal, and is obtained as X⁻¹ where X ~ W_d(Ψ⁻¹, ν).
+// Sampling: draw a Wishart W(Ψ⁻¹, ν) and invert via Cholesky.
+// Mean (for ν > d+1): E[X] = Ψ / (ν - d - 1)
+//
+// These distributions are NOT present in local Rust `rand_distr`, and are a
+// prerequisite for matrix-T distributions, Gaussian copulas, and other
+// multivariate Bayesian workflows.
+// -----------------------------------------------------------------------------
+
+pub const WishartError = Error;
+pub const InverseWishartError = Error;
+
+/// Static (stack-allocated, comptime-dimension) Wishart distribution.
+/// Samples d×d positive-definite matrices from W_d(scale, df) using Bartlett
+/// decomposition. All storage is inline; no allocator is needed.
+pub fn StaticWishart(comptime T: type, comptime dim: usize) type {
+    comptime requireFloat(T);
+    if (dim < 1) @compileError("StaticWishart requires dimension >= 1");
+
+    const Matrix = [dim][dim]T;
+
+    return struct {
+        const Self = @This();
+
+        /// Cholesky factor L of the scale matrix V (lower-triangular; V = L L').
+        cholesky: Matrix,
+        /// Degrees of freedom ν.
+        df: T,
+
+        /// Construct a static Wishart distribution from a symmetric positive-definite
+        /// scale matrix (full symmetric matrix, stored as rows).
+        /// Returns error.InvalidCovariance if the matrix is not positive definite.
+        pub fn init(scale: Matrix, df: T) Error!Self {
+            if (std.math.isNan(df) or df < @as(T, @floatFromInt(dim))) return error.InvalidCovariance;
+
+            // Compute Cholesky factor L (lower triangular) such that V = L L'.
+            var L: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| L[i][j] = 0;
+            }
+
+            // Check symmetry and copy
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    if (j > i) {
+                        if (scale[i][j] != scale[j][i]) return error.InvalidCovariance;
+                    }
+                }
+            }
+
+            // Cholesky-Banachiewicz decomposition
+            inline for (0..dim) |i| {
+                inline for (0..i+1) |j| {
+                    var sum: T = scale[i][j];
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime < j) {
+                            sum -= L[i][k_comptime] * L[j][k_comptime];
+                        }
+                    }
+                    if (i == j) {
+                        if (sum <= 0) return error.InvalidCovariance;
+                        L[i][j] = @sqrt(sum);
+                    } else {
+                        L[i][j] = sum / L[j][j];
+                    }
+                }
+            }
+
+            return Self{ .cholesky = L, .df = df };
+        }
+
+        /// Alias for init.
+        pub fn new(scale: Matrix, df: T) Error!Self {
+            return init(scale, df);
+        }
+
+        pub fn scaleValue(self: Self) Matrix {
+            // Reconstruct V = L L'
+            var V: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    var sum: T = 0;
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime <= i and k_comptime <= j) {
+                            sum += self.cholesky[i][k_comptime] * self.cholesky[j][k_comptime];
+                        }
+                    }
+                    V[i][j] = sum;
+                }
+            }
+            return V;
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dimensionValue(_: Self) usize {
+            return dim;
+        }
+
+        /// Expected value: E[X] = ν · V.
+        pub fn expectedValue(self: Self) Matrix {
+            const V = self.scaleValue();
+            var out: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    out[i][j] = self.df * V[i][j];
+                }
+            }
+            return out;
+        }
+
+        /// Mode: (ν - d - 1) · V, valid for ν > d + 1. Returns null for ν ≤ d+1.
+        pub fn modeValue(self: Self) ?Matrix {
+            if (self.df <= @as(T, @floatFromInt(dim + 1))) return null;
+            const V = self.scaleValue();
+            const factor = self.df - @as(T, @floatFromInt(dim + 1));
+            var out: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    out[i][j] = factor * V[i][j];
+                }
+            }
+            return out;
+        }
+
+        pub fn sample(self: Self, rng: Rng) Matrix {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) Matrix {
+            // Bartlett decomposition: construct lower-triangular A.
+            var A: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| A[i][j] = 0;
+            }
+
+            // Fill off-diagonal with N(0,1); diagonal with sqrt(χ²(ν - i))
+            inline for (0..dim) |i| {
+                // Diagonal: sqrt(ChiSquared(df - i)). Note: i is 0-indexed.
+                const chi_df = self.df - @as(T, @floatFromInt(i));
+                // chiSquaredFrom uses shape parameter k = df/2, rate = 1/2 (shape-rate gamma).
+                A[i][i] = @sqrt(chiSquaredFrom(source, T, chi_df));
+                // Off-diagonal (j < i): standard normal
+                inline for (0..i) |j| {
+                    A[i][j] = Rng.standardNormalFastFrom(source, T);
+                }
+            }
+
+            // Compute X = L * A * A' * L'.
+            // First compute LA = L * A (lower triangular).
+            var LA: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    var sum: T = 0;
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime <= i and k_comptime <= j) {
+                            sum += self.cholesky[i][k_comptime] * A[k_comptime][j];
+                        }
+                    }
+                    LA[i][j] = sum;
+                }
+            }
+
+            // Then X = LA * LA' (symmetric positive definite).
+            var X: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    var sum: T = 0;
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime <= i and k_comptime <= j) {
+                            sum += LA[i][k_comptime] * LA[j][k_comptime];
+                        }
+                    }
+                    X[i][j] = sum;
+                }
+            }
+
+            return X;
+        }
+    };
+}
+
+/// Static Inverse-Wishart distribution IW_d(Ψ, ν). Samples d×d positive-definite
+/// matrices. Parameters: scale matrix Ψ (positive definite), degrees of freedom
+/// ν ≥ d. Mean (for ν > d+1): Ψ / (ν - d - 1).
+///
+/// Sampling: draw X ~ W(Ψ⁻¹, ν) and return X⁻¹ via Cholesky inversion.
+pub fn StaticInverseWishart(comptime T: type, comptime dim: usize) type {
+    comptime requireFloat(T);
+    if (dim < 1) @compileError("StaticInverseWishart requires dimension >= 1");
+
+    const Matrix = [dim][dim]T;
+
+    return struct {
+        const Self = @This();
+
+        /// Inverse of the Cholesky factor of Ψ (used for Wishart sampling of
+        /// the precision matrix).
+        wishart: StaticWishart(T, dim),
+        /// Cholesky factor of Ψ (lower-triangular).
+        psi_chol: Matrix,
+        /// Degrees of freedom ν.
+        df: T,
+
+        pub fn init(scale: Matrix, df: T) Error!Self {
+            if (std.math.isNan(df) or df < @as(T, @floatFromInt(dim))) return error.InvalidCovariance;
+
+            // Compute Cholesky of Ψ
+            var Lpsi: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| Lpsi[i][j] = 0;
+            }
+
+            // Symmetry check
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    if (j > i) {
+                        if (scale[i][j] != scale[j][i]) return error.InvalidCovariance;
+                    }
+                }
+            }
+
+            // Cholesky-Banachiewicz
+            inline for (0..dim) |i| {
+                inline for (0..i+1) |j| {
+                    var sum: T = scale[i][j];
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime < j) {
+                            sum -= Lpsi[i][k_comptime] * Lpsi[j][k_comptime];
+                        }
+                    }
+                    if (i == j) {
+                        if (sum <= 0) return error.InvalidCovariance;
+                        Lpsi[i][j] = @sqrt(sum);
+                    } else {
+                        Lpsi[i][j] = sum / Lpsi[j][j];
+                    }
+                }
+            }
+
+            // Compute Ψ⁻¹ by inverting Cholesky then multiplying.
+            // First invert Lpsi (lower triangular, so inversion is forward substitution).
+            var Linv: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| Linv[i][j] = 0;
+            }
+            inline for (0..dim) |i| {
+                Linv[i][i] = 1.0 / Lpsi[i][i];
+                inline for (0..i) |j| {
+                    var sum: T = 0;
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime >= j and k_comptime < i) {
+                            sum += Lpsi[i][k_comptime] * Linv[k_comptime][j];
+                        }
+                    }
+                    Linv[i][j] = -sum / Lpsi[i][i];
+                }
+            }
+
+            // Ψ⁻¹ = Linv' * Linv
+            var psi_inv: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    var sum: T = 0;
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime >= i and k_comptime >= j) {
+                            sum += Linv[k_comptime][i] * Linv[k_comptime][j];
+                        }
+                    }
+                    psi_inv[i][j] = sum;
+                }
+            }
+
+            const wishart_sampler = try StaticWishart(T, dim).init(psi_inv, df);
+
+            return Self{
+                .wishart = wishart_sampler,
+                .psi_chol = Lpsi,
+                .df = df,
+            };
+        }
+
+        pub fn new(scale: Matrix, df: T) Error!Self {
+            return init(scale, df);
+        }
+
+        pub fn scaleValue(self: Self) Matrix {
+            // Reconstruct Ψ = Lpsi * Lpsi'
+            var psi: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    var sum: T = 0;
+                    comptime var k_comptime: usize = 0;
+                    inline while (k_comptime < dim) : (k_comptime += 1) {
+                        if (k_comptime <= i and k_comptime <= j) {
+                            sum += self.psi_chol[i][k_comptime] * self.psi_chol[j][k_comptime];
+                        }
+                    }
+                    psi[i][j] = sum;
+                }
+            }
+            return psi;
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dimensionValue(_: Self) usize {
+            return dim;
+        }
+
+        /// Expected value E[X] = Ψ / (ν - d - 1), valid for ν > d+1.
+        /// Returns null if ν ≤ d+1.
+        pub fn expectedValue(self: Self) ?Matrix {
+            const denom = self.df - @as(T, @floatFromInt(dim + 1));
+            if (denom <= 0) return null;
+            const psi = self.scaleValue();
+            var out: Matrix = undefined;
+            inline for (0..dim) |i| {
+                inline for (0..dim) |j| {
+                    out[i][j] = psi[i][j] / denom;
+                }
+            }
+            return out;
+        }
+
+        pub fn sample(self: Self, rng: Rng) Matrix {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) Matrix {
+            // Draw X ~ Wishart(Ψ⁻¹, ν), which is the precision matrix.
+            const X = self.wishart.sampleFrom(source);
+            // Invert X by Cholesky to get the covariance matrix draw.
+            return choleskyInvertMatrix(T, dim, X);
+        }
+    };
+}
+
+/// Invert a symmetric positive definite matrix given as a full dim×dim matrix
+/// using Cholesky decomposition followed by forward/back substitution.
+fn choleskyInvertMatrix(comptime T: type, comptime dim: usize, A: [dim][dim]T) [dim][dim]T {
+    // Cholesky factor L (lower triangular)
+    var L: [dim][dim]T = undefined;
+    inline for (0..dim) |i| {
+        inline for (0..dim) |j| L[i][j] = 0;
+    }
+    inline for (0..dim) |i| {
+        inline for (0..i+1) |j| {
+            var sum: T = A[i][j];
+            comptime var k_comptime: usize = 0;
+            inline while (k_comptime < dim) : (k_comptime += 1) {
+                if (k_comptime < j) {
+                    sum -= L[i][k_comptime] * L[j][k_comptime];
+                }
+            }
+            if (i == j) {
+                L[i][j] = @sqrt(sum);
+            } else {
+                L[i][j] = sum / L[j][j];
+            }
+        }
+    }
+
+    // Invert L (lower triangular), Linv
+    var Linv: [dim][dim]T = undefined;
+    inline for (0..dim) |i| {
+        inline for (0..dim) |j| Linv[i][j] = 0;
+    }
+    inline for (0..dim) |i| {
+        Linv[i][i] = 1.0 / L[i][i];
+        inline for (0..i) |j| {
+            var sum: T = 0;
+            comptime var k_comptime: usize = 0;
+            inline while (k_comptime < dim) : (k_comptime += 1) {
+                if (k_comptime >= j and k_comptime < i) {
+                    sum += L[i][k_comptime] * Linv[k_comptime][j];
+                }
+            }
+            Linv[i][j] = -sum / L[i][i];
+        }
+    }
+
+    // A⁻¹ = Linv' * Linv (symmetric)
+    var Ainv: [dim][dim]T = undefined;
+    inline for (0..dim) |i| {
+        inline for (0..dim) |j| {
+            var sum: T = 0;
+            comptime var k_comptime: usize = 0;
+            inline while (k_comptime < dim) : (k_comptime += 1) {
+                if (k_comptime >= i and k_comptime >= j) {
+                    sum += Linv[k_comptime][i] * Linv[k_comptime][j];
+                }
+            }
+            Ainv[i][j] = sum;
+        }
+    }
+    return Ainv;
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -50588,4 +51015,191 @@ test "VectorNoncentralChi basic functionality" {
     var buf: [8]V = undefined;
     fillVectorNoncentralChi(rng, V, &buf, 3.0, 4.0);
     for (buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] >= 0);
+}
+
+// Wishart and Inverse-Wishart tests -------------------------------------------
+
+test "StaticWishart identity scale df=dim=2 produces ChiSquared marginals" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7ed0);
+    const rng = Rng.init(&engine);
+
+    // 2x2 identity scale, df=2 (Wishart with identity scale is like 2 independent normals squared).
+    const I2 = [2][2]f64{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    };
+    const w = try StaticWishart(f64, 2).init(I2, 2);
+
+    // Mean should be df * I = 2*I
+    const mean = w.expectedValue();
+    try std.testing.expectApproxEqAbs(@as(f64, 2), mean[0][0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), mean[0][1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), mean[1][0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), mean[1][1], 1e-9);
+
+    // Diagonals are ChiSquared(df) for identity scale; check positive definiteness
+    for (0..100) |_| {
+        const X = w.sample(rng);
+        // Positive definite: det > 0
+        const det = X[0][0] * X[1][1] - X[0][1] * X[1][0];
+        try std.testing.expect(det > 0);
+        try std.testing.expect(X[0][0] > 0);
+        try std.testing.expect(X[1][1] > 0);
+        // Symmetry
+        try std.testing.expectApproxEqAbs(X[0][1], X[1][0], 1e-12);
+    }
+}
+
+test "StaticWishart non-identity scale produces correct Monte Carlo mean" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7ed1);
+    const rng = Rng.init(&engine);
+
+    // 3x3 scale matrix (symmetric positive definite).
+    const V = [3][3]f64{
+        .{ 2.0, 0.5, 0.3 },
+        .{ 0.5, 1.0, 0.2 },
+        .{ 0.3, 0.2, 1.5 },
+    };
+    const df: f64 = 10.0;
+    const w = try StaticWishart(f64, 3).init(V, df);
+
+    // Mean = df * V, check by Monte Carlo
+    var sum: [3][3]f64 = .{ .{0,0,0}, .{0,0,0}, .{0,0,0} };
+    const n = 5000;
+    for (0..n) |_| {
+        const X = w.sample(rng);
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                sum[i][j] += X[i][j];
+            }
+        }
+    }
+    inline for (0..3) |i| {
+        inline for (0..3) |j| {
+            const expected = df * V[i][j];
+            const mc = sum[i][j] / @as(f64, @floatFromInt(n));
+            // Wishart variance is high (Var(X_ij) = df*(V_ij^2 + V_ii*V_jj)), use looser tolerance
+            const tol = 0.3 * @abs(expected) + 0.3;
+            try std.testing.expectApproxEqAbs(expected, mc, tol);
+        }
+    }
+}
+
+test "StaticWishart invalid parameters" {
+    const I2 = [2][2]f64{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    };
+    // df < dim invalid
+    try std.testing.expectError(error.InvalidCovariance, StaticWishart(f64, 2).init(I2, 1));
+    // Non-positive-definite matrix invalid
+    const bad = [2][2]f64{
+        .{ 1, 2 },
+        .{ 2, 1 },
+    };
+    try std.testing.expectError(error.InvalidCovariance, StaticWishart(f64, 2).init(bad, 3));
+    // Non-symmetric not allowed
+    const nonsym = [2][2]f64{
+        .{ 1, 0.5 },
+        .{ 0.6, 1 },
+    };
+    try std.testing.expectError(error.InvalidCovariance, StaticWishart(f64, 2).init(nonsym, 3));
+}
+
+test "StaticWishart f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7ed2);
+    const rng = Rng.init(&engine);
+
+    const I2 = [2][2]f32{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    };
+    const w = try StaticWishart(f32, 2).init(I2, 3);
+    const X = w.sample(rng);
+    const det = X[0][0] * X[1][1] - X[0][1] * X[1][0];
+    try std.testing.expect(det > 0);
+    _ = w.expectedValue();
+    _ = w.modeValue();
+}
+
+test "StaticInverseWishart mean matches formula" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7ed3);
+    const rng = Rng.init(&engine);
+
+    // 2x2 identity scale, df=10 (ν > d+1 = 3 so mean exists).
+    // E[IW(I, ν)] = I / (ν - d - 1) = I / 7
+    const I2 = [2][2]f64{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    };
+    const df: f64 = 10;
+    const iw = try StaticInverseWishart(f64, 2).init(I2, df);
+
+    const expected_mean = iw.expectedValue() orelse unreachable;
+    const expected_scale: f64 = 1.0 / (df - 2 - 1); // 1/7
+    try std.testing.expectApproxEqAbs(expected_scale, expected_mean[0][0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), expected_mean[0][1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), expected_mean[1][0], 1e-9);
+    try std.testing.expectApproxEqAbs(expected_scale, expected_mean[1][1], 1e-9);
+
+    // Samples are positive definite
+    for (0..50) |_| {
+        const X = iw.sample(rng);
+        const det = X[0][0] * X[1][1] - X[0][1] * X[1][0];
+        try std.testing.expect(det > 0);
+        try std.testing.expect(X[0][0] > 0);
+        try std.testing.expect(X[1][1] > 0);
+        try std.testing.expectApproxEqAbs(X[0][1], X[1][0], 1e-10);
+    }
+}
+
+test "StaticInverseWishart invalid parameters" {
+    const I2 = [2][2]f64{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    };
+    try std.testing.expectError(error.InvalidCovariance, StaticInverseWishart(f64, 2).init(I2, 1));
+    const bad = [2][2]f64{
+        .{ 1, 2 },
+        .{ 2, 1 },
+    };
+    try std.testing.expectError(error.InvalidCovariance, StaticInverseWishart(f64, 2).init(bad, 5));
+}
+
+test "StaticInverseWishart 3x3 Monte Carlo mean" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7ed4);
+    const rng = Rng.init(&engine);
+
+    // 3x3 diagonal scale, df=10
+    const Psi = [3][3]f64{
+        .{ 2.0, 0, 0 },
+        .{ 0, 1.0, 0 },
+        .{ 0, 0, 1.5 },
+    };
+    const df: f64 = 10;
+    const iw = try StaticInverseWishart(f64, 3).init(Psi, df);
+    const expected = iw.expectedValue() orelse unreachable;
+
+    // Monte Carlo
+    var sum: [3][3]f64 = .{ .{0,0,0}, .{0,0,0}, .{0,0,0} };
+    const n = 3000;
+    for (0..n) |_| {
+        const X = iw.sample(rng);
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                sum[i][j] += X[i][j];
+            }
+        }
+    }
+    inline for (0..3) |i| {
+        inline for (0..3) |j| {
+            const mc = sum[i][j] / @as(f64, @floatFromInt(n));
+            try std.testing.expectApproxEqAbs(expected[i][j], mc, 0.2 * @abs(expected[i][j]) + 0.02);
+        }
+    }
 }

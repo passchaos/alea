@@ -3094,6 +3094,27 @@ Reusable samplers:
 - `Dirichlet(T).sampleManyIntoFrom`
 - `Dirichlet(T).sampleManyIntoChecked`
 - `Dirichlet(T).sampleManyIntoCheckedFrom`
+- `WishartError`
+- `InverseWishartError`
+- `StaticWishart(T, dimension)`
+- `StaticWishart(T, dimension).init`
+- `StaticWishart(T, dimension).new`
+- `StaticWishart(T, dimension).scaleValue`
+- `StaticWishart(T, dimension).dfValue`
+- `StaticWishart(T, dimension).dimensionValue`
+- `StaticWishart(T, dimension).expectedValue`
+- `StaticWishart(T, dimension).modeValue`
+- `StaticWishart(T, dimension).sample`
+- `StaticWishart(T, dimension).sampleFrom`
+- `StaticInverseWishart(T, dimension)`
+- `StaticInverseWishart(T, dimension).init`
+- `StaticInverseWishart(T, dimension).new`
+- `StaticInverseWishart(T, dimension).scaleValue`
+- `StaticInverseWishart(T, dimension).dfValue`
+- `StaticInverseWishart(T, dimension).dimensionValue`
+- `StaticInverseWishart(T, dimension).expectedValue`
+- `StaticInverseWishart(T, dimension).sample`
+- `StaticInverseWishart(T, dimension).sampleFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`
