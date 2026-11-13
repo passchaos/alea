@@ -647,6 +647,8 @@ self-forking.
   `exponentialCdf`, `exponentialQuantile`, `logNormalCdf`, `logNormalQuantile`,
   `halfNormalCdf`, `halfNormalQuantile`, `chiCdf`, `chiQuantile`,
   `erlangCdf`, `erlangQuantile`, `maxwellCdf`, `maxwellQuantile`,
+  `betaPrimeCdf`, `betaPrimeQuantile`, `logLogisticCdf`, `logLogisticQuantile`,
+  `inverseGammaCdf`, `inverseGammaQuantile`, `nakagamiCdf`, `nakagamiQuantile`,
   `binomialCdf`, `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
   `hypergeometricCdf`, `hypergeometricQuantile`,
@@ -763,13 +765,15 @@ self-forking.
   `Nakagami(T).mValue`, `Nakagami(T).spreadValue`, `Nakagami(T).omegaValue`,
   `Nakagami(T).equivalentRayleighScale`, `Nakagami(T).expectedValue`,
   `Nakagami(T).varianceValue`, `Nakagami(T).modeValue`, `Nakagami(T).minValue`,
-  `Nakagami(T).maxValue`, `Nakagami(T).sample`, `Nakagami(T).sampleFrom`,
+  `Nakagami(T).maxValue`, `Nakagami(T).cdf`, `Nakagami(T).quantile`,
+  `Nakagami(T).sample`, `Nakagami(T).sampleFrom`,
   `Nakagami(T).fill`, `Nakagami(T).fillFrom`,
   `nakagami`, `nakagamiFrom`, `nakagamiChecked`, `nakagamiCheckedFrom`,
   `fillNakagami`, `fillNakagamiFrom`, `fillNakagamiChecked`, `fillNakagamiCheckedFrom`,
   `InverseGamma(T)`, `InverseGamma(T).init`, `InverseGamma(T).new`, `InverseGamma(T).shapeValue`,
   `InverseGamma(T).scaleValue`, `InverseGamma(T).expectedValue`, `InverseGamma(T).varianceValue`,
   `InverseGamma(T).modeValue`, `InverseGamma(T).minValue`, `InverseGamma(T).maxValue`,
+  `InverseGamma(T).cdf`, `InverseGamma(T).quantile`,
   `InverseGamma(T).sample`, `InverseGamma(T).sampleFrom`, `InverseGamma(T).fill`,
   `InverseGamma(T).fillFrom`,
   `inverseGamma`, `inverseGammaFrom`, `inverseGammaChecked`, `inverseGammaCheckedFrom`,
@@ -2951,6 +2955,8 @@ Reusable samplers:
 - `LogLogistic(T).modeValue`
 - `LogLogistic(T).minValue`
 - `LogLogistic(T).maxValue`
+- `LogLogistic(T).cdf`
+- `LogLogistic(T).quantile`
 - `LogLogistic(T).sample`
 - `LogLogistic(T).sampleFrom`
 - `LogLogistic(T).fill`

@@ -504,6 +504,18 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("erlang quantile", alea.distributions.erlangCdf(alea.distributions.erlangQuantile(p, erlang_shape, erlang_scale), erlang_shape, erlang_scale), p - 1e-9, p + 1e-9);
         const maxwell_scale: f64 = 1.5;
         try expectFloatBetween("maxwell quantile", alea.distributions.maxwellCdf(alea.distributions.maxwellQuantile(p, maxwell_scale), maxwell_scale), p - 1e-9, p + 1e-9);
+        const bp_alpha: f64 = 2;
+        const bp_beta: f64 = 5;
+        try expectFloatBetween("beta-prime quantile", alea.distributions.betaPrimeCdf(alea.distributions.betaPrimeQuantile(p, bp_alpha, bp_beta), bp_alpha, bp_beta), p - 1e-9, p + 1e-9);
+        const ll_scale: f64 = 1.5;
+        const ll_shape: f64 = 2.5;
+        try expectFloatBetween("log-logistic quantile", alea.distributions.logLogisticCdf(alea.distributions.logLogisticQuantile(p, ll_scale, ll_shape), ll_scale, ll_shape), p - 1e-9, p + 1e-9);
+        const ig_shape: f64 = 3;
+        const ig_scale: f64 = 2;
+        try expectFloatBetween("inverse-gamma quantile", alea.distributions.inverseGammaCdf(alea.distributions.inverseGammaQuantile(p, ig_shape, ig_scale), ig_shape, ig_scale), p - 1e-9, p + 1e-9);
+        const nak_m: f64 = 2;
+        const nak_omega: f64 = 3;
+        try expectFloatBetween("nakagami quantile", alea.distributions.nakagamiCdf(alea.distributions.nakagamiQuantile(p, nak_m, nak_omega), nak_m, nak_omega), p - 1e-9, p + 1e-9);
         const discrete_q: f64 = 0.7;
         const poisson_lambda: f64 = 5;
         try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);
@@ -1932,12 +1944,16 @@ fn checkLongRun(samples: usize) !void {
         const fisher_f = try alea.distributions.FisherF(f64).init(5, 10);
         const exponential = try alea.distributions.Exponential(f64).init(2);
         var log_normal = try alea.distributions.LogNormal(f64).init(0, 0.5);
+        const log_logistic = try alea.distributions.LogLogistic(f64).init(1.5, 2.5);
+        const nakagami = try alea.distributions.Nakagami(f64).init(2, 3);
         var beta_hits = [_]usize{0} ** 3;
         var gamma_hits = [_]usize{0} ** 3;
         var student_hits = [_]usize{0} ** 3;
         var fisher_hits = [_]usize{0} ** 3;
         var exponential_hits = [_]usize{0} ** 3;
         var log_normal_hits = [_]usize{0} ** 3;
+        var log_logistic_hits = [_]usize{0} ** 3;
+        var nakagami_hits = [_]usize{0} ** 3;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
             const b = beta.sample(rng);
@@ -1964,6 +1980,14 @@ fn checkLongRun(samples: usize) !void {
             if (ln <= 0.5) log_normal_hits[0] += 1;
             if (ln <= 1) log_normal_hits[1] += 1;
             if (ln <= 2) log_normal_hits[2] += 1;
+            const ll = log_logistic.sample(rng);
+            if (ll <= 0.75) log_logistic_hits[0] += 1;
+            if (ll <= 1.5) log_logistic_hits[1] += 1;
+            if (ll <= 3) log_logistic_hits[2] += 1;
+            const nk = nakagami.sample(rng);
+            if (nk <= 1) nakagami_hits[0] += 1;
+            if (nk <= 2) nakagami_hits[1] += 1;
+            if (nk <= 3) nakagami_hits[2] += 1;
         }
         const beta_x = [_]f64{ 0.1, 0.3, 0.6 };
         const gamma_x = [_]f64{ 1, 3, 5 };
@@ -1971,6 +1995,8 @@ fn checkLongRun(samples: usize) !void {
         const fisher_x = [_]f64{ 0.5, 1, 2 };
         const exponential_x = [_]f64{ 0.25, 0.5, 1 };
         const log_normal_x = [_]f64{ 0.5, 1, 2 };
+        const log_logistic_x = [_]f64{ 0.75, 1.5, 3 };
+        const nakagami_x = [_]f64{ 1, 2, 3 };
         try expectEmpiricalCdf("long beta cdf(0.1)", beta_hits[0], samples, beta.cdf(beta_x[0]));
         try expectEmpiricalCdf("long beta cdf(0.3)", beta_hits[1], samples, beta.cdf(beta_x[1]));
         try expectEmpiricalCdf("long beta cdf(0.6)", beta_hits[2], samples, beta.cdf(beta_x[2]));
@@ -1989,14 +2015,22 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long log-normal cdf(0.5)", log_normal_hits[0], samples, log_normal.cdf(log_normal_x[0]));
         try expectEmpiricalCdf("long log-normal cdf(1)", log_normal_hits[1], samples, log_normal.cdf(log_normal_x[1]));
         try expectEmpiricalCdf("long log-normal cdf(2)", log_normal_hits[2], samples, log_normal.cdf(log_normal_x[2]));
+        try expectEmpiricalCdf("long log-logistic cdf(0.75)", log_logistic_hits[0], samples, log_logistic.cdf(log_logistic_x[0]));
+        try expectEmpiricalCdf("long log-logistic cdf(1.5)", log_logistic_hits[1], samples, log_logistic.cdf(log_logistic_x[1]));
+        try expectEmpiricalCdf("long log-logistic cdf(3)", log_logistic_hits[2], samples, log_logistic.cdf(log_logistic_x[2]));
+        try expectEmpiricalCdf("long nakagami cdf(1)", nakagami_hits[0], samples, nakagami.cdf(nakagami_x[0]));
+        try expectEmpiricalCdf("long nakagami cdf(2)", nakagami_hits[1], samples, nakagami.cdf(nakagami_x[1]));
+        try expectEmpiricalCdf("long nakagami cdf(3)", nakagami_hits[2], samples, nakagami.cdf(nakagami_x[2]));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
-        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6}\n", .{
+        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6} log-logistic(1.5)={d:.6} nakagami(2)={d:.6}\n", .{
             @as(f64, @floatFromInt(beta_hits[1])) * inv_n,
             @as(f64, @floatFromInt(gamma_hits[1])) * inv_n,
             @as(f64, @floatFromInt(student_hits[1])) * inv_n,
             @as(f64, @floatFromInt(fisher_hits[1])) * inv_n,
             @as(f64, @floatFromInt(exponential_hits[1])) * inv_n,
             @as(f64, @floatFromInt(log_normal_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(log_logistic_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(nakagami_hits[1])) * inv_n,
         });
     }
 

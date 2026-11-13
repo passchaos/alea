@@ -1330,6 +1330,107 @@ pub fn maxwellQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
     return scale * @sqrt(chiSquaredQuantile(p, @as(T, 3)));
 }
 
+/// Beta-prime CDF: `I_{x/(1+x)}(α, β)`.
+pub fn betaPrimeCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, alpha, beta_param) {
+    const T = @TypeOf(x, alpha, beta_param);
+    comptime requireFloat(T);
+    if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return betaIncomplete(x / (1 + x), alpha, beta_param);
+}
+
+/// Beta-prime quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn betaPrimeQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, alpha, beta_param) {
+    const T = @TypeOf(p, alpha, beta_param);
+    comptime requireFloat(T);
+    if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    const u = betaQuantile(p, alpha, beta_param);
+    return u / (1 - u);
+}
+
+/// Log-logistic CDF: `1/(1 + (x/scale)^{-shape})`. `scale = 0` and
+/// `shape = +∞` are point masses at 0 and `scale` respectively.
+pub fn logLogisticCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, shape) {
+    const T = @TypeOf(x, scale, shape);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or std.math.isNan(shape)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < 0) 0 else 1;
+    if (shape == std.math.inf(T)) return if (x < scale) 0 else 1;
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return 1 / (1 + std.math.pow(T, x / scale, -shape));
+}
+
+/// Log-logistic quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn logLogisticQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, scale, shape) {
+    const T = @TypeOf(p, scale, shape);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or std.math.isNan(shape)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (scale == 0) return 0;
+    if (shape == std.math.inf(T)) return scale;
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    return scale * std.math.pow(T, p / (1 - p), 1 / shape);
+}
+
+/// Inverse-gamma CDF: `Q(α, β/x)` for `x > 0`.
+pub fn inverseGammaCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, scale) {
+    const T = @TypeOf(x, shape, scale);
+    comptime requireFloat(T);
+    if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return gammaIncompleteQ(shape, scale / x);
+}
+
+/// Inverse-gamma quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn inverseGammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shape, scale) {
+    const T = @TypeOf(p, shape, scale);
+    comptime requireFloat(T);
+    if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    const g = gammaQuantile(1 - p, shape, 1 / scale);
+    return 1 / g;
+}
+
+/// Nakagami-m CDF: `P(m, m·x²/Ω)`. `Ω = 0` is the point mass at 0.
+pub fn nakagamiCdf(x: anytype, m_param: anytype, omega: anytype) @TypeOf(x, m_param, omega) {
+    const T = @TypeOf(x, m_param, omega);
+    comptime requireFloat(T);
+    if (!(m_param >= 0.5) or !std.math.isFinite(m_param)) return std.math.nan(T);
+    if (!(omega >= 0) or !std.math.isFinite(omega)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (omega == 0) return if (x < 0) 0 else 1;
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return gammaIncompleteP(m_param, m_param * x * x / omega);
+}
+
+/// Nakagami-m quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn nakagamiQuantile(p: anytype, m_param: anytype, omega: anytype) @TypeOf(p, m_param, omega) {
+    const T = @TypeOf(p, m_param, omega);
+    comptime requireFloat(T);
+    if (!(m_param >= 0.5) or !std.math.isFinite(m_param)) return std.math.nan(T);
+    if (!(omega >= 0) or !std.math.isFinite(omega)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (omega == 0) return 0;
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    return @sqrt(gammaQuantile(p, m_param, omega / m_param));
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -12176,6 +12277,16 @@ pub fn Nakagami(comptime T: type) type {
             return if (self.isDegenerate()) @as(T, 0) else null;
         }
 
+        /// Nakagami-m CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return nakagamiCdf(x, self.m_param, self.omega);
+        }
+
+        /// Nakagami-m quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return nakagamiQuantile(p, self.m_param, self.omega);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -12471,6 +12582,16 @@ pub fn InverseGamma(comptime T: type) type {
         pub fn maxValue(self: Self) ?T {
             _ = self;
             return null;
+        }
+
+        /// Inverse-gamma CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return inverseGammaCdf(x, self.shape, self.scale);
+        }
+
+        /// Inverse-gamma quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return inverseGammaQuantile(p, self.shape, self.scale);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -21123,19 +21244,12 @@ pub fn BetaPrime(comptime T: type) type {
 
         /// CDF `I_{x/(1+x)}(α, β)`.
         pub fn cdf(self: Self, x: T) T {
-            if (std.math.isNan(x)) return std.math.nan(T);
-            if (x <= 0) return 0;
-            if (x == std.math.inf(T)) return 1;
-            return betaIncomplete(x / (1 + x), self.alpha, self.beta_param);
+            return betaPrimeCdf(x, self.alpha, self.beta_param);
         }
 
         /// Quantile via the Beta quantile: `y = BetaQuantile(p)`, `x = y/(1−y)`.
         pub fn quantile(self: Self, p: T) T {
-            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
-            if (p == 0) return 0;
-            if (p == 1) return std.math.inf(T);
-            const y = betaQuantile(p, self.alpha, self.beta_param);
-            return y / (1 - y);
+            return betaPrimeQuantile(p, self.alpha, self.beta_param);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -23598,6 +23712,16 @@ pub fn LogLogistic(comptime T: type) type {
 
         pub fn maxValue(self: Self) ?T {
             return if (self.isDegenerate()) self.degenerateValue() else null;
+        }
+
+        /// Log-logistic CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return logLogisticCdf(x, self.scale, self.shapeValue());
+        }
+
+        /// Log-logistic quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return logLogisticQuantile(p, self.scale, self.shapeValue());
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -54048,6 +54172,55 @@ test "core continuous CDF and quantile helpers match known values" {
     try std.testing.expectApproxEqAbs(erlangCdf(@as(f64, 3), @as(f64, 2), @as(f64, 1.5)), erlang_dist.cdf(3), 0);
     const maxwell_dist = try Maxwell(f64).init(1.5);
     try std.testing.expectApproxEqAbs(maxwellCdf(@as(f64, 2), @as(f64, 1.5)), maxwell_dist.cdf(2), 0);
+}
+
+test "advanced continuous CDF and quantile helpers match known values" {
+    // BetaPrime(2,5): CDF(1) = I_{1/2}(2,5) = 0.890625.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.890625), betaPrimeCdf(@as(f64, 1), @as(f64, 2), @as(f64, 5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), betaPrimeQuantile(@as(f64, 0.890625), @as(f64, 2), @as(f64, 5)), 1e-9);
+    try std.testing.expectEqual(@as(f64, 0), betaPrimeCdf(@as(f64, -1), @as(f64, 2), @as(f64, 5)));
+    try std.testing.expectEqual(std.math.inf(f64), betaPrimeQuantile(@as(f64, 1), @as(f64, 2), @as(f64, 5)));
+
+    // LogLogistic(scale=2, shape=3): CDF(2)=0.5, CDF(4)=8/9.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), logLogisticCdf(@as(f64, 2), @as(f64, 2), @as(f64, 3)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 8.0 / 9.0), logLogisticCdf(@as(f64, 4), @as(f64, 2), @as(f64, 3)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), logLogisticQuantile(@as(f64, 0.5), @as(f64, 2), @as(f64, 3)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), logLogisticQuantile(@as(f64, 8.0 / 9.0), @as(f64, 2), @as(f64, 3)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 1), logLogisticCdf(@as(f64, 0), @as(f64, 0), @as(f64, 3)));
+    try std.testing.expectEqual(@as(f64, 2), logLogisticQuantile(@as(f64, 0.5), @as(f64, 2), std.math.inf(f64)));
+
+    // InverseGamma(3,2): CDF(2) = Q(3,1) = 2.5e^-1.
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5 * @exp(@as(f64, -1))), inverseGammaCdf(@as(f64, 2), @as(f64, 3), @as(f64, 2)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), inverseGammaQuantile(2.5 * @exp(@as(f64, -1)), @as(f64, 3), @as(f64, 2)), 1e-9);
+    try std.testing.expectEqual(@as(f64, 0), inverseGammaCdf(@as(f64, 0), @as(f64, 3), @as(f64, 2)));
+
+    // Nakagami(1,2) is Rayleigh(sqrt(Omega/2)).
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - @exp(@as(f64, -0.5))), nakagamiCdf(@as(f64, 1), @as(f64, 1), @as(f64, 2)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), nakagamiQuantile(1 - @exp(@as(f64, -0.5)), @as(f64, 1), @as(f64, 2)), 1e-9);
+    try std.testing.expectEqual(@as(f64, 1), nakagamiCdf(@as(f64, 0), @as(f64, 1), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), nakagamiQuantile(@as(f64, 0.5), @as(f64, 1), @as(f64, 0)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, betaPrimeCdf(betaPrimeQuantile(p, @as(f64, 2), @as(f64, 5)), @as(f64, 2), @as(f64, 5)), 1e-9);
+        try std.testing.expectApproxEqAbs(p, logLogisticCdf(logLogisticQuantile(p, @as(f64, 1.5), @as(f64, 2.5)), @as(f64, 1.5), @as(f64, 2.5)), 1e-12);
+        try std.testing.expectApproxEqAbs(p, inverseGammaCdf(inverseGammaQuantile(p, @as(f64, 3), @as(f64, 2)), @as(f64, 3), @as(f64, 2)), 1e-9);
+        try std.testing.expectApproxEqAbs(p, nakagamiCdf(nakagamiQuantile(p, @as(f64, 2), @as(f64, 3)), @as(f64, 2), @as(f64, 3)), 1e-9);
+    }
+
+    try std.testing.expect(std.math.isNan(betaPrimeCdf(@as(f64, 1), @as(f64, 0), @as(f64, 5))));
+    try std.testing.expect(std.math.isNan(logLogisticCdf(@as(f64, 1), @as(f64, -1), @as(f64, 2))));
+    try std.testing.expect(std.math.isNan(inverseGammaCdf(@as(f64, 1), @as(f64, 0), @as(f64, 2))));
+    try std.testing.expect(std.math.isNan(nakagamiCdf(@as(f64, 1), @as(f64, 0.4), @as(f64, 1))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.890625), betaPrimeCdf(@as(f32, 1), @as(f32, 2), @as(f32, 5)), 1e-6);
+
+    const bp = try BetaPrime(f64).init(2, 5);
+    try std.testing.expectApproxEqAbs(betaPrimeCdf(@as(f64, 1), @as(f64, 2), @as(f64, 5)), bp.cdf(1), 0);
+    const ll = try LogLogistic(f64).init(2, 3);
+    try std.testing.expectApproxEqAbs(logLogisticCdf(@as(f64, 4), @as(f64, 2), @as(f64, 3)), ll.cdf(4), 0);
+    const ig = try InverseGamma(f64).init(3, 2);
+    try std.testing.expectApproxEqAbs(inverseGammaCdf(@as(f64, 2), @as(f64, 3), @as(f64, 2)), ig.cdf(2), 0);
+    const nk = try Nakagami(f64).init(2, 3);
+    try std.testing.expectApproxEqAbs(nakagamiCdf(@as(f64, 2), @as(f64, 2), @as(f64, 3)), nk.cdf(2), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {

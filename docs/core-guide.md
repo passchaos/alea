@@ -546,6 +546,12 @@ CDF and quantile helpers complement the samplers:
   `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
   masses. These inherit the `normCdf`/`probit` approximation accuracy
   (~1e-7).
+- advanced continuous: `betaPrimeCdf` / `betaPrimeQuantile`,
+  `logLogisticCdf` / `logLogisticQuantile`, `inverseGammaCdf` /
+  `inverseGammaQuantile`, `nakagamiCdf` / `nakagamiQuantile`; Beta-prime uses
+  the incomplete beta form, inverse-gamma uses the incomplete gamma upper
+  tail, log-logistic is closed-form (with `scale = 0` and `shape = +∞` point
+  masses), and Nakagami delegates to the incomplete gamma.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
@@ -576,9 +582,9 @@ delegate to these helpers, including the derived continuous types
 `Pareto`, `PowerFunction`, `Kumaraswamy`, `Arcsine`, and `Triangular`).
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,
   `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Exponential`, `LogNormal`,
-  `HalfNormal`, `Chi`, `Erlang`, `Maxwell`, `Bernoulli`, `Binomial`,
-  `Geometric`, `NegativeBinomial`, `Hypergeometric`, `Zipf`, `Zeta`, and
-  `Poisson`.
+  `HalfNormal`, `Chi`, `Erlang`, `Maxwell`, `BetaPrime`, `LogLogistic`,
+  `InverseGamma`, `Nakagami`, `Bernoulli`, `Binomial`, `Geometric`,
+  `NegativeBinomial`, `Hypergeometric`, `Zipf`, `Zeta`, and `Poisson`.
 
 Quantiles use deterministic bisection (and a closed form for the geometric
 case), so they are diagnostics/ergonomics paths rather than hot sampling paths.

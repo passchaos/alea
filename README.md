@@ -191,7 +191,10 @@ The current Linux-first roadmap is intentionally broad:
   `chiSquaredQuantile`, `exponentialCdf` / `exponentialQuantile`,
   `logNormalCdf` / `logNormalQuantile`, `halfNormalCdf` /
   `halfNormalQuantile`, `chiCdf` / `chiQuantile`, `erlangCdf` /
-  `erlangQuantile`, `maxwellCdf` / `maxwellQuantile`, `studentTCdf` /
+  `erlangQuantile`, `maxwellCdf` / `maxwellQuantile`, `betaPrimeCdf` /
+  `betaPrimeQuantile`, `logLogisticCdf` / `logLogisticQuantile`,
+  `inverseGammaCdf` / `inverseGammaQuantile`, `nakagamiCdf` /
+  `nakagamiQuantile`, `studentTCdf` /
   `studentTQuantile`, `fisherFCdf` /
   `fisherFQuantile`, `poissonCdf` / `poissonQuantile`, `binomialCdf` /
   `binomialQuantile`, `geometricCdf` / `geometricQuantile`,
