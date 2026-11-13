@@ -862,6 +862,7 @@ pub const ExpError = Error;
 pub const GammaError = Error;
 pub const BetaError = Error;
 pub const BetaPrimeError = Error;
+pub const BetaBinomialError = Error;
 pub const BinomialError = Error;
 pub const CauchyError = Error;
 pub const ChiSquaredError = Error;
@@ -19123,6 +19124,122 @@ pub fn VectorBetaPrime(comptime VectorType: type) type {
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
+}
+
+/// Beta-binomial distribution over `0..trials`.
+///
+/// `X | p ~ Binomial(trials, p)` with `p ~ Beta(α, β)`, giving an
+/// overdispersed binomial count. Sampling is exact and rejection-free: one
+/// Beta draw followed by one binomial draw. `α = β = 1` gives the discrete
+/// uniform distribution over `0..trials`; large `α, β` approach the binomial
+/// limit with `p = α/(α+β)`.
+pub const BetaBinomial = struct {
+    trials: u64,
+    alpha: f64,
+    beta_param: f64,
+
+    pub fn init(trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!BetaBinomial {
+        if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return error.InvalidParameter;
+        return .{ .trials = trials, .alpha = alpha, .beta_param = beta_param };
+    }
+
+    pub fn new(trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!BetaBinomial {
+        return init(trials, alpha, beta_param);
+    }
+
+    pub fn trialsValue(self: BetaBinomial) u64 {
+        return self.trials;
+    }
+
+    pub fn alphaValue(self: BetaBinomial) f64 {
+        return self.alpha;
+    }
+
+    pub fn betaValue(self: BetaBinomial) f64 {
+        return self.beta_param;
+    }
+
+    pub fn expectedValue(self: BetaBinomial) f64 {
+        const n = @as(f64, @floatFromInt(self.trials));
+        return n * self.alpha / (self.alpha + self.beta_param);
+    }
+
+    pub fn varianceValue(self: BetaBinomial) f64 {
+        const n = @as(f64, @floatFromInt(self.trials));
+        const a = self.alpha;
+        const b = self.beta_param;
+        const sum = a + b;
+        return n * a * b * (sum + n) / (sum * sum * (sum + 1));
+    }
+
+    pub fn minValue(_: BetaBinomial) u64 {
+        return 0;
+    }
+
+    pub fn maxValue(self: BetaBinomial) u64 {
+        return self.trials;
+    }
+
+    pub fn sample(self: BetaBinomial, rng: Rng) u64 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: BetaBinomial, source: anytype) u64 {
+        const p = betaFrom(source, f64, self.alpha, self.beta_param);
+        return binomialFrom(source, self.trials, p);
+    }
+
+    pub fn fill(self: BetaBinomial, rng: Rng, dest: []u64) void {
+        self.fillFrom(rng, dest);
+    }
+
+    pub fn fillFrom(self: BetaBinomial, source: anytype, dest: []u64) void {
+        for (dest) |*value| value.* = self.sampleFrom(source);
+    }
+};
+
+/// Sample a BetaBinomial(trials, α, β) count. Returns error on invalid parameters.
+pub fn betaBinomial(rng: Rng, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!u64 {
+    return betaBinomialCheckedFrom(rng, trials, alpha, beta_param);
+}
+
+/// Source-accepting variant of `betaBinomial` (panics on invalid parameters).
+pub fn betaBinomialFrom(source: anytype, trials: u64, alpha: f64, beta_param: f64) u64 {
+    const dist = BetaBinomial.new(trials, alpha, beta_param) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn betaBinomialChecked(rng: Rng, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!u64 {
+    return betaBinomialCheckedFrom(rng, trials, alpha, beta_param);
+}
+
+/// Checked source-accepting variant.
+pub fn betaBinomialCheckedFrom(source: anytype, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!u64 {
+    const dist = try BetaBinomial.init(trials, alpha, beta_param);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with BetaBinomial counts. Validates parameters.
+pub fn fillBetaBinomial(rng: Rng, dest: []u64, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!void {
+    return fillBetaBinomialCheckedFrom(rng, dest, trials, alpha, beta_param);
+}
+
+/// Source-accepting fill (panics on invalid parameters).
+pub fn fillBetaBinomialFrom(source: anytype, dest: []u64, trials: u64, alpha: f64, beta_param: f64) void {
+    const dist = BetaBinomial.new(trials, alpha, beta_param) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillBetaBinomialChecked(rng: Rng, dest: []u64, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!void {
+    return fillBetaBinomialCheckedFrom(rng, dest, trials, alpha, beta_param);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillBetaBinomialCheckedFrom(source: anytype, dest: []u64, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!void {
+    const dist = try BetaBinomial.init(trials, alpha, beta_param);
+    dist.fillFrom(source, dest);
 }
 
 pub fn FisherF(comptime T: type) type {
@@ -50088,6 +50205,84 @@ test "VectorBetaPrime samples, accessors, and lane parity work" {
     inline for (0..8) |lane| {
         try std.testing.expect(f32_sample[lane] > 0 and std.math.isFinite(f32_sample[lane]));
     }
+}
+
+test "BetaBinomial constructor and moments" {
+    try std.testing.expectError(error.InvalidParameter, BetaBinomial.init(10, 0, 1));
+    try std.testing.expectError(error.InvalidParameter, BetaBinomial.init(10, 1, -1));
+    try std.testing.expectError(error.InvalidParameter, BetaBinomial.init(10, std.math.nan(f64), 1));
+
+    const dist = try BetaBinomial.init(10, 1, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dist.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), dist.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), dist.minValue());
+    try std.testing.expectEqual(@as(u64, 10), dist.maxValue());
+    try std.testing.expectEqual(@as(u64, 10), dist.trialsValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), dist.alphaValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), dist.betaValue(), 1e-12);
+}
+
+test "BetaBinomial sampling matches moments and overdispersion" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbb01);
+    const rng = Rng.init(&engine);
+
+    const count = 20_000;
+    const nf: f64 = @floatFromInt(count);
+
+    // Uniform case alpha = beta = 1: mean 5, variance 10 for n = 10.
+    const uniform_dist = try BetaBinomial.init(10, 1, 1);
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    for (0..count) |_| {
+        const x = uniform_dist.sample(rng);
+        try std.testing.expect(x <= 10);
+        sum += @floatFromInt(x);
+        sum_sq += @as(f64, @floatFromInt(x * x));
+    }
+    const mean = sum / nf;
+    try std.testing.expectApproxEqAbs(@as(f64, 5), mean, 0.1);
+    try std.testing.expectApproxEqAbs(@as(f64, 10), sum_sq / nf - mean * mean, 1.0);
+
+    // Overdispersed case alpha = beta = 0.5, n = 20: mean 10, variance 52.5.
+    const over_dist = try BetaBinomial.init(20, 0.5, 0.5);
+    var over_sum: f64 = 0;
+    var over_sum_sq: f64 = 0;
+    for (0..count) |_| {
+        const x = over_dist.sample(rng);
+        over_sum += @floatFromInt(x);
+        over_sum_sq += @as(f64, @floatFromInt(x * x));
+    }
+    const over_mean = over_sum / nf;
+    try std.testing.expectApproxEqAbs(@as(f64, 10), over_mean, 0.2);
+    try std.testing.expectApproxEqAbs(@as(f64, 52.5), over_sum_sq / nf - over_mean * over_mean, 4.0);
+
+    // Large alpha/beta approaches the binomial limit with p = 0.5.
+    const limit_dist = try BetaBinomial.init(20, 1e6, 1e6);
+    var limit_sum: f64 = 0;
+    var limit_sum_sq: f64 = 0;
+    for (0..count) |_| {
+        const x = limit_dist.sample(rng);
+        limit_sum += @floatFromInt(x);
+        limit_sum_sq += @as(f64, @floatFromInt(x * x));
+    }
+    const limit_mean = limit_sum / nf;
+    try std.testing.expectApproxEqAbs(@as(f64, 10), limit_mean, 0.1);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), limit_sum_sq / nf - limit_mean * limit_mean, 0.5);
+}
+
+test "BetaBinomial free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbb02);
+    const rng = Rng.init(&engine);
+
+    const x = try betaBinomial(rng, 12, 2, 3);
+    try std.testing.expect(x <= 12);
+    var buf: [16]u64 = undefined;
+    try fillBetaBinomial(rng, &buf, 12, 2, 3);
+    for (buf) |value| try std.testing.expect(value <= 12);
+    try std.testing.expectError(error.InvalidParameter, fillBetaBinomial(rng, &buf, 12, 0, 3));
+    try std.testing.expectError(error.InvalidParameter, betaBinomial(rng, 12, 2, -1));
 }
 
 test "StudentTCopula constructor validates parameters" {

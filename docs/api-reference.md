@@ -573,7 +573,7 @@ self-forking.
   `Error`, `UniformError`, `BernoulliError`,
   `WeightedError`, `WeightError`, `weighted.Error`,
   `weighted.WeightedError`, `weighted.WeightError`, `slice.Empty`,
-  `NormalError`, `ExpError`, `GammaError`, `BetaError`, `BetaPrimeError`, `BinomialError`,
+  `NormalError`, `ExpError`, `GammaError`, `BetaError`, `BetaPrimeError`, `BetaBinomialError`, `BinomialError`,
   `CauchyError`, `ChiSquaredError`, `FisherFError`, `FrechetError`,
   `GeoError`, `GumbelError`, `HyperGeoError`, `InverseGaussianError`,
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
@@ -2548,6 +2548,28 @@ Reusable samplers:
 - `VectorBetaPrime(VectorType).sampleFrom`
 - `VectorBetaPrime(VectorType).fill`
 - `VectorBetaPrime(VectorType).fillFrom`
+- `BetaBinomial`
+- `BetaBinomial.init`
+- `BetaBinomial.new`
+- `BetaBinomial.trialsValue`
+- `BetaBinomial.alphaValue`
+- `BetaBinomial.betaValue`
+- `BetaBinomial.expectedValue`
+- `BetaBinomial.varianceValue`
+- `BetaBinomial.minValue`
+- `BetaBinomial.maxValue`
+- `BetaBinomial.sample`
+- `BetaBinomial.sampleFrom`
+- `BetaBinomial.fill`
+- `BetaBinomial.fillFrom`
+- `betaBinomial`
+- `betaBinomialFrom`
+- `betaBinomialChecked`
+- `betaBinomialCheckedFrom`
+- `fillBetaBinomial`
+- `fillBetaBinomialFrom`
+- `fillBetaBinomialChecked`
+- `fillBetaBinomialCheckedFrom`
 - `VectorBeta(VectorType)`
 - `VectorBeta(VectorType).init`
 - `VectorBeta(VectorType).alphaValue`
