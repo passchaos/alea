@@ -6910,5 +6910,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1377-k1-wood-constants.md`, and
 `compare/results/s4-m1378-validate-all-refresh.md`, and
 `compare/results/s4-m1379-reproducibility-matrix-refresh.md`, and
-`compare/results/s4-m1380-hin-table-only-loop.md`.
+`compare/results/s4-m1380-hin-table-only-loop.md`, and
+`compare/results/s4-m1381-vector-kent-noinline-tail.md`.
 

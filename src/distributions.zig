@@ -12432,8 +12432,50 @@ fn vectorWoodW(source: anytype, comptime VectorType: type, lambda: vectorChild(V
         const accept = active & (lambda_v * wcand + two * @log(one - x0_v * wcand) - c_v >= @log(u));
         w = @select(Child, accept, wcand, w);
         active = @select(bool, accept, @as(B, @splat(false)), active);
+
+        var active_count: usize = 0;
+        inline for (0..L) |lane| {
+            if (active[lane]) active_count += 1;
+        }
+        if (active_count <= 4) {
+            vectorKentWoodTailFrom(source, VectorType, active, lambda, b, x0, c, &w);
+            break;
+        }
     }
     return w;
+}
+
+/// Scalar completion for the last pending vector-Kent Wood lanes. Kept out of
+/// line so the scalar Kent path keeps its code layout.
+noinline fn vectorKentWoodTailFrom(
+    source: anytype,
+    comptime VectorType: type,
+    active: @Vector(vectorInfo(VectorType).len, bool),
+    lambda: vectorChild(VectorType),
+    b: vectorChild(VectorType),
+    x0: vectorChild(VectorType),
+    c: vectorChild(VectorType),
+    w: *VectorType,
+) void {
+    const Child = vectorChild(VectorType);
+    const L = vectorInfo(VectorType).len;
+    inline for (0..L) |lane| {
+        if (active[lane]) {
+            if (lambda == 0) {
+                w[lane] = vmfSampleWFrom(source, Child, 0, 3);
+            } else {
+                while (true) {
+                    const z = Rng.floatOpenClosedFrom(source, Child);
+                    const ws = (1 - (1 + b) * z) / (1 - (1 - b) * z);
+                    const e = standardExponentialFrom(source, Child);
+                    if (lambda * ws + 2 * @log(1 - x0 * ws) - c + e >= 0) {
+                        w[lane] = ws;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// Per-lane log I₀; the Bessel helper is scalar, so evaluate it lane by lane.
