@@ -464,6 +464,101 @@ pub fn studentTCdf(t: anytype, nu: anytype) @TypeOf(t, nu) {
     return if (t >= 0) 1 - half * ib else half * ib;
 }
 
+/// Beta(α, β) cumulative distribution function: alias for the regularized
+/// incomplete beta `I_x(α, β)`.
+pub fn betaCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, alpha, beta_param) {
+    return betaIncomplete(x, alpha, beta_param);
+}
+
+/// Inverse regularized incomplete beta: returns x such that I_x(α, β) = p.
+/// Deterministic bisection on [0, 1]; p=0 → 0, p=1 → 1, invalid parameters
+/// return NaN.
+pub fn betaQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, alpha, beta_param) {
+    const T = @TypeOf(p, alpha, beta_param);
+    comptime requireFloat(T);
+    if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+
+    var lo: T = 0;
+    var hi: T = 1;
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (betaIncomplete(mid, alpha, beta_param) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+        if (hi - lo <= 64 * std.math.floatEps(T)) break;
+    }
+    return (lo + hi) / 2;
+}
+
+/// Fisher F cumulative distribution function with numerator/denominator
+/// degrees of freedom d1, d2 > 0:
+///   F(x) = I_{d1·x/(d1·x+d2)}(d1/2, d2/2).
+pub fn fisherFCdf(x: anytype, d1: anytype, d2: anytype) @TypeOf(x, d1, d2) {
+    const T = @TypeOf(x, d1, d2);
+    comptime requireFloat(T);
+    if (!(d1 > 0) or !(d2 > 0) or !std.math.isFinite(d1) or !std.math.isFinite(d2)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    const y = d1 / (d1 + d2 / x);
+    return betaIncomplete(y, d1 / 2, d2 / 2);
+}
+
+/// Inverse Fisher F CDF: returns x such that `fisherFCdf(x, d1, d2) = p`.
+/// p=0 → 0, p=1 → +∞; deterministic doubling plus bisection.
+pub fn fisherFQuantile(p: anytype, d1: anytype, d2: anytype) @TypeOf(p, d1, d2) {
+    const T = @TypeOf(p, d1, d2);
+    comptime requireFloat(T);
+    if (!(d1 > 0) or !(d2 > 0) or !std.math.isFinite(d1) or !std.math.isFinite(d2)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+
+    var hi: T = 1;
+    var expansion: usize = 0;
+    while (fisherFCdf(hi, d1, d2) < p and expansion < 1024) : (expansion += 1) {
+        hi *= 2;
+        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    }
+
+    var lo: T = 0;
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (fisherFCdf(mid, d1, d2) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return (lo + hi) / 2;
+}
+
+/// Inverse Student-t CDF: returns t such that `studentTCdf(t, ν) = p`.
+/// Uses the incomplete-beta representation for p < 0.5 and symmetry for
+/// p > 0.5; ν > 1e6 delegates to `probit`.
+pub fn studentTQuantile(p: anytype, nu: anytype) @TypeOf(p, nu) {
+    const T = @TypeOf(p, nu);
+    comptime requireFloat(T);
+    if (!(nu > 0) or !std.math.isFinite(nu)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    if (p == 0.5) return 0;
+    if (nu > 1e6) return probit(p);
+    if (p > 0.5) return -studentTQuantile(@as(T, 1 - p), nu);
+
+    const x = betaQuantile(@as(T, 2 * p), @as(T, nu / 2), @as(T, 0.5));
+    if (!(x > 0)) return -std.math.inf(T);
+    return -@sqrt(nu * (1 - x) / x);
+}
+
 const common = @import("distributions/common.zig");
 
 pub const Error = common.Error;
@@ -48904,6 +48999,57 @@ test "studentTCdf matches known values and symmetry" {
 
     // f32 support.
     try std.testing.expectApproxEqAbs(@as(f32, 0.75), studentTCdf(@as(f32, 1), @as(f32, 1)), 1e-5);
+}
+
+test "betaCdf and betaQuantile round-trip" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaCdf(@as(f64, 0.5), @as(f64, 2), @as(f64, 2)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaCdf(@as(f64, 0.5), @as(f64, 1), @as(f64, 1)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), betaCdf(@as(f64, 0.5), @as(f64, 2), @as(f64, 1)), 1e-12);
+
+    inline for ([_]f64{ 0.05, 0.3, 0.5, 0.9, 0.99 }) |p| {
+        inline for ([_][2]f64{ .{ 2, 5 }, .{ 0.5, 0.5 }, .{ 3, 7 } }) |ab| {
+            const x = betaQuantile(p, ab[0], ab[1]);
+            try std.testing.expect(x > 0 and x < 1);
+            try std.testing.expectApproxEqAbs(p, betaCdf(x, ab[0], ab[1]), 1e-10);
+        }
+    }
+
+    try std.testing.expectEqual(@as(f64, 0), betaQuantile(@as(f64, 0), @as(f64, 2), @as(f64, 3)));
+    try std.testing.expectEqual(@as(f64, 1), betaQuantile(@as(f64, 1), @as(f64, 2), @as(f64, 3)));
+    try std.testing.expect(std.math.isNan(betaQuantile(@as(f64, -0.1), @as(f64, 2), @as(f64, 3))));
+    try std.testing.expect(std.math.isNan(betaQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 3))));
+}
+
+test "fisherFCdf and fisherFQuantile match known values" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), fisherFCdf(@as(f64, 1), @as(f64, 1), @as(f64, 1)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), fisherFCdf(@as(f64, 1), @as(f64, 2), @as(f64, 2)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5348805734622006), fisherFCdf(@as(f64, 1), @as(f64, 5), @as(f64, 10)), 1e-10);
+    try std.testing.expectEqual(@as(f64, 0), fisherFCdf(@as(f64, -1), @as(f64, 5), @as(f64, 10)));
+    try std.testing.expectEqual(@as(f64, 1), fisherFCdf(std.math.inf(f64), @as(f64, 5), @as(f64, 10)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const x = fisherFQuantile(p, @as(f64, 5), @as(f64, 10));
+        try std.testing.expectApproxEqAbs(p, fisherFCdf(x, @as(f64, 5), @as(f64, 10)), 1e-9);
+    }
+
+    try std.testing.expectEqual(@as(f64, 0), fisherFQuantile(@as(f64, 0), @as(f64, 5), @as(f64, 10)));
+    try std.testing.expect(std.math.isNan(fisherFQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 10))));
+}
+
+test "studentTQuantile matches known values and symmetry" {
+    try std.testing.expectApproxEqAbs(@as(f64, 1), studentTQuantile(@as(f64, 0.75), @as(f64, 1)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, -1), studentTQuantile(@as(f64, 0.25), @as(f64, 1)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, -0.8164965809277265), studentTQuantile(@as(f64, 0.25), @as(f64, 2)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6998120613124303), studentTQuantile(@as(f64, 0.75), @as(f64, 10)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.4758840488244789), studentTQuantile(@as(f64, 0.9), @as(f64, 5)), 1e-9);
+
+    inline for ([_]f64{ 0.01, 0.1, 0.4, 0.6, 0.9, 0.99 }) |p| {
+        const t = studentTQuantile(p, @as(f64, 5));
+        try std.testing.expectApproxEqAbs(p, studentTCdf(t, @as(f64, 5)), 1e-9);
+    }
+
+    try std.testing.expectApproxEqAbs(probit(@as(f64, 0.9)), studentTQuantile(@as(f64, 0.9), @as(f64, 1e7)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 1), studentTQuantile(@as(f32, 0.75), @as(f32, 1)), 1e-4);
 }
 
 test "StudentTCopula constructor validates parameters" {
