@@ -10217,11 +10217,12 @@ fn vonMisesFisherFromW(source: anytype, comptime T: type, comptime n: usize, mea
     // Sample uniform point v on S^{n-2} (equator of the tangent subspace).
     var v: [n]T = undefined;
     if (n == 3) {
-        // Uniform on circle S^1 (tangent direction is 2D).
-        const u = Rng.floatOpenClosedFrom(source, T) * 2 * @as(T, @floatCast(std.math.pi));
+        // Uniform on circle S^1 (tangent direction is 2D). The direct circle
+        // sampler avoids the cos/sin pair for a uniform angle.
+        const circle = unitCircleFrom(source, T);
         v[0] = 0;
-        v[1] = @cos(u);
-        v[2] = @sin(u);
+        v[1] = circle[0];
+        v[2] = circle[1];
     } else {
         // General n ≥ 4: uniform on S^{n-2}.
         const v_sub = unitSphereSurfaceFrom(source, T, n - 1);
@@ -10478,7 +10479,6 @@ fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]v
     const zero: V = @splat(0);
     const one: V = @splat(1);
     const two: V = @splat(2);
-    const pi: V = @splat(@as(Child, @floatCast(std.math.pi)));
     const kappa_v: V = @splat(kappa);
 
     const consts = vmfWoodConstants(Child, kappa, 3);
@@ -10514,9 +10514,14 @@ fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]v
         }
     }
 
-    const angle = Rng.vectorOpenClosedFrom(source, V) * two * pi;
-    const cos_angle = @cos(angle);
-    const sin_angle = @sin(angle);
+    // Per-lane uniform circle draws avoid the vector cos/sin pair.
+    var cos_angle: V = undefined;
+    var sin_angle: V = undefined;
+    inline for (0..L) |lane| {
+        const circle = unitCircleFrom(source, Child);
+        cos_angle[lane] = circle[0];
+        sin_angle[lane] = circle[1];
+    }
     const s = @sqrt(@max(zero, one - w * w));
     var x = w;
     var y = s * cos_angle;
@@ -10768,11 +10773,12 @@ fn watsonPointFrom(source: anytype, comptime T: type, comptime n: usize, mean_ax
     // Step 2: Sample uniform point v on S^{n-2} (equatorial tangent subspace).
     var v: [n]T = undefined;
     if (n == 3) {
-        // Uniform on circle S^1 (tangent direction is 2D).
-        const u = Rng.floatOpenClosedFrom(source, T) * 2 * @as(T, @floatCast(std.math.pi));
+        // Uniform on circle S^1 (tangent direction is 2D). The direct circle
+        // sampler avoids the cos/sin pair for a uniform angle.
+        const circle = unitCircleFrom(source, T);
         v[0] = 0;
-        v[1] = @cos(u);
-        v[2] = @sin(u);
+        v[1] = circle[0];
+        v[2] = circle[1];
     } else {
         const v_sub = unitSphereSurfaceFrom(source, T, n - 1);
         v[0] = 0;
@@ -11059,12 +11065,18 @@ fn vectorWatsonPointFrom(source: anytype, comptime VectorType: type, mean_axis: 
         }
     }
 
-    const two_pi: V = @splat(2 * @as(Child, @floatCast(std.math.pi)));
-    const angle = Rng.vectorOpenClosedFrom(source, V) * two_pi;
+    // Per-lane uniform circle draws avoid the vector cos/sin pair.
+    var cos_angle: V = undefined;
+    var sin_angle: V = undefined;
+    inline for (0..L) |lane| {
+        const circle = unitCircleFrom(source, Child);
+        cos_angle[lane] = circle[0];
+        sin_angle[lane] = circle[1];
+    }
     const s = @sqrt(@max(zero, one - w * w));
     var x = w;
-    var y = s * @cos(angle);
-    var z = s * @sin(angle);
+    var y = s * cos_angle;
+    var z = s * sin_angle;
     vectorHouseholderReflect(VectorType, mean_axis, &x, &y, &z);
     return .{ x, y, z };
 }
