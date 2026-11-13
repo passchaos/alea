@@ -11352,7 +11352,10 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
         eigenvectors: [n][n]T,
         b: [n]T,
         precision: [n]T,
+        /// Precomputed `1 / sqrt(precision[i])` for the proposal draws.
+        normal_scale: [n]T,
         nu: T,
+        two_over_nu: T,
         log_envelope: T,
         uniform: bool,
         point_mass: bool,
@@ -11418,13 +11421,18 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
                 inline for (0..n) |i| precision[i] = 1 + 2 * b[i] / nu;
             }
 
+            var normal_scale: [n]T = undefined;
+            inline for (0..n) |i| normal_scale[i] = 1 / @sqrt(precision[i]);
+
             return .{
                 .matrix = symmetric,
                 .eigenvalues = eigen.values,
                 .eigenvectors = eigen.vectors,
                 .b = b,
                 .precision = precision,
+                .normal_scale = normal_scale,
                 .nu = nu,
+                .two_over_nu = 2 / nu,
                 .log_envelope = log_envelope,
                 .uniform = is_uniform,
                 .point_mass = is_point_mass,
@@ -11484,7 +11492,7 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
                 var norm_sq: T = 0;
                 inline for (0..n) |i| {
                     const w = Rng.standardNormalFastFrom(source, T);
-                    y[i] = w / @sqrt(self.precision[i]);
+                    y[i] = w * self.normal_scale[i];
                     norm_sq += y[i] * y[i];
                 }
                 if (!(norm_sq > 0) or !std.math.isFinite(norm_sq)) continue;
@@ -11496,7 +11504,7 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
                     t += self.b[i] * y[i] * y[i];
                 }
                 t = @max(0, t);
-                const log_ratio = -t + (nf / 2) * std.math.log1p(2 * t / self.nu);
+                const log_ratio = -t + (nf / 2) * std.math.log1p(self.two_over_nu * t);
                 const u = Rng.floatOpenFrom(source, T);
                 if (@log(u) <= log_ratio - self.log_envelope) {
                     var result: [n]T = undefined;
@@ -11593,7 +11601,7 @@ fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *
     const zero: V = @splat(0);
     const one: V = @splat(1);
     const half_n: V = @splat(1.5);
-    const two_over_nu: V = @splat(2 / sampler.nu);
+    const two_over_nu: V = @splat(sampler.two_over_nu);
     const log_envelope: V = @splat(sampler.log_envelope);
 
     var result: [3]V = undefined;
@@ -11602,7 +11610,7 @@ fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *
         var y: [3]V = undefined;
         var norm_sq: V = @splat(0);
         inline for (0..3) |i| {
-            const scale: V = @splat(1 / @sqrt(sampler.precision[i]));
+            const scale: V = @splat(sampler.normal_scale[i]);
             y[i] = Rng.vectorNormalFrom(source, V, 0, 1) * scale;
             norm_sq += y[i] * y[i];
         }
