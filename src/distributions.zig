@@ -11654,7 +11654,7 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
                     t += self.b[i] * y[i] * y[i];
                 }
                 t = @max(0, t);
-                const log_ratio = -t + (nf / 2) * std.math.log1p(self.two_over_nu * t);
+                const log_ratio = -t + (nf / 2) * @log(1 + self.two_over_nu * t);
                 const u = Rng.floatOpenFrom(source, T);
                 if (@log(u) <= log_ratio - self.log_envelope) {
                     var result: [n]T = undefined;
