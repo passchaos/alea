@@ -2670,6 +2670,16 @@ pub const Binomial = struct {
         return self.p;
     }
 
+    /// Binomial CDF at `k` with this sampler's trials/probability.
+    pub fn cdf(self: Binomial, k: f64) f64 {
+        return binomialCdf(k, @as(f64, @floatFromInt(self.trials)), self.p);
+    }
+
+    /// Binomial quantile for probability `q`.
+    pub fn quantile(self: Binomial, q: f64) f64 {
+        return binomialQuantile(q, @as(f64, @floatFromInt(self.trials)), self.p);
+    }
+
     pub fn expectedValue(self: Binomial) f64 {
         return @as(f64, @floatFromInt(self.trials)) * self.p;
     }
@@ -3364,6 +3374,16 @@ pub const NegativeBinomial = struct {
 
     pub fn probabilityValue(self: NegativeBinomial) f64 {
         return self.p;
+    }
+
+    /// Negative-binomial CDF at failure count `k`.
+    pub fn cdf(self: NegativeBinomial, k: f64) f64 {
+        return negativeBinomialCdf(k, @as(f64, @floatFromInt(self.successes)), self.p);
+    }
+
+    /// Negative-binomial quantile for probability `q`.
+    pub fn quantile(self: NegativeBinomial, q: f64) f64 {
+        return negativeBinomialQuantile(q, @as(f64, @floatFromInt(self.successes)), self.p);
     }
 
     pub fn expectedValue(self: NegativeBinomial) f64 {
@@ -6651,6 +6671,21 @@ pub fn Normal(comptime T: type) type {
 
         pub fn stddevValue(self: Self) T {
             return self.stddev;
+        }
+
+        /// Normal CDF: Φ((x − mean)/stddev). A zero stddev is a point mass.
+        pub fn cdf(self: Self, x: T) T {
+            if (self.stddev == 0) return if (x < self.mean) 0 else 1;
+            return normCdf((x - self.mean) / self.stddev);
+        }
+
+        /// Normal quantile: mean + stddev·probit(p).
+        pub fn quantile(self: Self, p: T) T {
+            if (self.stddev == 0) return self.mean;
+            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+            if (p == 0) return -std.math.inf(T);
+            if (p == 1) return std.math.inf(T);
+            return self.mean + self.stddev * probit(p);
         }
 
         pub fn stddevParameter(self: Self) T {
@@ -15695,6 +15730,16 @@ pub const Poisson = struct {
         };
     }
 
+    /// Poisson CDF at `k` with this sampler's lambda.
+    pub fn cdf(self: Poisson, k: f64) f64 {
+        return poissonCdf(k, self.lambdaValue());
+    }
+
+    /// Poisson quantile for probability `q`.
+    pub fn quantile(self: Poisson, q: f64) f64 {
+        return poissonQuantile(q, self.lambdaValue());
+    }
+
     pub fn expectedValue(self: Poisson) f64 {
         return self.lambdaValue();
     }
@@ -16359,6 +16404,16 @@ pub const Geometric = struct {
 
     pub fn probabilityValue(self: Geometric) f64 {
         return self.p;
+    }
+
+    /// Geometric CDF at trial count `k` (one-based support).
+    pub fn cdf(self: Geometric, k: f64) f64 {
+        return geometricCdf(k, self.p);
+    }
+
+    /// Geometric quantile for probability `q`.
+    pub fn quantile(self: Geometric, q: f64) f64 {
+        return geometricQuantile(q, self.p);
     }
 
     pub fn expectedValue(self: Geometric) f64 {
@@ -17129,6 +17184,16 @@ pub fn Gamma(comptime T: type) type {
             return self.scale;
         }
 
+        /// Gamma CDF at `x` with this sampler's shape/scale.
+        pub fn cdf(self: Self, x: T) T {
+            return gammaCdf(x, self.shape, self.scale);
+        }
+
+        /// Gamma quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return gammaQuantile(p, self.shape, self.scale);
+        }
+
         pub fn expectedValue(self: Self) T {
             if (self.scale == 0) return 0;
             return self.shape * self.scale;
@@ -17487,6 +17552,16 @@ pub fn ChiSquared(comptime T: type) type {
 
         pub fn dofValue(self: Self) T {
             return self.dof;
+        }
+
+        /// Chi-squared CDF at `x` with this sampler's degrees of freedom.
+        pub fn cdf(self: Self, x: T) T {
+            return chiSquaredCdf(x, self.dof);
+        }
+
+        /// Chi-squared quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return chiSquaredQuantile(p, self.dof);
         }
 
         pub fn expectedValue(self: Self) T {
@@ -18424,6 +18499,16 @@ pub fn Beta(comptime T: type) type {
             return self.beta_param;
         }
 
+        /// Beta CDF at `x` with this sampler's shape parameters.
+        pub fn cdf(self: Self, x: T) T {
+            return betaCdf(x, self.alpha, self.beta_param);
+        }
+
+        /// Beta quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return betaQuantile(p, self.alpha, self.beta_param);
+        }
+
         pub fn expectedValue(self: Self) T {
             return self.alpha / (self.alpha + self.beta_param);
         }
@@ -18798,6 +18883,16 @@ pub fn FisherF(comptime T: type) type {
             return self.d2;
         }
 
+        /// Fisher F CDF at `x` with this sampler's degrees of freedom.
+        pub fn cdf(self: Self, x: T) T {
+            return fisherFCdf(x, self.d1, self.d2);
+        }
+
+        /// Fisher F quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return fisherFQuantile(p, self.d1, self.d2);
+        }
+
         pub fn expectedValue(self: Self) ?T {
             if (self.hasInfiniteDof()) return null;
             if (self.d2 <= 2) return null;
@@ -19078,6 +19173,16 @@ pub fn StudentT(comptime T: type) type {
 
         pub fn dofValue(self: Self) T {
             return self.dof;
+        }
+
+        /// Student-t CDF at `x` with this sampler's degrees of freedom.
+        pub fn cdf(self: Self, x: T) T {
+            return studentTCdf(x, self.dof);
+        }
+
+        /// Student-t quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return studentTQuantile(p, self.dof);
         }
 
         pub fn expectedValue(self: Self) ?T {
@@ -49458,6 +49563,76 @@ test "poissonQuantile returns the smallest covering count" {
             try std.testing.expect(poissonCdf(k - 1, @as(f64, 5)) < q);
         }
     }
+}
+
+test "sampler cdf and quantile methods delegate to the free helpers" {
+    const x: f64 = 3;
+    const normal_dist = try Normal(f64).init(1, 2);
+    try std.testing.expectApproxEqAbs(normCdf((x - 1) / 2), normal_dist.cdf(x), 1e-12);
+    const p90: f64 = 0.9;
+    try std.testing.expectApproxEqAbs(1 + 2 * probit(p90), normal_dist.quantile(p90), 1e-9);
+    const point_normal = try Normal(f64).init(4, 0);
+    try std.testing.expectEqual(@as(f64, 0), point_normal.cdf(3));
+    try std.testing.expectEqual(@as(f64, 1), point_normal.cdf(5));
+    try std.testing.expectEqual(@as(f64, 4), point_normal.quantile(0.3));
+
+    const gamma_dist = try Gamma(f64).init(2.5, 1.5);
+    const gamma_x: f64 = 2;
+    try std.testing.expectApproxEqAbs(gammaCdf(gamma_x, gamma_dist.shapeValue(), gamma_dist.scaleValue()), gamma_dist.cdf(gamma_x), 1e-12);
+    const p70: f64 = 0.7;
+    try std.testing.expectApproxEqAbs(gammaQuantile(p70, gamma_dist.shapeValue(), gamma_dist.scaleValue()), gamma_dist.quantile(p70), 1e-12);
+
+    const beta_dist = try Beta(f64).init(2, 5);
+    const beta_x: f64 = 0.4;
+    try std.testing.expectApproxEqAbs(betaCdf(beta_x, beta_dist.alphaValue(), beta_dist.betaValue()), beta_dist.cdf(beta_x), 1e-12);
+    const p60: f64 = 0.6;
+    try std.testing.expectApproxEqAbs(betaQuantile(p60, beta_dist.alphaValue(), beta_dist.betaValue()), beta_dist.quantile(p60), 1e-12);
+
+    const chi_dist = try ChiSquared(f64).init(4);
+    const chi_x: f64 = 3;
+    try std.testing.expectApproxEqAbs(chiSquaredCdf(chi_x, chi_dist.dofValue()), chi_dist.cdf(chi_x), 1e-12);
+    const p80: f64 = 0.8;
+    try std.testing.expectApproxEqAbs(chiSquaredQuantile(p80, chi_dist.dofValue()), chi_dist.quantile(p80), 1e-12);
+
+    const student_dist = try StudentT(f64).init(5);
+    const student_x: f64 = 1.5;
+    try std.testing.expectApproxEqAbs(studentTCdf(student_x, student_dist.dofValue()), student_dist.cdf(student_x), 1e-12);
+    try std.testing.expectApproxEqAbs(studentTQuantile(p80, student_dist.dofValue()), student_dist.quantile(p80), 1e-12);
+
+    const fisher_dist = try FisherF(f64).init(5, 10);
+    const fisher_x: f64 = 1.2;
+    try std.testing.expectApproxEqAbs(fisherFCdf(fisher_x, fisher_dist.d1Value(), fisher_dist.d2Value()), fisher_dist.cdf(fisher_x), 1e-12);
+    try std.testing.expectApproxEqAbs(fisherFQuantile(p70, fisher_dist.d1Value(), fisher_dist.d2Value()), fisher_dist.quantile(p70), 1e-12);
+
+    const binomial_dist = try Binomial.init(20, 0.3);
+    const binomial_k: f64 = 7;
+    const binomial_n: f64 = 20;
+    const binomial_p: f64 = 0.3;
+    const binomial_q: f64 = 0.6;
+    try std.testing.expectApproxEqAbs(binomialCdf(binomial_k, binomial_n, binomial_p), binomial_dist.cdf(binomial_k), 1e-12);
+    try std.testing.expectApproxEqAbs(binomialQuantile(binomial_q, binomial_n, binomial_p), binomial_dist.quantile(binomial_q), 1e-12);
+
+    const geometric_dist = try Geometric.init(0.4);
+    const geometric_k: f64 = 3;
+    const geometric_p: f64 = 0.4;
+    const geometric_q: f64 = 0.8;
+    try std.testing.expectApproxEqAbs(geometricCdf(geometric_k, geometric_p), geometric_dist.cdf(geometric_k), 1e-12);
+    try std.testing.expectApproxEqAbs(geometricQuantile(geometric_q, geometric_p), geometric_dist.quantile(geometric_q), 1e-12);
+
+    const negative_binomial_dist = try NegativeBinomial.init(3, 0.5);
+    const negative_binomial_k: f64 = 2;
+    const negative_binomial_s: f64 = 3;
+    const negative_binomial_p: f64 = 0.5;
+    const negative_binomial_q: f64 = 0.6;
+    try std.testing.expectApproxEqAbs(negativeBinomialCdf(negative_binomial_k, negative_binomial_s, negative_binomial_p), negative_binomial_dist.cdf(negative_binomial_k), 1e-12);
+    try std.testing.expectApproxEqAbs(negativeBinomialQuantile(negative_binomial_q, negative_binomial_s, negative_binomial_p), negative_binomial_dist.quantile(negative_binomial_q), 1e-12);
+
+    const poisson_dist = try Poisson.init(3.5);
+    const poisson_k: f64 = 4;
+    const poisson_lambda: f64 = 3.5;
+    const poisson_q: f64 = 0.7;
+    try std.testing.expectApproxEqAbs(poissonCdf(poisson_k, poisson_lambda), poisson_dist.cdf(poisson_k), 1e-12);
+    try std.testing.expectApproxEqAbs(poissonQuantile(poisson_q, poisson_lambda), poisson_dist.quantile(poisson_q), 1e-12);
 }
 
 test "StudentTCopula constructor validates parameters" {

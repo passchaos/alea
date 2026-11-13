@@ -1379,6 +1379,8 @@ Reusable samplers:
 - `Binomial.new`
 - `Binomial.trialsValue`
 - `Binomial.probabilityValue`
+- `Binomial.cdf`
+- `Binomial.quantile`
 - `Binomial.expectedValue`
 - `Binomial.varianceValue`
 - `Binomial.minValue`
@@ -1562,6 +1564,8 @@ Reusable samplers:
 - `NegativeBinomial.init`
 - `NegativeBinomial.successesValue`
 - `NegativeBinomial.probabilityValue`
+- `NegativeBinomial.cdf`
+- `NegativeBinomial.quantile`
 - `NegativeBinomial.expectedValue`
 - `NegativeBinomial.varianceValue`
 - `NegativeBinomial.minValue`
@@ -1779,6 +1783,8 @@ Reusable samplers:
 - `Normal(T).stddevValue`
 - `Normal(T).stddevParameter`
 - `Normal(T).stdDevParameter`
+- `Normal(T).cdf`
+- `Normal(T).quantile`
 - `Normal(T).expectedValue`
 - `Normal(T).varianceValue`
 - `Normal(T).medianValue`
@@ -2274,6 +2280,8 @@ Reusable samplers:
 - `Poisson.max_lambda`
 - `Poisson.MAX_LAMBDA`
 - `Poisson.lambdaValue`
+- `Poisson.cdf`
+- `Poisson.quantile`
 - `Poisson.expectedValue`
 - `Poisson.varianceValue`
 - `Poisson.minValue`
@@ -2298,6 +2306,8 @@ Reusable samplers:
 - `Geometric`
 - `Geometric.init`
 - `Geometric.probabilityValue`
+- `Geometric.cdf`
+- `Geometric.quantile`
 - `Geometric.expectedValue`
 - `Geometric.varianceValue`
 - `Geometric.modeValue`
@@ -2371,6 +2381,8 @@ Reusable samplers:
 - `Gamma(T).new`
 - `Gamma(T).shapeValue`
 - `Gamma(T).scaleValue`
+- `Gamma(T).cdf`
+- `Gamma(T).quantile`
 - `Gamma(T).expectedValue`
 - `Gamma(T).varianceValue`
 - `Gamma(T).modeValue`
@@ -2397,6 +2409,8 @@ Reusable samplers:
 - `ChiSquared(T).init`
 - `ChiSquared(T).new`
 - `ChiSquared(T).dofValue`
+- `ChiSquared(T).cdf`
+- `ChiSquared(T).quantile`
 - `ChiSquared(T).expectedValue`
 - `ChiSquared(T).varianceValue`
 - `ChiSquared(T).modeValue`
@@ -2473,6 +2487,8 @@ Reusable samplers:
 - `Beta(T).new`
 - `Beta(T).alphaValue`
 - `Beta(T).betaValue`
+- `Beta(T).cdf`
+- `Beta(T).quantile`
 - `Beta(T).expectedValue`
 - `Beta(T).varianceValue`
 - `Beta(T).modeValue`
@@ -2500,6 +2516,8 @@ Reusable samplers:
 - `FisherF(T).new`
 - `FisherF(T).d1Value`
 - `FisherF(T).d2Value`
+- `FisherF(T).cdf`
+- `FisherF(T).quantile`
 - `FisherF(T).expectedValue`
 - `FisherF(T).varianceValue`
 - `FisherF(T).minValue`
@@ -2524,6 +2542,8 @@ Reusable samplers:
 - `StudentT(T).init`
 - `StudentT(T).new`
 - `StudentT(T).dofValue`
+- `StudentT(T).cdf`
+- `StudentT(T).quantile`
 - `StudentT(T).expectedValue`
 - `StudentT(T).varianceValue`
 - `StudentT(T).minValue`
