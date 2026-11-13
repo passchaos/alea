@@ -9996,7 +9996,9 @@ fn vonMises2dPointFrom(source: anytype, comptime T: type, mean_x: T, mean_y: T, 
     if (kappa > 1e12) return .{ mean_x, mean_y };
     const disc = @sqrt(1 + 4 * kappa * kappa);
     const tau = 1 + disc;
-    const rho = (2 * kappa * tau) / ((disc + 1) * (tau + @sqrt(2 * tau)));
+    // rho = (2 kappa tau) / ((disc + 1) (tau + sqrt(2 tau))); `disc + 1`
+    // equals `tau`, so the leading `tau` cancels.
+    const rho = (2 * kappa) / (tau + @sqrt(2 * tau));
     const r = (1 + rho * rho) / (2 * rho);
     if (!(r > 0) or !std.math.isFinite(r)) {
         const angle = (Rng.floatOpenClosedFrom(source, T) * 2 - 1) * pi;
@@ -33586,7 +33588,97 @@ fn runtimeVonMisesFisherInto(source: anytype, comptime T: type, dim: usize, mean
     while (i < dim) : (i += 1) out[i] -= factor * scratch[i];
 }
 
+/// Cross product of two 3-vectors.
+inline fn matrixVmfCross3(comptime T: type, a: [3]T, b: [3]T) [3]T {
+    return .{
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    };
+}
+
+/// Normalize a 3-vector in place; returns false when the vector is degenerate.
+inline fn matrixVmfNormalize3(comptime T: type, v: *[3]T, tol: T) bool {
+    const norm_sq = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+    if (!(norm_sq > tol) or !std.math.isFinite(norm_sq)) return false;
+    const inv = 1 / @sqrt(norm_sq);
+    v[0] *= inv;
+    v[1] *= inv;
+    v[2] *= inv;
+    return true;
+}
+
+/// Update one column of a 3×2 Stiefel matrix from its exact von Mises-Fisher
+/// conditional on the complement basis `{col, n}` and return the circle draw.
+inline fn matrixVmfColumn3x2(source: anytype, comptime T: type, f: [3]T, col: *[3]T, other: [3]T, n: [3]T, tol: T) [2]T {
+    const dot_other = other[0] * f[0] + other[1] * f[1] + other[2] * f[2];
+    const g = [3]T{
+        f[0] - dot_other * other[0],
+        f[1] - dot_other * other[1],
+        f[2] - dot_other * other[2],
+    };
+    const h0 = col[0] * g[0] + col[1] * g[1] + col[2] * g[2];
+    const h1 = n[0] * g[0] + n[1] * g[1] + n[2] * g[2];
+    const norm_sq = h0 * h0 + h1 * h1;
+    var z: [2]T = undefined;
+    if (norm_sq > tol) {
+        const norm = @sqrt(norm_sq);
+        z = vonMises2dPointFrom(source, T, h0 / norm, h1 / norm, norm);
+    } else {
+        runtimeUnitSphereFrom(source, T, 2, &z);
+    }
+    col[0] = z[0] * col[0] + z[1] * n[0];
+    col[1] = z[0] * col[1] + z[1] * n[1];
+    col[2] = z[0] * col[2] + z[1] * n[2];
+    return z;
+}
+
+/// Fully unrolled 3×2 Gibbs sweep. For a 3×2 Stiefel matrix the orthogonal
+/// complement of either column is spanned by the other column and their
+/// normalized cross product, so the generic Gram-Schmidt complement
+/// construction reduces to one cross product per sweep; the second basis
+/// follows from the first circle draw algebraically.
+fn matrixVmfSweep3x2(source: anytype, comptime T: type, f: []const T, x: []T) void {
+    const tol: T = if (T == f32) @floatCast(1e-5) else @floatCast(1e-10);
+    // Row-major 3×2 layout: column 0 = {x[0], x[2], x[4]},
+    // column 1 = {x[1], x[3], x[5]}.
+    var c0 = [3]T{ x[0], x[2], x[4] };
+    var c1 = [3]T{ x[1], x[3], x[5] };
+    const f0 = [3]T{ f[0], f[2], f[4] };
+    const f1 = [3]T{ f[1], f[3], f[5] };
+
+    // Column 0 conditional: complement basis {c0, c0 × c1}.
+    var n = matrixVmfCross3(T, c0, c1);
+    if (!matrixVmfNormalize3(T, &n, tol)) {
+        matrixVmfInitUniform(source, T, x, 3, 2);
+        return;
+    }
+    const c0_old = c0;
+    const z0 = matrixVmfColumn3x2(source, T, f0, &c0, c1, n, tol);
+
+    // Column 1 conditional: complement basis {c1, c0' × c1}. For an
+    // orthonormal basis c0' × c1 = z0[0] * n - z0[1] * c0, so no second
+    // cross product or normalization is needed.
+    const n_next = [3]T{
+        z0[0] * n[0] - z0[1] * c0_old[0],
+        z0[0] * n[1] - z0[1] * c0_old[1],
+        z0[0] * n[2] - z0[1] * c0_old[2],
+    };
+    _ = matrixVmfColumn3x2(source, T, f1, &c1, c0, n_next, tol);
+
+    x[0] = c0[0];
+    x[2] = c0[1];
+    x[4] = c0[2];
+    x[1] = c1[0];
+    x[3] = c1[1];
+    x[5] = c1[2];
+}
+
 fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows: usize, cols: usize, q: []T, g: []T, scratch: []T, h: []T, z: []T, d: usize) void {
+    if (rows == 3 and cols == 2) {
+        matrixVmfSweep3x2(source, T, f, x);
+        return;
+    }
     const tol: T = if (T == f32) @floatCast(1e-5) else @floatCast(1e-10);
     var j: usize = 0;
     while (j < cols) : (j += 1) {
@@ -33640,11 +33732,12 @@ fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows:
 ///
 /// Sampling uses a Gibbs sampler whose per-column conditional distributions
 /// are exact von Mises-Fisher draws on the orthogonal complement of the other
-/// columns. Draws are approximate (correlated) samples from the stationary
-/// distribution; `initWithOptions` controls burn-in and thinning. The columns
-/// stay orthonormal up to floating-point drift, which is corrected by a
-/// Gram-Schmidt pass every 64 sweeps (drift stays below ~1e-11 over 10M
-/// sweeps).
+/// columns. The 3×2 case uses a fully unrolled cross-product kernel; other
+/// shapes use the generic Gram-Schmidt path. Draws are approximate
+/// (correlated) samples from the stationary distribution; `initWithOptions`
+/// controls burn-in and thinning. The columns stay orthonormal up to
+/// floating-point drift, which is corrected by a Gram-Schmidt pass every 64
+/// sweeps (drift stays below ~1e-11 over 10M sweeps).
 ///
 /// Requires `p > k`. Square orthogonal matrices (`p = k`) make the conditional
 /// complement one-dimensional and the fixed-sweep chain periodic, so they are
@@ -56962,6 +57055,48 @@ test "MatrixVonMisesFisher samples are orthonormal and batches work" {
         var norm_sq: f64 = 0;
         inline for (0..6) |i| norm_sq += item[i] * item[i];
         try std.testing.expect(std.math.isFinite(norm_sq));
+    }
+}
+
+test "MatrixVonMisesFisher generic shapes stay orthonormal" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x2a07);
+    const rng = Rng.init(&engine);
+
+    // 4x2 and 4x3 exercise the generic Gram-Schmidt sweep; the 3x2 fast
+    // kernel is covered by the tests above.
+    const f42 = [8]f64{ 0.4, -0.2, 0.3, 0.1, -0.5, 0.6, 0.2, 0.7 };
+    var dist42 = try MatrixVonMisesFisher(f64).initWithOptions(allocator, &f42, 4, 2, 20, 2);
+    defer dist42.deinit();
+    const f43 = [12]f64{ 0.4, -0.2, 0.3, 0.1, -0.5, 0.6, 0.2, 0.7, -0.3, 0.5, 0.1, -0.6 };
+    var dist43 = try MatrixVonMisesFisher(f64).initWithOptions(allocator, &f43, 4, 3, 20, 2);
+    defer dist43.deinit();
+
+    var out42: [8]f64 = undefined;
+    for (0..50) |_| {
+        try dist42.sampleInto(rng, &out42);
+        inline for (0..2) |a| {
+            inline for (0..2) |b| {
+                var dot: f64 = 0;
+                inline for (0..4) |i| dot += out42[i * 2 + a] * out42[i * 2 + b];
+                const expected: f64 = if (a == b) 1 else 0;
+                try std.testing.expectApproxEqAbs(expected, dot, 1e-9);
+            }
+        }
+    }
+
+    var out43: [12]f64 = undefined;
+    for (0..50) |_| {
+        try dist43.sampleInto(rng, &out43);
+        inline for (0..3) |a| {
+            inline for (0..3) |b| {
+                var dot: f64 = 0;
+                inline for (0..4) |i| dot += out43[i * 3 + a] * out43[i * 3 + b];
+                const expected: f64 = if (a == b) 1 else 0;
+                try std.testing.expectApproxEqAbs(expected, dot, 1e-9);
+            }
+        }
     }
 }
 

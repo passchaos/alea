@@ -6879,5 +6879,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1346-vector-kent-tail.md`, and
 `compare/results/s4-m1347-vmf-2d-direct.md`, and
 `compare/results/s4-m1348-validate-all-refresh.md`, and
-`compare/results/s4-m1349-periodic-matrix-vmf-ortho.md`.
+`compare/results/s4-m1349-periodic-matrix-vmf-ortho.md`, and
+`compare/results/s4-m1350-matrix-vmf-3x2-kernel.md`.
 
