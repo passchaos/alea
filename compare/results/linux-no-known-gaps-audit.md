@@ -6792,3 +6792,9 @@ ScaledInvChiSq/Hoyt/ExGaussian/Rice/Nakagami/InverseGamma vector/SIMD sampling,
 copula methods, SIMD spherical bulk sampling paths, weighted/alias sampling
 advances, string generation expansion, longer statistical validation runs,
 broader platform evidence, or newly discovered core random-workflow gaps.
+
+S4-M1264, S4-M1265, and S4-M1266 are recorded in
+`compare/results/s4-m1264-vector-simd-advanced-distributions.md`,
+`compare/results/s4-m1265-wishart-inverse-wishart.md`, and
+`compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md`.
+

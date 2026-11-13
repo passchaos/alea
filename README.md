@@ -3,6 +3,57 @@
 `alea` is a Zig 0.16 random toolkit for simulations, games, tests, procedural
 generation, and reproducible experiments.
 
+## Quick Start
+
+```zig
+const std = @import("std");
+const alea = @import("alea");
+
+pub fn main() !void {
+    var engine = alea.DefaultPrng.init(1234);
+    const rng = alea.Rng.init(&engine);
+
+    const die = rng.intRangeAtMost(u8, 1, 6);
+    const x = rng.normal(f64, 0.0, 1.0);
+    const outages = alea.distributions.binomial(rng, 40, 0.25);
+    const tuple = rng.value(struct { u16, bool, f32 });
+    var rolls = rng.sampleIter(u8, try alea.distributions.Uniform(u8).initInclusive(1, 6));
+    const next_roll = rolls.next().?;
+    const random_bytes = try rng.bytesAlloc(std.heap.smp_allocator, 8);
+    defer std.heap.smp_allocator.free(random_bytes);
+    const random_words = try rng.valueBatch(u16, std.heap.smp_allocator, 4);
+    defer std.heap.smp_allocator.free(random_words);
+    const token = try alea.ascii.Alphanumeric.alloc(std.heap.smp_allocator, rng, 16);
+    defer std.heap.smp_allocator.free(token);
+    const utf8_capacity = try alea.ascii.unicodeUtf8Capacity(8);
+    const utf8_buf = try std.heap.smp_allocator.alloc(u8, utf8_capacity);
+    defer std.heap.smp_allocator.free(utf8_buf);
+    const text = try alea.ascii.unicodeUtf8Into(rng, utf8_buf, 8);
+
+    var items = [_]u32{ 10, 20, 30, 40 };
+    const item_index = rng.chooseIndex(items.len).?;
+    const compact_item_index = rng.chooseIndexU32(@intCast(items.len)).?;
+    const item_ptr = rng.chooseConstPtr(u32, &items).?;
+    const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
+
+    _ = die;
+    _ = x;
+    _ = outages;
+    _ = tuple;
+    _ = next_roll;
+    _ = random_bytes;
+    _ = random_words;
+    _ = token;
+    _ = utf8_capacity;
+    _ = text;
+    _ = item_index;
+    _ = item_ptr;
+    _ = hand;
+}
+```
+
+## Feature Overview
+
 The current Linux-first roadmap is intentionally broad:
 
 - multiple deterministic engines: `Wyhash64`, `Xoshiro256`,
@@ -129,55 +180,6 @@ Stage 4 evidence and performance triage. See
 `compare/results/performance-triage.md` for current hard gaps and rejected
 optimization attempts.
 
-## Quick Start
-
-```zig
-const std = @import("std");
-const alea = @import("alea");
-
-pub fn main() !void {
-    var engine = alea.DefaultPrng.init(1234);
-    const rng = alea.Rng.init(&engine);
-
-    const die = rng.intRangeAtMost(u8, 1, 6);
-    const x = rng.normal(f64, 0.0, 1.0);
-    const outages = alea.distributions.binomial(rng, 40, 0.25);
-    const tuple = rng.value(struct { u16, bool, f32 });
-    var rolls = rng.sampleIter(u8, try alea.distributions.Uniform(u8).initInclusive(1, 6));
-    const next_roll = rolls.next().?;
-    const random_bytes = try rng.bytesAlloc(std.heap.smp_allocator, 8);
-    defer std.heap.smp_allocator.free(random_bytes);
-    const random_words = try rng.valueBatch(u16, std.heap.smp_allocator, 4);
-    defer std.heap.smp_allocator.free(random_words);
-    const token = try alea.ascii.Alphanumeric.alloc(std.heap.smp_allocator, rng, 16);
-    defer std.heap.smp_allocator.free(token);
-    const utf8_capacity = try alea.ascii.unicodeUtf8Capacity(8);
-    const utf8_buf = try std.heap.smp_allocator.alloc(u8, utf8_capacity);
-    defer std.heap.smp_allocator.free(utf8_buf);
-    const text = try alea.ascii.unicodeUtf8Into(rng, utf8_buf, 8);
-
-    var items = [_]u32{ 10, 20, 30, 40 };
-    const item_index = rng.chooseIndex(items.len).?;
-    const compact_item_index = rng.chooseIndexU32(@intCast(items.len)).?;
-    const item_ptr = rng.chooseConstPtr(u32, &items).?;
-    const hand = alea.seq.partialShuffle(rng, u32, &items, 2);
-
-    _ = die;
-    _ = x;
-    _ = outages;
-    _ = tuple;
-    _ = next_roll;
-    _ = random_bytes;
-    _ = random_words;
-    _ = token;
-    _ = utf8_capacity;
-    _ = text;
-    _ = item_index;
-    _ = item_ptr;
-    _ = hand;
-}
-```
-
 ## Build
 
 Run `zig build -l` for the generated list of project-defined build steps. The
@@ -301,7 +303,8 @@ engine type.
 See `docs/core-guide.md` for the core API guide, `docs/api-reference.md` for
 the public API reference, `docs/examples.md` for runnable examples,
 `docs/tooling.md` for the build/tool catalog, and
-`compare/results/core-rand-coverage.md` for the roadmap and validation matrix.
+`compare/results/core-rand-coverage.md` for the roadmap and validation matrix;
+`compare/results/README.md` is the evidence index for the checked-in reports.
 Current hard performance gaps and rejected optimization attempts are tracked in
 `compare/results/performance-triage.md`; LogNormal transform tradeoffs,
 including the opt-in bounded f32 approximation, are summarized in
