@@ -384,6 +384,86 @@ pub fn probit(p: anytype) @TypeOf(p) {
     }
 }
 
+/// Continued fraction for the regularized incomplete beta function
+/// (Numerical Recipes `betacf`). Converges in a few dozen iterations for
+/// typical parameters; the 300-iteration cap is a safety bound.
+fn betaContinuedFraction(comptime T: type, x: T, a: T, b: T) T {
+    const max_iter = 300;
+    const eps = 64 * std.math.floatEps(T);
+    const fpmin = std.math.floatMin(T) * 16;
+
+    const qab = a + b;
+    const qap = a + 1;
+    const qam = a - 1;
+    var c: T = 1;
+    var d = 1 - qab * x / qap;
+    if (@abs(d) < fpmin) d = fpmin;
+    d = 1 / d;
+    var h = d;
+    var m: usize = 1;
+    while (m <= max_iter) : (m += 1) {
+        const m_f: T = @floatFromInt(m);
+        const m2 = 2 * m_f;
+        var aa = m_f * (b - m_f) * x / ((qam + m2) * (a + m2));
+        d = 1 + aa * d;
+        if (@abs(d) < fpmin) d = fpmin;
+        c = 1 + aa / c;
+        if (@abs(c) < fpmin) c = fpmin;
+        d = 1 / d;
+        h *= d * c;
+        aa = -(a + m_f) * (qab + m_f) * x / ((a + m2) * (qap + m2));
+        d = 1 + aa * d;
+        if (@abs(d) < fpmin) d = fpmin;
+        c = 1 + aa / c;
+        if (@abs(c) < fpmin) c = fpmin;
+        d = 1 / d;
+        const delta = d * c;
+        h *= delta;
+        if (@abs(delta - 1) < eps) break;
+    }
+    return h;
+}
+
+/// Regularized incomplete beta function I_x(a, b) for 0 ≤ x ≤ 1 and a, b > 0.
+/// Uses the continued-fraction representation with the symmetry
+/// I_x(a, b) = 1 − I_{1−x}(b, a) for numerical stability.
+pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
+    const T = @TypeOf(x, a, b);
+    comptime requireFloat(T);
+    if (!(a > 0) or !(b > 0) or !std.math.isFinite(a) or !std.math.isFinite(b)) return std.math.nan(T);
+    if (!(x >= 0)) return std.math.nan(T);
+    if (x == 0) return 0;
+    if (x >= 1) return 1;
+
+    const log_beta = std.math.lgamma(T, a) + std.math.lgamma(T, b) - std.math.lgamma(T, a + b);
+    const front = @exp(a * @log(x) + b * std.math.log1p(-x) - log_beta);
+    if (x < (a + 1) / (a + b + 2)) {
+        return front * betaContinuedFraction(T, x, a, b) / a;
+    }
+    return 1 - front * betaContinuedFraction(T, 1 - x, b, a) / b;
+}
+
+/// Student-t cumulative distribution function with `nu` degrees of freedom.
+/// Uses the regularized incomplete beta representation
+///   F(t) = 1 − ½·I_{ν/(ν+t²)}(ν/2, ½)   for t ≥ 0
+///   F(t) = ½·I_{ν/(ν+t²)}(ν/2, ½)       for t < 0.
+/// For ν > 1e6 the distribution is numerically indistinguishable from the
+/// standard normal and `normCdf` is used directly to avoid lgamma cancellation.
+pub fn studentTCdf(t: anytype, nu: anytype) @TypeOf(t, nu) {
+    const T = @TypeOf(t, nu);
+    comptime requireFloat(T);
+    if (!(nu > 0) or !std.math.isFinite(nu)) return std.math.nan(T);
+    if (std.math.isNan(t)) return std.math.nan(T);
+    if (t == std.math.inf(T)) return 1;
+    if (t == -std.math.inf(T)) return 0;
+    if (nu > 1e6) return normCdf(t);
+
+    const half: T = 0.5;
+    const x = nu / (nu + t * t);
+    const ib = betaIncomplete(x, nu / 2, half);
+    return if (t >= 0) 1 - half * ib else half * ib;
+}
+
 const common = @import("distributions/common.zig");
 
 pub const Error = common.Error;
@@ -427,6 +507,7 @@ pub const NoncentralTError = Error;
 pub const NoncentralFError = Error;
 pub const NoncentralChiError = Error;
 pub const GaussianCopulaError = Error;
+pub const StudentTCopulaError = Error;
 
 /// Von Mises-Fisher distribution error set.
 pub const VonMisesFisherError = error{
@@ -501,6 +582,10 @@ pub const multi = struct {
 
     pub fn StaticGaussianCopula(comptime T: type, comptime dimension: usize) type {
         return distributions_module.StaticGaussianCopula(T, dimension);
+    }
+
+    pub fn StaticStudentTCopula(comptime T: type, comptime dimension: usize) type {
+        return distributions_module.StaticStudentTCopula(T, dimension);
     }
 };
 
@@ -26007,6 +26092,36 @@ pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) typ
     };
 }
 
+/// Validate and symmetrize a correlation matrix shared by the copula types.
+/// Rejects non-finite entries, non-unit diagonals, and out-of-range
+/// correlations. Positive-semidefiniteness is checked later by the
+/// multivariate-normal factor.
+fn staticCopulaCorrelation(comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T) Error![dimension][dimension]T {
+    inline for (0..dimension) |i| {
+        inline for (0..dimension) |j| {
+            if (!std.math.isFinite(correlation[i][j])) return error.InvalidParameter;
+        }
+    }
+
+    var symmetric: [dimension][dimension]T = undefined;
+    inline for (0..dimension) |i| {
+        inline for (i..dimension) |j| {
+            const value = (correlation[i][j] + correlation[j][i]) / 2;
+            symmetric[i][j] = value;
+            symmetric[j][i] = value;
+        }
+    }
+
+    inline for (0..dimension) |i| {
+        if (@abs(symmetric[i][i] - 1) > 1e-6) return error.InvalidParameter;
+        inline for (0..dimension) |j| {
+            if (@abs(symmetric[i][j]) > 1 + 1e-6) return error.InvalidParameter;
+        }
+    }
+
+    return symmetric;
+}
+
 /// Gaussian copula on the unit hypercube (0,1)^dimension.
 ///
 /// The Gaussian copula couples `dimension` uniform marginals through a
@@ -26037,28 +26152,7 @@ pub fn StaticGaussianCopula(comptime T: type, comptime dimension: usize) type {
         /// non-positive-semidefinite matrices are rejected. A non-symmetric
         /// matrix is symmetrized as (R + Rᵀ)/2.
         pub fn init(correlation: Matrix) GaussianCopulaError!Self {
-            inline for (0..dimension) |i| {
-                inline for (0..dimension) |j| {
-                    if (!std.math.isFinite(correlation[i][j])) return error.InvalidParameter;
-                }
-            }
-
-            var symmetric: Matrix = undefined;
-            inline for (0..dimension) |i| {
-                inline for (i..dimension) |j| {
-                    const value = (correlation[i][j] + correlation[j][i]) / 2;
-                    symmetric[i][j] = value;
-                    symmetric[j][i] = value;
-                }
-            }
-
-            inline for (0..dimension) |i| {
-                if (@abs(symmetric[i][i] - 1) > 1e-6) return error.InvalidParameter;
-                inline for (0..dimension) |j| {
-                    if (@abs(symmetric[i][j]) > 1 + 1e-6) return error.InvalidParameter;
-                }
-            }
-
+            const symmetric = try staticCopulaCorrelation(T, dimension, correlation);
             const zero: Vector = @splat(0);
             const mvn = try StaticMultivariateNormal(T, dimension).init(zero, symmetric);
             return .{ .correlation = symmetric, .mvn = mvn };
@@ -26147,6 +26241,136 @@ pub fn fillGaussianCopulaChecked(rng: Rng, comptime T: type, comptime dimension:
 /// Checked source-accepting fill variant.
 pub fn fillGaussianCopulaCheckedFrom(source: anytype, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T) GaussianCopulaError!void {
     const dist = try StaticGaussianCopula(T, dimension).init(correlation);
+    dist.fillFrom(source, dest);
+}
+
+/// Student-t copula on the unit hypercube (0,1)^dimension.
+///
+/// The t-copula couples uniform marginals through a correlation matrix R and
+/// degrees of freedom ν:
+///
+///   z ~ N(0, R),   s ~ χ²(ν),   t_i = z_i / √(s/ν),   u_i = F_ν(t_i).
+///
+/// The shared chi-squared scale induces symmetric tail dependence, making the
+/// t-copula the standard model for joint extreme events in finance and risk
+/// management. ν → ∞ recovers the Gaussian copula; small ν gives heavier
+/// joint tails.
+pub fn StaticStudentTCopula(comptime T: type, comptime dimension: usize) type {
+    if (dimension == 0) @compileError("StaticStudentTCopula dimension must be greater than zero");
+    comptime requireFloat(T);
+
+    return struct {
+        const Self = @This();
+        pub const Vector = [dimension]T;
+        pub const Matrix = [dimension][dimension]T;
+
+        correlation: Matrix,
+        df: T,
+        mvn: StaticMultivariateNormal(T, dimension),
+
+        /// Construct a Student-t copula from a correlation matrix and positive
+        /// finite degrees of freedom. Correlation validation matches
+        /// `StaticGaussianCopula`.
+        pub fn init(correlation: Matrix, degrees_of_freedom: T) StudentTCopulaError!Self {
+            if (!(degrees_of_freedom > 0) or !std.math.isFinite(degrees_of_freedom)) return error.InvalidParameter;
+            const symmetric = try staticCopulaCorrelation(T, dimension, correlation);
+            const zero: Vector = @splat(0);
+            const mvn = try StaticMultivariateNormal(T, dimension).init(zero, symmetric);
+            return .{ .correlation = symmetric, .df = degrees_of_freedom, .mvn = mvn };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(correlation: Matrix, degrees_of_freedom: T) Self {
+            return Self.init(correlation, degrees_of_freedom) catch |err| {
+                std.debug.panic("StaticStudentTCopula.new: invalid parameters: {}", .{err});
+            };
+        }
+
+        /// Symmetrized correlation matrix parameter.
+        pub fn correlationValue(self: *const Self) Matrix {
+            return self.correlation;
+        }
+
+        pub fn degreesOfFreedomValue(self: *const Self) T {
+            return self.df;
+        }
+
+        /// Alias for `degreesOfFreedomValue`.
+        pub fn dfValue(self: *const Self) T {
+            return self.df;
+        }
+
+        pub fn dimensionValue(_: *const Self) usize {
+            return dimension;
+        }
+
+        /// Draw a vector of correlated uniforms with t-copula dependence.
+        /// Values are clamped to the open interval (ε/2, 1−ε/2).
+        pub fn sample(self: *const Self, rng: Rng) Vector {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *const Self, source: anytype) Vector {
+            var z = self.mvn.sampleFrom(source);
+            const scale = @sqrt(chiSquaredFrom(source, T, self.df) / self.df);
+            const eps: T = std.math.floatEps(T);
+            inline for (0..dimension) |i| {
+                z[i] = @min(@max(studentTCdf(z[i] / scale, self.df), eps / 2), 1 - eps / 2);
+            }
+            return z;
+        }
+
+        pub fn fill(self: *const Self, rng: Rng, dest: []Vector) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: *const Self, source: anytype, dest: []Vector) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Sample a Student-t-copula vector of correlated uniforms on (0,1)^dimension.
+pub fn studentTCopula(rng: Rng, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T, degrees_of_freedom: T) StudentTCopulaError![dimension]T {
+    return studentTCopulaCheckedFrom(rng, T, dimension, correlation, degrees_of_freedom);
+}
+
+/// Source-accepting variant of `studentTCopula` (panics on invalid parameters).
+pub fn studentTCopulaFrom(source: anytype, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T, degrees_of_freedom: T) [dimension]T {
+    const dist = StaticStudentTCopula(T, dimension).new(correlation, degrees_of_freedom);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn studentTCopulaChecked(rng: Rng, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T, degrees_of_freedom: T) StudentTCopulaError![dimension]T {
+    return studentTCopulaCheckedFrom(rng, T, dimension, correlation, degrees_of_freedom);
+}
+
+/// Checked source-accepting variant.
+pub fn studentTCopulaCheckedFrom(source: anytype, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T, degrees_of_freedom: T) StudentTCopulaError![dimension]T {
+    const dist = try StaticStudentTCopula(T, dimension).init(correlation, degrees_of_freedom);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Student-t-copula vectors. Validates parameters.
+pub fn fillStudentTCopula(rng: Rng, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T, degrees_of_freedom: T) StudentTCopulaError!void {
+    return fillStudentTCopulaCheckedFrom(rng, T, dimension, dest, correlation, degrees_of_freedom);
+}
+
+/// Source-accepting fill (panics on invalid parameters).
+pub fn fillStudentTCopulaFrom(source: anytype, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T, degrees_of_freedom: T) void {
+    const dist = StaticStudentTCopula(T, dimension).new(correlation, degrees_of_freedom);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillStudentTCopulaChecked(rng: Rng, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T, degrees_of_freedom: T) StudentTCopulaError!void {
+    return fillStudentTCopulaCheckedFrom(rng, T, dimension, dest, correlation, degrees_of_freedom);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillStudentTCopulaCheckedFrom(source: anytype, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T, degrees_of_freedom: T) StudentTCopulaError!void {
+    const dist = try StaticStudentTCopula(T, dimension).init(correlation, degrees_of_freedom);
     dist.fillFrom(source, dest);
 }
 
@@ -47493,6 +47717,26 @@ test "Gaussian copula recovers the input correlation" {
     try std.testing.expectApproxEqAbs(rho, observed, 0.03);
 }
 
+test "Gaussian copula cross moment matches the exact arcsin formula" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc6);
+    const rng = Rng.init(&engine);
+
+    const rho: f64 = 0.5;
+    const dist = try StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, rho },
+        .{ rho, 1 },
+    });
+    const count = 5000;
+    var sum: f64 = 0;
+    for (0..count) |_| {
+        const u = dist.sample(rng);
+        sum += u[0] * u[1];
+    }
+    const expected = 0.25 + std.math.asin(rho / 2) / (2 * std.math.pi);
+    try std.testing.expectApproxEqAbs(expected, sum / @as(f64, @floatFromInt(count)), 0.02);
+}
+
 test "Gaussian copula free functions and fill work" {
     const alea = @import("root.zig");
     var engine = alea.DefaultPrng.init(0xc3);
@@ -47553,6 +47797,197 @@ test "Gaussian copula f32 sampling works" {
         .{ 0.5, 1, 0.1 },
         .{ 0.25, 0.1, 1 },
     });
+    for (0..64) |_| {
+        const u = dist.sample(rng);
+        inline for (0..3) |i| {
+            try std.testing.expect(u[i] > 0 and u[i] < 1);
+        }
+    }
+}
+
+test "studentTCdf matches known values and symmetry" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), studentTCdf(@as(f64, 0), @as(f64, 3)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), studentTCdf(@as(f64, 1), @as(f64, 1)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), studentTCdf(@as(f64, -1), @as(f64, 1)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7886751345948129), studentTCdf(@as(f64, 1), @as(f64, 2)), 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8295534338489705), studentTCdf(@as(f64, 1), @as(f64, 10)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9490302605850708), studentTCdf(@as(f64, 2), @as(f64, 5)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9900289369340037), studentTCdf(@as(f64, 3), @as(f64, 7)), 1e-9);
+
+    // Symmetry F(t) + F(-t) = 1.
+    inline for ([_]f64{ 0.5, 1.5, 3.0, 8.0 }) |t| {
+        try std.testing.expectApproxEqAbs(@as(f64, 1), studentTCdf(t, @as(f64, 4)) + studentTCdf(-t, @as(f64, 4)), 1e-12);
+    }
+
+    // Large degrees of freedom approach the standard normal.
+    try std.testing.expectApproxEqAbs(normCdf(@as(f64, 1.2)), studentTCdf(@as(f64, 1.2), @as(f64, 1e5)), 1e-4);
+    try std.testing.expectApproxEqAbs(normCdf(@as(f64, 1.2)), studentTCdf(@as(f64, 1.2), @as(f64, 1e7)), 1e-6);
+
+    // f32 support.
+    try std.testing.expectApproxEqAbs(@as(f32, 0.75), studentTCdf(@as(f32, 1), @as(f32, 1)), 1e-5);
+}
+
+test "StudentTCopula constructor validates parameters" {
+    const valid = [2][2]f64{
+        .{ 1, 0.3 },
+        .{ 0.3, 1 },
+    };
+    try std.testing.expectError(error.InvalidParameter, StaticStudentTCopula(f64, 2).init(valid, 0));
+    try std.testing.expectError(error.InvalidParameter, StaticStudentTCopula(f64, 2).init(valid, -1));
+    try std.testing.expectError(error.InvalidParameter, StaticStudentTCopula(f64, 2).init(valid, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, StaticStudentTCopula(f64, 2).init(valid, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, StaticStudentTCopula(f64, 2).init(.{
+        .{ 1, 0.3 },
+        .{ 0.2, 2 },
+    }, 5));
+
+    const dist = try StaticStudentTCopula(f64, 2).init(valid, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dist.degreesOfFreedomValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dist.dfValue(), 1e-12);
+    try std.testing.expectEqual(@as(usize, 2), dist.dimensionValue());
+}
+
+test "StudentTCopula with identity correlation has uniform marginals" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc7);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticStudentTCopula(f64, 2).init(.{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    }, 5);
+    const count = 5000;
+    var sums: [2]f64 = .{ 0, 0 };
+    var sum_sq: [2]f64 = .{ 0, 0 };
+    var cross: f64 = 0;
+    for (0..count) |_| {
+        const u = dist.sample(rng);
+        inline for (0..2) |i| {
+            try std.testing.expect(u[i] > 0 and u[i] < 1);
+            sums[i] += u[i];
+            sum_sq[i] += u[i] * u[i];
+        }
+        cross += u[0] * u[1];
+    }
+    const nf: f64 = @floatFromInt(count);
+    inline for (0..2) |i| {
+        const mean = sums[i] / nf;
+        try std.testing.expectApproxEqAbs(@as(f64, 0.5), mean, 0.02);
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 12.0), sum_sq[i] / nf - mean * mean, 0.01);
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), cross / nf, 0.02);
+}
+
+test "StudentTCopula with perfect correlation returns equal uniforms" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc8);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticStudentTCopula(f64, 2).init(.{
+        .{ 1, 1 },
+        .{ 1, 1 },
+    }, 3);
+    for (0..64) |_| {
+        const u = dist.sample(rng);
+        try std.testing.expectApproxEqAbs(u[0], u[1], 1e-15);
+    }
+}
+
+test "StudentTCopula exhibits lower-tail dependence" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc9);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticStudentTCopula(f64, 2).init(.{
+        .{ 1, 0.8 },
+        .{ 0.8, 1 },
+    }, 3);
+    const count = 20000;
+    var both_low: usize = 0;
+    for (0..count) |_| {
+        const u = dist.sample(rng);
+        if (u[0] < 0.1 and u[1] < 0.1) both_low += 1;
+    }
+    const rate = @as(f64, @floatFromInt(both_low)) / @as(f64, @floatFromInt(count));
+    // Independence would give about 0.01; the t-copula with ν=3 is far above.
+    try std.testing.expect(rate > 0.03);
+}
+
+test "StudentTCopula large degrees of freedom approaches the Gaussian copula" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xca);
+    const rng = Rng.init(&engine);
+
+    const rho: f64 = 0.5;
+    const dist = try StaticStudentTCopula(f64, 2).init(.{
+        .{ 1, rho },
+        .{ rho, 1 },
+    }, 1e7);
+    const count = 5000;
+    var sum: f64 = 0;
+    for (0..count) |_| {
+        const u = dist.sample(rng);
+        sum += u[0] * u[1];
+    }
+    const expected = 0.25 + std.math.asin(rho / 2) / (2 * std.math.pi);
+    try std.testing.expectApproxEqAbs(expected, sum / @as(f64, @floatFromInt(count)), 0.02);
+}
+
+test "StudentTCopula free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcb);
+    const rng = Rng.init(&engine);
+
+    const correlation = [3][3]f64{
+        .{ 1, 0.3, 0.2 },
+        .{ 0.3, 1, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+    var buf: [16][3]f64 = undefined;
+    try fillStudentTCopula(rng, f64, 3, &buf, correlation, 4);
+    for (buf) |u| {
+        inline for (0..3) |i| {
+            try std.testing.expect(u[i] > 0 and u[i] < 1);
+        }
+    }
+
+    try std.testing.expectError(error.InvalidParameter, fillStudentTCopula(rng, f64, 3, &buf, correlation, 0));
+    try std.testing.expectError(error.InvalidParameter, studentTCopula(rng, f64, 3, correlation, -2));
+
+    const u = try studentTCopulaChecked(rng, f64, 3, correlation, 4);
+    inline for (0..3) |i| {
+        try std.testing.expect(u[i] > 0 and u[i] < 1);
+    }
+}
+
+test "StudentTCopula direct-source sampling matches facade" {
+    const alea = @import("root.zig");
+    var facade_engine = alea.DefaultPrng.init(0xcc);
+    var direct_engine = alea.DefaultPrng.init(0xcc);
+    const rng = Rng.init(&facade_engine);
+
+    const correlation = [2][2]f64{
+        .{ 1, 0.4 },
+        .{ 0.4, 1 },
+    };
+    const dist = try StaticStudentTCopula(f64, 2).init(correlation, 6);
+    for (0..16) |_| {
+        const facade_sample = dist.sample(rng);
+        const direct_sample = studentTCopulaFrom(&direct_engine, f64, 2, correlation, 6);
+        try std.testing.expectEqualSlices(f64, &facade_sample, &direct_sample);
+    }
+}
+
+test "StudentTCopula f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcd);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticStudentTCopula(f32, 3).init(.{
+        .{ 1, 0.5, 0.25 },
+        .{ 0.5, 1, 0.1 },
+        .{ 0.25, 0.1, 1 },
+    }, 5);
     for (0..64) |_| {
         const u = dist.sample(rng);
         inline for (0..3) |i| {

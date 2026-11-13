@@ -580,7 +580,7 @@ self-forking.
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
   `VonMisesFisherError`, `WatsonError`, `BinghamError`, `GaussianCopulaError`,
-  `RiceError`, `NakagamiError`,
+  `StudentTCopulaError`, `RiceError`, `NakagamiError`,
   `InverseGammaError`, `ExGaussianError`, `GeneralizedParetoError`,
   `ScaledInverseChiSquaredError`, `HoytError`,
   `NoncentralChiSquaredError`, `NoncentralTError`, `NoncentralFError`, `NoncentralChiError`;
@@ -640,7 +640,7 @@ self-forking.
   `StandardWrappedCauchy.minValue`, `StandardWrappedCauchy.maxValue`,
   `StandardWrappedCauchy.sample`, `StandardWrappedCauchy.sampleFrom`,
   `StandardWrappedCauchy.fill`, `StandardWrappedCauchy.fillFrom`,
-  `normPdf`, `normCdf`, `probit`,
+  `normPdf`, `normCdf`, `probit`, `betaIncomplete`, `studentTCdf`,
   `vonMises`, `vonMisesFrom`, `vonMisesChecked`, `vonMisesCheckedFrom`,
   `fillVonMises`, `fillVonMisesFrom`, `fillVonMisesChecked`, `fillVonMisesCheckedFrom`,
   `vectorVonMises`, `vectorVonMisesFrom`, `vectorVonMisesChecked`, `vectorVonMisesCheckedFrom`,
@@ -1462,6 +1462,28 @@ Reusable samplers:
 - `fillGaussianCopulaFrom`
 - `fillGaussianCopulaChecked`
 - `fillGaussianCopulaCheckedFrom`
+- `StaticStudentTCopula(T, dimension)`
+- `multi.StaticStudentTCopula(T, dimension)`
+- `StaticStudentTCopula(T, dimension).Vector`
+- `StaticStudentTCopula(T, dimension).Matrix`
+- `StaticStudentTCopula(T, dimension).init`
+- `StaticStudentTCopula(T, dimension).new`
+- `StaticStudentTCopula(T, dimension).correlationValue`
+- `StaticStudentTCopula(T, dimension).degreesOfFreedomValue`
+- `StaticStudentTCopula(T, dimension).dfValue`
+- `StaticStudentTCopula(T, dimension).dimensionValue`
+- `StaticStudentTCopula(T, dimension).sample`
+- `StaticStudentTCopula(T, dimension).sampleFrom`
+- `StaticStudentTCopula(T, dimension).fill`
+- `StaticStudentTCopula(T, dimension).fillFrom`
+- `studentTCopula`
+- `studentTCopulaFrom`
+- `studentTCopulaChecked`
+- `studentTCopulaCheckedFrom`
+- `fillStudentTCopula`
+- `fillStudentTCopulaFrom`
+- `fillStudentTCopulaChecked`
+- `fillStudentTCopulaCheckedFrom`
 - `Multinomial`
 - `Multinomial.init`
 - `Multinomial.trialsValue`
