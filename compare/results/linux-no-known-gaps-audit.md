@@ -6896,5 +6896,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1363-direct-circle-direction.md`, and
 `compare/results/s4-m1364-kent-small-a-race.md`, and
 `compare/results/s4-m1365-hin-ziggurat-exponentials.md`, and
-`compare/results/s4-m1366-validate-all-refresh.md`.
+`compare/results/s4-m1366-validate-all-refresh.md`, and
+`compare/results/s4-m1367-student-t-recurrence-table.md`.
 

@@ -443,12 +443,41 @@ pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
     return 1 - front * betaContinuedFraction(T, 1 - x, b, a) / b;
 }
 
+/// `1 / (a · B(a, 1/2))` for the Student-t recurrence, indexed by step. The
+/// odd table starts at `a = 1/2`, the even table at `a = 1`; both are
+/// generated from `B(a+1, 1/2) = B(a, 1/2) · a / (a + 1/2)`.
+const student_t_inv_ab_odd = blk: {
+    var table: [32]f64 = undefined;
+    var a: f64 = 0.5;
+    var b: f64 = std.math.pi;
+    var k: usize = 0;
+    while (k < 32) : (k += 1) {
+        table[k] = 1 / (a * b);
+        b = b * a / (a + 0.5);
+        a += 1;
+    }
+    break :blk table;
+};
+const student_t_inv_ab_even = blk: {
+    var table: [32]f64 = undefined;
+    var a: f64 = 1;
+    var b: f64 = 2;
+    var k: usize = 0;
+    while (k < 32) : (k += 1) {
+        table[k] = 1 / (a * b);
+        b = b * a / (a + 0.5);
+        a += 1;
+    }
+    break :blk table;
+};
+
 /// Closed-form Student-t CDF for small integer degrees of freedom. The
 /// regularized incomplete beta `I_x(ν/2, 1/2)` is built from the exact
 /// `ν = 1` or `ν = 2` base case with the recurrence
 ///   I_x(a+1, 1/2) = I_x(a, 1/2) − x^a √(1−x) / (a B(a, 1/2)),
-/// which advances two degrees of freedom per step. Returns null when `nu` is
-/// not an integer in `[1, 64]`.
+/// which advances two degrees of freedom per step. The denominator is served
+/// from a precomputed table, so each step is three multiplies. Returns null
+/// when `nu` is not an integer in `[1, 64]`.
 fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
     const T = @TypeOf(t, nu);
     if (!(nu == @floor(nu)) or nu < 1 or nu > 64) return null;
@@ -460,28 +489,28 @@ fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
     const x = nu / (nu + abs_t * abs_t);
     const sin_theta = abs_t / @sqrt(nu + abs_t * abs_t);
 
+    const odd = @mod(@as(i64, @intFromFloat(nu)), 2) == 1;
     var a: T = undefined;
     var ib: T = undefined;
-    var b: T = undefined;
     var x_to_a: T = undefined;
-    if (@mod(@as(i64, @intFromFloat(nu)), 2) == 1) {
-        // ν = 1: I_x(1/2, 1/2) = 1 − 2θ/π, B(1/2, 1/2) = π.
+    if (odd) {
+        // ν = 1: I_x(1/2, 1/2) = 1 − 2θ/π.
         a = 0.5;
         ib = 1 - 2 * theta / pi;
-        b = pi;
         x_to_a = @sqrt(x);
     } else {
-        // ν = 2: I_x(1, 1/2) = 1 − sin θ, B(1, 1/2) = 2.
+        // ν = 2: I_x(1, 1/2) = 1 − sin θ.
         a = 1;
         ib = 1 - sin_theta;
-        b = 2;
         x_to_a = x;
     }
+    const inv_ab_table = if (odd) &student_t_inv_ab_odd else &student_t_inv_ab_even;
     const target = nu / 2;
-    while (a < target) {
-        ib -= x_to_a * sin_theta / (a * b);
+    var step: usize = 0;
+    while (a < target) : (step += 1) {
+        const inv_ab: T = @floatCast(inv_ab_table[step]);
+        ib -= x_to_a * sin_theta * inv_ab;
         x_to_a *= x;
-        b = b * a / (a + 0.5);
         a += 1;
     }
     const cdf = 1 - 0.5 * ib;
