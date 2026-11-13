@@ -10404,6 +10404,21 @@ fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]v
         const accept = active & (kappa_v * wcand + two * @log(one - x0 * wcand) - c + e >= zero);
         w = @select(Child, accept, wcand, w);
         active = @select(bool, accept, @as(B, @splat(false)), active);
+
+        // Once only a few lanes remain, finish them with the scalar marginal
+        // sampler instead of redrawing full vectors.
+        var active_count: usize = 0;
+        inline for (0..L) |lane| {
+            if (active[lane]) active_count += 1;
+        }
+        if (active_count <= 4) {
+            inline for (0..L) |lane| {
+                if (active[lane]) {
+                    w[lane] = vmfSampleWWithConstantsFrom(source, Child, kappa, 3, consts.b, consts.x0, consts.c);
+                }
+            }
+            break;
+        }
     }
 
     const angle = Rng.vectorOpenClosedFrom(source, V) * two * pi;
