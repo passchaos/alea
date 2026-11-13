@@ -702,6 +702,149 @@ pub fn poissonCdf(k: anytype, lambda: anytype) @TypeOf(k, lambda) {
     return gammaIncompleteQ(@floor(k) + 1, lambda);
 }
 
+/// Binomial CDF: P(X ≤ k) = I_{1−p}(n−k, k+1) for integer-valued n and k.
+pub fn binomialCdf(k: anytype, n: anytype, p: anytype) @TypeOf(k, n, p) {
+    const T = @TypeOf(k, n, p);
+    comptime requireFloat(T);
+    if (!(n >= 0) or !std.math.isFinite(n)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (std.math.isNan(k)) return std.math.nan(T);
+    if (k < 0) return 0;
+    const n_floor = @floor(n);
+    const k_floor = @floor(k);
+    if (k_floor >= n_floor) return 1;
+    return betaIncomplete(1 - p, n_floor - k_floor, k_floor + 1);
+}
+
+/// Smallest integer k with `binomialCdf(k, n, p) ≥ q`.
+pub fn binomialQuantile(q: anytype, n: anytype, p: anytype) @TypeOf(q, n, p) {
+    const T = @TypeOf(q, n, p);
+    comptime requireFloat(T);
+    if (!(n >= 0) or !std.math.isFinite(n)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (!(q >= 0 and q <= 1)) return std.math.nan(T);
+    if (n > @as(T, @floatFromInt(std.math.maxInt(usize)))) return std.math.nan(T);
+
+    const n_int: usize = @intFromFloat(@floor(n));
+    if (q == 0) return 0;
+    if (q == 1) return @floatFromInt(n_int);
+
+    var lo: usize = 0;
+    var hi: usize = n_int;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (binomialCdf(@as(T, @floatFromInt(mid)), n, p) < q) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatFromInt(lo);
+}
+
+/// Geometric CDF using alea's one-based trial-count semantics:
+/// P(X ≤ k) = 1 − (1−p)^k for k ≥ 1.
+pub fn geometricCdf(k: anytype, p: anytype) @TypeOf(k, p) {
+    const T = @TypeOf(k, p);
+    comptime requireFloat(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (std.math.isNan(k)) return std.math.nan(T);
+    if (k < 1) return 0;
+    if (k == std.math.inf(T)) return 1;
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+    return 1 - @exp(k * std.math.log1p(-p));
+}
+
+/// Smallest integer k with `geometricCdf(k, p) ≥ q`.
+pub fn geometricQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
+    const T = @TypeOf(q, p);
+    comptime requireFloat(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (!(q >= 0 and q <= 1)) return std.math.nan(T);
+    if (q == 0) return 1;
+    if (p == 1) return 1;
+    if (p == 0 or q == 1) return std.math.inf(T);
+
+    const raw = std.math.log1p(-q) / std.math.log1p(-p);
+    const tolerance = 64 * std.math.floatEps(T) * @max(@as(T, 1), @abs(raw));
+    return @ceil(raw - tolerance);
+}
+
+/// Negative-binomial CDF for the number of failures before `successes`
+/// successes: P(X ≤ k) = I_p(successes, k+1).
+pub fn negativeBinomialCdf(k: anytype, successes: anytype, p: anytype) @TypeOf(k, successes, p) {
+    const T = @TypeOf(k, successes, p);
+    comptime requireFloat(T);
+    if (!(successes > 0) or !std.math.isFinite(successes)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (std.math.isNan(k)) return std.math.nan(T);
+    if (k < 0) return 0;
+    if (k == std.math.inf(T)) return 1;
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+    return betaIncomplete(p, successes, @floor(k) + 1);
+}
+
+/// Smallest integer k with `negativeBinomialCdf(k, successes, p) ≥ q`.
+pub fn negativeBinomialQuantile(q: anytype, successes: anytype, p: anytype) @TypeOf(q, successes, p) {
+    const T = @TypeOf(q, successes, p);
+    comptime requireFloat(T);
+    if (!(successes > 0) or !std.math.isFinite(successes)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (!(q >= 0 and q <= 1)) return std.math.nan(T);
+    if (q == 0) return 0;
+    if (p == 1) return 0;
+    if (p == 0 or q == 1) return std.math.inf(T);
+
+    var hi: usize = 1;
+    var expansion: usize = 0;
+    while (negativeBinomialCdf(@as(T, @floatFromInt(hi)), successes, p) < q and expansion < 1024) : (expansion += 1) {
+        if (hi > std.math.maxInt(usize) / 2) return std.math.inf(T);
+        hi *= 2;
+    }
+
+    var lo: usize = 0;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (negativeBinomialCdf(@as(T, @floatFromInt(mid)), successes, p) < q) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatFromInt(lo);
+}
+
+/// Smallest integer k with `poissonCdf(k, λ) ≥ q`.
+pub fn poissonQuantile(q: anytype, lambda: anytype) @TypeOf(q, lambda) {
+    const T = @TypeOf(q, lambda);
+    comptime requireFloat(T);
+    if (!(lambda >= 0) or !std.math.isFinite(lambda)) return std.math.nan(T);
+    if (!(q >= 0 and q <= 1)) return std.math.nan(T);
+    if (q == 0 or lambda == 0) return 0;
+    if (q == 1) return std.math.inf(T);
+    if (lambda > @as(T, @floatFromInt(std.math.maxInt(usize) / 4))) return std.math.nan(T);
+
+    var hi: usize = @as(usize, @intFromFloat(@ceil(lambda))) + 1;
+    var expansion: usize = 0;
+    while (poissonCdf(@as(T, @floatFromInt(hi)), lambda) < q and expansion < 1024) : (expansion += 1) {
+        if (hi > std.math.maxInt(usize) / 2) return std.math.inf(T);
+        hi *= 2;
+    }
+
+    var lo: usize = 0;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (poissonCdf(@as(T, @floatFromInt(mid)), lambda) < q) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatFromInt(lo);
+}
+
 const common = @import("distributions/common.zig");
 
 pub const Error = common.Error;
@@ -49250,6 +49393,71 @@ test "poissonCdf matches known values and point masses" {
     try std.testing.expectEqual(@as(f64, 1), poissonCdf(std.math.inf(f64), @as(f64, 2)));
     try std.testing.expect(std.math.isNan(poissonCdf(@as(f64, 3), @as(f64, -1))));
     try std.testing.expectApproxEqAbs(@as(f32, 0.85712346), poissonCdf(@as(f32, 3), @as(f32, 2)), 1e-5);
+}
+
+test "binomialCdf and binomialQuantile match known values" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.623046875), binomialCdf(@as(f64, 5), @as(f64, 10), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.73828125), binomialCdf(@as(f64, 1), @as(f64, 4), @as(f64, 0.25)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), binomialCdf(@as(f64, -1), @as(f64, 10), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 1), binomialCdf(@as(f64, 10), @as(f64, 10), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 1), binomialCdf(@as(f64, 0), @as(f64, 10), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), binomialCdf(@as(f64, 0), @as(f64, 10), @as(f64, 1)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |q| {
+        const k = binomialQuantile(q, @as(f64, 20), @as(f64, 0.3));
+        try std.testing.expect(binomialCdf(k, @as(f64, 20), @as(f64, 0.3)) >= q);
+        if (k > 0) {
+            try std.testing.expect(binomialCdf(k - 1, @as(f64, 20), @as(f64, 0.3)) < q);
+        }
+    }
+    try std.testing.expectEqual(@as(f64, 0), binomialQuantile(@as(f64, 0), @as(f64, 10), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 10), binomialQuantile(@as(f64, 1), @as(f64, 10), @as(f64, 0.5)));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.6230469), binomialCdf(@as(f32, 5), @as(f32, 10), @as(f32, 0.5)), 1e-5);
+}
+
+test "geometricCdf and geometricQuantile match known values" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), geometricCdf(@as(f64, 1), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), geometricCdf(@as(f64, 2), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.875), geometricCdf(@as(f64, 3), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), geometricCdf(@as(f64, 0), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 1), geometricCdf(@as(f64, 10), @as(f64, 1)));
+
+    try std.testing.expectEqual(@as(f64, 1), geometricQuantile(@as(f64, 0.5), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 2), geometricQuantile(@as(f64, 0.75), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 3), geometricQuantile(@as(f64, 0.875), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 4), geometricQuantile(@as(f64, 0.9), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 1), geometricQuantile(@as(f64, 0), @as(f64, 0.5)));
+    try std.testing.expectEqual(std.math.inf(f64), geometricQuantile(@as(f64, 0.5), @as(f64, 0)));
+}
+
+test "negativeBinomialCdf and negativeBinomialQuantile match known values" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.125), negativeBinomialCdf(@as(f64, 0), @as(f64, 3), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3125), negativeBinomialCdf(@as(f64, 1), @as(f64, 3), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), negativeBinomialCdf(@as(f64, 2), @as(f64, 3), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), negativeBinomialCdf(@as(f64, -1), @as(f64, 3), @as(f64, 0.5)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |q| {
+        const k = negativeBinomialQuantile(q, @as(f64, 3), @as(f64, 0.5));
+        try std.testing.expect(negativeBinomialCdf(k, @as(f64, 3), @as(f64, 0.5)) >= q);
+        if (k > 0) {
+            try std.testing.expect(negativeBinomialCdf(k - 1, @as(f64, 3), @as(f64, 0.5)) < q);
+        }
+    }
+}
+
+test "poissonQuantile returns the smallest covering count" {
+    try std.testing.expectEqual(@as(f64, 2), poissonQuantile(@as(f64, 0.5), @as(f64, 2)));
+    try std.testing.expectEqual(@as(f64, 4), poissonQuantile(@as(f64, 0.9), @as(f64, 2)));
+    try std.testing.expectEqual(@as(f64, 5), poissonQuantile(@as(f64, 0.95), @as(f64, 2)));
+    try std.testing.expectEqual(@as(f64, 0), poissonQuantile(@as(f64, 0.5), @as(f64, 0)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9, 0.99 }) |q| {
+        const k = poissonQuantile(q, @as(f64, 5));
+        try std.testing.expect(poissonCdf(k, @as(f64, 5)) >= q);
+        if (k > 0) {
+            try std.testing.expect(poissonCdf(k - 1, @as(f64, 5)) < q);
+        }
+    }
 }
 
 test "StudentTCopula constructor validates parameters" {
