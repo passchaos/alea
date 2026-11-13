@@ -650,7 +650,8 @@ self-forking.
   `betaPrimeCdf`, `betaPrimeQuantile`, `logLogisticCdf`, `logLogisticQuantile`,
   `inverseGammaCdf`, `inverseGammaQuantile`, `nakagamiCdf`, `nakagamiQuantile`,
   `exGaussianCdf`, `exGaussianQuantile`, `inverseGaussianCdf`,
-  `inverseGaussianQuantile`,
+  `inverseGaussianQuantile`, `skewNormalCdf`, `skewNormalQuantile`,
+  `pertCdf`, `pertQuantile`,
   `binomialCdf`, `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
   `hypergeometricCdf`, `hypergeometricQuantile`,
@@ -3227,6 +3228,8 @@ Reusable samplers:
 - `SkewNormal(T).varianceValue`
 - `SkewNormal(T).minValue`
 - `SkewNormal(T).maxValue`
+- `SkewNormal(T).cdf`
+- `SkewNormal(T).quantile`
 - `SkewNormal(T).sample`
 - `SkewNormal(T).sampleFrom`
 - `SkewNormal(T).fill`
@@ -3255,6 +3258,8 @@ Reusable samplers:
 - `Pert(T).initMean`
 - `Pert(T).minValue`
 - `Pert(T).maxValue`
+- `Pert(T).cdf`
+- `Pert(T).quantile`
 - `Pert(T).shapeValue`
 - `Pert(T).modeValue`
 - `Pert(T).alphaValue`

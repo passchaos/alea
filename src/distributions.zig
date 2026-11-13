@@ -1567,6 +1567,155 @@ pub fn inverseGaussianQuantile(p: anytype, mean: anytype, shape: anytype) @TypeO
     return @floatCast((lo + hi) / 2);
 }
 
+/// Owen's T integrand in the `t = tan θ` form: `exp(−h²/(2cos²θ))`.
+fn owenTIntegrand(h2: f64, theta: f64) f64 {
+    const c = @cos(theta);
+    return @exp(-h2 / (c * c));
+}
+
+fn owenTSimpson(fa: f64, fm: f64, fb: f64, a: f64, b: f64) f64 {
+    return (b - a) / 6 * (fa + 4 * fm + fb);
+}
+
+fn owenTAdaptive(h2: f64, a: f64, b: f64, fa: f64, fm: f64, fb: f64, whole: f64, tol: f64, depth: u32) f64 {
+    const m = (a + b) / 2;
+    const lm = (a + m) / 2;
+    const rm = (m + b) / 2;
+    const flm = owenTIntegrand(h2, lm);
+    const frm = owenTIntegrand(h2, rm);
+    const left = owenTSimpson(fa, flm, fm, a, m);
+    const right = owenTSimpson(fm, frm, fb, m, b);
+    const refined = left + right;
+    if (depth == 0 or @abs(refined - whole) <= 15 * tol) {
+        return refined + (refined - whole) / 15;
+    }
+    return owenTAdaptive(h2, a, m, fa, flm, fm, left, tol / 2, depth - 1) +
+        owenTAdaptive(h2, m, b, fm, frm, fb, right, tol / 2, depth - 1);
+}
+
+/// Owen's T function `T(h, a)` via adaptive Simpson in the `t = tan θ`
+/// representation. `T(h, ±∞)` uses the closed form `±½(1 − Φ(|h|))`.
+fn owenT(h: f64, a: f64) f64 {
+    if (a == 0 or std.math.isNan(h)) return 0;
+    const sign: f64 = if (a < 0) -1 else 1;
+    if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
+    const b = std.math.atan(@abs(a));
+    const h2 = 0.5 * h * h;
+    const fa = owenTIntegrand(h2, 0);
+    const fm = owenTIntegrand(h2, b / 2);
+    const fb = owenTIntegrand(h2, b);
+    const whole = owenTSimpson(fa, fm, fb, 0, b);
+    const integral = owenTAdaptive(h2, 0, b, fa, fm, fb, whole, 1e-12, 24);
+    return sign * integral / (2 * std.math.pi);
+}
+
+/// Skew-normal CDF: `Φ(z) − 2·T(z, α)` with `z = (x − ξ)/ω`.
+/// `scale = 0` is the point mass at the location.
+pub fn skewNormalCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(x, location, scale, shape) {
+    const T = @TypeOf(x, location, scale, shape);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    const x_f: f64 = @floatCast(x);
+    const location_f: f64 = @floatCast(location);
+    const scale_f: f64 = @floatCast(scale);
+    const shape_f: f64 = @floatCast(shape);
+    if (scale_f == 0) return if (x_f < location_f) 0 else 1;
+    if (x_f == std.math.inf(f64)) return 1;
+    if (x_f == -std.math.inf(f64)) return 0;
+    const z = (x_f - location_f) / scale_f;
+    const cdf = normCdf(z) - 2 * owenT(z, shape_f);
+    return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
+}
+
+/// Skew-normal quantile via deterministic bisection. `p = 0 → −∞`,
+/// `p = 1 → +∞`.
+pub fn skewNormalQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(p, location, scale, shape) {
+    const T = @TypeOf(p, location, scale, shape);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (scale == 0) return location;
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    const location_f: f64 = @floatCast(location);
+    const scale_f: f64 = @floatCast(scale);
+    var lo: f64 = location_f - 40 * scale_f;
+    var hi: f64 = location_f + 40 * scale_f;
+    var expansion: usize = 0;
+    while (skewNormalCdf(@as(f64, lo), location_f, scale_f, @as(f64, @floatCast(shape))) > p and expansion < 64) : (expansion += 1) {
+        lo -= scale_f;
+        if (!std.math.isFinite(lo)) return -std.math.inf(T);
+    }
+    expansion = 0;
+    while (skewNormalCdf(@as(f64, hi), location_f, scale_f, @as(f64, @floatCast(shape))) < p and expansion < 64) : (expansion += 1) {
+        hi += scale_f;
+        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    }
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (skewNormalCdf(@as(f64, mid), location_f, scale_f, @as(f64, @floatCast(shape))) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
+/// Validated PERT parameters (mirrors `Pert.init`).
+fn pertDiagnosticParams(min: f64, mode: f64, max: f64, shape: f64) ?struct { alpha: f64, beta: f64 } {
+    if (!(std.math.isFinite(min) and std.math.isFinite(mode) and std.math.isFinite(max))) return null;
+    if (!(min <= max and min <= mode and mode <= max)) return null;
+    if (!(shape >= 0 and (std.math.isFinite(shape) or shape == std.math.inf(f64)))) return null;
+    if (shape == std.math.inf(f64) and min < max and (mode == min or mode == max)) return null;
+    const range = max - min;
+    if (range == 0) return .{ .alpha = 0, .beta = 0 };
+    if (shape == std.math.inf(f64)) return .{ .alpha = std.math.inf(f64), .beta = std.math.inf(f64) };
+    return .{
+        .alpha = 1 + shape * (mode - min) / range,
+        .beta = 1 + shape * (max - mode) / range,
+    };
+}
+
+/// PERT CDF via the equivalent scaled Beta distribution. Collapsed ranges are
+/// point masses at `min`; infinite shape returns NaN, matching the sampler's
+/// `rand_distr`-compatible semantics.
+pub fn pertCdf(x: anytype, min: anytype, mode: anytype, max: anytype, shape: anytype) @TypeOf(x, min, mode, max, shape) {
+    const T = @TypeOf(x, min, mode, max, shape);
+    comptime requireFloat(T);
+    const x_f: f64 = @floatCast(x);
+    if (std.math.isNan(x_f)) return std.math.nan(T);
+    const params = pertDiagnosticParams(@floatCast(min), @floatCast(mode), @floatCast(max), @floatCast(shape)) orelse return std.math.nan(T);
+    const min_f: f64 = @floatCast(min);
+    const max_f: f64 = @floatCast(max);
+    if (min_f == max_f) return if (x_f < min_f) 0 else 1;
+    if (params.alpha == std.math.inf(f64)) return std.math.nan(T);
+    if (x_f <= min_f) return 0;
+    if (x_f >= max_f) return 1;
+    return @floatCast(betaCdf((x_f - min_f) / (max_f - min_f), params.alpha, params.beta));
+}
+
+/// PERT quantile via the equivalent scaled Beta quantile. `p = 0 → min`,
+/// `p = 1 → max`; infinite shape returns NaN.
+pub fn pertQuantile(p: anytype, min: anytype, mode: anytype, max: anytype, shape: anytype) @TypeOf(p, min, mode, max, shape) {
+    const T = @TypeOf(p, min, mode, max, shape);
+    comptime requireFloat(T);
+    const p_f: f64 = @floatCast(p);
+    if (!(p_f >= 0 and p_f <= 1)) return std.math.nan(T);
+    const params = pertDiagnosticParams(@floatCast(min), @floatCast(mode), @floatCast(max), @floatCast(shape)) orelse return std.math.nan(T);
+    const min_f: f64 = @floatCast(min);
+    const max_f: f64 = @floatCast(max);
+    if (min_f == max_f) return min;
+    if (params.alpha == std.math.inf(f64)) return std.math.nan(T);
+    if (p_f == 0) return min;
+    if (p_f == 1) return max;
+    return @floatCast(min_f + (max_f - min_f) * betaQuantile(p_f, params.alpha, params.beta));
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -26762,6 +26911,16 @@ pub fn SkewNormal(comptime T: type) type {
             return if (self.isDegenerate()) self.location else null;
         }
 
+        /// Skew-normal CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return skewNormalCdf(x, self.location, self.scale, self.shape);
+        }
+
+        /// Skew-normal quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return skewNormalQuantile(p, self.location, self.scale, self.shape);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.location;
 
@@ -27077,6 +27236,28 @@ pub fn Pert(comptime T: type) type {
 
         pub fn maxValue(self: Self) T {
             return self.min + self.range;
+        }
+
+        /// PERT CDF at `x` via the equivalent scaled Beta distribution.
+        /// Collapsed ranges are point masses; infinite shape returns NaN,
+        /// matching the sampler's `rand_distr`-compatible semantics.
+        pub fn cdf(self: Self, x: T) T {
+            if (std.math.isNan(x)) return std.math.nan(T);
+            if (self.range == 0) return if (x < self.min) 0 else 1;
+            if (std.math.isInf(self.alpha) or std.math.isInf(self.beta_param)) return std.math.nan(T);
+            if (x <= self.min) return 0;
+            if (x >= self.min + self.range) return 1;
+            return betaCdf((x - self.min) / self.range, self.alpha, self.beta_param);
+        }
+
+        /// PERT quantile for probability `p` via the scaled Beta quantile.
+        pub fn quantile(self: Self, p: T) T {
+            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+            if (self.range == 0) return self.min;
+            if (std.math.isInf(self.alpha) or std.math.isInf(self.beta_param)) return std.math.nan(T);
+            if (p == 0) return self.min;
+            if (p == 1) return self.min + self.range;
+            return self.min + self.range * betaQuantile(p, self.alpha, self.beta_param);
         }
 
         pub fn shapeValue(self: Self) T {
@@ -54414,6 +54595,49 @@ test "ExGaussian and InverseGaussian CDF and quantile helpers" {
     try std.testing.expectApproxEqAbs(exGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5)), eg.cdf(2), 0);
     const ig = try InverseGaussian(f64).init(1, 2);
     try std.testing.expectApproxEqAbs(inverseGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 2)), ig.cdf(2), 0);
+}
+
+test "SkewNormal and PERT CDF and quantile helpers" {
+    // SkewNormal with shape=0 is the normal.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), skewNormalCdf(@as(f64, 0), @as(f64, 0), @as(f64, 1), @as(f64, 0)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8413447460685429), skewNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 0)), 1e-6);
+    // SN(0,1,1) and SN(0,1,2) reference values from Owen's T integration.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), skewNormalCdf(@as(f64, 0), @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.707860981737136), skewNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.025171489600050057), skewNormalCdf(@as(f64, -1), @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6844083720823744), skewNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 2)), 1e-6);
+    // F(-x; -α) = 1 - F(x; α).
+    try std.testing.expectApproxEqAbs(@as(f64, 1) - skewNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 1)), skewNormalCdf(@as(f64, -1), @as(f64, 0), @as(f64, 1), @as(f64, -1)), 1e-10);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const q = skewNormalQuantile(p, @as(f64, 0), @as(f64, 1), @as(f64, 1));
+        try std.testing.expectApproxEqAbs(p, skewNormalCdf(q, @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-5);
+    }
+    try std.testing.expectEqual(@as(f64, 1), skewNormalCdf(@as(f64, 3), @as(f64, 2), @as(f64, 0), @as(f64, 1)));
+    try std.testing.expectEqual(@as(f64, 0), skewNormalCdf(@as(f64, 1), @as(f64, 2), @as(f64, 0), @as(f64, 1)));
+    try std.testing.expectEqual(@as(f64, 2), skewNormalQuantile(@as(f64, 0.5), @as(f64, 2), @as(f64, 0), @as(f64, 1)));
+
+    // PERT(0, 0.5, 1, 4) is Beta(3,3) scaled.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), pertCdf(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.103515625), pertCdf(@as(f64, 0.25), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), pertQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), 1e-12);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const q = pertQuantile(p, @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4));
+        try std.testing.expectApproxEqAbs(p, pertCdf(q, @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), 1e-9);
+    }
+    try std.testing.expectEqual(@as(f64, 1), pertCdf(@as(f64, 2), @as(f64, 2), @as(f64, 2), @as(f64, 2), @as(f64, 4)));
+    try std.testing.expectEqual(@as(f64, 2), pertQuantile(@as(f64, 0.5), @as(f64, 2), @as(f64, 2), @as(f64, 2), @as(f64, 4)));
+    try std.testing.expect(std.math.isNan(pertCdf(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), std.math.inf(f64))));
+    try std.testing.expect(std.math.isNan(pertQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), std.math.inf(f64))));
+
+    try std.testing.expect(std.math.isNan(skewNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, -1), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(pertCdf(@as(f64, 1), @as(f64, 0), @as(f64, 2), @as(f64, 1), @as(f64, 4))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.25), skewNormalCdf(@as(f32, 0), @as(f32, 0), @as(f32, 1), @as(f32, 1)), 1e-5);
+
+    const sn = try SkewNormal(f64).init(0, 1, 1);
+    try std.testing.expectApproxEqAbs(skewNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 1)), sn.cdf(1), 0);
+    const pert_dist = try Pert(f64).init(0, 0.5, 1, 4);
+    try std.testing.expectApproxEqAbs(pertCdf(@as(f64, 0.25), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), pert_dist.cdf(0.25), 0);
+    try std.testing.expectApproxEqAbs(pertQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), pert_dist.quantile(0.5), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {

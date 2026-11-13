@@ -554,7 +554,10 @@ CDF and quantile helpers complement the samplers:
   gamma upper tail, log-logistic is closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
-  plus deterministic bisection quantiles.
+  plus deterministic bisection quantiles, skew-normal uses Owen's T via
+  adaptive Simpson, and PERT maps to the equivalent scaled Beta distribution
+  (infinite shape follows the sampler's `rand_distr`-compatible NaN
+  semantics).
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
@@ -586,9 +589,9 @@ delegate to these helpers, including the derived continuous types
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,
   `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Exponential`, `LogNormal`,
   `HalfNormal`, `Chi`, `Erlang`, `Maxwell`, `BetaPrime`, `LogLogistic`,
-  `InverseGamma`, `Nakagami`, `ExGaussian`, `InverseGaussian`, `Bernoulli`,
-  `Binomial`, `Geometric`, `NegativeBinomial`, `Hypergeometric`, `Zipf`,
-  `Zeta`, and `Poisson`.
+  `InverseGamma`, `Nakagami`, `ExGaussian`, `InverseGaussian`, `SkewNormal`,
+  `Pert`, `Bernoulli`, `Binomial`, `Geometric`, `NegativeBinomial`,
+  `Hypergeometric`, `Zipf`, `Zeta`, and `Poisson`.
 
 Quantiles use deterministic bisection (and a closed form for the geometric
 case), so they are diagnostics/ergonomics paths rather than hot sampling paths.
