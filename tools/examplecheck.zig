@@ -38,7 +38,12 @@ const examples = [_]Example{
         .aggregate_token = "examples_step.dependOn(&run_directional_example.step)",
         .source_tokens = &.{ "VonMisesFisher(f64, 3)", "Kent(f64)", "Bingham(f64, 3)", "MatrixFisher(f64)", "MatrixVonMisesFisher(f64)", "VectorVonMisesFisher(V)" },
     },
-    .{ .path = "examples/distribution_diagnostics.zig", .step = "zig build run-distribution-diagnostics", .aggregate_token = "examples_step.dependOn(&run_distribution_diagnostics_example.step)" },
+    .{
+        .path = "examples/distribution_diagnostics.zig",
+        .step = "zig build run-distribution-diagnostics",
+        .aggregate_token = "examples_step.dependOn(&run_distribution_diagnostics_example.step)",
+        .source_tokens = &.{ "laplace.cdf", "laplace.quantile", "weibull.cdf", "triangular.cdf", "kumaraswamy.cdf", "frechetCdf", "paretoQuantile" },
+    },
     .{ .path = "examples/vector_profiles.zig", .step = "zig build run-vector-profiles", .aggregate_token = "examples_step.dependOn(&run_vector_profiles_example.step)" },
     .{ .path = "examples/native_f32_profiles.zig", .step = "zig build run-native-f32-profiles", .aggregate_token = "examples_step.dependOn(&run_native_f32_profiles_example.step)" },
     .{ .path = "examples/lognormal_profiles.zig", .step = "zig build run-lognormal-profiles", .aggregate_token = "examples_step.dependOn(&run_lognormal_profiles_example.step)" },

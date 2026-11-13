@@ -51,6 +51,31 @@ pub fn main(init: std.process.Init) !void {
     }
     try stdout.print("], sample={}\n", .{poisson.sampleFrom(&engine)});
 
+    // Closed-form CDF/quantile diagnostics and sampler-level methods.
+    const laplace = try alea.distributions.Laplace(f64).init(0, 1);
+    const laplace_cdf = laplace.cdf(1);
+    const laplace_q90 = laplace.quantile(0.9);
+    try stdout.print("Laplace(0,1): cdf(1)={d:.6}, quantile(0.9)={d:.6}\n", .{ laplace_cdf, laplace_q90 });
+
+    const weibull = try alea.distributions.Weibull(f64).init(1, 2);
+    try stdout.print("Weibull(1,2): cdf(1)={d:.6}, quantile(0.5)={d:.6}\n", .{ weibull.cdf(1), weibull.quantile(0.5) });
+
+    const triangular = try alea.distributions.Triangular(f64).init(0, 0.5, 1);
+    try stdout.print("Triangular(0,0.5,1): cdf(0.25)={d:.6}, quantile(0.5)={d:.6}\n", .{ triangular.cdf(0.25), triangular.quantile(0.5) });
+
+    const kumaraswamy = try alea.distributions.Kumaraswamy(f64).init(2, 3);
+    try stdout.print("Kumaraswamy(2,3): cdf(0.5)={d:.6}, quantile(0.5)={d:.6}\n", .{ kumaraswamy.cdf(0.5), kumaraswamy.quantile(0.5) });
+
+    const cdf_x: f64 = 1;
+    const cdf_p: f64 = 0.5;
+    const cdf_zero: f64 = 0;
+    const cdf_one: f64 = 1;
+    const cdf_two: f64 = 2;
+    try stdout.print("frechetCdf(1; 0,1,2)={d:.6}, paretoQuantile(0.5; 1,2)={d:.6}\n", .{
+        alea.distributions.frechetCdf(cdf_x, cdf_zero, cdf_one, cdf_two),
+        alea.distributions.paretoQuantile(cdf_p, cdf_one, cdf_two),
+    });
+
     try stdout.print("\nUse constructor/accessor diagnostics to echo parameters, support, moments, and derived parameterizations before sampling.\n", .{});
     try stdout.flush();
 }

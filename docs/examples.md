@@ -15,7 +15,7 @@ focused `zig build run-*` step for quick adoption checks.
 | `zig build run-copulas` | `examples/copulas.zig` | Gaussian and Student-t copulas, static comptime dimensions, allocator-backed runtime dimensions, probit-transformed correlation recovery, tail dependence, caller-owned and batch sampling, and clone support. |
 | `zig build run-matrix-normal` | `examples/matrix_normal.zig` | Dynamic and allocation-free static matrix normal sampling, row/column covariance diagnostics, caller-owned buffers, and batch outputs. |
 | `zig build run-directional` | `examples/directional.zig` | Scalar vMF, Kent, Bingham, exact SO(3) matrix Fisher, Gibbs matrix Langevin, and f64x4 SIMD vMF sampling with moment diagnostics. |
-| `zig build run-distribution-diagnostics` | `examples/distribution_diagnostics.zig` | Constructor/accessor diagnostics: moments, support, mean/CV constructors, z-score conversion, and PERT range-first builders. |
+| `zig build run-distribution-diagnostics` | `examples/distribution_diagnostics.zig` | Constructor/accessor diagnostics: moments, support, mean/CV constructors, z-score conversion, PERT range-first builders, closed-form CDF/quantile values, and sampler-level `cdf`/`quantile` methods. |
 | `zig build run-vector-profiles` | `examples/vector_profiles.zig` | Exact/default vector normal/exponential versus explicit throughput-first `Table` and `ApproxLog` opt-ins. |
 | `zig build run-native-f32-profiles` | `examples/native_f32_profiles.zig` | Exact/default f64-backed f32 outputs versus f32-native normal/exponential throughput profiles. |
 | `zig build run-lognormal-profiles` | `examples/lognormal_profiles.zig` | Exact LogNormal, buffered exact, native-f32, exp2, native-exp2, and libc-backed platform opt-ins when available. |
