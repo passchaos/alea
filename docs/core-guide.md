@@ -536,7 +536,16 @@ CDF and quantile helpers complement the samplers:
 - normal: `normCdf`, `probit`.
 - beta: `betaIncomplete`, `betaCdf`, `betaQuantile`.
 - gamma family: `gammaIncompleteP`, `gammaIncompleteQ`, `gammaCdf`,
-  `gammaQuantile`, `chiSquaredCdf`, `chiSquaredQuantile`.
+  `gammaQuantile`, `chiSquaredCdf`, `chiSquaredQuantile`, `chiCdf`,
+  `chiQuantile`, `erlangCdf`, `erlangQuantile`, `maxwellCdf`,
+  `maxwellQuantile`; the Maxwell and Chi helpers share the chi-squared
+  incomplete-gamma form, and Erlang delegates to the Gamma helpers after
+  integer-shape validation.
+- normal-derived: `exponentialCdf` / `exponentialQuantile`, `logNormalCdf` /
+  `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`; log-normal uses
+  `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
+  masses. These inherit the `normCdf`/`probit` approximation accuracy
+  (~1e-7).
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
@@ -566,7 +575,8 @@ delegate to these helpers, including the derived continuous types
 (`Laplace`, `Logistic`, `Cauchy`, `Rayleigh`, `Weibull`, `Gumbel`, `Frechet`,
 `Pareto`, `PowerFunction`, `Kumaraswamy`, `Arcsine`, and `Triangular`).
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,
-  `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Bernoulli`, `Binomial`,
+  `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Exponential`, `LogNormal`,
+  `HalfNormal`, `Chi`, `Erlang`, `Maxwell`, `Bernoulli`, `Binomial`,
   `Geometric`, `NegativeBinomial`, `Hypergeometric`, `Zipf`, `Zeta`, and
   `Poisson`.
 

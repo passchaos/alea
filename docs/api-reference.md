@@ -644,6 +644,9 @@ self-forking.
   `studentTCdf`, `studentTQuantile`, `fisherFCdf`, `fisherFQuantile`,
   `gammaIncompleteP`, `gammaIncompleteQ`, `gammaCdf`, `gammaQuantile`,
   `chiSquaredCdf`, `chiSquaredQuantile`, `poissonCdf`, `poissonQuantile`,
+  `exponentialCdf`, `exponentialQuantile`, `logNormalCdf`, `logNormalQuantile`,
+  `halfNormalCdf`, `halfNormalQuantile`, `chiCdf`, `chiQuantile`,
+  `erlangCdf`, `erlangQuantile`, `maxwellCdf`, `maxwellQuantile`,
   `binomialCdf`, `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
   `hypergeometricCdf`, `hypergeometricQuantile`,
@@ -2109,6 +2112,8 @@ Reusable samplers:
 - `Exponential(T).modeValue`
 - `Exponential(T).minValue`
 - `Exponential(T).maxValue`
+- `Exponential(T).cdf`
+- `Exponential(T).quantile`
 - `Exponential(T).sample`
 - `Exponential(T).sampleFrom`
 - `Exponential(T).fill`
@@ -2216,6 +2221,8 @@ Reusable samplers:
 - `LogNormal(T).initMeanCv`
 - `LogNormal(T).fromMeanCv`
 - `LogNormal(T).fromZScore`
+- `LogNormal(T).cdf`
+- `LogNormal(T).quantile`
 - `LogNormal(T).logMean`
 - `LogNormal(T).logMeanValue`
 - `LogNormal(T).logStddev`
@@ -2383,6 +2390,8 @@ Reusable samplers:
 - `HalfNormal(T).varianceValue`
 - `HalfNormal(T).minValue`
 - `HalfNormal(T).maxValue`
+- `HalfNormal(T).cdf`
+- `HalfNormal(T).quantile`
 - `HalfNormal(T).sample`
 - `HalfNormal(T).sampleFrom`
 - `HalfNormal(T).fill`
@@ -2564,6 +2573,8 @@ Reusable samplers:
 - `Chi(T).modeValue`
 - `Chi(T).minValue`
 - `Chi(T).maxValue`
+- `Chi(T).cdf`
+- `Chi(T).quantile`
 - `Chi(T).sample`
 - `Chi(T).sampleFrom`
 - `Chi(T).fill`
@@ -2589,6 +2600,8 @@ Reusable samplers:
 - `Erlang(T).modeValue`
 - `Erlang(T).minValue`
 - `Erlang(T).maxValue`
+- `Erlang(T).cdf`
+- `Erlang(T).quantile`
 - `Erlang(T).sample`
 - `Erlang(T).sampleFrom`
 - `Erlang(T).fill`
@@ -3048,6 +3061,8 @@ Reusable samplers:
 - `Maxwell(T).modeValue`
 - `Maxwell(T).minValue`
 - `Maxwell(T).maxValue`
+- `Maxwell(T).cdf`
+- `Maxwell(T).quantile`
 - `Maxwell(T).sample`
 - `Maxwell(T).sampleFrom`
 - `Maxwell(T).fill`

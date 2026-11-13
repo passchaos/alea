@@ -188,7 +188,11 @@ The current Linux-first roadmap is intentionally broad:
   `rand::distr::*` discovery
 - distribution diagnostics: `normCdf` / `probit`, `betaCdf` /
   `betaQuantile`, `gammaCdf` / `gammaQuantile`, `chiSquaredCdf` /
-  `chiSquaredQuantile`, `studentTCdf` / `studentTQuantile`, `fisherFCdf` /
+  `chiSquaredQuantile`, `exponentialCdf` / `exponentialQuantile`,
+  `logNormalCdf` / `logNormalQuantile`, `halfNormalCdf` /
+  `halfNormalQuantile`, `chiCdf` / `chiQuantile`, `erlangCdf` /
+  `erlangQuantile`, `maxwellCdf` / `maxwellQuantile`, `studentTCdf` /
+  `studentTQuantile`, `fisherFCdf` /
   `fisherFQuantile`, `poissonCdf` / `poissonQuantile`, `binomialCdf` /
   `binomialQuantile`, `geometricCdf` / `geometricQuantile`,
   `negativeBinomialCdf` / `negativeBinomialQuantile`, `hypergeometricCdf` /

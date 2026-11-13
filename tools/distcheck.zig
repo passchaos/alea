@@ -490,6 +490,20 @@ fn checkAdvancedMultivariate() !void {
         const f_d1: f64 = 5;
         const f_d2: f64 = 10;
         try expectFloatBetween("fisher-f quantile", alea.distributions.fisherFCdf(alea.distributions.fisherFQuantile(p, f_d1, f_d2), f_d1, f_d2), p - 1e-9, p + 1e-9);
+        const exp_rate: f64 = 2;
+        try expectFloatBetween("exponential quantile", alea.distributions.exponentialCdf(alea.distributions.exponentialQuantile(p, exp_rate), exp_rate), p - 1e-9, p + 1e-9);
+        const log_mean: f64 = 0.5;
+        const log_stddev: f64 = 0.75;
+        try expectFloatBetween("log-normal quantile", alea.distributions.logNormalCdf(alea.distributions.logNormalQuantile(p, log_mean, log_stddev), log_mean, log_stddev), p - 1e-5, p + 1e-5);
+        const half_scale: f64 = 2;
+        try expectFloatBetween("half-normal quantile", alea.distributions.halfNormalCdf(alea.distributions.halfNormalQuantile(p, half_scale), half_scale), p - 1e-5, p + 1e-5);
+        const chi_k: f64 = 4;
+        try expectFloatBetween("chi quantile", alea.distributions.chiCdf(alea.distributions.chiQuantile(p, chi_k), chi_k), p - 1e-9, p + 1e-9);
+        const erlang_shape: f64 = 2;
+        const erlang_scale: f64 = 1.5;
+        try expectFloatBetween("erlang quantile", alea.distributions.erlangCdf(alea.distributions.erlangQuantile(p, erlang_shape, erlang_scale), erlang_shape, erlang_scale), p - 1e-9, p + 1e-9);
+        const maxwell_scale: f64 = 1.5;
+        try expectFloatBetween("maxwell quantile", alea.distributions.maxwellCdf(alea.distributions.maxwellQuantile(p, maxwell_scale), maxwell_scale), p - 1e-9, p + 1e-9);
         const discrete_q: f64 = 0.7;
         const poisson_lambda: f64 = 5;
         try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);
@@ -1916,10 +1930,14 @@ fn checkLongRun(samples: usize) !void {
         const gamma = try alea.distributions.Gamma(f64).init(2.5, 1.5);
         const student_t = try alea.distributions.StudentT(f64).init(5);
         const fisher_f = try alea.distributions.FisherF(f64).init(5, 10);
+        const exponential = try alea.distributions.Exponential(f64).init(2);
+        var log_normal = try alea.distributions.LogNormal(f64).init(0, 0.5);
         var beta_hits = [_]usize{0} ** 3;
         var gamma_hits = [_]usize{0} ** 3;
         var student_hits = [_]usize{0} ** 3;
         var fisher_hits = [_]usize{0} ** 3;
+        var exponential_hits = [_]usize{0} ** 3;
+        var log_normal_hits = [_]usize{0} ** 3;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
             const b = beta.sample(rng);
@@ -1938,11 +1956,21 @@ fn checkLongRun(samples: usize) !void {
             if (f <= 0.5) fisher_hits[0] += 1;
             if (f <= 1) fisher_hits[1] += 1;
             if (f <= 2) fisher_hits[2] += 1;
+            const e = exponential.sample(rng);
+            if (e <= 0.25) exponential_hits[0] += 1;
+            if (e <= 0.5) exponential_hits[1] += 1;
+            if (e <= 1) exponential_hits[2] += 1;
+            const ln = log_normal.sample(rng);
+            if (ln <= 0.5) log_normal_hits[0] += 1;
+            if (ln <= 1) log_normal_hits[1] += 1;
+            if (ln <= 2) log_normal_hits[2] += 1;
         }
         const beta_x = [_]f64{ 0.1, 0.3, 0.6 };
         const gamma_x = [_]f64{ 1, 3, 5 };
         const student_x = [_]f64{ -1, 0, 1.5 };
         const fisher_x = [_]f64{ 0.5, 1, 2 };
+        const exponential_x = [_]f64{ 0.25, 0.5, 1 };
+        const log_normal_x = [_]f64{ 0.5, 1, 2 };
         try expectEmpiricalCdf("long beta cdf(0.1)", beta_hits[0], samples, beta.cdf(beta_x[0]));
         try expectEmpiricalCdf("long beta cdf(0.3)", beta_hits[1], samples, beta.cdf(beta_x[1]));
         try expectEmpiricalCdf("long beta cdf(0.6)", beta_hits[2], samples, beta.cdf(beta_x[2]));
@@ -1955,12 +1983,20 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long fisher-f cdf(0.5)", fisher_hits[0], samples, fisher_f.cdf(fisher_x[0]));
         try expectEmpiricalCdf("long fisher-f cdf(1)", fisher_hits[1], samples, fisher_f.cdf(fisher_x[1]));
         try expectEmpiricalCdf("long fisher-f cdf(2)", fisher_hits[2], samples, fisher_f.cdf(fisher_x[2]));
+        try expectEmpiricalCdf("long exponential cdf(0.25)", exponential_hits[0], samples, exponential.cdf(exponential_x[0]));
+        try expectEmpiricalCdf("long exponential cdf(0.5)", exponential_hits[1], samples, exponential.cdf(exponential_x[1]));
+        try expectEmpiricalCdf("long exponential cdf(1)", exponential_hits[2], samples, exponential.cdf(exponential_x[2]));
+        try expectEmpiricalCdf("long log-normal cdf(0.5)", log_normal_hits[0], samples, log_normal.cdf(log_normal_x[0]));
+        try expectEmpiricalCdf("long log-normal cdf(1)", log_normal_hits[1], samples, log_normal.cdf(log_normal_x[1]));
+        try expectEmpiricalCdf("long log-normal cdf(2)", log_normal_hits[2], samples, log_normal.cdf(log_normal_x[2]));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
-        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6}\n", .{
+        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6}\n", .{
             @as(f64, @floatFromInt(beta_hits[1])) * inv_n,
             @as(f64, @floatFromInt(gamma_hits[1])) * inv_n,
             @as(f64, @floatFromInt(student_hits[1])) * inv_n,
             @as(f64, @floatFromInt(fisher_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(exponential_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(log_normal_hits[1])) * inv_n,
         });
     }
 

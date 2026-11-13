@@ -1182,6 +1182,154 @@ pub fn bernoulliQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
     return 1;
 }
 
+/// Exponential CDF with rate `λ`: `1 − e^{−λx}` for `x ≥ 0`. Rate 0 is the
+/// improper all-at-infinity limit and rate +∞ is the point mass at 0.
+pub fn exponentialCdf(x: anytype, rate: anytype) @TypeOf(x, rate) {
+    const T = @TypeOf(x, rate);
+    comptime requireFloat(T);
+    if (!(rate >= 0) or std.math.isNan(rate)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x < 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    if (rate == std.math.inf(T)) return 1;
+    if (rate == 0) return 0;
+    return 1 - @exp(-rate * x);
+}
+
+/// Exponential quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn exponentialQuantile(p: anytype, rate: anytype) @TypeOf(p, rate) {
+    const T = @TypeOf(p, rate);
+    comptime requireFloat(T);
+    if (!(rate >= 0) or std.math.isNan(rate)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (rate == std.math.inf(T)) return 0;
+    if (rate == 0 or p == 1) return std.math.inf(T);
+    return -std.math.log1p(-p) / rate;
+}
+
+/// Log-normal CDF with log-space mean and standard deviation. The scale is
+/// `|stddev|`, matching the sampler's reflected-normal semantics; a zero
+/// standard deviation is the point mass at `exp(log_mean)`.
+pub fn logNormalCdf(x: anytype, log_mean: anytype, log_stddev: anytype) @TypeOf(x, log_mean, log_stddev) {
+    const T = @TypeOf(x, log_mean, log_stddev);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(log_mean) or !std.math.isFinite(log_stddev)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    const sigma = @abs(log_stddev);
+    if (sigma == 0) return if (x < @exp(log_mean)) 0 else 1;
+    return normCdf((@log(x) - log_mean) / sigma);
+}
+
+/// Log-normal quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn logNormalQuantile(p: anytype, log_mean: anytype, log_stddev: anytype) @TypeOf(p, log_mean, log_stddev) {
+    const T = @TypeOf(p, log_mean, log_stddev);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(log_mean) or !std.math.isFinite(log_stddev)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    const sigma = @abs(log_stddev);
+    return @exp(log_mean + sigma * probit(p));
+}
+
+/// Half-normal CDF: `2Φ(x/σ) − 1` for `x > 0`; `σ = 0` is the point mass at 0.
+pub fn halfNormalCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
+    const T = @TypeOf(x, scale);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < 0) 0 else 1;
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return 2 * normCdf(x / scale) - 1;
+}
+
+/// Half-normal quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn halfNormalQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
+    const T = @TypeOf(p, scale);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return 0;
+    return scale * probit((1 + p) / 2);
+}
+
+/// Chi CDF: `P(χ_k ≤ x) = P(k/2, x²/2)`.
+pub fn chiCdf(x: anytype, dof: anytype) @TypeOf(x, dof) {
+    const T = @TypeOf(x, dof);
+    comptime requireFloat(T);
+    if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return gammaIncompleteP(dof / 2, x * x / 2);
+}
+
+/// Chi quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn chiQuantile(p: anytype, dof: anytype) @TypeOf(p, dof) {
+    const T = @TypeOf(p, dof);
+    comptime requireFloat(T);
+    if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    return @sqrt(chiSquaredQuantile(p, dof));
+}
+
+/// Erlang CDF for a positive integer shape; `scale = 0` is the point mass at 0.
+pub fn erlangCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, scale) {
+    const T = @TypeOf(x, shape, scale);
+    comptime requireFloat(T);
+    if (!(shape >= 1) or !std.math.isFinite(shape) or shape != @floor(shape)) return std.math.nan(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < 0) 0 else 1;
+    return gammaCdf(x, shape, scale);
+}
+
+/// Erlang quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn erlangQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shape, scale) {
+    const T = @TypeOf(p, shape, scale);
+    comptime requireFloat(T);
+    if (!(shape >= 1) or !std.math.isFinite(shape) or shape != @floor(shape)) return std.math.nan(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return 0;
+    return gammaQuantile(p, shape, scale);
+}
+
+/// Maxwell CDF: `P(σ·χ₃ ≤ x)`. `σ = 0` is the point mass at 0.
+pub fn maxwellCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
+    const T = @TypeOf(x, scale);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < 0) 0 else 1;
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    const z = x / scale;
+    return gammaIncompleteP(@as(T, 1.5), z * z / 2);
+}
+
+/// Maxwell quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn maxwellQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
+    const T = @TypeOf(p, scale);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return 0;
+    return scale * @sqrt(chiSquaredQuantile(p, @as(T, 3)));
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -15371,6 +15519,16 @@ pub fn Exponential(comptime T: type) type {
             return self.inverse_rate * self.inverse_rate;
         }
 
+        /// Exponential CDF at `x` with this sampler's rate.
+        pub fn cdf(self: Self, x: T) T {
+            return exponentialCdf(x, self.rateValue());
+        }
+
+        /// Exponential quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return exponentialQuantile(p, self.rateValue());
+        }
+
         pub fn medianValue(self: Self) T {
             return @log(@as(T, 2)) * self.inverse_rate;
         }
@@ -16464,6 +16622,16 @@ pub fn LogNormal(comptime T: type) type {
             return @exp(self.normal_sampler.fromZScore(z_score));
         }
 
+        /// Log-normal CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return logNormalCdf(x, self.logMean(), self.logStddev());
+        }
+
+        /// Log-normal quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return logNormalQuantile(p, self.logMean(), self.logStddev());
+        }
+
         pub fn logMean(self: Self) T {
             return self.normal_sampler.meanValue();
         }
@@ -17534,6 +17702,16 @@ pub fn HalfNormal(comptime T: type) type {
 
         pub fn maxValue(self: Self) ?T {
             return if (self.isDegenerate()) 0 else null;
+        }
+
+        /// Half-normal CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return halfNormalCdf(x, self.scale);
+        }
+
+        /// Half-normal quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return halfNormalQuantile(p, self.scale);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -19850,6 +20028,16 @@ pub fn Chi(comptime T: type) type {
             return chiPoint(T, self.dofValue());
         }
 
+        /// Chi CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return chiCdf(x, self.dofValue());
+        }
+
+        /// Chi quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return chiQuantile(p, self.dofValue());
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             if (chiPoint(T, self.dofValue())) |point| return point;
             return @sqrt(self.chi_squared_sampler.sample(rng));
@@ -20096,6 +20284,16 @@ pub fn Erlang(comptime T: type) type {
 
         pub fn maxValue(self: Self) ?T {
             return if (self.isDegenerate()) 0 else null;
+        }
+
+        /// Erlang CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return erlangCdf(x, @as(T, @floatFromInt(self.shape)), self.scaleValue());
+        }
+
+        /// Erlang quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return erlangQuantile(p, @as(T, @floatFromInt(self.shape)), self.scaleValue());
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -24750,6 +24948,16 @@ pub fn Maxwell(comptime T: type) type {
 
         pub fn maxValue(self: Self) ?T {
             return if (self.isDegenerate()) 0 else null;
+        }
+
+        /// Maxwell CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return maxwellCdf(x, self.scale);
+        }
+
+        /// Maxwell quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return maxwellQuantile(p, self.scale);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -53772,6 +53980,74 @@ test "bernoulliCdf and bernoulliQuantile match the two-point law" {
     try std.testing.expectApproxEqAbs(b.cdf(0), 1 - b.probability(), 0);
     try std.testing.expectEqual(@as(f64, 0), b.quantile(0.5));
     try std.testing.expectEqual(@as(f64, 1), b.quantile(0.9));
+}
+
+test "core continuous CDF and quantile helpers match known values" {
+    // Exponential(rate=2): CDF(1)=1−e^-2, median=ln2/2.
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - @exp(@as(f64, -2))), exponentialCdf(@as(f64, 1), @as(f64, 2)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.34657359027997264), exponentialQuantile(@as(f64, 0.5), @as(f64, 2)), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0), exponentialCdf(@as(f64, 1), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 1), exponentialCdf(@as(f64, 0), std.math.inf(f64)));
+    try std.testing.expectEqual(std.math.inf(f64), exponentialQuantile(@as(f64, 0.5), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), exponentialQuantile(@as(f64, 0.5), std.math.inf(f64)));
+
+    // LogNormal(0,1): CDF(1)=0.5, CDF(e)=Φ(1), median=1.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), logNormalCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8413447460685429), logNormalCdf(@exp(@as(f64, 1)), @as(f64, 0), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), logNormalQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 1)), 1e-15);
+    try std.testing.expectApproxEqAbs(logNormalCdf(@as(f64, 2), @as(f64, 0), @as(f64, 0.5)), logNormalCdf(@as(f64, 2), @as(f64, 0), @as(f64, -0.5)), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0), logNormalCdf(@as(f64, 0.5), @as(f64, 0), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), logNormalCdf(@as(f64, 0.9), @as(f64, 0), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 1), logNormalCdf(@as(f64, 1.5), @as(f64, 0), @as(f64, 0)));
+
+    // HalfNormal(1): CDF(1)=2Φ(1)−1 (A&S erf approximation, ~1e-7).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6826894921370859), halfNormalCdf(@as(f64, 1), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), halfNormalQuantile(@as(f64, 0.6826894921370859), @as(f64, 1)), 1e-5);
+    try std.testing.expectEqual(@as(f64, 1), halfNormalCdf(@as(f64, 0), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), halfNormalQuantile(@as(f64, 0.5), @as(f64, 0)));
+
+    // Chi(3) and Maxwell(1) share the same distribution.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.19874804309879923), chiCdf(@as(f64, 1), @as(f64, 3)), 1e-14);
+    try std.testing.expectApproxEqAbs(chiCdf(@as(f64, 1), @as(f64, 3)), maxwellCdf(@as(f64, 1), @as(f64, 1)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5381722544550522), chiQuantile(@as(f64, 0.5), @as(f64, 3)), 1e-12);
+    try std.testing.expectApproxEqAbs(chiQuantile(@as(f64, 0.5), @as(f64, 3)), maxwellQuantile(@as(f64, 0.5), @as(f64, 1)), 1e-15);
+    try std.testing.expectEqual(@as(f64, 1), maxwellCdf(@as(f64, 0), @as(f64, 0)));
+
+    // Erlang(2, 1.5): CDF(3) = 1 − 3e^-2.
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - 3 * @exp(@as(f64, -2))), erlangCdf(@as(f64, 3), @as(f64, 2), @as(f64, 1.5)), 1e-15);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, erlangCdf(erlangQuantile(p, @as(f64, 2), @as(f64, 1.5)), @as(f64, 2), @as(f64, 1.5)), 1e-12);
+    }
+    try std.testing.expect(std.math.isNan(erlangCdf(@as(f64, 1), @as(f64, 1.5), @as(f64, 1))));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, exponentialCdf(exponentialQuantile(p, @as(f64, 2)), @as(f64, 2)), 1e-12);
+        try std.testing.expectApproxEqAbs(p, logNormalCdf(logNormalQuantile(p, @as(f64, 0.5), @as(f64, 0.75)), @as(f64, 0.5), @as(f64, 0.75)), 1e-5);
+        try std.testing.expectApproxEqAbs(p, halfNormalCdf(halfNormalQuantile(p, @as(f64, 2)), @as(f64, 2)), 1e-5);
+        try std.testing.expectApproxEqAbs(p, chiCdf(chiQuantile(p, @as(f64, 4)), @as(f64, 4)), 1e-12);
+        try std.testing.expectApproxEqAbs(p, maxwellCdf(maxwellQuantile(p, @as(f64, 1.5)), @as(f64, 1.5)), 1e-12);
+    }
+
+    try std.testing.expect(std.math.isNan(exponentialCdf(@as(f64, 1), @as(f64, -1))));
+    try std.testing.expect(std.math.isNan(logNormalCdf(@as(f64, 1), std.math.inf(f64), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(halfNormalCdf(@as(f64, 1), @as(f64, -1))));
+    try std.testing.expect(std.math.isNan(chiCdf(@as(f64, 1), @as(f64, 0))));
+    try std.testing.expect(std.math.isNan(maxwellCdf(@as(f64, 1), @as(f64, -1))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.86466473), exponentialCdf(@as(f32, 1), @as(f32, 2)), 1e-6);
+
+    const exp_dist = try Exponential(f64).init(2);
+    try std.testing.expectApproxEqAbs(exponentialCdf(@as(f64, 1), @as(f64, 2)), exp_dist.cdf(1), 0);
+    try std.testing.expectApproxEqAbs(exponentialQuantile(@as(f64, 0.5), @as(f64, 2)), exp_dist.quantile(0.5), 0);
+    const log_normal_dist = try LogNormal(f64).init(0.5, 0.75);
+    try std.testing.expectApproxEqAbs(logNormalCdf(@as(f64, 2), @as(f64, 0.5), @as(f64, 0.75)), log_normal_dist.cdf(2), 0);
+    const half_normal_dist = try HalfNormal(f64).init(2);
+    try std.testing.expectApproxEqAbs(halfNormalCdf(@as(f64, 1), @as(f64, 2)), half_normal_dist.cdf(1), 0);
+    const chi_dist = try Chi(f64).init(4);
+    try std.testing.expectApproxEqAbs(chiCdf(@as(f64, 2), @as(f64, 4)), chi_dist.cdf(2), 0);
+    const erlang_dist = try Erlang(f64).init(2, 1.5);
+    try std.testing.expectApproxEqAbs(erlangCdf(@as(f64, 3), @as(f64, 2), @as(f64, 1.5)), erlang_dist.cdf(3), 0);
+    const maxwell_dist = try Maxwell(f64).init(1.5);
+    try std.testing.expectApproxEqAbs(maxwellCdf(@as(f64, 2), @as(f64, 1.5)), maxwell_dist.cdf(2), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {
