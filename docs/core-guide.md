@@ -497,6 +497,11 @@ Directional distributions on the circle and sphere:
   `exp(tr(FᵀR))`; the trace reduces to `tr(F) + qᵀAq` for a unit quaternion,
   so sampling is an exact Bingham draw on S³ followed by the quaternion-to-
   rotation conversion. No burn-in or thinning is needed.
+- `MatrixFisherO3(T)` — the full O(3) matrix Fisher including reflections. The
+  two components are matrix Fisher distributions with parameters `F` and
+  `F·diag(1,1,-1)`; their mixture weights are computed deterministically at
+  construction from the equivalent S³ Bingham normalizers, and sampling draws
+  an exact quaternion Bingham sample from the selected component.
 
 Copulas on the unit hypercube:
 

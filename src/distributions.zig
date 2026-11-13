@@ -32611,6 +32611,186 @@ pub fn fillMatrixFisherCheckedFrom(source: anytype, comptime T: type, dest: [][3
     dist.fillFrom(source, dest);
 }
 
+/// Gauss-Legendre nodes and weights on [-1, 1] via Newton iteration on the
+/// Legendre polynomial. Used for the deterministic O(3) mixture weights.
+fn gaussLegendreNodes(comptime T: type, n: usize, xs: []T, ws: []T) void {
+    const nf: T = @floatFromInt(n);
+    const pi: T = @floatCast(std.math.pi);
+    var i: usize = 1;
+    while (i <= n) : (i += 1) {
+        var x = @cos(pi * (@as(T, @floatFromInt(i)) - 0.25) / (nf + 0.5));
+        var iter: usize = 0;
+        while (iter < 100) : (iter += 1) {
+            var p0: T = 1;
+            var p1: T = x;
+            var k: usize = 2;
+            while (k <= n) : (k += 1) {
+                const kf: T = @floatFromInt(k);
+                const p2 = ((@as(T, @floatFromInt(2 * k - 1)) * x * p1) - ((kf - 1) * p0)) / kf;
+                p0 = p1;
+                p1 = p2;
+            }
+            const pp = nf * (x * p1 - p0) / (x * x - 1);
+            const dx = p1 / pp;
+            x -= dx;
+            if (@abs(dx) < 1e-15) break;
+        }
+        var p0: T = 1;
+        var p1: T = x;
+        var k: usize = 2;
+        while (k <= n) : (k += 1) {
+            const kf: T = @floatFromInt(k);
+            const p2 = ((@as(T, @floatFromInt(2 * k - 1)) * x * p1) - ((kf - 1) * p0)) / kf;
+            p0 = p1;
+            p1 = p2;
+        }
+        const pp = nf * (x * p1 - p0) / (x * x - 1);
+        xs[i - 1] = x;
+        ws[i - 1] = 2 / ((1 - x * x) * pp * pp);
+    }
+}
+
+/// Log of the S³ Bingham normalizer `∫ exp(qᵀAq) dq` for the diagonal
+/// eigenvalues of A, using a shifted (non-positive) exponent and a 2D
+/// Gauss-Legendre quadrature.
+fn binghamNormalizerLog(comptime T: type, eigenvalues: [4]T, xs: []const T, ws: []const T) T {
+    if (eigenvalues[0] == eigenvalues[3]) {
+        const pi: T = @floatCast(std.math.pi);
+        return @log(2 * pi * pi);
+    }
+    const lmax = eigenvalues[0];
+    const l2 = eigenvalues[1] - lmax;
+    const l3 = eigenvalues[2] - lmax;
+    const l4 = eigenvalues[3] - lmax;
+    var total: T = 0;
+    var i: usize = 0;
+    while (i < xs.len) : (i += 1) {
+        const u = xs[i];
+        const a = 1 - u * u;
+        if (!(a > 0)) continue;
+        const su = @sqrt(a);
+        var inner: T = 0;
+        var j: usize = 0;
+        while (j < xs.len) : (j += 1) {
+            const w = xs[j];
+            const s2 = a * (1 - w * w);
+            const expo = a * (l2 * w * w + (1 - w * w) * (l3 + l4) / 2);
+            inner += ws[j] * @exp(expo + logBesselI0(s2 * (l3 - l4) / 2));
+        }
+        total += ws[i] * su * inner;
+    }
+    const two_pi: T = 2 * @as(T, @floatCast(std.math.pi));
+    return lmax + @log(two_pi * total);
+}
+
+/// Matrix Fisher distribution on O(3), including reflections.
+///
+/// The target density is `exp(tr(FᵀR))` over both SO(3) and O⁻(3). The two
+/// components are matrix Fisher distributions with parameters `F` and
+/// `F·diag(1,1,-1)`; their mixture weights are computed deterministically from
+/// the equivalent S³ Bingham normalizers at construction. Sampling then picks
+/// a component and draws an exact quaternion Bingham sample.
+pub fn MatrixFisherO3(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+        const gl_n = 256;
+
+        parameter: [3][3]T,
+        reflection_parameter: [3][3]T,
+        sampler_so: Bingham(T, 4),
+        sampler_ref: Bingham(T, 4),
+        so_weight: T,
+
+        pub fn init(parameter: [3][3]T) MatrixFisherError!Self {
+            inline for (0..3) |i| {
+                inline for (0..3) |j| {
+                    if (!std.math.isFinite(parameter[i][j])) return error.InvalidParameter;
+                }
+            }
+            var f_s = parameter;
+            f_s[0][2] = -f_s[0][2];
+            f_s[1][2] = -f_s[1][2];
+            f_s[2][2] = -f_s[2][2];
+
+            const a_so = matrixFisherQuaternionMatrix(T, parameter);
+            const a_ref = matrixFisherQuaternionMatrix(T, f_s);
+            const sampler_so = Bingham(T, 4).init(a_so) catch return error.InvalidParameter;
+            const sampler_ref = Bingham(T, 4).init(a_ref) catch return error.InvalidParameter;
+
+            var xs: [gl_n]T = undefined;
+            var ws: [gl_n]T = undefined;
+            gaussLegendreNodes(T, gl_n, &xs, &ws);
+            const log_z_so = binghamNormalizerLog(T, sampler_so.eigenvaluesValue(), &xs, &ws);
+            const log_z_ref = binghamNormalizerLog(T, sampler_ref.eigenvaluesValue(), &xs, &ws);
+            const diff = log_z_ref - log_z_so;
+            const so_weight = 1 / (1 + @exp(diff));
+
+            return Self{
+                .parameter = parameter,
+                .reflection_parameter = f_s,
+                .sampler_so = sampler_so,
+                .sampler_ref = sampler_ref,
+                .so_weight = so_weight,
+            };
+        }
+
+        pub fn new(parameter: [3][3]T) Self {
+            return Self.init(parameter) catch |e| {
+                std.debug.panic("MatrixFisherO3.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn parameterValue(self: Self) [3][3]T {
+            return self.parameter;
+        }
+
+        pub fn parameterAt(self: Self, row: usize, col: usize) T {
+            std.debug.assert(row < 3 and col < 3);
+            return self.parameter[row][col];
+        }
+
+        pub fn reflectionParameterValue(self: Self) [3][3]T {
+            return self.reflection_parameter;
+        }
+
+        /// Probability of the SO(3) component.
+        pub fn soWeightValue(self: Self) T {
+            return self.so_weight;
+        }
+
+        /// Probability of the O⁻(3) reflection component.
+        pub fn reflectionWeightValue(self: Self) T {
+            return 1 - self.so_weight;
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3][3]T {
+            const u = Rng.floatOpenFrom(source, T);
+            const is_so = u < self.so_weight;
+            const q = if (is_so) self.sampler_so.sampleFrom(source) else self.sampler_ref.sampleFrom(source);
+            const r = matrixFisherQuaternionToRotation(T, q);
+            if (is_so) return r;
+            return .{
+                .{ r[0][0], r[0][1], -r[0][2] },
+                .{ r[1][0], r[1][1], -r[1][2] },
+                .{ r[2][0], r[2][1], -r[2][2] },
+            };
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3][3]T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3][3]T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3][3]T) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -55198,6 +55378,127 @@ test "MatrixFisher free functions, fill, and f32 work" {
             inline for (0..3) |j| norm32 += r[i][j] * r[i][j];
         }
         try std.testing.expect(@abs(norm32 - 3) < 1e-3);
+    }
+}
+
+test "MatrixFisherO3 zero parameter is uniform on O(3)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9a01);
+    const rng = Rng.init(&engine);
+
+    const dist = try MatrixFisherO3(f64).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, 0, 0 },
+        .{ 0, 0, 0 },
+    });
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), dist.soWeightValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), dist.reflectionWeightValue(), 1e-12);
+
+    const count = 20_000;
+    var sums = [_]f64{0} ** 9;
+    var positive_det: usize = 0;
+    for (0..count) |_| {
+        const r = dist.sample(rng);
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                var dot: f64 = 0;
+                inline for (0..3) |k| dot += r[k][i] * r[k][j];
+                try std.testing.expectApproxEqAbs(if (i == j) @as(f64, 1) else @as(f64, 0), dot, 1e-9);
+            }
+        }
+        const det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) -
+            r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0]) +
+            r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), @abs(det), 1e-9);
+        if (det > 0) positive_det += 1;
+        inline for (0..3) |i| {
+            inline for (0..3) |j| sums[i * 3 + j] += r[i][j];
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    inline for (0..9) |i| {
+        try std.testing.expectApproxEqAbs(@as(f64, 0), sums[i] / nf, 0.03);
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), @as(f64, @floatFromInt(positive_det)) / nf, 0.03);
+}
+
+test "MatrixFisherO3 isotropic parameter matches the exact mixture weight" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9a02);
+    const rng = Rng.init(&engine);
+
+    const dist = try MatrixFisherO3(f64).init(.{
+        .{ 2, 0, 0 },
+        .{ 0, 2, 0 },
+        .{ 0, 0, 2 },
+    });
+
+    const steps: usize = 200_000;
+    var z_so: f64 = 0;
+    var z_ref: f64 = 0;
+    for (0..steps) |i| {
+        const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+        const s = @sqrt(1 - w * w);
+        z_so += s * @exp(-8 * (1 - w * w));
+        z_ref += s * @exp(-8 * w * w);
+    }
+    const expected = z_so / (z_so + z_ref);
+    try std.testing.expectApproxEqAbs(expected, dist.soWeightValue(), 1e-3);
+
+    const count = 20_000;
+    var positive_det: usize = 0;
+    for (0..count) |_| {
+        const r = dist.sample(rng);
+        const det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) -
+            r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0]) +
+            r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
+        if (det > 0) positive_det += 1;
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(expected, @as(f64, @floatFromInt(positive_det)) / nf, 0.03);
+}
+
+test "MatrixFisherO3 general and f32 sampling work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9a03);
+    const rng = Rng.init(&engine);
+
+    const parameter = [3][3]f64{
+        .{ 1.0, 0.2, -0.3 },
+        .{ 0.1, 0.5, 0.4 },
+        .{ -0.2, 0.3, 0.8 },
+    };
+    const dist = try MatrixFisherO3(f64).init(parameter);
+    try std.testing.expect(dist.soWeightValue() > 0);
+    try std.testing.expect(dist.soWeightValue() < 1);
+    for (0..2_000) |_| {
+        const r = dist.sample(rng);
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                var dot: f64 = 0;
+                inline for (0..3) |k| dot += r[k][i] * r[k][j];
+                try std.testing.expectApproxEqAbs(if (i == j) @as(f64, 1) else @as(f64, 0), dot, 1e-9);
+            }
+        }
+    }
+
+    const parameter32 = [3][3]f32{
+        .{ 1.0, 0.2, -0.3 },
+        .{ 0.1, 0.5, 0.4 },
+        .{ -0.2, 0.3, 0.8 },
+    };
+    const dist32 = try MatrixFisherO3(f32).init(parameter32);
+    try std.testing.expect(std.math.isFinite(dist32.soWeightValue()));
+    var engine32 = alea.DefaultPrng.init(0x9a04);
+    for (0..1_000) |_| {
+        const r = dist32.sample(Rng.init(&engine32));
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                var dot: f32 = 0;
+                inline for (0..3) |k| dot += r[k][i] * r[k][j];
+                try std.testing.expect(@abs(dot - (if (i == j) @as(f32, 1) else @as(f32, 0))) < 1e-3);
+            }
+        }
     }
 }
 
