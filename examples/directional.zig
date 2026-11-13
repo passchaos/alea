@@ -110,6 +110,27 @@ pub fn main(init: std.process.Init) !void {
     const vector_nf: f64 = @floatFromInt(vector_count);
     try stdout.print("vector vMF lane mean z: {d:.3}\n", .{vector_sum_z / vector_nf});
 
+    // Full O(3) matrix Fisher: SO(3)/reflection mixture with deterministic
+    // weights from the equivalent S³ Bingham normalizers.
+    const o3 = try alea.distributions.MatrixFisherO3(f64).init(.{
+        .{ 2, 0, 0 },
+        .{ 0, 2, 0 },
+        .{ 0, 0, 2 },
+    });
+    var o3_positive: usize = 0;
+    const o3_count = 5_000;
+    for (0..o3_count) |_| {
+        const r = o3.sampleFrom(&engine);
+        const det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) -
+            r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0]) +
+            r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
+        if (det > 0) o3_positive += 1;
+    }
+    try stdout.print("matrix Fisher O(3) SO weight: {d:.3}, positive-det rate: {d:.3}\n", .{
+        o3.soWeightValue(),
+        @as(f64, @floatFromInt(o3_positive)) / @as(f64, @floatFromInt(o3_count)),
+    });
+
     try stdout.print("\nUse the scalar samplers for single points and the Vector* samplers for one sample per SIMD lane.\n", .{});
     try stdout.flush();
 }

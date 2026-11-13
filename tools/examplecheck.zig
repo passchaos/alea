@@ -36,7 +36,7 @@ const examples = [_]Example{
         .path = "examples/directional.zig",
         .step = "zig build run-directional",
         .aggregate_token = "examples_step.dependOn(&run_directional_example.step)",
-        .source_tokens = &.{ "VonMisesFisher(f64, 3)", "Kent(f64)", "Bingham(f64, 3)", "MatrixFisher(f64)", "MatrixVonMisesFisher(f64)", "VectorVonMisesFisher(V)" },
+        .source_tokens = &.{ "VonMisesFisher(f64, 3)", "Kent(f64)", "Bingham(f64, 3)", "MatrixFisher(f64)", "MatrixFisherO3(f64)", "MatrixVonMisesFisher(f64)", "VectorVonMisesFisher(V)", "soWeightValue" },
     },
     .{
         .path = "examples/distribution_diagnostics.zig",

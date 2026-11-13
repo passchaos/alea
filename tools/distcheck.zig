@@ -1635,6 +1635,29 @@ fn checkLongRun(samples: usize) !void {
         try expectFloatBetween("long matrix fisher trace", sum / nf, expected - 0.004, expected + 0.004);
     }
 
+    // O(3) matrix Fisher component frequency.
+    {
+        var engine = alea.FastPrng.init(0x10d1);
+        const rng = alea.Rng.init(&engine);
+        const parameter = [3][3]f64{
+            .{ 2, 0, 0 },
+            .{ 0, 2, 0 },
+            .{ 0, 0, 2 },
+        };
+        const dist = try alea.distributions.MatrixFisherO3(f64).init(parameter);
+        const expected = dist.soWeightValue();
+        var positive_det: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const r = dist.sample(rng);
+            const det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) -
+                r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0]) +
+                r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
+            if (det > 0) positive_det += 1;
+        }
+        try expectFloatBetween("long matrix fisher o3 det frequency", @as(f64, @floatFromInt(positive_det)) / nf, expected - 0.005, expected + 0.005);
+    }
+
     // SIMD von Mises-Fisher lane moment.
     {
         var engine = alea.FastPrng.init(0x10cf);
