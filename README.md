@@ -169,8 +169,10 @@ The current Linux-first roadmap is intentionally broad:
   matrix-variate Student-t, Wishart/Inverse-Wishart, Zig-native full-covariance
   multivariate normal with reusable dynamic Cholesky factorization plus
   allocation-free `StaticMultivariateNormal(T, dimension)` fixed-array
-  sampling, and allocator-backed `MultivariateT(T)` with a shared chi-squared
-  scale; `multi.Dirichlet`, `multi.MultivariateNormal`, `multi.MultivariateT`,
+  sampling, allocator-backed `MultivariateT(T)` with a shared chi-squared
+  scale, and allocator-backed `MultivariateLaplace(T)` with an exponential
+  scale mixture; `multi.Dirichlet`, `multi.MultivariateNormal`,
+  `multi.MultivariateT`, `multi.MultivariateLaplace`,
   `multi.StaticMultivariateNormal`, `multi.GaussianCopula`,
   `multi.StudentTCopula`, `multi.MatrixNormal`, `multi.StaticMatrixNormal`,
   `multi.MatrixT`, and `multi.StaticMatrixT` provide multivariate namespace
