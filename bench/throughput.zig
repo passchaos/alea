@@ -56,6 +56,7 @@ pub fn main(init: std.process.Init) !void {
     try stdout.print("\nfill-only throughput\n", .{});
     try benchFillOnly(io, stdout, "alea4x64 fill-only", alea.Alea4x64, bytes, &buffer);
     try benchFillOnly(io, stdout, "xoshiro256++ fill-only", alea.Xoshiro256PlusPlus, bytes, &buffer);
+    try benchFillOnly(io, stdout, "chacha12 fill-only", alea.ChaCha, bytes, &buffer);
     try benchFillTypedU32(io, stdout, "alea fill u32 facade", bytes / 4);
     try benchFillTypedBool(io, stdout, "alea fill bool facade", bytes / 8);
     try benchFillChance(io, stdout, "alea fillChance p=0.25", bytes / 8);

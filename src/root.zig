@@ -37,9 +37,9 @@ pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
 pub const Xoshiro128PlusPlus = @import("engines/xoshiro128plusplus.zig");
 pub const Xoshiro256 = @import("engines/xoshiro256.zig");
 pub const Pcg64 = @import("engines/pcg64.zig");
-pub const ChaCha = @import("engines/chacha.zig");
-pub const ChaCha8Rng = @import("engines/chacha8.zig");
-pub const ChaCha20Rng = @import("engines/chacha20.zig");
+pub const ChaCha = @import("engines/chacha.zig").ChaCha;
+pub const ChaCha8Rng = @import("engines/chacha8.zig").ChaCha8Rng;
+pub const ChaCha20Rng = @import("engines/chacha20.zig").ChaCha20Rng;
 pub const StepRng = @import("engines/step.zig");
 
 pub const ChaCha12Rng = ChaCha;
@@ -58,9 +58,9 @@ pub const rngs = struct {
     pub const SmallRng = @import("engines/xoshiro256plusplus.zig");
     pub const SysRng = Rng.SysRng;
     pub const SysError = Rng.SysRng.Error;
-    pub const ChaCha8Rng = @import("engines/chacha8.zig");
+    pub const ChaCha8Rng = @import("engines/chacha8.zig").ChaCha8Rng;
     pub const ChaCha12Rng = ChaCha;
-    pub const ChaCha20Rng = @import("engines/chacha20.zig");
+    pub const ChaCha20Rng = @import("engines/chacha20.zig").ChaCha20Rng;
     pub const Xoshiro128PlusPlus = @import("engines/xoshiro128plusplus.zig");
     pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
 };

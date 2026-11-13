@@ -526,6 +526,20 @@ self-forking.
   `random`, `next`, `tryNext`, `nextU64`, `tryNextU64`, `nextU32`,
   `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`, `fromRng`, `tryFromRng`,
   `fork`, `tryFork`
+- `ChaChaRng(Cipher)`: generic constructor used by `ChaCha`, `ChaCha8Rng`, and
+  `ChaCha20Rng`; exposes the same engine surface. Each refill runs `Cipher`
+  with the current key and a zero nonce, retains the first `key_length` bytes
+  as the next key, and emits the remaining bytes. The first block therefore
+  matches standard ChaCha keystream bytes after the key prefix, while later
+  blocks follow the rekey chain rather than a counter.
+- `ChaChaRng` members: `ChaChaRng.seed_length`, `ChaChaRng.init`,
+  `ChaChaRng.initFromU64`, `ChaChaRng.seedFromU64`, `ChaChaRng.fromSeed`,
+  `ChaChaRng.fromSeedBytes`, `ChaChaRng.fromRng`, `ChaChaRng.tryFromRng`,
+  `ChaChaRng.random`, `ChaChaRng.addEntropy`, `ChaChaRng.next`,
+  `ChaChaRng.tryNext`, `ChaChaRng.tryNextU64`, `ChaChaRng.tryNextU32`,
+  `ChaChaRng.nextU64`, `ChaChaRng.nextU32`, `ChaChaRng.fill`,
+  `ChaChaRng.fillBytes`, `ChaChaRng.tryFillBytes`, `ChaChaRng.fork`,
+  `ChaChaRng.tryFork`.
 - `ChaCha`: `seed_length`, `init`, `initFromU64`, `random`, `addEntropy`,
   `seedFromU64`, `fromSeed`, `fromSeedBytes`, `next`, `tryNext`, `nextU64`,
   `tryNextU64`, `nextU32`, `tryNextU32`, `fill`, `fillBytes`, `tryFillBytes`,

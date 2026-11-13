@@ -30,6 +30,11 @@ and checked-tool catalog maintained by `zig build toolingcheck`.
   matching local Rust's optional `rand::rngs::ChaCha12Rng` discovery.
 - `ChaCha20Rng`: Rust-discoverable optional-`chacha` ChaCha20 stream for users
   intentionally matching local Rust's higher-round named generator.
+  These three engines use Alea's buffered rekeying construction: each 512-byte
+  block retains its first 32 bytes as the next key and emits the remaining
+  bytes. The first block matches the standard ChaCha keystream after that
+  prefix, but later blocks are not a standard counter-mode stream; see
+  `compare/results/reproducibility-matrix.md` for the stable-output contract.
 - `StdRng = SecurePrng`: Rust-discoverable standard secure-style RNG alias,
   mirroring local Rust `rand::rngs::StdRng` discovery while preserving Alea's
   explicit `SecurePrng` name.
