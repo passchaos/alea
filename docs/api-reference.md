@@ -2562,6 +2562,9 @@ Reusable samplers:
 - `BetaBinomial.sampleFrom`
 - `BetaBinomial.fill`
 - `BetaBinomial.fillFrom`
+- `BetaBinomial.pmf`
+- `BetaBinomial.cdf`
+- `BetaBinomial.quantile`
 - `betaBinomial`
 - `betaBinomialFrom`
 - `betaBinomialChecked`
@@ -2570,6 +2573,9 @@ Reusable samplers:
 - `fillBetaBinomialFrom`
 - `fillBetaBinomialChecked`
 - `fillBetaBinomialCheckedFrom`
+- `betaBinomialPmf`
+- `betaBinomialCdf`
+- `betaBinomialQuantile`
 - `VectorBeta(VectorType)`
 - `VectorBeta(VectorType).init`
 - `VectorBeta(VectorType).alphaValue`

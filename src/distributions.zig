@@ -19180,6 +19180,21 @@ pub const BetaBinomial = struct {
         return self.trials;
     }
 
+    /// Beta-binomial probability mass at integer `k`.
+    pub fn pmf(self: BetaBinomial, k: f64) f64 {
+        return betaBinomialPmf(k, self.trials, self.alpha, self.beta_param);
+    }
+
+    /// Beta-binomial CDF at `k`.
+    pub fn cdf(self: BetaBinomial, k: f64) f64 {
+        return betaBinomialCdf(k, self.trials, self.alpha, self.beta_param);
+    }
+
+    /// Smallest integer `k` with `cdf(k) ≥ q`.
+    pub fn quantile(self: BetaBinomial, q: f64) f64 {
+        return betaBinomialQuantile(q, self.trials, self.alpha, self.beta_param);
+    }
+
     pub fn sample(self: BetaBinomial, rng: Rng) u64 {
         return self.sampleFrom(rng);
     }
@@ -19240,6 +19255,78 @@ pub fn fillBetaBinomialChecked(rng: Rng, dest: []u64, trials: u64, alpha: f64, b
 pub fn fillBetaBinomialCheckedFrom(source: anytype, dest: []u64, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!void {
     const dist = try BetaBinomial.init(trials, alpha, beta_param);
     dist.fillFrom(source, dest);
+}
+
+fn logAddExpF64(a: f64, b: f64) f64 {
+    const maximum = @max(a, b);
+    if (maximum == -std.math.inf(f64)) return maximum;
+    return maximum + std.math.log1p(@exp(@min(a, b) - maximum));
+}
+
+fn betaBinomialParametersFinite(alpha: f64, beta_param: f64) bool {
+    return alpha > 0 and beta_param > 0 and std.math.isFinite(alpha) and std.math.isFinite(beta_param);
+}
+
+/// Beta-binomial probability mass at integer `k`.
+pub fn betaBinomialPmf(k: f64, trials: u64, alpha: f64, beta_param: f64) f64 {
+    if (!betaBinomialParametersFinite(alpha, beta_param)) return std.math.nan(f64);
+    if (std.math.isNan(k)) return std.math.nan(f64);
+    const n: f64 = @floatFromInt(trials);
+    if (k < 0 or k > n) return 0;
+    const floored = @floor(k);
+    if (floored != k) return 0;
+    const log_pmf = std.math.lgamma(f64, n + 1) -
+        std.math.lgamma(f64, k + 1) -
+        std.math.lgamma(f64, n - k + 1) +
+        std.math.lgamma(f64, k + alpha) +
+        std.math.lgamma(f64, n - k + beta_param) -
+        std.math.lgamma(f64, n + alpha + beta_param) -
+        (std.math.lgamma(f64, alpha) + std.math.lgamma(f64, beta_param) - std.math.lgamma(f64, alpha + beta_param));
+    return @exp(log_pmf);
+}
+
+/// Beta-binomial CDF at `k`, evaluated with a stable log-space PMF recurrence.
+pub fn betaBinomialCdf(k: f64, trials: u64, alpha: f64, beta_param: f64) f64 {
+    if (!betaBinomialParametersFinite(alpha, beta_param)) return std.math.nan(f64);
+    if (std.math.isNan(k)) return std.math.nan(f64);
+    if (k < 0) return 0;
+    const n: f64 = @floatFromInt(trials);
+    if (k >= n) return 1;
+    if (trials == 0) return 1;
+
+    const k_int: u64 = @intFromFloat(@floor(k));
+    var log_pmf = std.math.lgamma(f64, n + beta_param) +
+        std.math.lgamma(f64, alpha + beta_param) -
+        std.math.lgamma(f64, beta_param) -
+        std.math.lgamma(f64, n + alpha + beta_param);
+    var log_sum = log_pmf;
+    var j: u64 = 0;
+    while (j < k_int) : (j += 1) {
+        const j_f: f64 = @floatFromInt(j);
+        log_pmf += @log(n - j_f) - @log(j_f + 1) + @log(j_f + alpha) - @log(n - j_f + beta_param - 1);
+        log_sum = logAddExpF64(log_sum, log_pmf);
+    }
+    return @exp(log_sum);
+}
+
+/// Smallest integer `k` with `betaBinomialCdf(k) ≥ q`.
+pub fn betaBinomialQuantile(q: f64, trials: u64, alpha: f64, beta_param: f64) f64 {
+    if (!betaBinomialParametersFinite(alpha, beta_param)) return std.math.nan(f64);
+    if (!(q >= 0 and q <= 1)) return std.math.nan(f64);
+    if (q == 0 or trials == 0) return 0;
+    if (q == 1) return @floatFromInt(trials);
+
+    var lo: u64 = 0;
+    var hi: u64 = trials;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (betaBinomialCdf(@floatFromInt(mid), trials, alpha, beta_param) < q) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatFromInt(lo);
 }
 
 pub fn FisherF(comptime T: type) type {
@@ -50283,6 +50370,46 @@ test "BetaBinomial free functions and fill work" {
     for (buf) |value| try std.testing.expect(value <= 12);
     try std.testing.expectError(error.InvalidParameter, fillBetaBinomial(rng, &buf, 12, 0, 3));
     try std.testing.expectError(error.InvalidParameter, betaBinomial(rng, 12, 2, -1));
+}
+
+test "BetaBinomial pmf and cdf match the uniform and binomial limits" {
+    // alpha = beta = 1: uniform PMF 1/(n+1), CDF (k+1)/(n+1).
+    const n: u64 = 10;
+    inline for (0..11) |k| {
+        const kf: f64 = @floatFromInt(k);
+        try std.testing.expectApproxEqAbs(1.0 / 11.0, betaBinomialPmf(kf, n, 1, 1), 1e-12);
+        try std.testing.expectApproxEqAbs((kf + 1) / 11.0, betaBinomialCdf(kf, n, 1, 1), 1e-12);
+    }
+
+    // Large alpha/beta approaches Binomial(20, 0.5).
+    const pmf10 = betaBinomialPmf(10, 20, 1e6, 1e6);
+    const expected_pmf = 184756.0 / 1048576.0;
+    try std.testing.expectApproxEqAbs(expected_pmf, pmf10, 1e-4);
+    const cdf10 = betaBinomialCdf(10, 20, 1e6, 1e6);
+    try std.testing.expect(cdf10 > 0.55 and cdf10 < 0.62);
+
+    // PMF sums to one over the support.
+    var sum: f64 = 0;
+    var k: u64 = 0;
+    while (k <= 20) : (k += 1) sum += betaBinomialPmf(@floatFromInt(k), 20, 2, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), sum, 1e-10);
+
+    try std.testing.expectEqual(@as(f64, 0), betaBinomialCdf(-1, 10, 2, 3));
+    try std.testing.expectEqual(@as(f64, 1), betaBinomialCdf(10, 10, 2, 3));
+    try std.testing.expect(std.math.isNan(betaBinomialPmf(3, 10, 0, 3)));
+}
+
+test "BetaBinomial quantile and sampler methods work" {
+    const dist = try BetaBinomial.init(20, 2, 3);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |q| {
+        const k = dist.quantile(q);
+        try std.testing.expect(dist.cdf(k) >= q);
+        if (k > 0) try std.testing.expect(dist.cdf(k - 1) < q);
+    }
+    try std.testing.expectEqual(@as(f64, 0), dist.quantile(0));
+    try std.testing.expectEqual(@as(f64, 20), dist.quantile(1));
+    try std.testing.expectApproxEqAbs(dist.pmf(3), betaBinomialPmf(3, 20, 2, 3), 1e-12);
+    try std.testing.expectApproxEqAbs(dist.cdf(3), betaBinomialCdf(3, 20, 2, 3), 1e-12);
 }
 
 test "StudentTCopula constructor validates parameters" {
