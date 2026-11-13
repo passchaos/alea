@@ -5767,7 +5767,7 @@ fn binomialWaitingFrom(source: anytype, trials: u64, q: f64) u64 {
     var sum: f64 = 0;
     while (true) {
         if (successes == trials) return successes;
-        const e = -@log(1.0 - Rng.floatFrom(source, f64));
+        const e = standardExponentialFrom(source, f64);
         sum += e / @as(f64, @floatFromInt(trials - successes));
         successes += 1;
         if (sum > q) return successes - 1;
@@ -5889,7 +5889,7 @@ fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
             const y = s1 * @abs(n);
             reject = y >= d1;
             if (!reject) {
-                const e = -@log(1.0 - Rng.floatFrom(source, f64));
+                const e = standardExponentialFrom(source, f64);
                 x = @floor(y);
                 v = -e - n * n / 2.0 + setup.c;
             }
@@ -5898,19 +5898,19 @@ fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
             const y = s2 * @abs(n);
             reject = y >= d2;
             if (!reject) {
-                const e = -@log(1.0 - Rng.floatFrom(source, f64));
+                const e = standardExponentialFrom(source, f64);
                 x = @floor(-y);
                 v = -e - n * n / 2.0;
             }
         } else if (u <= setup.a123) {
-            const e1 = -@log(1.0 - Rng.floatFrom(source, f64));
-            const e2 = -@log(1.0 - Rng.floatFrom(source, f64));
+            const e1 = standardExponentialFrom(source, f64);
+            const e2 = standardExponentialFrom(source, f64);
             const y = d1 + 2.0 * s1s * e1 / d1;
             x = @floor(y);
             v = -e2 + d1 * (1.0 / (t - np) - y / (2.0 * s1s));
         } else {
-            const e1 = -@log(1.0 - Rng.floatFrom(source, f64));
-            const e2 = -@log(1.0 - Rng.floatFrom(source, f64));
+            const e1 = standardExponentialFrom(source, f64);
+            const e2 = standardExponentialFrom(source, f64);
             const y = d2 + 2.0 * s2s * e1 / d2;
             x = @floor(-y);
             v = -e2 - d2 * y / (2.0 * s2s);
