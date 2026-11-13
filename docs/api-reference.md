@@ -1462,6 +1462,25 @@ Reusable samplers:
 - `fillGaussianCopulaFrom`
 - `fillGaussianCopulaChecked`
 - `fillGaussianCopulaCheckedFrom`
+- `GaussianCopula(T)`
+- `multi.GaussianCopula(T)`
+- `GaussianCopula(T).init`
+- `GaussianCopula(T).new`
+- `GaussianCopula(T).deinit`
+- `GaussianCopula(T).clone`
+- `GaussianCopula(T).dimensionValue`
+- `GaussianCopula(T).rankValue`
+- `GaussianCopula(T).isDegenerate`
+- `GaussianCopula(T).correlationValue`
+- `GaussianCopula(T).correlationInto`
+- `GaussianCopula(T).sample`
+- `GaussianCopula(T).sampleFrom`
+- `GaussianCopula(T).sampleInto`
+- `GaussianCopula(T).sampleIntoFrom`
+- `GaussianCopula(T).sampleIntoChecked`
+- `GaussianCopula(T).sampleIntoCheckedFrom`
+- `GaussianCopula(T).sampleManyInto`
+- `GaussianCopula(T).sampleManyIntoFrom`
 - `StaticStudentTCopula(T, dimension)`
 - `multi.StaticStudentTCopula(T, dimension)`
 - `StaticStudentTCopula(T, dimension).Vector`
@@ -1484,6 +1503,27 @@ Reusable samplers:
 - `fillStudentTCopulaFrom`
 - `fillStudentTCopulaChecked`
 - `fillStudentTCopulaCheckedFrom`
+- `StudentTCopula(T)`
+- `multi.StudentTCopula(T)`
+- `StudentTCopula(T).init`
+- `StudentTCopula(T).new`
+- `StudentTCopula(T).deinit`
+- `StudentTCopula(T).clone`
+- `StudentTCopula(T).dimensionValue`
+- `StudentTCopula(T).rankValue`
+- `StudentTCopula(T).isDegenerate`
+- `StudentTCopula(T).degreesOfFreedomValue`
+- `StudentTCopula(T).dfValue`
+- `StudentTCopula(T).correlationValue`
+- `StudentTCopula(T).correlationInto`
+- `StudentTCopula(T).sample`
+- `StudentTCopula(T).sampleFrom`
+- `StudentTCopula(T).sampleInto`
+- `StudentTCopula(T).sampleIntoFrom`
+- `StudentTCopula(T).sampleIntoChecked`
+- `StudentTCopula(T).sampleIntoCheckedFrom`
+- `StudentTCopula(T).sampleManyInto`
+- `StudentTCopula(T).sampleManyIntoFrom`
 - `Multinomial`
 - `Multinomial.init`
 - `Multinomial.trialsValue`

@@ -587,6 +587,14 @@ pub const multi = struct {
     pub fn StaticStudentTCopula(comptime T: type, comptime dimension: usize) type {
         return distributions_module.StaticStudentTCopula(T, dimension);
     }
+
+    pub fn GaussianCopula(comptime T: type) type {
+        return distributions_module.GaussianCopula(T);
+    }
+
+    pub fn StudentTCopula(comptime T: type) type {
+        return distributions_module.StudentTCopula(T);
+    }
 };
 
 pub const BernoulliError = error{
@@ -26374,6 +26382,344 @@ pub fn fillStudentTCopulaCheckedFrom(source: anytype, comptime T: type, comptime
     dist.fillFrom(source, dest);
 }
 
+fn DynamicCopulaCorrelation(comptime T: type) type {
+    return struct {
+        values: []T,
+        dimension: usize,
+    };
+}
+
+/// Validate and symmetrize a runtime-dimension correlation matrix. Returns an
+/// allocator-owned flat row-major copy and its dimension.
+fn dynamicCopulaCorrelation(comptime T: type, allocator: std.mem.Allocator, correlation: []const T) !DynamicCopulaCorrelation(T) {
+    comptime requireFloat(T);
+    if (correlation.len == 0) return error.EmptyRange;
+
+    const dim_float = @sqrt(@as(f64, @floatFromInt(correlation.len)));
+    const dimension: usize = @intFromFloat(dim_float);
+    if (dimension == 0 or dimension * dimension != correlation.len) return error.InvalidLength;
+
+    for (correlation) |value| {
+        if (!std.math.isFinite(value)) return error.InvalidParameter;
+    }
+
+    const values = try allocator.alloc(T, correlation.len);
+    errdefer allocator.free(values);
+
+    var i: usize = 0;
+    while (i < dimension) : (i += 1) {
+        var j: usize = i;
+        while (j < dimension) : (j += 1) {
+            const value = (correlation[i * dimension + j] + correlation[j * dimension + i]) / 2;
+            values[i * dimension + j] = value;
+            values[j * dimension + i] = value;
+        }
+    }
+
+    i = 0;
+    while (i < dimension) : (i += 1) {
+        if (@abs(values[i * dimension + i] - 1) > 1e-6) return error.InvalidParameter;
+        var j: usize = 0;
+        while (j < dimension) : (j += 1) {
+            if (@abs(values[i * dimension + j]) > 1 + 1e-6) return error.InvalidParameter;
+        }
+    }
+
+    return .{ .values = values, .dimension = dimension };
+}
+
+fn mapCopulaUniforms(comptime T: type, out: []T) void {
+    const eps: T = std.math.floatEps(T);
+    for (out) |*value| {
+        value.* = @min(@max(normCdf(value.*), eps / 2), 1 - eps / 2);
+    }
+}
+
+/// Allocator-backed Gaussian copula with runtime dimension.
+///
+/// Same dependence model as `StaticGaussianCopula`, but the correlation matrix
+/// is a flat row-major `[]T` of length `dimension²` and the dimension is
+/// determined at runtime. The owned `MultivariateNormal(T)` factor performs
+/// the O(d³) factorization once; `sampleInto` is allocation-free after
+/// construction.
+pub fn GaussianCopula(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        correlation: []T,
+        mvn: MultivariateNormal(T),
+        allocator: std.mem.Allocator,
+
+        pub fn init(allocator: std.mem.Allocator, correlation: []const T) !Self {
+            const validated = try dynamicCopulaCorrelation(T, allocator, correlation);
+            errdefer allocator.free(validated.values);
+
+            const mean = try allocator.alloc(T, validated.dimension);
+            defer allocator.free(mean);
+            @memset(mean, 0);
+
+            var mvn = try MultivariateNormal(T).init(allocator, mean, validated.values);
+            errdefer mvn.deinit();
+
+            return .{
+                .correlation = validated.values,
+                .mvn = mvn,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(allocator: std.mem.Allocator, correlation: []const T) !Self {
+            return Self.init(allocator, correlation);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.mvn.deinit();
+            self.allocator.free(self.correlation);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const correlation = try allocator.dupe(T, self.correlation);
+            errdefer allocator.free(correlation);
+            var mvn = try self.mvn.clone(allocator);
+            errdefer mvn.deinit();
+            return .{
+                .correlation = correlation,
+                .mvn = mvn,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.mvn.dimensionValue();
+        }
+
+        pub fn rankValue(self: Self) usize {
+            return self.mvn.rankValue();
+        }
+
+        pub fn isDegenerate(self: Self) bool {
+            return self.mvn.isDegenerate();
+        }
+
+        pub fn correlationValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            return allocator.dupe(T, self.correlation);
+        }
+
+        pub fn correlationInto(self: Self, out: []T) Error!void {
+            if (out.len != self.correlation.len) return error.InvalidLength;
+            @memcpy(out, self.correlation);
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(rng, out[offset..][0..dimension]);
+            }
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(source, out[offset..][0..dimension]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            self.mvn.sampleIntoFrom(source, out);
+            mapCopulaUniforms(T, out);
+        }
+    };
+}
+
+/// Allocator-backed Student-t copula with runtime dimension.
+///
+/// Same dependence model as `StaticStudentTCopula`: a shared chi-squared scale
+/// induces symmetric tail dependence. `sampleInto` is allocation-free after
+/// construction.
+pub fn StudentTCopula(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        correlation: []T,
+        df: T,
+        mvn: MultivariateNormal(T),
+        allocator: std.mem.Allocator,
+
+        pub fn init(allocator: std.mem.Allocator, correlation: []const T, degrees_of_freedom: T) !Self {
+            if (!(degrees_of_freedom > 0) or !std.math.isFinite(degrees_of_freedom)) return error.InvalidParameter;
+
+            const validated = try dynamicCopulaCorrelation(T, allocator, correlation);
+            errdefer allocator.free(validated.values);
+
+            const mean = try allocator.alloc(T, validated.dimension);
+            defer allocator.free(mean);
+            @memset(mean, 0);
+
+            var mvn = try MultivariateNormal(T).init(allocator, mean, validated.values);
+            errdefer mvn.deinit();
+
+            return .{
+                .correlation = validated.values,
+                .df = degrees_of_freedom,
+                .mvn = mvn,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(allocator: std.mem.Allocator, correlation: []const T, degrees_of_freedom: T) !Self {
+            return Self.init(allocator, correlation, degrees_of_freedom);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.mvn.deinit();
+            self.allocator.free(self.correlation);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const correlation = try allocator.dupe(T, self.correlation);
+            errdefer allocator.free(correlation);
+            var mvn = try self.mvn.clone(allocator);
+            errdefer mvn.deinit();
+            return .{
+                .correlation = correlation,
+                .df = self.df,
+                .mvn = mvn,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.mvn.dimensionValue();
+        }
+
+        pub fn rankValue(self: Self) usize {
+            return self.mvn.rankValue();
+        }
+
+        pub fn isDegenerate(self: Self) bool {
+            return self.mvn.isDegenerate();
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn correlationValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            return allocator.dupe(T, self.correlation);
+        }
+
+        pub fn correlationInto(self: Self, out: []T) Error!void {
+            if (out.len != self.correlation.len) return error.InvalidLength;
+            @memcpy(out, self.correlation);
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(rng, out[offset..][0..dimension]);
+            }
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(source, out[offset..][0..dimension]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            self.mvn.sampleIntoFrom(source, out);
+            const scale = @sqrt(chiSquaredFrom(source, T, self.df) / self.df);
+            const eps: T = std.math.floatEps(T);
+            for (out) |*value| {
+                value.* = @min(@max(studentTCdf(value.* / scale, self.df), eps / 2), 1 - eps / 2);
+            }
+        }
+    };
+}
+
 pub fn Dirichlet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -47993,6 +48339,182 @@ test "StudentTCopula f32 sampling works" {
         inline for (0..3) |i| {
             try std.testing.expect(u[i] > 0 and u[i] < 1);
         }
+    }
+}
+
+test "GaussianCopula (dynamic) validates correlation matrices" {
+    const allocator = std.testing.allocator;
+    try std.testing.expectError(error.EmptyRange, GaussianCopula(f64).init(allocator, &[_]f64{}));
+    try std.testing.expectError(error.InvalidLength, GaussianCopula(f64).init(allocator, &[_]f64{ 1, 0.2, 0.2 }));
+    try std.testing.expectError(error.InvalidParameter, GaussianCopula(f64).init(allocator, &[_]f64{
+        1, std.math.nan(f64), 0.2, 1,
+    }));
+    try std.testing.expectError(error.InvalidParameter, GaussianCopula(f64).init(allocator, &[_]f64{
+        1.5, 0.2, 0.2, 1,
+    }));
+    try std.testing.expectError(error.InvalidCovariance, GaussianCopula(f64).init(allocator, &[_]f64{
+        1,    0.9, -0.9,
+        0.9,  1,   0.9,
+        -0.9, 0.9, 1,
+    }));
+}
+
+test "GaussianCopula (dynamic) samples match the static copula" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var dynamic_engine = alea.DefaultPrng.init(0xd0);
+    var static_engine = alea.DefaultPrng.init(0xd0);
+    const dynamic_rng = Rng.init(&dynamic_engine);
+    const static_rng = Rng.init(&static_engine);
+
+    const correlation = [_]f64{
+        1,   0.4, 0.2,
+        0.4, 1,   0.1,
+        0.2, 0.1, 1,
+    };
+    const static_correlation = [3][3]f64{
+        .{ 1, 0.4, 0.2 },
+        .{ 0.4, 1, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+
+    var dynamic = try GaussianCopula(f64).init(allocator, &correlation);
+    defer dynamic.deinit();
+    const static = try StaticGaussianCopula(f64, 3).init(static_correlation);
+    try std.testing.expectEqual(@as(usize, 3), dynamic.dimensionValue());
+
+    var buf: [3]f64 = undefined;
+    for (0..32) |_| {
+        dynamic.sampleInto(dynamic_rng, &buf);
+        const expected = static.sample(static_rng);
+        try std.testing.expectEqualSlices(f64, &expected, &buf);
+    }
+}
+
+test "GaussianCopula (dynamic) clone and caller buffers work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xd1);
+    const rng = Rng.init(&engine);
+
+    const correlation = [_]f64{
+        1,   0.3,
+        0.3, 1,
+    };
+    var dist = try GaussianCopula(f64).init(allocator, &correlation);
+    defer dist.deinit();
+    try std.testing.expectEqual(@as(usize, 2), dist.dimensionValue());
+    try std.testing.expectEqual(@as(usize, 2), dist.rankValue());
+    try std.testing.expect(!dist.isDegenerate());
+
+    var clone = try dist.clone(allocator);
+    defer clone.deinit();
+    var correlation_buf: [4]f64 = undefined;
+    try clone.correlationInto(&correlation_buf);
+    try std.testing.expectEqualSlices(f64, &correlation, &correlation_buf);
+
+    var out: [2]f64 = undefined;
+    try dist.sampleIntoChecked(rng, &out);
+    inline for (0..2) |i| try std.testing.expect(out[i] > 0 and out[i] < 1);
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, out[0..1]));
+
+    var batch: [6]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+    inline for (0..6) |i| try std.testing.expect(batch[i] > 0 and batch[i] < 1);
+
+    const allocated = try dist.sample(allocator, rng);
+    defer allocator.free(allocated);
+    inline for (0..2) |i| try std.testing.expect(allocated[i] > 0 and allocated[i] < 1);
+}
+
+test "StudentTCopula (dynamic) validates parameters and matches static" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var dynamic_engine = alea.DefaultPrng.init(0xd2);
+    var static_engine = alea.DefaultPrng.init(0xd2);
+    const dynamic_rng = Rng.init(&dynamic_engine);
+    const static_rng = Rng.init(&static_engine);
+
+    const correlation = [_]f64{
+        1,   0.4, 0.2,
+        0.4, 1,   0.1,
+        0.2, 0.1, 1,
+    };
+    const static_correlation = [3][3]f64{
+        .{ 1, 0.4, 0.2 },
+        .{ 0.4, 1, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+
+    try std.testing.expectError(error.InvalidParameter, StudentTCopula(f64).init(allocator, &correlation, 0));
+    try std.testing.expectError(error.InvalidParameter, StudentTCopula(f64).init(allocator, &correlation, -1));
+    try std.testing.expectError(error.InvalidParameter, StudentTCopula(f64).init(allocator, &correlation, std.math.nan(f64)));
+
+    var dynamic = try StudentTCopula(f64).init(allocator, &correlation, 5);
+    defer dynamic.deinit();
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dynamic.degreesOfFreedomValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dynamic.dfValue(), 1e-12);
+
+    const static = try StaticStudentTCopula(f64, 3).init(static_correlation, 5);
+    var buf: [3]f64 = undefined;
+    for (0..32) |_| {
+        dynamic.sampleInto(dynamic_rng, &buf);
+        const expected = static.sample(static_rng);
+        try std.testing.expectEqualSlices(f64, &expected, &buf);
+    }
+}
+
+test "StudentTCopula (dynamic) clone and caller buffers work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xd3);
+    const rng = Rng.init(&engine);
+
+    const correlation = [_]f64{
+        1,   0.5,
+        0.5, 1,
+    };
+    var dist = try StudentTCopula(f64).init(allocator, &correlation, 4);
+    defer dist.deinit();
+
+    var clone = try dist.clone(allocator);
+    defer clone.deinit();
+    var correlation_buf: [4]f64 = undefined;
+    try clone.correlationInto(&correlation_buf);
+    try std.testing.expectEqualSlices(f64, &correlation, &correlation_buf);
+
+    var out: [2]f64 = undefined;
+    try dist.sampleIntoChecked(rng, &out);
+    inline for (0..2) |i| try std.testing.expect(out[i] > 0 and out[i] < 1);
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, out[0..1]));
+
+    var batch: [6]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+    inline for (0..6) |i| try std.testing.expect(batch[i] > 0 and batch[i] < 1);
+}
+
+test "GaussianCopula and StudentTCopula (dynamic) f32 support" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xd4);
+    const rng = Rng.init(&engine);
+
+    const correlation = [_]f32{
+        1,    0.5, 0.25,
+        0.5,  1,   0.1,
+        0.25, 0.1, 1,
+    };
+    var gaussian = try GaussianCopula(f32).init(allocator, &correlation);
+    defer gaussian.deinit();
+    var student = try StudentTCopula(f32).init(allocator, &correlation, 5);
+    defer student.deinit();
+
+    var out: [3]f32 = undefined;
+    for (0..64) |_| {
+        gaussian.sampleInto(rng, &out);
+        inline for (0..3) |i| try std.testing.expect(out[i] > 0 and out[i] < 1);
+        student.sampleInto(rng, &out);
+        inline for (0..3) |i| try std.testing.expect(out[i] > 0 and out[i] < 1);
     }
 }
 
