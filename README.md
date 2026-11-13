@@ -165,7 +165,7 @@ The current Linux-first roadmap is intentionally broad:
   inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial, von Mises, wrapped Cauchy, von Mises-Fisher, Watson, Bingham,
-  Kent, matrix von Mises-Fisher (matrix Langevin),
+  Kent, matrix von Mises-Fisher (matrix Langevin), matrix Fisher on SO(3),
   truncated normal, Gaussian/Student-t copulas, matrix normal,
   matrix-variate Student-t, Wishart/Inverse-Wishart, Zig-native full-covariance
   multivariate normal with reusable dynamic Cholesky factorization plus
@@ -178,9 +178,9 @@ The current Linux-first roadmap is intentionally broad:
   `multi.MultivariateSkewNormal`,
   `multi.StaticMultivariateNormal`, `multi.GaussianCopula`,
   `multi.StudentTCopula`, `multi.MatrixNormal`, `multi.StaticMatrixNormal`,
-  `multi.MatrixT`, `multi.StaticMatrixT`, and
-  `multi.MatrixVonMisesFisher` provide multivariate namespace
-  discovery; local `rand_distr` scalar sampler `new(...)` constructor aliases
+  `multi.MatrixT`, `multi.StaticMatrixT`,
+  `multi.MatrixVonMisesFisher`, and `multi.MatrixFisher` provide multivariate
+  namespace discovery; local `rand_distr` scalar sampler `new(...)` constructor aliases
   are available over canonical `init(...)` names; root `distr` aliases
   `distributions` for local Rust
   `rand::distr::*` discovery

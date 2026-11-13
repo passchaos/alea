@@ -484,6 +484,10 @@ Directional distributions on the circle and sphere:
   orthogonal complement of the other columns, with configurable burn-in and
   thinning. Square `p = k` matrices are rejected because the fixed-sweep
   chain is periodic.
+- `MatrixFisher(T)` — exact matrix Fisher distribution on SO(3) with density
+  `exp(tr(FᵀR))`; the trace reduces to `tr(F) + qᵀAq` for a unit quaternion,
+  so sampling is an exact Bingham draw on S³ followed by the quaternion-to-
+  rotation conversion. No burn-in or thinning is needed.
 
 Copulas on the unit hypercube:
 

@@ -299,6 +299,37 @@ fn checkAdvancedMultivariate() !void {
         }
     }
 
+    // Matrix Fisher SO(3) isotropic trace moment.
+    {
+        const d: f64 = 2;
+        const parameter = [3][3]f64{
+            .{ d, 0, 0 },
+            .{ 0, d, 0 },
+            .{ 0, 0, d },
+        };
+        const dist = try alea.distributions.MatrixFisher(f64).init(parameter);
+        const steps: usize = 20_000;
+        var num: f64 = 0;
+        var den: f64 = 0;
+        var i: usize = 0;
+        while (i < steps) : (i += 1) {
+            const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+            const weight = @exp(4 * d * w * w) * @sqrt(1 - w * w);
+            num += (4 * w * w - 1) * weight;
+            den += weight;
+        }
+        const expected = num / den;
+        const samples = 20_000;
+        var sum: f64 = 0;
+        i = 0;
+        while (i < samples) : (i += 1) {
+            const r = dist.sampleFrom(&engine);
+            sum += r[0][0] + r[1][1] + r[2][2];
+        }
+        const nf: f64 = @floatFromInt(samples);
+        try expectFloatBetween("matrix fisher trace", sum / nf, expected - 0.03, expected + 0.03);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;
