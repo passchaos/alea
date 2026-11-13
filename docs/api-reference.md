@@ -3210,6 +3210,7 @@ Reusable samplers:
 - `WishartError`
 - `InverseWishartError`
 - `MatrixNormalError`
+- `MatrixTError`
 - `Wishart(T)`
 - `Wishart(T).init`
 - `Wishart(T).new`
@@ -3311,6 +3312,31 @@ Reusable samplers:
 - `StaticMatrixNormal(T, rows, cols).sampleIntoFrom`
 - `StaticMatrixNormal(T, rows, cols).sampleManyInto`
 - `StaticMatrixNormal(T, rows, cols).sampleManyIntoFrom`
+- `MatrixT(T)`
+- `multi.MatrixT(T)`
+- `MatrixT(T).init`
+- `MatrixT(T).new`
+- `MatrixT(T).deinit`
+- `MatrixT(T).clone`
+- `MatrixT(T).rowsValue`
+- `MatrixT(T).colsValue`
+- `MatrixT(T).degreesOfFreedomValue`
+- `MatrixT(T).dfValue`
+- `MatrixT(T).meanValues`
+- `MatrixT(T).meanAt`
+- `MatrixT(T).expectedValue`
+- `MatrixT(T).modeValue`
+- `MatrixT(T).rowCovarianceAt`
+- `MatrixT(T).colCovarianceAt`
+- `MatrixT(T).varianceAt`
+- `MatrixT(T).sample`
+- `MatrixT(T).sampleFrom`
+- `MatrixT(T).sampleInto`
+- `MatrixT(T).sampleIntoFrom`
+- `MatrixT(T).sampleIntoChecked`
+- `MatrixT(T).sampleIntoCheckedFrom`
+- `MatrixT(T).sampleManyInto`
+- `MatrixT(T).sampleManyIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`
