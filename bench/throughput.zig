@@ -480,6 +480,8 @@ pub fn main(init: std.process.Init) !void {
     try benchStudentTCopula(io, stdout, "alea student-t copula 3d", bytes / 64);
     try benchMatrixNormal(io, stdout, "alea matrix normal 2x3", bytes / 64);
     try benchMatrixT(io, stdout, "alea matrix t 2x3", bytes / 64);
+    try benchBetaPrime(io, stdout, "alea beta prime", bytes / 64);
+    try benchBetaBinomial(io, stdout, "alea beta binomial", bytes / 64);
     try stdout.flush();
 }
 
@@ -11468,6 +11470,56 @@ fn benchMatrixT(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
                 inline for (0..3) |c| checksum +%= @bitCast(sample[r][c]);
             }
         }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchBetaPrime(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const dist = alea.distributions.BetaPrime(f64).init(3, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xbe91);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum +%= @bitCast(dist.sample(rng));
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchBetaBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const dist = alea.distributions.BetaBinomial.init(20, 2, 3) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xbe92);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum +%= dist.sample(rng);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

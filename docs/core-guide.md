@@ -358,7 +358,8 @@ families.
   as aliases for `StandardExponential(T)` / `Exponential(T)`
 - poisson, vector poisson/Poisson-AD, geometric, vector geometric/failures
 - gamma/vector gamma, chi-squared/vector chi-squared, chi/vector chi, erlang/vector erlang,
-  beta/vector beta, Fisher F/vector Fisher F, Student t/vector Student t
+  beta/vector beta, beta prime/vector beta prime, beta-binomial/vector beta-binomial,
+  Fisher F/vector Fisher F, Student t/vector Student t
 - triangular/vector triangular, arcsine/vector arcsine, cauchy/vector cauchy, laplace/vector laplace, logistic/vector logistic, log-logistic/vector log-logistic, kumaraswamy/vector kumaraswamy,
   power-function/vector power-function, rayleigh/vector rayleigh, maxwell/vector maxwell, pareto/vector pareto, weibull/vector weibull
 - gumbel/vector gumbel, frechet/vector frechet, skew-normal/vector skew-normal, PERT/vector PERT
