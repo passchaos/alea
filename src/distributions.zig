@@ -25851,7 +25851,7 @@ pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     std.debug.assert(paretoParametersValid(T, scale, shape));
     if (scale == 0 or shape == std.math.inf(T)) return scale;
 
-    return scale / std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
+    return scale * @exp((-1 / shape) * @log(Rng.floatOpenFrom(source, T)));
 }
 
 pub fn fillPareto(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
@@ -26148,7 +26148,8 @@ pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     std.debug.assert(weibullParametersValid(T, scale, shape));
     if (scale == 0 or shape == std.math.inf(T)) return scale;
     if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
-    return scale * std.math.pow(T, -@log(Rng.floatOpenFrom(source, T)), 1 / shape);
+    const e = -@log(Rng.floatOpenFrom(source, T));
+    return scale * @exp((1 / shape) * @log(e));
 }
 
 pub fn fillWeibull(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
@@ -26714,7 +26715,7 @@ pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, sha
     if (shape == std.math.inf(T)) return location + scale;
 
     const u = Rng.floatOpenClosedFrom(source, T);
-    return location + scale * std.math.pow(T, -@log(u), -1 / shape);
+    return location + scale * @exp((-1 / shape) * @log(-@log(u)));
 }
 
 pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
