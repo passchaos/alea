@@ -6786,14 +6786,14 @@ All four noncentral distributions extend beyond local Rust `rand_distr` 0.6.0,
 which provides no noncentral distributions. All 730 tests pass (28 new tests
 across the batch); `zig build validate` passes all gates.
 
-The next product bar after S4-M1263, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, and S4-M1282 covers additional
+The next product bar after S4-M1263, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, S4-M1282, and S4-M1283 covers additional
 directional/multivariate distributions (Matrix von Mises-Fisher, Kent), Noncentral/GeneralizedPareto/
 ScaledInvChiSq/Hoyt/ExGaussian/Rice/Nakagami/InverseGamma vector/SIMD sampling,
 SIMD spherical bulk sampling paths, weighted/alias sampling
 advances, string generation expansion, longer statistical validation runs,
 broader platform evidence, or newly discovered core random-workflow gaps.
 
-S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, and S4-M1282 are recorded in
+S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, S4-M1282, and S4-M1283 are recorded in
 `compare/results/s4-m1264-vector-simd-advanced-distributions.md`,
 `compare/results/s4-m1265-wishart-inverse-wishart.md`,
 `compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md`,
@@ -6812,5 +6812,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1279-sampler-cdf-quantile-methods.md`, and
 `compare/results/s4-m1280-multivariate-marginal-cdfs.md`, and
 `compare/results/s4-m1281-advanced-multivariate-benchmarks.md`, and
-`compare/results/s4-m1282-wasi-report-allocator-fix.md`.
+`compare/results/s4-m1282-wasi-report-allocator-fix.md`, and
+`compare/results/s4-m1283-directional-copula-docs-refresh.md`.
 

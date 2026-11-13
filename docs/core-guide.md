@@ -450,6 +450,74 @@ Run `zig build run-unit-geometry` for a runnable comparison of unit surface,
 filled-volume, slice-fill, reusable-sampler diagnostics, and vector-lane unit
 geometry helpers.
 
+## Directional, Copula, and Matrix-Variate Distributions
+
+Directional distributions on the circle and sphere:
+
+- `VonMises(T)` / `StandardVonMises` — circular von Mises with Best–Fisher
+  rejection sampling, κ=0 uniform and large-κ point-mass behavior.
+- `WrappedCauchy(T)` / `StandardWrappedCauchy` — heavy-tailed circular
+  distribution with closed-form inverse-CDF sampling and SIMD vector support.
+- `VonMisesFisher(T, n)` — vMF on Sⁿ⁻¹ for comptime `n ≥ 2` with Wood (1994)
+  rejection sampling, `κ = 0` uniform, and `κ → ∞` point-mass fast paths.
+- `Watson(T, n)` — axial vMF counterpart with bipolar (`κ > 0`), girdle
+  (`κ < 0`), and uniform (`κ = 0`) regimes plus Kummer-function moment
+  diagnostics.
+- `Bingham(T, n)` — general quadratic-exponential density `exp(xᵀAx)` with a
+  deterministic symmetric Jacobi eigendecomposition, adaptive angular central
+  Gaussian rejection sampling, isotropic-uniform and `±mode` point-mass fast
+  paths.
+
+Copulas on the unit hypercube:
+
+- `StaticGaussianCopula(T, dim)` / `GaussianCopula(T)` — Gaussian copula
+  `z ~ N(0, R)`, `u_i = Φ(z_i)`, with correlation validation, rank-deficient
+  support, and open-interval clamping.
+- `StaticStudentTCopula(T, dim)` / `StudentTCopula(T)` — t-copula with a shared
+  `χ²(ν)` scale for symmetric tail dependence.
+- `multi.StaticGaussianCopula`, `multi.GaussianCopula`,
+  `multi.StaticStudentTCopula`, and `multi.StudentTCopula` provide namespace
+  discovery.
+
+Matrix-variate distributions:
+
+- `MatrixNormal(T)` / `StaticMatrixNormal(T, rows, cols)` — matrix normal
+  `MN(M, U, V)` with in-place `X = M + L_U Z L_Vᵀ` sampling.
+- `MatrixT(T)` / `StaticMatrixT(T, rows, cols)` — matrix-variate Student-t
+  with a shared `χ²(ν)` scale.
+- `StaticWishart(T, dim)` / `Wishart(T)` and
+  `StaticInverseWishart(T, dim)` / `InverseWishart(T)` — Wishart and
+  Inverse-Wishart priors on covariance matrices.
+- `multi.MatrixNormal`, `multi.StaticMatrixNormal`, `multi.MatrixT`, and
+  `multi.StaticMatrixT` provide namespace discovery.
+
+Run `zig build run-copulas` and `zig build run-matrix-normal` for runnable
+adoption examples covering static/dynamic copulas and matrix-normal sampling.
+
+## Distribution Diagnostics
+
+CDF and quantile helpers complement the samplers:
+
+- normal: `normCdf`, `probit`.
+- beta: `betaIncomplete`, `betaCdf`, `betaQuantile`.
+- gamma family: `gammaIncompleteP`, `gammaIncompleteQ`, `gammaCdf`,
+  `gammaQuantile`, `chiSquaredCdf`, `chiSquaredQuantile`.
+- Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
+  `fisherFQuantile`.
+- discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
+  `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
+  `negativeBinomialCdf`, `negativeBinomialQuantile`.
+- multivariate marginals: `Dirichlet(T).marginalCdf` /
+  `marginalQuantile` and `Multinomial.marginalCdf` / `marginalQuantile`.
+- reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,
+  `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Binomial`, `Geometric`,
+  `NegativeBinomial`, and `Poisson`.
+
+Quantiles use deterministic bisection (and a closed form for the geometric
+case), so they are diagnostics/ergonomics paths rather than hot sampling paths.
+Endpoints follow the usual `0` / `+∞` / `NaN` conventions, and degenerate
+parameters return the corresponding point-mass values.
+
 ## Sequence And Collection Sampling
 
 Use:

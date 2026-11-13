@@ -163,15 +163,29 @@ The current Linux-first roadmap is intentionally broad:
   rayleigh, maxwell, pareto, weibull, gumbel, frechet, skew-normal, PERT,
   inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
-  multinomial, and Zig-native full-covariance multivariate normal with
-  reusable dynamic Cholesky factorization plus allocation-free
-  `StaticMultivariateNormal(T, dimension)` fixed-array sampling;
-  `multi.Dirichlet`, `multi.MultivariateNormal`, and
-  `multi.StaticMultivariateNormal` provide multivariate
-  namespace discovery; local `rand_distr` scalar sampler `new(...)` constructor aliases
+  multinomial, von Mises, wrapped Cauchy, von Mises-Fisher, Watson, Bingham,
+  truncated normal, Gaussian/Student-t copulas, matrix normal,
+  matrix-variate Student-t, Wishart/Inverse-Wishart, and Zig-native
+  full-covariance multivariate normal with reusable dynamic Cholesky
+  factorization plus allocation-free `StaticMultivariateNormal(T, dimension)`
+  fixed-array sampling; `multi.Dirichlet`, `multi.MultivariateNormal`,
+  `multi.StaticMultivariateNormal`, `multi.GaussianCopula`,
+  `multi.StudentTCopula`, `multi.MatrixNormal`, `multi.StaticMatrixNormal`,
+  `multi.MatrixT`, and `multi.StaticMatrixT` provide multivariate namespace
+  discovery; local `rand_distr` scalar sampler `new(...)` constructor aliases
   are available over canonical `init(...)` names; root `distr` aliases
   `distributions` for local Rust
   `rand::distr::*` discovery
+- distribution diagnostics: `normCdf` / `probit`, `betaCdf` /
+  `betaQuantile`, `gammaCdf` / `gammaQuantile`, `chiSquaredCdf` /
+  `chiSquaredQuantile`, `studentTCdf` / `studentTQuantile`, `fisherFCdf` /
+  `fisherFQuantile`, `poissonCdf` / `poissonQuantile`, `binomialCdf` /
+  `binomialQuantile`, `geometricCdf` / `geometricQuantile`,
+  `negativeBinomialCdf` / `negativeBinomialQuantile`,
+  `Dirichlet(T).marginalCdf` / `marginalQuantile`, and
+  `Multinomial.marginalCdf` / `marginalQuantile`, plus sampler-level
+  `cdf(x)` / `quantile(p)` methods on the core continuous and discrete
+  samplers
 - O(1) repeated weighted sampling through alias tables
 
 The local Linux roadmap has progressed beyond basic feature bring-up into
