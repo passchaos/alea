@@ -370,9 +370,11 @@ Run `zig build run-rank-distributions` for a runnable comparison of finite
 rank-one behavior.
 - dirichlet, full-covariance multivariate normal, allocator-backed multivariate
   Student-t (`MultivariateT(T)` / `multi.MultivariateT(T)`) with a shared
-  chi-squared scale and heavier joint tails, and allocator-backed multivariate
+  chi-squared scale and heavier joint tails, allocator-backed multivariate
   Laplace (`MultivariateLaplace(T)` / `multi.MultivariateLaplace(T)`) with an
-  exponential scale mixture
+  exponential scale mixture, and allocator-backed multivariate skew-normal
+  (`MultivariateSkewNormal(T)` / `multi.MultivariateSkewNormal(T)`) with
+  shape-driven asymmetry
 
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be

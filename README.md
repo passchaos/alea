@@ -170,9 +170,11 @@ The current Linux-first roadmap is intentionally broad:
   multivariate normal with reusable dynamic Cholesky factorization plus
   allocation-free `StaticMultivariateNormal(T, dimension)` fixed-array
   sampling, allocator-backed `MultivariateT(T)` with a shared chi-squared
-  scale, and allocator-backed `MultivariateLaplace(T)` with an exponential
-  scale mixture; `multi.Dirichlet`, `multi.MultivariateNormal`,
+  scale, allocator-backed `MultivariateLaplace(T)` with an exponential
+  scale mixture, and allocator-backed `MultivariateSkewNormal(T)` with
+  shape-driven asymmetry; `multi.Dirichlet`, `multi.MultivariateNormal`,
   `multi.MultivariateT`, `multi.MultivariateLaplace`,
+  `multi.MultivariateSkewNormal`,
   `multi.StaticMultivariateNormal`, `multi.GaussianCopula`,
   `multi.StudentTCopula`, `multi.MatrixNormal`, `multi.StaticMatrixNormal`,
   `multi.MatrixT`, and `multi.StaticMatrixT` provide multivariate namespace

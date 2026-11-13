@@ -193,6 +193,36 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("multivariate laplace accessor variance", try dist.varianceAt(0), 0.999, 1.001);
     }
 
+    // Allocator-backed multivariate skew-normal moment recovery.
+    {
+        const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;
+        const location = [_]f64{ 0, 0 };
+        const scale = [_]f64{ 1, 0.5, 0.5, 2 };
+        const shape = [_]f64{ 2, -1 };
+        var dist = try alea.distributions.MultivariateSkewNormal(f64).init(allocator, &location, &scale, &shape);
+        defer dist.deinit();
+        const inv_sqrt5: f64 = 1.0 / @sqrt(5.0);
+        const delta0: f64 = 1.5 * inv_sqrt5;
+        const normal_factor: f64 = @sqrt(2.0 / std.math.pi);
+        const expected_mean0 = normal_factor * delta0;
+        const expected_var0 = 1 - (2.0 / std.math.pi) * delta0 * delta0;
+        const samples = 40_000;
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var out: [2]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleIntoFrom(&engine, &out);
+            sum += out[0];
+            sum_sq += out[0] * out[0];
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const observed_mean = sum / nf;
+        try expectFloatBetween("multivariate skew-normal mean", observed_mean, expected_mean0 - 0.03, expected_mean0 + 0.03);
+        try expectFloatBetween("multivariate skew-normal variance", sum_sq / nf - observed_mean * observed_mean, expected_var0 - 0.06, expected_var0 + 0.06);
+        try expectFloatBetween("multivariate skew-normal accessor variance", try dist.varianceAt(0), expected_var0 - 1e-9, expected_var0 + 1e-9);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;
