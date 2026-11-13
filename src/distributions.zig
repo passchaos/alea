@@ -559,6 +559,149 @@ pub fn studentTQuantile(p: anytype, nu: anytype) @TypeOf(p, nu) {
     return -@sqrt(nu * (1 - x) / x);
 }
 
+/// Power-series evaluation of the regularized lower incomplete gamma for
+/// `x < a + 1`.
+fn gammaSeriesP(comptime T: type, a: T, x: T) T {
+    const max_iter = 300;
+    const eps = 64 * std.math.floatEps(T);
+    var sum = 1 / a;
+    var term = sum;
+    var n: usize = 1;
+    while (n <= max_iter) : (n += 1) {
+        const n_f: T = @floatFromInt(n);
+        term *= x / (a + n_f);
+        sum += term;
+        if (@abs(term) <= @abs(sum) * eps) break;
+    }
+    const log_prefactor = a * @log(x) - x - std.math.lgamma(T, a);
+    return sum * @exp(log_prefactor);
+}
+
+/// Lentz continued-fraction evaluation of the regularized upper incomplete
+/// gamma for `x >= a + 1`.
+fn gammaContinuedFractionQ(comptime T: type, a: T, x: T) T {
+    const max_iter = 300;
+    const eps = 64 * std.math.floatEps(T);
+    const fpmin = std.math.floatMin(T) * 16;
+
+    var b = x + 1 - a;
+    var c: T = 1 / fpmin;
+    var d = 1 / b;
+    var h = d;
+    var i: usize = 1;
+    while (i <= max_iter) : (i += 1) {
+        const i_f: T = @floatFromInt(i);
+        const an = -i_f * (i_f - a);
+        b += 2;
+        d = an * d + b;
+        if (@abs(d) < fpmin) d = fpmin;
+        c = b + an / c;
+        if (@abs(c) < fpmin) c = fpmin;
+        d = 1 / d;
+        const delta = d * c;
+        h *= delta;
+        if (@abs(delta - 1) <= eps) break;
+    }
+    const log_prefactor = a * @log(x) - x - std.math.lgamma(T, a);
+    return @exp(log_prefactor) * h;
+}
+
+/// Regularized lower incomplete gamma P(a, x) = γ(a, x)/Γ(a).
+pub fn gammaIncompleteP(a: anytype, x: anytype) @TypeOf(a, x) {
+    const T = @TypeOf(a, x);
+    comptime requireFloat(T);
+    if (!(a > 0) or !std.math.isFinite(a)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    if (x < a + 1) return gammaSeriesP(T, a, x);
+    return 1 - gammaContinuedFractionQ(T, a, x);
+}
+
+/// Regularized upper incomplete gamma Q(a, x) = Γ(a, x)/Γ(a) = 1 − P(a, x).
+pub fn gammaIncompleteQ(a: anytype, x: anytype) @TypeOf(a, x) {
+    const T = @TypeOf(a, x);
+    comptime requireFloat(T);
+    if (!(a > 0) or !std.math.isFinite(a)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 1;
+    if (x == std.math.inf(T)) return 0;
+    if (x < a + 1) return 1 - gammaSeriesP(T, a, x);
+    return gammaContinuedFractionQ(T, a, x);
+}
+
+/// Gamma(shape, scale) cumulative distribution function.
+pub fn gammaCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, scale) {
+    const T = @TypeOf(x, shape, scale);
+    comptime requireFloat(T);
+    if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return gammaIncompleteP(shape, x / scale);
+}
+
+/// Inverse Gamma(shape, scale) CDF. p=0 → 0, p=1 → +∞.
+pub fn gammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shape, scale) {
+    const T = @TypeOf(p, shape, scale);
+    comptime requireFloat(T);
+    if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+
+    var lo: T = 0;
+    var hi = scale * @max(@as(T, 1), shape);
+    var expansion: usize = 0;
+    while (gammaCdf(hi, shape, scale) < p and expansion < 1024) : (expansion += 1) {
+        hi *= 2;
+        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    }
+
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (gammaCdf(mid, shape, scale) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return (lo + hi) / 2;
+}
+
+/// Chi-squared cumulative distribution function.
+pub fn chiSquaredCdf(x: anytype, dof: anytype) @TypeOf(x, dof) {
+    const T = @TypeOf(x, dof);
+    comptime requireFloat(T);
+    if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return gammaIncompleteP(dof / 2, x / 2);
+}
+
+/// Inverse chi-squared CDF. p=0 → 0, p=1 → +∞.
+pub fn chiSquaredQuantile(p: anytype, dof: anytype) @TypeOf(p, dof) {
+    const T = @TypeOf(p, dof);
+    comptime requireFloat(T);
+    if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
+    return gammaQuantile(p, @as(T, dof / 2), @as(T, 2));
+}
+
+/// Poisson cumulative distribution function for non-negative integer-valued
+/// `k`: P(X ≤ k; λ) = Q(k+1, λ). λ=0 is the point mass at 0.
+pub fn poissonCdf(k: anytype, lambda: anytype) @TypeOf(k, lambda) {
+    const T = @TypeOf(k, lambda);
+    comptime requireFloat(T);
+    if (std.math.isNan(k) or std.math.isNan(lambda)) return std.math.nan(T);
+    if (k < 0) return 0;
+    if (k == std.math.inf(T)) return 1;
+    if (lambda == 0) return 1;
+    if (!(lambda > 0) or !std.math.isFinite(lambda)) return std.math.nan(T);
+    return gammaIncompleteQ(@floor(k) + 1, lambda);
+}
+
 const common = @import("distributions/common.zig");
 
 pub const Error = common.Error;
@@ -49050,6 +49193,63 @@ test "studentTQuantile matches known values and symmetry" {
 
     try std.testing.expectApproxEqAbs(probit(@as(f64, 0.9)), studentTQuantile(@as(f64, 0.9), @as(f64, 1e7)), 1e-6);
     try std.testing.expectApproxEqAbs(@as(f32, 1), studentTQuantile(@as(f32, 0.75), @as(f32, 1)), 1e-4);
+}
+
+test "gammaIncompleteP and gammaIncompleteQ match known values" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3934693402873666), gammaIncompleteP(@as(f64, 1), @as(f64, 0.5)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), gammaIncompleteP(@as(f64, 1), @as(f64, 1)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8646647167633873), gammaIncompleteP(@as(f64, 1), @as(f64, 2)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8427007929497149), gammaIncompleteP(@as(f64, 0.5), @as(f64, 1)), 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.36787944117144233), gammaIncompleteQ(@as(f64, 1), @as(f64, 1)), 1e-12);
+
+    inline for ([_]f64{ 0.5, 1, 2, 5 }) |a| {
+        inline for ([_]f64{ 0.25, 1, 3, 8 }) |x| {
+            try std.testing.expectApproxEqAbs(@as(f64, 1), gammaIncompleteP(a, x) + gammaIncompleteQ(a, x), 1e-12);
+        }
+    }
+
+    try std.testing.expectApproxEqAbs(@as(f32, 0.63212055), gammaIncompleteP(@as(f32, 1), @as(f32, 1)), 1e-5);
+    try std.testing.expect(std.math.isNan(gammaIncompleteP(@as(f64, 0), @as(f64, 1))));
+    try std.testing.expectEqual(@as(f64, 0), gammaIncompleteP(@as(f64, 2), @as(f64, 0)));
+}
+
+test "gammaCdf and gammaQuantile round-trip" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), gammaCdf(@as(f64, 2), @as(f64, 1), @as(f64, 2)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), gammaCdf(@as(f64, -1), @as(f64, 2), @as(f64, 1)));
+    try std.testing.expectEqual(@as(f64, 1), gammaCdf(std.math.inf(f64), @as(f64, 2), @as(f64, 1)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const x = gammaQuantile(p, @as(f64, 2.5), @as(f64, 1.5));
+        try std.testing.expect(x > 0);
+        try std.testing.expectApproxEqAbs(p, gammaCdf(x, @as(f64, 2.5), @as(f64, 1.5)), 1e-9);
+    }
+
+    try std.testing.expectEqual(@as(f64, 0), gammaQuantile(@as(f64, 0), @as(f64, 2), @as(f64, 1)));
+    try std.testing.expect(std.math.isNan(gammaQuantile(@as(f64, 0.5), @as(f64, -1), @as(f64, 1))));
+}
+
+test "chiSquaredCdf and chiSquaredQuantile match known values" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6826894921370859), chiSquaredCdf(@as(f64, 1), @as(f64, 1)), 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), chiSquaredCdf(@as(f64, 2), @as(f64, 2)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.8414588206941254), chiSquaredQuantile(@as(f64, 0.95), @as(f64, 1)), 1e-8);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.991464547107982), chiSquaredQuantile(@as(f64, 0.95), @as(f64, 2)), 1e-8);
+
+    inline for ([_]f64{ 0.05, 0.5, 0.95 }) |p| {
+        const x = chiSquaredQuantile(p, @as(f64, 4));
+        try std.testing.expectApproxEqAbs(p, chiSquaredCdf(x, @as(f64, 4)), 1e-9);
+    }
+
+    try std.testing.expect(std.math.isNan(chiSquaredCdf(@as(f64, 1), @as(f64, 0))));
+}
+
+test "poissonCdf matches known values and point masses" {
+    try std.testing.expectApproxEqAbs(@as(f64, 0.857123460498547), poissonCdf(@as(f64, 3), @as(f64, 2)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4060058497098381), poissonCdf(@as(f64, 1), @as(f64, 2)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), poissonCdf(@as(f64, -1), @as(f64, 2)));
+    try std.testing.expectEqual(@as(f64, 1), poissonCdf(@as(f64, 0), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 1), poissonCdf(std.math.inf(f64), @as(f64, 2)));
+    try std.testing.expect(std.math.isNan(poissonCdf(@as(f64, 3), @as(f64, -1))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.85712346), poissonCdf(@as(f32, 3), @as(f32, 2)), 1e-5);
 }
 
 test "StudentTCopula constructor validates parameters" {

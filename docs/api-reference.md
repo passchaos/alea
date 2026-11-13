@@ -642,6 +642,8 @@ self-forking.
   `StandardWrappedCauchy.fill`, `StandardWrappedCauchy.fillFrom`,
   `normPdf`, `normCdf`, `probit`, `betaIncomplete`, `betaCdf`, `betaQuantile`,
   `studentTCdf`, `studentTQuantile`, `fisherFCdf`, `fisherFQuantile`,
+  `gammaIncompleteP`, `gammaIncompleteQ`, `gammaCdf`, `gammaQuantile`,
+  `chiSquaredCdf`, `chiSquaredQuantile`, `poissonCdf`,
   `vonMises`, `vonMisesFrom`, `vonMisesChecked`, `vonMisesCheckedFrom`,
   `fillVonMises`, `fillVonMisesFrom`, `fillVonMisesChecked`, `fillVonMisesCheckedFrom`,
   `vectorVonMises`, `vectorVonMisesFrom`, `vectorVonMisesChecked`, `vectorVonMisesCheckedFrom`,
