@@ -894,6 +894,7 @@ pub const StudentTCopulaError = Error;
 pub const MatrixNormalError = Error;
 pub const MatrixTError = Error;
 pub const MatrixVonMisesFisherError = Error;
+pub const MatrixFisherError = error{InvalidParameter};
 
 /// Von Mises-Fisher distribution error set.
 pub const VonMisesFisherError = error{
@@ -1020,6 +1021,10 @@ pub const multi = struct {
 
     pub fn MatrixVonMisesFisher(comptime T: type) type {
         return distributions_module.MatrixVonMisesFisher(T);
+    }
+
+    pub fn MatrixFisher(comptime T: type) type {
+        return distributions_module.MatrixFisher(T);
     }
 };
 
@@ -31274,6 +31279,143 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
     };
 }
 
+// ============================================================================
+// Matrix Fisher distribution on SO(3)
+// ============================================================================
+//
+// The matrix Fisher distribution on SO(3) has density f(R) ∝ exp(tr(FᵀR)).
+// With the unit quaternion q = (w, x, y, z) parameterizing R(q), the trace is
+//
+//     tr(FᵀR(q)) = tr(F) + qᵀAq
+//
+// for the symmetric 4×4 matrix A below. Sampling therefore reduces exactly to
+// a Bingham distribution on S³, which Alea already provides.
+
+fn matrixFisherQuaternionMatrix(comptime T: type, f: [3][3]T) [4][4]T {
+    return .{
+        .{ 0, f[2][1] - f[1][2], f[0][2] - f[2][0], f[1][0] - f[0][1] },
+        .{ f[2][1] - f[1][2], -2 * (f[1][1] + f[2][2]), f[0][1] + f[1][0], f[0][2] + f[2][0] },
+        .{ f[0][2] - f[2][0], f[0][1] + f[1][0], -2 * (f[0][0] + f[2][2]), f[1][2] + f[2][1] },
+        .{ f[1][0] - f[0][1], f[0][2] + f[2][0], f[1][2] + f[2][1], -2 * (f[0][0] + f[1][1]) },
+    };
+}
+
+fn matrixFisherQuaternionToRotation(comptime T: type, q: [4]T) [3][3]T {
+    const w = q[0];
+    const x = q[1];
+    const y = q[2];
+    const z = q[3];
+    const two: T = 2;
+    return .{
+        .{ 1 - two * (y * y + z * z), two * (x * y - w * z), two * (x * z + w * y) },
+        .{ two * (x * y + w * z), 1 - two * (x * x + z * z), two * (y * z - w * x) },
+        .{ two * (x * z - w * y), two * (y * z + w * x), 1 - two * (x * x + y * y) },
+    };
+}
+
+/// Matrix Fisher distribution on SO(3) with density `exp(tr(FᵀR))`.
+///
+/// Sampling is exact and independent: the quaternion reduction turns the
+/// density into a Bingham distribution on S³, and the resulting unit
+/// quaternion is converted back to a rotation matrix. This covers the square
+/// `p = k = 3` case that the `MatrixVonMisesFisher` Gibbs sampler rejects.
+pub fn MatrixFisher(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        parameter: [3][3]T,
+        bingham_dist: Bingham(T, 4),
+
+        pub fn init(parameter: [3][3]T) MatrixFisherError!Self {
+            inline for (0..3) |i| {
+                inline for (0..3) |j| {
+                    if (!std.math.isFinite(parameter[i][j])) return error.InvalidParameter;
+                }
+            }
+            const bingham_dist = try Bingham(T, 4).init(matrixFisherQuaternionMatrix(T, parameter));
+            return Self{ .parameter = parameter, .bingham_dist = bingham_dist };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(parameter: [3][3]T) Self {
+            return Self.init(parameter) catch |e| {
+                std.debug.panic("MatrixFisher.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn parameterValue(self: Self) [3][3]T {
+            return self.parameter;
+        }
+
+        pub fn parameterAt(self: Self, row: usize, col: usize) T {
+            std.debug.assert(row < 3 and col < 3);
+            return self.parameter[row][col];
+        }
+
+        /// The derived symmetric 4×4 Bingham parameter matrix.
+        pub fn quaternionParameterValue(self: Self) [4][4]T {
+            return matrixFisherQuaternionMatrix(T, self.parameter);
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3][3]T {
+            return matrixFisherQuaternionToRotation(T, self.bingham_dist.sample(rng));
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3][3]T {
+            return matrixFisherQuaternionToRotation(T, self.bingham_dist.sampleFrom(source));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3][3]T) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3][3]T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+// -----------------------------------------------------------------------------
+// Matrix Fisher free functions
+// -----------------------------------------------------------------------------
+
+pub fn matrixFisher(rng: Rng, comptime T: type, parameter: [3][3]T) MatrixFisherError![3][3]T {
+    return matrixFisherCheckedFrom(rng, T, parameter);
+}
+
+pub fn matrixFisherFrom(source: anytype, comptime T: type, parameter: [3][3]T) [3][3]T {
+    const dist = MatrixFisher(T).new(parameter);
+    return dist.sampleFrom(source);
+}
+
+pub fn matrixFisherChecked(rng: Rng, comptime T: type, parameter: [3][3]T) MatrixFisherError![3][3]T {
+    return matrixFisherCheckedFrom(rng, T, parameter);
+}
+
+pub fn matrixFisherCheckedFrom(source: anytype, comptime T: type, parameter: [3][3]T) MatrixFisherError![3][3]T {
+    const dist = try MatrixFisher(T).init(parameter);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillMatrixFisher(rng: Rng, comptime T: type, dest: [][3][3]T, parameter: [3][3]T) MatrixFisherError!void {
+    return fillMatrixFisherCheckedFrom(rng, T, dest, parameter);
+}
+
+pub fn fillMatrixFisherFrom(source: anytype, comptime T: type, dest: [][3][3]T, parameter: [3][3]T) void {
+    const dist = MatrixFisher(T).new(parameter);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillMatrixFisherChecked(rng: Rng, comptime T: type, dest: [][3][3]T, parameter: [3][3]T) MatrixFisherError!void {
+    return fillMatrixFisherCheckedFrom(rng, T, dest, parameter);
+}
+
+pub fn fillMatrixFisherCheckedFrom(source: anytype, comptime T: type, dest: [][3][3]T, parameter: [3][3]T) MatrixFisherError!void {
+    const dist = try MatrixFisher(T).init(parameter);
+    dist.fillFrom(source, dest);
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -53430,6 +53572,164 @@ test "MatrixVonMisesFisher clone and f32 work" {
     for (0..16) |_| {
         try dist32.sampleInto(Rng.init(&engine32), &out32);
         for (out32) |value| try std.testing.expect(std.math.isFinite(value));
+    }
+}
+
+test "MatrixFisher quaternion quadratic form matches the trace" {
+    const f = [3][3]f64{
+        .{ 1.2, -0.3, 0.4 },
+        .{ 0.5, 0.8, -0.2 },
+        .{ -0.6, 0.7, 1.1 },
+    };
+    const a = matrixFisherQuaternionMatrix(f64, f);
+    const trace_f = f[0][0] + f[1][1] + f[2][2];
+    const raw_quaternions = [4][4]f64{
+        .{ 1, 0, 0, 0 },
+        .{ 0, 1, 0, 0 },
+        .{ 0.5, 0.5, 0.5, 0.5 },
+        .{ 0.3, -0.4, 0.5, 0.7 },
+    };
+    for (raw_quaternions) |raw| {
+        const norm = @sqrt(raw[0] * raw[0] + raw[1] * raw[1] + raw[2] * raw[2] + raw[3] * raw[3]);
+        var q: [4]f64 = undefined;
+        inline for (0..4) |i| q[i] = raw[i] / norm;
+        var quadratic: f64 = 0;
+        inline for (0..4) |i| {
+            inline for (0..4) |j| quadratic += q[i] * a[i][j] * q[j];
+        }
+        const r = matrixFisherQuaternionToRotation(f64, q);
+        var trace: f64 = 0;
+        inline for (0..3) |i| {
+            inline for (0..3) |j| trace += f[i][j] * r[i][j];
+        }
+        try std.testing.expectApproxEqAbs(trace, quadratic + trace_f, 1e-10);
+    }
+}
+
+test "MatrixFisher zero parameter is uniform on SO(3)" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x3b01);
+    const rng = Rng.init(&engine);
+
+    const dist = try MatrixFisher(f64).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, 0, 0 },
+        .{ 0, 0, 0 },
+    });
+    const count = 20_000;
+    var sums = [_]f64{0} ** 9;
+    for (0..count) |_| {
+        const r = dist.sample(rng);
+        inline for (0..3) |i| {
+            inline for (0..3) |j| sums[i * 3 + j] += r[i][j];
+        }
+        var dot: [3][3]f64 = undefined;
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                var value: f64 = 0;
+                inline for (0..3) |k| value += r[k][i] * r[k][j];
+                dot[i][j] = value;
+            }
+        }
+        inline for (0..3) |i| {
+            inline for (0..3) |j| {
+                try std.testing.expectApproxEqAbs(if (i == j) @as(f64, 1) else @as(f64, 0), dot[i][j], 1e-9);
+            }
+        }
+        const det = r[0][0] * (r[1][1] * r[2][2] - r[1][2] * r[2][1]) -
+            r[0][1] * (r[1][0] * r[2][2] - r[1][2] * r[2][0]) +
+            r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), det, 1e-9);
+    }
+    const nf: f64 = @floatFromInt(count);
+    inline for (0..9) |i| {
+        try std.testing.expectApproxEqAbs(@as(f64, 0), sums[i] / nf, 0.02);
+    }
+}
+
+test "MatrixFisher isotropic parameter matches the exact trace moment" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x3b02);
+    const rng = Rng.init(&engine);
+
+    const d: f64 = 2;
+    const dist = try MatrixFisher(f64).init(.{
+        .{ d, 0, 0 },
+        .{ 0, d, 0 },
+        .{ 0, 0, d },
+    });
+
+    // Under the S³ Bingham reduction the density is ∝ exp(4d w²) and the
+    // uniform marginal of w is ∝ √(1−w²); tr(R) = 4w² − 1.
+    const steps: usize = 20_000;
+    var num: f64 = 0;
+    var den: f64 = 0;
+    for (0..steps) |i| {
+        const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+        const weight = @exp(4 * d * w * w) * @sqrt(1 - w * w);
+        num += (4 * w * w - 1) * weight;
+        den += weight;
+    }
+    const expected = num / den;
+
+    const count = 20_000;
+    var sum: f64 = 0;
+    for (0..count) |_| {
+        const r = dist.sample(rng);
+        sum += r[0][0] + r[1][1] + r[2][2];
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(expected, sum / nf, 0.02);
+}
+
+test "MatrixFisher free functions, fill, and f32 work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x3b03);
+    const rng = Rng.init(&engine);
+
+    const parameter = [3][3]f64{
+        .{ 0.8, -0.2, 0.3 },
+        .{ 0.4, 0.6, -0.1 },
+        .{ -0.5, 0.2, 0.9 },
+    };
+    var buf: [8][3][3]f64 = undefined;
+    try fillMatrixFisher(rng, f64, &buf, parameter);
+    for (buf) |r| {
+        var norm_sq: f64 = 0;
+        inline for (0..3) |i| {
+            inline for (0..3) |j| norm_sq += r[i][j] * r[i][j];
+        }
+        try std.testing.expectApproxEqAbs(@as(f64, 3), norm_sq, 1e-9);
+    }
+
+    const single = try matrixFisherChecked(rng, f64, parameter);
+    var norm_sq: f64 = 0;
+    inline for (0..3) |i| {
+        inline for (0..3) |j| norm_sq += single[i][j] * single[i][j];
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 3), norm_sq, 1e-9);
+
+    const bad = [3][3]f64{
+        .{ 0, 0, 0 },
+        .{ 0, std.math.nan(f64), 0 },
+        .{ 0, 0, 0 },
+    };
+    try std.testing.expectError(error.InvalidParameter, matrixFisher(rng, f64, bad));
+    try std.testing.expectError(error.InvalidParameter, fillMatrixFisher(rng, f64, &buf, bad));
+
+    const parameter32 = [3][3]f32{
+        .{ 0.8, -0.2, 0.3 },
+        .{ 0.4, 0.6, -0.1 },
+        .{ -0.5, 0.2, 0.9 },
+    };
+    var buf32: [4][3][3]f32 = undefined;
+    try fillMatrixFisher(rng, f32, &buf32, parameter32);
+    for (buf32) |r| {
+        var norm32: f32 = 0;
+        inline for (0..3) |i| {
+            inline for (0..3) |j| norm32 += r[i][j] * r[i][j];
+        }
+        try std.testing.expect(@abs(norm32 - 3) < 1e-3);
     }
 }
 
