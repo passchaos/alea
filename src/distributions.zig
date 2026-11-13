@@ -8919,28 +8919,39 @@ fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]v
     var y = s * cos_angle;
     var z = s * sin_angle;
 
-    const mu0 = mean_dir[0];
+    vectorHouseholderReflect(VectorType, mean_dir, &x, &y, &z);
+    return .{ x, y, z };
+}
+
+/// Householder-reflect a per-lane point from the e₁ frame to the shared
+/// direction `mean` (all lanes use the same direction).
+fn vectorHouseholderReflect(comptime VectorType: type, mean: [3]vectorChild(VectorType), x: *VectorType, y: *VectorType, z: *VectorType) void {
+    const Child = vectorChild(VectorType);
+    const V = VectorType;
+    const mu0 = mean[0];
     const tol: Child = if (Child == f32) @floatCast(1e-5) else @floatCast(1e-12);
-    if (@abs(mu0 - 1) < tol) return .{ x, y, z };
-    if (@abs(mu0 + 1) < tol) return .{ -x, y, z };
+    if (@abs(mu0 - 1) < tol) return;
+    if (@abs(mu0 + 1) < tol) {
+        x.* = -x.*;
+        return;
+    }
 
     var vv: Child = 0;
     var vx: V = @splat(0);
     var v_hh: [3]Child = undefined;
     v_hh[0] = 1 - mu0;
     vv += v_hh[0] * v_hh[0];
-    vx += @as(V, @splat(v_hh[0])) * x;
-    v_hh[1] = -mean_dir[1];
+    vx += @as(V, @splat(v_hh[0])) * x.*;
+    v_hh[1] = -mean[1];
     vv += v_hh[1] * v_hh[1];
-    vx += @as(V, @splat(v_hh[1])) * y;
-    v_hh[2] = -mean_dir[2];
+    vx += @as(V, @splat(v_hh[1])) * y.*;
+    v_hh[2] = -mean[2];
     vv += v_hh[2] * v_hh[2];
-    vx += @as(V, @splat(v_hh[2])) * z;
+    vx += @as(V, @splat(v_hh[2])) * z.*;
     const factor = vx * @as(V, @splat(2 / vv));
-    x -= factor * @as(V, @splat(v_hh[0]));
-    y -= factor * @as(V, @splat(v_hh[1]));
-    z -= factor * @as(V, @splat(v_hh[2]));
-    return .{ x, y, z };
+    x.* -= factor * @as(V, @splat(v_hh[0]));
+    y.* -= factor * @as(V, @splat(v_hh[1]));
+    z.* -= factor * @as(V, @splat(v_hh[2]));
 }
 
 /// SIMD-vectorized von Mises-Fisher sampler on S². One vector holds one
@@ -9275,21 +9286,21 @@ pub fn Watson(comptime T: type, comptime n: usize) type {
             const d: T = @floatFromInt(n);
             if (k == 0) return 1 / d;
             if (k > 50) {
-                // Bipolar asymptotic: ρ₂ ≈ 1 − (d-1)/(2k) + O(1/k²).
-                return 1 - (d - 1) / (2 * k);
+                // Bipolar asymptotic: ρ₂ ≈ 1 − (d-1)/(2k) − (d-1)/(4k²).
+                return 1 - (d - 1) / (2 * k) - (d - 1) / (4 * k * k);
             }
-            if (k < -50) {
-                // Girdle asymptotic: ρ₂ ≈ (d-1)/(-2k) + O(1/k²) for n≥3; for n=2 ~1/(-2k).
-                if (n == 2) return 1 / (-2 * k);
-                return (d - 1) / (-2 * k);
+            if (k < -30) {
+                // Girdle asymptotic: the density concentrates near w = 0 and
+                // the (1−w²) weight is negligible, so ρ₂ ≈ 1/(−2κ) for all n.
+                return 1 / (-2 * k);
             }
-            // Moderate |κ|: series expansion of the Kummer function ratio.
-            // ρ₂ = M(3/2, (d+1)/2, κ) / (d · M(1/2, (d-1)/2, κ))
+            // Moderate |κ|: series expansion of the Kummer function ratio
+            //   ρ₂ = M(3/2, (d+2)/2, κ) / (d · M(1/2, d/2, κ)),
             // where M(a,b,z) = ₁F₁(a;b;z).
-            // Use truncated series M(a,b,z) = Σ z^j · (a)_j / ((b)_j · j!)
-            // with enough terms for |κ| ≤ 50.
-            const M1 = kummerM(1.0 / 2.0, (d - 1) / 2.0, k, 60);
-            const M2 = kummerM(3.0 / 2.0, (d + 1) / 2.0, k, 60);
+            // Use enough terms for |κ| ≤ 50; 160 terms avoids the truncation
+            // error that 60 terms produced near κ = 50.
+            const M1 = kummerM(1.0 / 2.0, d / 2.0, k, 160);
+            const M2 = kummerM(3.0 / 2.0, (d + 2) / 2.0, k, 160);
             return M2 / (d * M1);
         }
 
@@ -9374,6 +9385,151 @@ pub fn fillWatsonChecked(rng: Rng, comptime T: type, comptime n: usize, dest: []
 /// Checked source-accepting fill variant.
 pub fn fillWatsonCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: [n]T, kappa: T) WatsonError!void {
     const dist = try Watson(T, n).init(mean_axis, kappa);
+    dist.fillFrom(source, dest);
+}
+
+// -----------------------------------------------------------------------------
+// SIMD Watson sampling on S²
+// -----------------------------------------------------------------------------
+
+/// Per-lane SIMD Watson sampler on S² with a shared axis and concentration.
+/// For n = 3 the uniform-sphere Beta proposal is Beta(1, 1), so each lane
+/// proposes `w = 2U − 1` and accepts against `exp(κ(w² − 1))` (bipolar) or
+/// `exp(κw²)` (girdle).
+fn vectorWatsonPointFrom(source: anytype, comptime VectorType: type, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) [3]VectorType {
+    const Child = vectorChild(VectorType);
+    const info = vectorInfo(VectorType);
+    const L = info.len;
+    const V = @Vector(L, Child);
+    const B = @Vector(L, bool);
+
+    if (kappa == 0) return vectorUnitSphereFrom(source, VectorType);
+    if (kappa > 1e12) {
+        const u = Rng.vectorOpenFrom(source, V);
+        const positive = u < @as(V, @splat(0.5));
+        const x = @select(Child, positive, @as(V, @splat(mean_axis[0])), @as(V, @splat(-mean_axis[0])));
+        const y = @select(Child, positive, @as(V, @splat(mean_axis[1])), @as(V, @splat(-mean_axis[1])));
+        const z = @select(Child, positive, @as(V, @splat(mean_axis[2])), @as(V, @splat(-mean_axis[2])));
+        return .{ x, y, z };
+    }
+    if (kappa < -1e12) {
+        const two_pi: V = @splat(2 * @as(Child, @floatCast(std.math.pi)));
+        const angle = Rng.vectorOpenClosedFrom(source, V) * two_pi;
+        var x: V = @splat(0);
+        var y = @cos(angle);
+        var z = @sin(angle);
+        vectorHouseholderReflect(VectorType, mean_axis, &x, &y, &z);
+        return .{ x, y, z };
+    }
+
+    const zero: V = @splat(0);
+    const one: V = @splat(1);
+    const two: V = @splat(2);
+    const kappa_v: V = @splat(kappa);
+    const shift: V = if (kappa > 0) one else zero;
+
+    var w: V = undefined;
+    var active: B = @splat(true);
+    while (@reduce(.Or, active)) {
+        const u = Rng.vectorOpenClosedFrom(source, V);
+        const wcand = two * u - one;
+        const log_u = @log(Rng.vectorOpenFrom(source, V));
+        const accept = active & (log_u <= kappa_v * (wcand * wcand - shift));
+        w = @select(Child, accept, wcand, w);
+        active = @select(bool, accept, @as(B, @splat(false)), active);
+    }
+
+    const two_pi: V = @splat(2 * @as(Child, @floatCast(std.math.pi)));
+    const angle = Rng.vectorOpenClosedFrom(source, V) * two_pi;
+    const s = @sqrt(@max(zero, one - w * w));
+    var x = w;
+    var y = s * @cos(angle);
+    var z = s * @sin(angle);
+    vectorHouseholderReflect(VectorType, mean_axis, &x, &y, &z);
+    return .{ x, y, z };
+}
+
+/// SIMD-vectorized Watson sampler on S². One vector holds one independent
+/// sample per lane; the mean axis and concentration are shared across lanes.
+pub fn VectorWatson(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+
+        mean_axis: [3]Child,
+        kappa: Child,
+
+        pub fn init(mean_axis: [3]Child, kappa: Child) WatsonError!Self {
+            const scalar = try Watson(Child, 3).init(mean_axis, kappa);
+            return Self{ .mean_axis = scalar.meanAxis(), .kappa = scalar.concentrationValue() };
+        }
+
+        pub fn new(mean_axis: [3]Child, kappa: Child) Self {
+            return Self.init(mean_axis, kappa) catch |e| {
+                std.debug.panic("VectorWatson.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn meanAxis(self: Self) [3]Child {
+            return self.mean_axis;
+        }
+
+        pub fn concentrationValue(self: Self) Child {
+            return self.kappa;
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3]VectorType {
+            return vectorWatsonPointFrom(rng, VectorType, self.mean_axis, self.kappa);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3]VectorType {
+            return vectorWatsonPointFrom(source, VectorType, self.mean_axis, self.kappa);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+pub fn vectorWatson(rng: Rng, comptime VectorType: type, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) WatsonError![3]VectorType {
+    return vectorWatsonCheckedFrom(rng, VectorType, mean_axis, kappa);
+}
+
+pub fn vectorWatsonFrom(source: anytype, comptime VectorType: type, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) [3]VectorType {
+    const dist = VectorWatson(VectorType).new(mean_axis, kappa);
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorWatsonChecked(rng: Rng, comptime VectorType: type, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) WatsonError![3]VectorType {
+    return vectorWatsonCheckedFrom(rng, VectorType, mean_axis, kappa);
+}
+
+pub fn vectorWatsonCheckedFrom(source: anytype, comptime VectorType: type, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) WatsonError![3]VectorType {
+    const dist = try VectorWatson(VectorType).init(mean_axis, kappa);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorWatson(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) WatsonError!void {
+    return fillVectorWatsonCheckedFrom(rng, VectorType, dest, mean_axis, kappa);
+}
+
+pub fn fillVectorWatsonFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) void {
+    const dist = VectorWatson(VectorType).new(mean_axis, kappa);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorWatsonChecked(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) WatsonError!void {
+    return fillVectorWatsonCheckedFrom(rng, VectorType, dest, mean_axis, kappa);
+}
+
+pub fn fillVectorWatsonCheckedFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, mean_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) WatsonError!void {
+    const dist = try VectorWatson(VectorType).init(mean_axis, kappa);
     dist.fillFrom(source, dest);
 }
 
@@ -57150,6 +57306,102 @@ test "VectorVonMisesFisher free functions and fill work" {
     try std.testing.expectError(error.InvalidMeanDirection, vectorVonMisesFisher(rng, V, .{ 1, 1, 0 }, 3));
 }
 
+test "VectorWatson bipolar and girdle moments match the scalar accessor" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x6d01);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const axis = [3]f64{ 0, 0, 1 };
+
+    const bipolar = try VectorWatson(V).init(axis, 5);
+    const scalar_bipolar = try Watson(f64, 3).init(axis, 5);
+    var sum_z2: f64 = 0;
+    var count: usize = 0;
+    for (0..10_000) |_| {
+        const p = bipolar.sample(rng);
+        inline for (0..4) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+            sum_z2 += p[2][lane] * p[2][lane];
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(scalar_bipolar.meanCosineSquared(), sum_z2 / nf, 0.02);
+
+    const girdle = try VectorWatson(V).init(axis, -5);
+    const scalar_girdle = try Watson(f64, 3).init(axis, -5);
+    var girdle_sum_z2: f64 = 0;
+    count = 0;
+    for (0..10_000) |_| {
+        const p = girdle.sample(rng);
+        inline for (0..4) |lane| {
+            girdle_sum_z2 += p[2][lane] * p[2][lane];
+            count += 1;
+        }
+    }
+    const girdle_nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(scalar_girdle.meanCosineSquared(), girdle_sum_z2 / girdle_nf, 0.02);
+}
+
+test "VectorWatson kappa=0 is uniform and f32x8 works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x6d02);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const dist = try VectorWatson(V).init(.{ 0, 0, 1 }, 0);
+    var sum_z2: f64 = 0;
+    var count: usize = 0;
+    for (0..5_000) |_| {
+        const p = dist.sample(rng);
+        inline for (0..4) |lane| {
+            sum_z2 += p[2][lane] * p[2][lane];
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(1.0 / 3.0, sum_z2 / nf, 0.03);
+
+    const V8 = @Vector(8, f32);
+    const dist32 = try VectorWatson(V8).init(.{ 0, 0, 1 }, 5);
+    var engine32 = alea.DefaultPrng.init(0x6d03);
+    for (0..2_000) |_| {
+        const p = dist32.sample(Rng.init(&engine32));
+        inline for (0..8) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+        }
+    }
+}
+
+test "VectorWatson free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x6d04);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const axis = [3]f64{ 0.6, 0.0, 0.8 };
+    var buf: [8][3]V = undefined;
+    try fillVectorWatson(rng, V, &buf, axis, 5);
+    for (buf) |p| {
+        inline for (0..4) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        }
+    }
+
+    const single = try vectorWatsonChecked(rng, V, axis, 5);
+    inline for (0..4) |lane| {
+        const norm_sq = single[0][lane] * single[0][lane] + single[1][lane] * single[1][lane] + single[2][lane] * single[2][lane];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+
+    try std.testing.expectError(error.InvalidParameter, vectorWatson(rng, V, axis, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidMeanDirection, vectorWatson(rng, V, .{ 1, 1, 0 }, 5));
+}
+
 test "Watson constructor validates parameters" {
     // Non-finite kappa.
     try std.testing.expectError(error.InvalidParameter, Watson(f64, 3).init(.{ 1, 0, 0 }, std.math.nan(f64)));
@@ -57166,6 +57418,18 @@ test "Watson constructor validates parameters" {
     // Negative (girdle) κ is valid.
     const ok3 = try Watson(f64, 3).init(.{ 0, 0, 1 }, -2);
     try std.testing.expectEqual(@as(f64, -2), ok3.concentrationValue());
+}
+
+test "Watson mean cosine squared matches direct integration" {
+    // Reference values from ∫ w² exp(κw²) dw / ∫ exp(κw²) dw on [-1, 1].
+    const bipolar = try Watson(f64, 3).init(.{ 0, 0, 1 }, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7642662211), bipolar.meanCosineSquared(), 1e-6);
+    const girdle = try Watson(f64, 3).init(.{ 0, 0, 1 }, -5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0982972612), girdle.meanCosineSquared(), 1e-6);
+    const uniform3 = try Watson(f64, 3).init(.{ 0, 0, 1 }, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), uniform3.meanCosineSquared(), 1e-12);
+    const uniform4d = try Watson(f64, 4).init(.{ 0, 0, 0, 1 }, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), uniform4d.meanCosineSquared(), 1e-12);
 }
 
 test "Watson 3D bipolar samples are unit vectors concentrated around axis" {
