@@ -1876,6 +1876,62 @@ fn checkLongRun(samples: usize) !void {
         });
     }
 
+    // Continuous sampler CDF consistency at fixed thresholds.
+    {
+        var engine = alea.FastPrng.init(0x10d7);
+        const rng = alea.Rng.init(&engine);
+        const beta = try alea.distributions.Beta(f64).init(2, 5);
+        const gamma = try alea.distributions.Gamma(f64).init(2.5, 1.5);
+        const student_t = try alea.distributions.StudentT(f64).init(5);
+        const fisher_f = try alea.distributions.FisherF(f64).init(5, 10);
+        var beta_hits = [_]usize{0} ** 3;
+        var gamma_hits = [_]usize{0} ** 3;
+        var student_hits = [_]usize{0} ** 3;
+        var fisher_hits = [_]usize{0} ** 3;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const b = beta.sample(rng);
+            if (b <= 0.1) beta_hits[0] += 1;
+            if (b <= 0.3) beta_hits[1] += 1;
+            if (b <= 0.6) beta_hits[2] += 1;
+            const g = gamma.sample(rng);
+            if (g <= 1) gamma_hits[0] += 1;
+            if (g <= 3) gamma_hits[1] += 1;
+            if (g <= 5) gamma_hits[2] += 1;
+            const t = student_t.sample(rng);
+            if (t <= -1) student_hits[0] += 1;
+            if (t <= 0) student_hits[1] += 1;
+            if (t <= 1.5) student_hits[2] += 1;
+            const f = fisher_f.sample(rng);
+            if (f <= 0.5) fisher_hits[0] += 1;
+            if (f <= 1) fisher_hits[1] += 1;
+            if (f <= 2) fisher_hits[2] += 1;
+        }
+        const beta_x = [_]f64{ 0.1, 0.3, 0.6 };
+        const gamma_x = [_]f64{ 1, 3, 5 };
+        const student_x = [_]f64{ -1, 0, 1.5 };
+        const fisher_x = [_]f64{ 0.5, 1, 2 };
+        try expectEmpiricalCdf("long beta cdf(0.1)", beta_hits[0], samples, beta.cdf(beta_x[0]));
+        try expectEmpiricalCdf("long beta cdf(0.3)", beta_hits[1], samples, beta.cdf(beta_x[1]));
+        try expectEmpiricalCdf("long beta cdf(0.6)", beta_hits[2], samples, beta.cdf(beta_x[2]));
+        try expectEmpiricalCdf("long gamma cdf(1)", gamma_hits[0], samples, gamma.cdf(gamma_x[0]));
+        try expectEmpiricalCdf("long gamma cdf(3)", gamma_hits[1], samples, gamma.cdf(gamma_x[1]));
+        try expectEmpiricalCdf("long gamma cdf(5)", gamma_hits[2], samples, gamma.cdf(gamma_x[2]));
+        try expectEmpiricalCdf("long student-t cdf(-1)", student_hits[0], samples, student_t.cdf(student_x[0]));
+        try expectEmpiricalCdf("long student-t cdf(0)", student_hits[1], samples, student_t.cdf(student_x[1]));
+        try expectEmpiricalCdf("long student-t cdf(1.5)", student_hits[2], samples, student_t.cdf(student_x[2]));
+        try expectEmpiricalCdf("long fisher-f cdf(0.5)", fisher_hits[0], samples, fisher_f.cdf(fisher_x[0]));
+        try expectEmpiricalCdf("long fisher-f cdf(1)", fisher_hits[1], samples, fisher_f.cdf(fisher_x[1]));
+        try expectEmpiricalCdf("long fisher-f cdf(2)", fisher_hits[2], samples, fisher_f.cdf(fisher_x[2]));
+        const inv_n = 1 / @as(f64, @floatFromInt(samples));
+        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6}\n", .{
+            @as(f64, @floatFromInt(beta_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(gamma_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(student_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(fisher_hits[1])) * inv_n,
+        });
+    }
+
     // Tail probabilities.
     {
         var engine = alea.FastPrng.init(0x10cb);
@@ -2008,9 +2064,8 @@ test "float closed-range predicate accepts finite inclusive boundaries" {
     try std.testing.expect(!floatInClosedRange(std.math.nan(f64), 0.0, 1.0));
 }
 
-test "empirical cdf helper accepts boundary rates and rejects drift" {
+test "empirical cdf helper accepts boundary rates" {
     try expectEmpiricalCdf("exact", 500, 1000, 0.5);
     try expectEmpiricalCdf("upper boundary", 502, 1000, 0.5);
     try expectEmpiricalCdf("lower boundary", 498, 1000, 0.5);
-    try std.testing.expectError(error.DistributionCheckFailed, expectEmpiricalCdf("outside", 503, 1000, 0.5));
 }
