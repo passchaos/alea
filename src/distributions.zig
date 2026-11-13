@@ -9032,9 +9032,10 @@ fn vmfSampleWWithConstantsFrom(source: anytype, comptime T: type, kappa: T, dim:
     const d_minus_1: T = @floatFromInt(dim - 1);
     while (true) {
         const z = Rng.floatOpenClosedFrom(source, T);
-        const u = Rng.floatOpenFrom(source, T);
         const w = (1 - (1 + b) * z) / (1 - (1 - b) * z);
-        if (kappa * w + d_minus_1 * @log(1 - x0 * w) - c >= @log(u)) {
+        // Exp(1) race: `A ≥ log(u)` is equivalent to `A + E ≥ 0`.
+        const e = standardExponentialFrom(source, T);
+        if (kappa * w + d_minus_1 * @log(1 - x0 * w) - c + e >= 0) {
             return w;
         }
     }
@@ -9363,9 +9364,11 @@ fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]v
     var active: B = @splat(true);
     while (@reduce(.Or, active)) {
         const z = Rng.vectorOpenClosedFrom(source, V);
-        const u = Rng.vectorOpenFrom(source, V);
         const wcand = (one - (one + b) * z) / (one - (one - b) * z);
-        const accept = active & (kappa_v * wcand + two * @log(one - x0 * wcand) - c >= @log(u));
+        // Exp(1) race: `A ≥ log(u)` is equivalent to `E ≥ −A` and avoids the
+        // second vector log per round.
+        const e = vectorStandardExponentialFrom(source, VectorType);
+        const accept = active & (kappa_v * wcand + two * @log(one - x0 * wcand) - c + e >= zero);
         w = @select(Child, accept, wcand, w);
         active = @select(bool, accept, @as(B, @splat(false)), active);
     }
@@ -9543,24 +9546,25 @@ fn watsonSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T 
 
     if (kappa > 0) {
         // Bipolar: envelope is M · uniform marginal with M = exp(κ) at w = ±1.
-        // Accept iff log(u) ≤ κ·(w² − 1).
+        // Accept iff E ≥ κ·(1 − w²) for E ~ Exp(1); this is the same test as
+        // log(u) ≤ κ·(w² − 1) but avoids the log.
         while (true) {
             const b_sample = betaFrom(source, T, shape, shape);
             const w = 2 * b_sample - 1;
-            const u = Rng.floatOpenFrom(source, T);
-            if (@log(u) <= kappa * (w * w - 1)) {
+            const e = standardExponentialFrom(source, T);
+            if (e >= kappa * (1 - w * w)) {
                 return w;
             }
         }
     } else {
         // Girdle (κ < 0): exp(κ·w²) ≤ 1, so envelope M=1 with uniform marginal.
-        // Accept iff log(u) ≤ κ·w².
+        // Accept iff E ≥ −κ·w² for E ~ Exp(1).
         const k = kappa;
         while (true) {
             const b_sample = betaFrom(source, T, shape, shape);
             const w = 2 * b_sample - 1;
-            const u = Rng.floatOpenFrom(source, T);
-            if (@log(u) <= k * w * w) {
+            const e = standardExponentialFrom(source, T);
+            if (e >= -k * w * w) {
                 return w;
             }
         }
@@ -9892,8 +9896,11 @@ fn vectorWatsonPointFrom(source: anytype, comptime VectorType: type, mean_axis: 
     while (@reduce(.Or, active)) {
         const u = Rng.vectorOpenClosedFrom(source, V);
         const wcand = two * u - one;
-        const log_u = @log(Rng.vectorOpenFrom(source, V));
-        const accept = active & (log_u <= kappa_v * (wcand * wcand - shift));
+        // Exp(1) race: `E ≥ κ·(shift − w²)` is the same test as
+        // `log(u2) ≤ κ·(w² − shift)` but uses the fast exponential kernel
+        // instead of a vector log.
+        const e = vectorStandardExponentialFrom(source, VectorType);
+        const accept = active & (e >= kappa_v * (shift - wcand * wcand));
         w = @select(Child, accept, wcand, w);
         active = @select(bool, accept, @as(B, @splat(false)), active);
 
@@ -9903,7 +9910,7 @@ fn vectorWatsonPointFrom(source: anytype, comptime VectorType: type, mean_axis: 
         inline for (0..L) |lane| {
             if (active[lane]) active_count += 1;
         }
-        if (active_count <= 3) {
+        if (active_count <= 4) {
             inline for (0..L) |lane| {
                 if (active[lane]) w[lane] = watsonSampleWFrom(source, Child, kappa, 3);
             }
@@ -10483,7 +10490,7 @@ fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *
         inline for (0..L) |lane| {
             if (active[lane]) active_count += 1;
         }
-        if (active_count <= 3) {
+        if (active_count <= 4) {
             inline for (0..L) |lane| {
                 if (active[lane]) {
                     const point = sampler.sampleFrom(source);
@@ -10792,9 +10799,9 @@ fn kentPointFrom(
         } else {
             while (true) {
                 const z = Rng.floatOpenClosedFrom(source, T);
-                const u = Rng.floatOpenFrom(source, T);
                 w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
-                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c >= @log(u)) break;
+                const e = standardExponentialFrom(source, T);
+                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c + e >= 0) break;
             }
         }
         // Exact conditional sampler: accept w against the I₀-weighted marginal,
@@ -10802,8 +10809,9 @@ fn kentPointFrom(
         const s2 = @max(0, one - w * w);
         const a = ovalness * s2;
         const log_ratio = diff * w + logBesselI0(a) - marginal_max_log;
-        const u = Rng.floatOpenFrom(source, T);
-        if (@log(u) <= log_ratio) {
+        // Exp(1) race: E ≥ −log_ratio replaces log(u) ≤ log_ratio.
+        const e = standardExponentialFrom(source, T);
+        if (e >= -log_ratio) {
             const phi = kentConditionalPhiFrom(source, T, a);
             const s = @sqrt(s2);
             const cos_phi = @cos(phi);
@@ -11133,8 +11141,9 @@ fn vectorKentPointFrom(
         const s2 = @max(zero, one - wcand * wcand);
         const a = beta_v * s2;
         const log_ratio = diff * wcand + vectorLogBesselI0(VectorType, a) - max_log;
-        const u = Rng.vectorOpenFrom(source, V);
-        const accept = pending & (@log(u) <= log_ratio);
+        // Exp(1) race: E ≥ −log_ratio replaces log(u) ≤ log_ratio.
+        const e = vectorStandardExponentialFrom(source, VectorType);
+        const accept = pending & (e >= -log_ratio);
         w = @select(Child, accept, wcand, w);
         pending = @select(bool, accept, @as(B, @splat(false)), pending);
     }
