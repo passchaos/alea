@@ -700,8 +700,9 @@ fn checkMultivariateNormal() !void {
         0.6,  2.0, 0.3,
         -0.2, 0.3, 0.5,
     };
+    const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;
     var sampler = try alea.distributions.MultivariateNormal(f64).init(
-        std.heap.smp_allocator,
+        allocator,
         &expected_mean,
         &expected_covariance,
     );
