@@ -443,11 +443,57 @@ pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
     return 1 - front * betaContinuedFraction(T, 1 - x, b, a) / b;
 }
 
+/// Closed-form Student-t CDF for small integer degrees of freedom. The
+/// regularized incomplete beta `I_x(ν/2, 1/2)` is built from the exact
+/// `ν = 1` or `ν = 2` base case with the recurrence
+///   I_x(a+1, 1/2) = I_x(a, 1/2) − x^a √(1−x) / (a B(a, 1/2)),
+/// which advances two degrees of freedom per step. Returns null when `nu` is
+/// not an integer in `[1, 64]`.
+fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
+    const T = @TypeOf(t, nu);
+    if (!(nu == @floor(nu)) or nu < 1 or nu > 64) return null;
+    if (t == 0) return 0.5;
+    const pi: T = @floatCast(std.math.pi);
+    const abs_t = @abs(t);
+    const sqrt_nu = @sqrt(nu);
+    const theta = std.math.atan(abs_t / sqrt_nu);
+    const x = nu / (nu + abs_t * abs_t);
+    const sin_theta = abs_t / @sqrt(nu + abs_t * abs_t);
+
+    var a: T = undefined;
+    var ib: T = undefined;
+    var b: T = undefined;
+    var x_to_a: T = undefined;
+    if (@mod(@as(i64, @intFromFloat(nu)), 2) == 1) {
+        // ν = 1: I_x(1/2, 1/2) = 1 − 2θ/π, B(1/2, 1/2) = π.
+        a = 0.5;
+        ib = 1 - 2 * theta / pi;
+        b = pi;
+        x_to_a = @sqrt(x);
+    } else {
+        // ν = 2: I_x(1, 1/2) = 1 − sin θ, B(1, 1/2) = 2.
+        a = 1;
+        ib = 1 - sin_theta;
+        b = 2;
+        x_to_a = x;
+    }
+    const target = nu / 2;
+    while (a < target) {
+        ib -= x_to_a * sin_theta / (a * b);
+        x_to_a *= x;
+        b = b * a / (a + 0.5);
+        a += 1;
+    }
+    const cdf = 1 - 0.5 * ib;
+    return if (t >= 0) cdf else 1 - cdf;
+}
+
 /// Student-t cumulative distribution function with `nu` degrees of freedom.
 /// Uses the regularized incomplete beta representation
 ///   F(t) = 1 − ½·I_{ν/(ν+t²)}(ν/2, ½)   for t ≥ 0
 ///   F(t) = ½·I_{ν/(ν+t²)}(ν/2, ½)       for t < 0.
-/// For ν > 1e6 the distribution is numerically indistinguishable from the
+/// Small integer degrees of freedom use the exact incomplete-beta recurrence;
+/// for ν > 1e6 the distribution is numerically indistinguishable from the
 /// standard normal and `normCdf` is used directly to avoid lgamma cancellation.
 pub fn studentTCdf(t: anytype, nu: anytype) @TypeOf(t, nu) {
     const T = @TypeOf(t, nu);
@@ -457,6 +503,7 @@ pub fn studentTCdf(t: anytype, nu: anytype) @TypeOf(t, nu) {
     if (t == std.math.inf(T)) return 1;
     if (t == -std.math.inf(T)) return 0;
     if (nu > 1e6) return normCdf(t);
+    if (studentTCdfSmallInteger(t, nu)) |value| return value;
 
     const half: T = 0.5;
     const x = nu / (nu + t * t);
@@ -54484,6 +54531,20 @@ test "studentTCdf matches known values and symmetry" {
 
     // f32 support.
     try std.testing.expectApproxEqAbs(@as(f32, 0.75), studentTCdf(@as(f32, 1), @as(f32, 1)), 1e-5);
+}
+
+test "studentTCdf integer recurrence matches the incomplete beta" {
+    const ts = [_]f64{ -20, -10, -5, -2, -1, -0.5, -0.1, 0, 0.1, 0.5, 1, 2, 5, 10, 20 };
+    var nu: u32 = 1;
+    while (nu <= 64) : (nu += 1) {
+        const nu_f: f64 = @floatFromInt(nu);
+        for (ts) |t| {
+            const ib = betaIncomplete(nu_f / (nu_f + t * t), nu_f / 2, @as(f64, 0.5));
+            const expected = if (t >= 0) 1 - 0.5 * ib else 0.5 * ib;
+            const actual = studentTCdfSmallInteger(t, nu_f).?;
+            try std.testing.expectApproxEqAbs(expected, actual, 1e-12);
+        }
+    }
 }
 
 test "betaCdf and betaQuantile round-trip" {
