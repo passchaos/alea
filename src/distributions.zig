@@ -916,6 +916,14 @@ pub const BinghamError = error{
     InvalidParameter,
 };
 
+/// Kent (Fisher-Bingham F5) distribution error set.
+pub const KentError = error{
+    /// Concentration or ovalness is negative, non-finite, or violates 2β < κ.
+    InvalidParameter,
+    /// Mean direction is not a unit vector, or the major axis is parallel to it.
+    InvalidMeanDirection,
+};
+
 pub fn weightedErrorMessage(err: WeightedError) []const u8 {
     return switch (err) {
         error.InvalidInput => "Weights sequence is empty/too long/unordered",
@@ -9516,6 +9524,386 @@ pub fn fillBinghamChecked(rng: Rng, comptime T: type, comptime n: usize, dest: [
 /// Checked source-accepting fill variant.
 pub fn fillBinghamCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, matrix: [n][n]T) BinghamError!void {
     const dist = try Bingham(T, n).init(matrix);
+    dist.fillFrom(source, dest);
+}
+
+// -----------------------------------------------------------------------------
+// Kent (Fisher-Bingham F5) distribution on S²
+// -----------------------------------------------------------------------------
+
+/// Integrand for the Kent w-marginal: returns
+/// `{h, w·h, w²·h, (1−w²)·I₁(a)/I₀(a)·h}` with `h = e^{κ(w−1)}·I₀(β(1−w²))`
+/// and `a = β(1−w²)`.
+fn kentIntegrand(comptime T: type, kappa: T, ovalness: T, w: T) [4]T {
+    const one: T = 1;
+    const s2 = one - w * w;
+    const a = ovalness * s2;
+    const h = @exp(kappa * (w - one)) * besselI0(a);
+    const ratio = besselI1Ratio(a);
+    return .{ h, w * h, w * w * h, s2 * ratio * h };
+}
+
+fn kentSimpson(comptime T: type, fa: [4]T, fm: [4]T, fb: [4]T, a: T, b: T) [4]T {
+    const sixth = (b - a) / 6;
+    var out: [4]T = undefined;
+    inline for (0..4) |i| out[i] = sixth * (fa[i] + 4 * fm[i] + fb[i]);
+    return out;
+}
+
+fn kentAdaptiveSimpson(comptime T: type, kappa: T, ovalness: T, a: T, b: T, fa: [4]T, fm: [4]T, fb: [4]T, whole: [4]T, tol: T, depth: u32) [4]T {
+    const m = (a + b) / 2;
+    const lm = (a + m) / 2;
+    const rm = (m + b) / 2;
+    const flm = kentIntegrand(T, kappa, ovalness, lm);
+    const frm = kentIntegrand(T, kappa, ovalness, rm);
+    const left = kentSimpson(T, fa, flm, fm, a, m);
+    const right = kentSimpson(T, fm, frm, fb, m, b);
+    var refined: [4]T = undefined;
+    var err: T = 0;
+    inline for (0..4) |i| {
+        refined[i] = left[i] + right[i];
+        err = @max(err, @abs(refined[i] - whole[i]));
+    }
+    if (depth == 0 or err <= 15 * tol) {
+        inline for (0..4) |i| refined[i] += (refined[i] - whole[i]) / 15;
+        return refined;
+    }
+    const left_sum = kentAdaptiveSimpson(T, kappa, ovalness, a, m, fa, flm, fm, left, tol / 2, depth - 1);
+    const right_sum = kentAdaptiveSimpson(T, kappa, ovalness, m, b, fm, frm, fb, right, tol / 2, depth - 1);
+    var out: [4]T = undefined;
+    inline for (0..4) |i| out[i] = left_sum[i] + right_sum[i];
+    return out;
+}
+
+fn kentQuadrature(comptime T: type, kappa: T, ovalness: T) [4]T {
+    const a: T = -1;
+    const b: T = 1;
+    const m: T = 0;
+    const fa = kentIntegrand(T, kappa, ovalness, a);
+    const fm = kentIntegrand(T, kappa, ovalness, m);
+    const fb = kentIntegrand(T, kappa, ovalness, b);
+    const whole = kentSimpson(T, fa, fm, fb, a, b);
+    const tol: T = if (T == f32) @as(T, 1e-5) else @as(T, 1e-10);
+    return kentAdaptiveSimpson(T, kappa, ovalness, a, b, fa, fm, fb, whole, tol, 24);
+}
+
+/// Returns `{E[w], Var[w], Cov along γ₂, Cov along γ₃}` for the Kent
+/// distribution. Moments are computed deterministically: adaptive Simpson
+/// quadrature for moderate concentration, and a leading-order expansion for
+/// very large κ with a wide spectral gap.
+fn kentMoments(comptime T: type, kappa: T, ovalness: T) [4]T {
+    if (kappa == 0) {
+        const third: T = 1.0 / 3.0;
+        return .{ 0, third, third, third };
+    }
+    const denom = kappa - 2 * ovalness;
+    if (kappa > 1e4 and denom > 10) {
+        const inv = 1 / denom;
+        const e_w = 1 - inv;
+        const e_w2 = 1 - 2 * inv + 2 * inv * inv;
+        const ratio = besselI1Ratio(2 * ovalness * inv);
+        return .{ e_w, e_w2 - e_w * e_w, inv * (1 + ratio), inv * (1 - ratio) };
+    }
+    const q = kentQuadrature(T, kappa, ovalness);
+    const z = q[0];
+    const e_w = q[1] / z;
+    const e_w2 = q[2] / z;
+    const s2 = 1 - e_w2;
+    const s2r = q[3] / z;
+    return .{ e_w, e_w2 - e_w * e_w, (s2 + s2r) / 2, (s2 - s2r) / 2 };
+}
+
+/// Mean resultant length of the unit von Mises-Fisher distribution on S²:
+/// `coth(λ) − 1/λ`.
+fn kentVmfMean(comptime T: type, lambda: T) T {
+    if (lambda == 0) return 0;
+    if (lambda < 1e-4) return lambda / 3;
+    const e2 = @exp(-2 * lambda);
+    const coth = (1 + e2) / (1 - e2);
+    return coth - 1 / lambda;
+}
+
+/// Solve `coth(λ) − 1/λ = rho` for λ ≥ 0 by bisection.
+fn kentProposalLambda(comptime T: type, rho: T) T {
+    if (!(rho > 0)) return 0;
+    if (rho >= 1) return 1e12;
+    var hi: T = 1;
+    while (kentVmfMean(T, hi) < rho and hi < 1e12) hi *= 2;
+    if (hi > 1e12) hi = 1e12;
+    var lo: T = 0;
+    for (0..80) |_| {
+        const mid = (lo + hi) / 2;
+        if (kentVmfMean(T, mid) < rho) lo = mid else hi = mid;
+    }
+    return (lo + hi) / 2;
+}
+
+/// Supremum of `(κ−λ)w + β(1−w²)` over w ∈ [-1, 1]. The joint target/proposal
+/// ratio is bounded by `exp` of this value, attained at `cos(2φ) = 1`.
+fn kentMaxExponent(comptime T: type, kappa: T, ovalness: T, lambda: T) T {
+    const diff = kappa - lambda;
+    if (ovalness == 0) return @max(diff, -diff);
+    const w_star = diff / (2 * ovalness);
+    if (w_star >= 1) return diff;
+    if (w_star <= -1) return -diff;
+    return ovalness + diff * diff / (4 * ovalness);
+}
+
+fn kentPointFrom(
+    source: anytype,
+    comptime T: type,
+    mean_dir: *const [3]T,
+    major_axis: *const [3]T,
+    minor_axis: *const [3]T,
+    kappa: T,
+    ovalness: T,
+    proposal_lambda: T,
+    max_exponent: T,
+) [3]T {
+    if (kappa == 0) return unitSphereSurfaceFrom(source, T, 3);
+    if (kappa > 1e12) return mean_dir.*;
+    if (ovalness == 0) return vonMisesFisherPointFrom(source, T, 3, mean_dir, kappa);
+
+    const one: T = 1;
+    const diff = kappa - proposal_lambda;
+    while (true) {
+        const x = vonMisesFisherPointFrom(source, T, 3, mean_dir, proposal_lambda);
+        var w: T = 0;
+        var t2: T = 0;
+        var t3: T = 0;
+        inline for (0..3) |i| {
+            w += x[i] * mean_dir[i];
+            t2 += x[i] * major_axis[i];
+            t3 += x[i] * minor_axis[i];
+        }
+        const s2 = @max(0, one - w * w);
+        const tangent_sq = t2 * t2 + t3 * t3;
+        const cos2phi = if (tangent_sq > 0) (t2 * t2 - t3 * t3) / tangent_sq else one;
+        const accept_log = diff * w + ovalness * s2 * cos2phi - max_exponent;
+        const u = Rng.floatOpenFrom(source, T);
+        if (@log(u) <= accept_log) return x;
+    }
+}
+
+fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: *const [3]T, major_axis: *const [3]T, minor_axis: *const [3]T, kappa: T, ovalness: T, proposal_lambda: T, max_exponent: T) void {
+    for (dest) |*item| {
+        item.* = kentPointFrom(source, T, mean_dir, major_axis, minor_axis, kappa, ovalness, proposal_lambda, max_exponent);
+    }
+}
+
+/// Kent (Fisher-Bingham F5) distribution on the unit sphere S².
+///
+/// Density: `f(x) ∝ exp(κ·γ₁ᵀx + β·((γ₂ᵀx)² − (γ₃ᵀx)²))` for `x ∈ S²`,
+/// where `γ₁` is the mean direction, `(γ₁, γ₂, γ₃)` is an orthonormal frame,
+/// `κ ≥ 0` is the concentration, and `0 ≤ β < κ/2` is the ovalness.
+/// `β = 0` reduces to the Von Mises-Fisher distribution; `κ = 0` is uniform.
+///
+/// Sampling uses exact rejection from a Von Mises-Fisher proposal whose
+/// concentration matches the target mean resultant length, with an analytic
+/// supremum envelope, so acceptance stays high across the parameter range.
+pub fn Kent(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        mean_dir: [3]T,
+        major_axis: [3]T,
+        minor_axis: [3]T,
+        kappa: T,
+        ovalness: T,
+        proposal_lambda: T,
+        max_exponent: T,
+
+        /// Construct a Kent distribution from a mean direction, a major axis
+        /// (projected onto the tangent plane and normalized), concentration,
+        /// and ovalness. Requires `κ ≥ 0`, `0 ≤ β < κ/2`, and a unit mean.
+        pub fn init(mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError!Self {
+            if (!std.math.isFinite(kappa) or kappa < 0) return error.InvalidParameter;
+            if (!std.math.isFinite(ovalness) or ovalness < 0) return error.InvalidParameter;
+            const two: T = 2;
+            if (kappa == 0) {
+                if (ovalness != 0) return error.InvalidParameter;
+            } else if (!(two * ovalness < kappa)) {
+                return error.InvalidParameter;
+            }
+
+            const unit_tol: T = @floatCast(1e-6);
+            const orth_tol: T = @floatCast(1e-12);
+            var mean_norm_sq: T = 0;
+            inline for (0..3) |i| {
+                if (!std.math.isFinite(mean_dir[i])) return error.InvalidMeanDirection;
+                mean_norm_sq += mean_dir[i] * mean_dir[i];
+            }
+            if (@abs(mean_norm_sq - 1) > unit_tol) return error.InvalidMeanDirection;
+
+            var proj: T = 0;
+            inline for (0..3) |i| {
+                if (!std.math.isFinite(major_axis[i])) return error.InvalidMeanDirection;
+                proj += major_axis[i] * mean_dir[i];
+            }
+            var orth: [3]T = undefined;
+            var orth_norm_sq: T = 0;
+            inline for (0..3) |i| {
+                orth[i] = major_axis[i] - proj * mean_dir[i];
+                orth_norm_sq += orth[i] * orth[i];
+            }
+            if (!(orth_norm_sq > orth_tol) or !std.math.isFinite(orth_norm_sq)) return error.InvalidMeanDirection;
+            const inv_norm = 1 / @sqrt(orth_norm_sq);
+            inline for (0..3) |i| orth[i] *= inv_norm;
+
+            const minor = [3]T{
+                mean_dir[1] * orth[2] - mean_dir[2] * orth[1],
+                mean_dir[2] * orth[0] - mean_dir[0] * orth[2],
+                mean_dir[0] * orth[1] - mean_dir[1] * orth[0],
+            };
+
+            const rho = kentMoments(T, kappa, ovalness)[0];
+            const lambda = kentProposalLambda(T, rho);
+            const max_exponent = kentMaxExponent(T, kappa, ovalness, lambda);
+
+            return Self{
+                .mean_dir = mean_dir,
+                .major_axis = orth,
+                .minor_axis = minor,
+                .kappa = kappa,
+                .ovalness = ovalness,
+                .proposal_lambda = lambda,
+                .max_exponent = max_exponent,
+            };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) Self {
+            return Self.init(mean_dir, major_axis, kappa, ovalness) catch |e| {
+                std.debug.panic("Kent.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn meanDirection(self: Self) [3]T {
+            return self.mean_dir;
+        }
+
+        pub fn majorAxis(self: Self) [3]T {
+            return self.major_axis;
+        }
+
+        pub fn minorAxis(self: Self) [3]T {
+            return self.minor_axis;
+        }
+
+        pub fn concentrationValue(self: Self) T {
+            return self.kappa;
+        }
+
+        pub fn ovalnessValue(self: Self) T {
+            return self.ovalness;
+        }
+
+        pub fn dimensionValue(_: Self) usize {
+            return 3;
+        }
+
+        /// Mode direction (the mean direction for 0 ≤ 2β < κ).
+        pub fn modeValue(self: Self) [3]T {
+            return self.mean_dir;
+        }
+
+        /// Mean resultant length `E[γ₁ᵀx]`.
+        pub fn meanResultantLength(self: Self) T {
+            return kentMoments(T, self.kappa, self.ovalness)[0];
+        }
+
+        /// Expected direction `E[x] = E[γ₁ᵀx]·γ₁`.
+        pub fn expectedValue(self: Self) [3]T {
+            const rho = self.meanResultantLength();
+            var out: [3]T = undefined;
+            inline for (0..3) |i| out[i] = rho * self.mean_dir[i];
+            return out;
+        }
+
+        /// Total spherical variance `1 − |E[x]|²`.
+        pub fn varianceValue(self: Self) T {
+            const rho = self.meanResultantLength();
+            return 1 - rho * rho;
+        }
+
+        /// Covariance of the ambient coordinates:
+        /// `Var[w]·γ₁γ₁ᵀ + Cov₂·γ₂γ₂ᵀ + Cov₃·γ₃γ₃ᵀ`.
+        pub fn covarianceAt(self: Self, row: usize, col: usize) T {
+            std.debug.assert(row < 3 and col < 3);
+            const m = kentMoments(T, self.kappa, self.ovalness);
+            return m[1] * self.mean_dir[row] * self.mean_dir[col] +
+                m[2] * self.major_axis[row] * self.major_axis[col] +
+                m[3] * self.minor_axis[row] * self.minor_axis[col];
+        }
+
+        pub fn varianceAt(self: Self, index: usize) T {
+            return self.covarianceAt(index, index);
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3]T {
+            return kentPointFrom(rng, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3]T {
+            return kentPointFrom(source, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3]T) void {
+            fillKentPointsFrom(rng, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3]T) void {
+            fillKentPointsFrom(source, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+        }
+    };
+}
+
+// -----------------------------------------------------------------------------
+// Kent free functions
+// -----------------------------------------------------------------------------
+
+/// Sample a single Kent-distributed point on S² (validated).
+pub fn kent(rng: Rng, comptime T: type, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError![3]T {
+    return kentCheckedFrom(rng, T, mean_dir, major_axis, kappa, ovalness);
+}
+
+/// Source-accepting variant of `kent` (panics on invalid parameters).
+pub fn kentFrom(source: anytype, comptime T: type, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) [3]T {
+    const dist = Kent(T).new(mean_dir, major_axis, kappa, ovalness);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning an error on invalid parameters.
+pub fn kentChecked(rng: Rng, comptime T: type, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError![3]T {
+    return kentCheckedFrom(rng, T, mean_dir, major_axis, kappa, ovalness);
+}
+
+/// Checked source-accepting variant.
+pub fn kentCheckedFrom(source: anytype, comptime T: type, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError![3]T {
+    const dist = try Kent(T).init(mean_dir, major_axis, kappa, ovalness);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Kent-distributed points (validated).
+pub fn fillKent(rng: Rng, comptime T: type, dest: [][3]T, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError!void {
+    return fillKentCheckedFrom(rng, T, dest, mean_dir, major_axis, kappa, ovalness);
+}
+
+/// Source-accepting fill (panics on invalid parameters).
+pub fn fillKentFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) void {
+    const dist = Kent(T).new(mean_dir, major_axis, kappa, ovalness);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillKentChecked(rng: Rng, comptime T: type, dest: [][3]T, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError!void {
+    return fillKentCheckedFrom(rng, T, dest, mean_dir, major_axis, kappa, ovalness);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillKentCheckedFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: [3]T, major_axis: [3]T, kappa: T, ovalness: T) KentError!void {
+    const dist = try Kent(T).init(mean_dir, major_axis, kappa, ovalness);
     dist.fillFrom(source, dest);
 }
 
@@ -55940,6 +56328,163 @@ test "Bingham f32 sampling works" {
         const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
         try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
     }
+}
+
+test "Kent constructor validates parameters and builds an orthonormal frame" {
+    const mean = [3]f64{ 0, 0, 1 };
+    const major = [3]f64{ 2, 0, 0 };
+    const dist = try Kent(f64).init(mean, major, 4, 1.5);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), dist.concentrationValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.5), dist.ovalnessValue(), 1e-12);
+    try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
+    try std.testing.expectEqualSlices(f64, &mean, &dist.meanDirection());
+
+    const m = dist.meanDirection();
+    const a = dist.majorAxis();
+    const b = dist.minorAxis();
+    const dot = struct {
+        fn call(x: [3]f64, y: [3]f64) f64 {
+            return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+        }
+    }.call;
+    try std.testing.expectApproxEqAbs(@as(f64, 0), dot(m, a), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), dot(m, b), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), dot(a, b), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), dot(a, a), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), dot(b, b), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), a[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), b[1], 1e-12);
+
+    try std.testing.expectError(error.InvalidParameter, Kent(f64).init(mean, major, -1, 0));
+    try std.testing.expectError(error.InvalidParameter, Kent(f64).init(mean, major, 4, -1));
+    try std.testing.expectError(error.InvalidParameter, Kent(f64).init(mean, major, 4, 2));
+    try std.testing.expectError(error.InvalidParameter, Kent(f64).init(mean, major, 0, 0.1));
+    try std.testing.expectError(error.InvalidParameter, Kent(f64).init(mean, major, std.math.inf(f64), 0));
+    try std.testing.expectError(error.InvalidParameter, Kent(f64).init(mean, major, 4, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidMeanDirection, Kent(f64).init(.{ 1, 0, 0 }, major, 4, 1));
+    try std.testing.expectError(error.InvalidMeanDirection, Kent(f64).init(mean, .{ 0, 0, 1 }, 4, 1));
+    try std.testing.expectError(error.InvalidMeanDirection, Kent(f64).init(.{ std.math.nan(f64), 0, 1 }, major, 4, 1));
+    try std.testing.expectError(error.InvalidMeanDirection, Kent(f64).init(mean, .{ std.math.nan(f64), 0, 0 }, 4, 1));
+}
+
+test "Kent beta=0 reduces to Von Mises-Fisher" {
+    const alea = @import("root.zig");
+    var kent_engine = alea.DefaultPrng.init(0xc1);
+    var vmf_engine = alea.DefaultPrng.init(0xc1);
+    const kent_rng = Rng.init(&kent_engine);
+    const vmf_rng = Rng.init(&vmf_engine);
+
+    const mean = [3]f64{ 0, 0, 1 };
+    const major = [3]f64{ 1, 0, 0 };
+    const dist = try Kent(f64).init(mean, major, 6, 0);
+    const vmf = try VonMisesFisher(f64, 3).init(mean, 6);
+    try std.testing.expectApproxEqAbs(vmf.meanResultantLength(), dist.meanResultantLength(), 1e-6);
+
+    for (0..16) |_| {
+        const kent_sample = dist.sample(kent_rng);
+        const vmf_sample = vmf.sample(vmf_rng);
+        try std.testing.expectEqualSlices(f64, &kent_sample, &vmf_sample);
+    }
+}
+
+test "Kent sampling matches its analytic moments" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc2);
+    const rng = Rng.init(&engine);
+
+    const dist = try Kent(f64).init(.{ 0, 0, 1 }, .{ 1, 0, 0 }, 5, 1.5);
+    const expected = dist.expectedValue();
+    const count = 40_000;
+    var sums = [_]f64{0} ** 3;
+    var sums_sq = [_]f64{0} ** 3;
+    var cross01: f64 = 0;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        inline for (0..3) |i| {
+            sums[i] += p[i];
+            sums_sq[i] += p[i] * p[i];
+        }
+        cross01 += p[0] * p[1];
+    }
+    const nf: f64 = @floatFromInt(count);
+    const observed = [3]f64{ sums[0] / nf, sums[1] / nf, sums[2] / nf };
+    inline for (0..3) |i| {
+        try std.testing.expectApproxEqAbs(expected[i], observed[i], 0.02);
+        try std.testing.expectApproxEqAbs(dist.covarianceAt(i, i), sums_sq[i] / nf - observed[i] * observed[i], 0.03);
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 0), cross01 / nf - observed[0] * observed[1], 0.03);
+
+    // Ovalness makes the γ₂ axis noisier than the γ₃ axis.
+    try std.testing.expect(dist.varianceAt(0) > dist.varianceAt(1));
+    try std.testing.expect(dist.varianceAt(0) > dist.varianceAt(2));
+    // Total covariance trace equals the spherical variance 1 − ρ².
+    try std.testing.expectApproxEqAbs(dist.varianceValue(), dist.varianceAt(0) + dist.varianceAt(1) + dist.varianceAt(2), 1e-9);
+}
+
+test "Kent mean resultant matches direct numerical integration" {
+    const kappa: f64 = 4;
+    const ovalness: f64 = 1.5;
+    const steps: usize = 20000;
+    var num: f64 = 0;
+    var den: f64 = 0;
+    for (0..steps) |i| {
+        const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+        const h = @exp(kappa * w) * besselI0(ovalness * (1 - w * w));
+        num += w * h;
+        den += h;
+    }
+    const dist = try Kent(f64).init(.{ 0, 0, 1 }, .{ 1, 0, 0 }, kappa, ovalness);
+    try std.testing.expectApproxEqAbs(num / den, dist.meanResultantLength(), 1e-6);
+}
+
+test "Kent free functions, fill, and direct-source parity work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc3);
+    const rng = Rng.init(&engine);
+    const mean = [3]f64{ 0, 0, 1 };
+    const major = [3]f64{ 1, 0, 0 };
+
+    var buf: [16][3]f64 = undefined;
+    try fillKent(rng, f64, &buf, mean, major, 4, 1);
+    for (buf) |p| {
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+
+    const single = try kentChecked(rng, f64, mean, major, 4, 1);
+    const norm_sq = single[0] * single[0] + single[1] * single[1] + single[2] * single[2];
+    try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+
+    try std.testing.expectError(error.InvalidParameter, kent(rng, f64, mean, major, -1, 0));
+    try std.testing.expectError(error.InvalidParameter, kent(rng, f64, mean, major, 4, 2));
+    try std.testing.expectError(error.InvalidMeanDirection, kent(rng, f64, .{ 1, 0, 0 }, major, 4, 1));
+    try std.testing.expectError(error.InvalidParameter, fillKent(rng, f64, &buf, mean, major, 4, 2));
+
+    var facade_engine = alea.DefaultPrng.init(0xc4);
+    var direct_engine = alea.DefaultPrng.init(0xc4);
+    const facade_rng = Rng.init(&facade_engine);
+    const dist = try Kent(f64).init(mean, major, 4, 1);
+    for (0..16) |_| {
+        const facade_sample = dist.sample(facade_rng);
+        const direct_sample = kentFrom(&direct_engine, f64, mean, major, 4, 1);
+        try std.testing.expectEqualSlices(f64, &facade_sample, &direct_sample);
+    }
+}
+
+test "Kent f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc5);
+    const rng = Rng.init(&engine);
+
+    const dist = try Kent(f32).init(.{ 0, 0, 1 }, .{ 1, 0, 0 }, 4, 1);
+    for (0..64) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+    }
+    try std.testing.expect(std.math.isFinite(dist.meanResultantLength()));
 }
 
 test "kummerM hypergeometric sanity checks" {
