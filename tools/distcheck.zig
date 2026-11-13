@@ -1403,6 +1403,83 @@ fn checkLongRun(samples: usize) !void {
         }
         try expectFloatBetween("long vmf mean resultant", sum / nf, expected - 0.002, expected + 0.002);
     }
+
+    // Tail probabilities.
+    {
+        var engine = alea.FastPrng.init(0x10cb);
+        const rng = alea.Rng.init(&engine);
+        var normal_tail: usize = 0;
+        var exponential_tail: usize = 0;
+        var student_tail: usize = 0;
+        const tail_threshold: f64 = 3;
+        const tail_nu: f64 = 5;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            if (@abs(alea.distributions.standardNormal(rng, f64)) > tail_threshold) normal_tail += 1;
+            if (alea.distributions.standardExponential(rng, f64) > tail_threshold) exponential_tail += 1;
+            if (@abs(alea.distributions.studentT(rng, f64, tail_nu)) > tail_threshold) student_tail += 1;
+        }
+        const normal_rate = @as(f64, @floatFromInt(normal_tail)) / nf;
+        const exponential_rate = @as(f64, @floatFromInt(exponential_tail)) / nf;
+        const student_rate = @as(f64, @floatFromInt(student_tail)) / nf;
+        const student_expected = 2 * (1 - alea.distributions.studentTCdf(tail_threshold, tail_nu));
+        try expectFloatBetween("long normal tail", normal_rate, 0.00270 - 0.0005, 0.00270 + 0.0005);
+        try expectFloatBetween("long exponential tail", exponential_rate, 0.049787 - 0.0015, 0.049787 + 0.0015);
+        try expectFloatBetween("long student-t tail", student_rate, student_expected - 0.002, student_expected + 0.002);
+        std.debug.print("long tails: normal={d:.6} exponential={d:.6} student-t={d:.6} (expected {d:.6})\n", .{ normal_rate, exponential_rate, student_rate, student_expected });
+    }
+
+    // Copula correlation and lower-tail dependence.
+    {
+        const correlation = [2][2]f64{ .{ 1, 0.6 }, .{ 0.6, 1 } };
+        const gaussian = try alea.distributions.StaticGaussianCopula(f64, 2).init(correlation);
+        const student = try alea.distributions.StaticStudentTCopula(f64, 2).init(correlation, 3);
+
+        var g_engine = alea.FastPrng.init(0x10cc);
+        const g_rng = alea.Rng.init(&g_engine);
+        var g_sum0: f64 = 0;
+        var g_sum1: f64 = 0;
+        var g_sum00: f64 = 0;
+        var g_sum11: f64 = 0;
+        var g_sum01: f64 = 0;
+        var g_joint_low: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const u = gaussian.sample(g_rng);
+            const z0 = alea.distributions.probit(u[0]);
+            const z1 = alea.distributions.probit(u[1]);
+            g_sum0 += z0;
+            g_sum1 += z1;
+            g_sum00 += z0 * z0;
+            g_sum11 += z1 * z1;
+            g_sum01 += z0 * z1;
+            if (u[0] < 0.01 and u[1] < 0.01) g_joint_low += 1;
+        }
+        const g_m0 = g_sum0 / nf;
+        const g_m1 = g_sum1 / nf;
+        const g_cov = g_sum01 / nf - g_m0 * g_m1;
+        const g_sd0 = @sqrt(g_sum00 / nf - g_m0 * g_m0);
+        const g_sd1 = @sqrt(g_sum11 / nf - g_m1 * g_m1);
+        try expectFloatBetween("long gaussian copula correlation", g_cov / (g_sd0 * g_sd1), 0.595, 0.605);
+
+        var t_engine = alea.FastPrng.init(0x10cd);
+        const t_rng = alea.Rng.init(&t_engine);
+        var t_joint_low: usize = 0;
+        i = 0;
+        while (i < samples) : (i += 1) {
+            const u = student.sample(t_rng);
+            if (u[0] < 0.01 and u[1] < 0.01) t_joint_low += 1;
+        }
+        const g_rate = @as(f64, @floatFromInt(g_joint_low)) / nf;
+        const t_rate = @as(f64, @floatFromInt(t_joint_low)) / nf;
+        // The ν=3 t-copula has positive lower-tail dependence, so its 1% joint
+        // lower-tail rate should be materially above the Gaussian copula's.
+        if (!(t_rate > 1.5 * g_rate)) {
+            std.debug.print("long copula tail dependence: t={d:.6} gaussian={d:.6}\n", .{ t_rate, g_rate });
+            return error.DistributionCheckFailed;
+        }
+        std.debug.print("long copula 1% joint lower-tail rates: gaussian={d:.6} student-t={d:.6}\n", .{ g_rate, t_rate });
+    }
 }
 
 fn expectStandardNormalCdfGates(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType) !void {
