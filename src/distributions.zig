@@ -33894,6 +33894,10 @@ fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows:
 /// parameter column is zero, so `MatrixFisher` provides exact draws. The
 /// `burnin` and `thin` options are ignored for 3×2.
 ///
+/// Single-column matrices (`k = 1`) are also sampled exactly: the conditional
+/// is the full vector von Mises-Fisher law, so one direct draw replaces the
+/// burn-in/thinning chain. `burnin` and `thin` are ignored for `k = 1`.
+///
 /// Other shapes use a Gibbs sampler whose per-column conditional
 /// distributions are exact von Mises-Fisher draws on the orthogonal complement
 /// of the other columns. The 3×2 Gibbs kernel remains as a fallback when the
@@ -33927,6 +33931,9 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
         ortho_countdown: usize,
         /// Exact 3×2 sampler through the SO(3) matrix Fisher reduction.
         exact_3x2: ?MatrixFisher(T),
+        /// Concentration for the exact single-column path; the normalized
+        /// mean direction is stored in `g`.
+        mean_norm: T,
 
         /// Construct with default burn-in (100 sweeps) and thinning (10 sweeps).
         pub fn init(allocator: std.mem.Allocator, parameter: []const T, rows: usize, cols: usize) !Self {
@@ -33978,6 +33985,21 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 exact_3x2 = MatrixFisher(T).init(k) catch null;
             }
 
+            // For a single column the Gibbs conditional is the full vector
+            // von Mises-Fisher law, so one direct draw is exact. Store the
+            // normalized mean direction in `g` and its norm in `mean_norm`.
+            var mean_norm: T = 0;
+            if (cols == 1) {
+                var sum_sq: T = 0;
+                for (parameter) |value| sum_sq += value * value;
+                mean_norm = @sqrt(sum_sq);
+                if (mean_norm > 0) {
+                    for (parameter, 0..) |value, i| g[i] = value / mean_norm;
+                } else {
+                    @memset(g, 0);
+                }
+            }
+
             return Self{
                 .allocator = allocator,
                 .rows = rows,
@@ -33994,6 +34016,7 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 .initialized = false,
                 .ortho_countdown = 0,
                 .exact_3x2 = exact_3x2,
+                .mean_norm = mean_norm,
             };
         }
 
@@ -34079,6 +34102,10 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 out[3] = rotation[1][1];
                 out[4] = rotation[2][0];
                 out[5] = rotation[2][1];
+                return;
+            }
+            if (self.cols == 1) {
+                runtimeVonMisesFisherInto(source, T, self.rows, self.g, self.mean_norm, out, self.scratch);
                 return;
             }
             self.ensureInitialized(source);
