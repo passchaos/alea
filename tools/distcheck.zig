@@ -414,6 +414,31 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("vector bingham mean x0^2", sum_x0_sq / nf, expected - 0.03, expected + 0.03);
     }
 
+    // SIMD Kent f64x4 mean-resultant recovery.
+    {
+        const V = @Vector(4, f64);
+        const mean = [3]f64{ 0, 0, 1 };
+        const major = [3]f64{ 1, 0, 0 };
+        const dist = try alea.distributions.VectorKent(V).init(mean, major, 5, 1.5);
+        const scalar = try alea.distributions.Kent(f64).init(mean, major, 5, 1.5);
+        const expected = scalar.meanResultantLength();
+        const samples = 10_000;
+        var sum_z: f64 = 0;
+        var count: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const p = dist.sampleFrom(&engine);
+            inline for (0..4) |lane| {
+                const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+                if (@abs(norm_sq - 1) > 1e-9) return error.DistributionCheckFailed;
+                sum_z += p[2][lane];
+                count += 1;
+            }
+        }
+        const nf: f64 = @floatFromInt(count);
+        try expectFloatBetween("vector kent mean resultant", sum_z / nf, expected - 0.03, expected + 0.03);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;

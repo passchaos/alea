@@ -480,6 +480,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorVonMisesFisher(io, stdout, "alea vector von mises-fisher f64x4 3d", bytes / 64);
     try benchVectorWatson(io, stdout, "alea vector watson f64x4 3d", bytes / 64);
     try benchVectorBingham(io, stdout, "alea vector bingham f64x4 3d", bytes / 64);
+    try benchVectorKent(io, stdout, "alea vector kent f64x4 3d", bytes / 64);
     try benchWatson(io, stdout, "alea watson 3d", bytes / 64);
     try benchKent(io, stdout, "alea kent 3d", bytes / 64);
     try benchGaussianCopula(io, stdout, "alea gaussian copula 3d", bytes / 64);
@@ -11482,6 +11483,37 @@ fn benchVectorBingham(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0x5f50);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..3) |component| {
+                inline for (0..4) |lane| checksum +%= @bitCast(point[component][lane]);
+            }
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchVectorKent(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const V = @Vector(4, f64);
+    const dist = alea.distributions.VectorKent(V).init(.{ 0, 0, 1 }, .{ 1, 0, 0 }, 5, 1.5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5f60);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
