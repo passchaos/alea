@@ -6875,5 +6875,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1342-validate-all-refresh.md`, and
 `compare/results/s4-m1343-rice-marcum-q.md`, and
 `compare/results/s4-m1344-hoyt-cdf-quantile.md`, and
-`compare/results/s4-m1345-matrix-vmf-benchmark-determinism.md`.
+`compare/results/s4-m1345-matrix-vmf-benchmark-determinism.md`, and
+`compare/results/s4-m1346-vector-kent-tail.md`.
 

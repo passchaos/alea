@@ -11696,6 +11696,33 @@ fn kentConditionalPhiFrom(source: anytype, comptime T: type, a: T) T {
     return phi;
 }
 
+/// Scalar Kent marginal draw: Wood proposal plus I₀-weighted acceptance.
+inline fn kentSampleWFrom(source: anytype, comptime T: type, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) T {
+    const one: T = 1;
+    const two: T = 2;
+    const diff = kappa - proposal_lambda;
+    while (true) {
+        var w: T = undefined;
+        if (proposal_lambda == 0) {
+            w = vmfSampleWFrom(source, T, 0, 3);
+        } else {
+            while (true) {
+                const z = Rng.floatOpenClosedFrom(source, T);
+                w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
+                const e = standardExponentialFrom(source, T);
+                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c + e >= 0) break;
+            }
+        }
+        // Exact conditional sampler: accept w against the I₀-weighted marginal.
+        const s2 = @max(0, one - w * w);
+        const a = ovalness * s2;
+        const log_ratio = diff * w + logBesselI0(a) - marginal_max_log;
+        // Exp(1) race: E ≥ −log_ratio replaces log(u) ≤ log_ratio.
+        const e = standardExponentialFrom(source, T);
+        if (e >= -log_ratio) return w;
+    }
+}
+
 fn kentPointFrom(
     source: anytype,
     comptime T: type,
@@ -11715,40 +11742,16 @@ fn kentPointFrom(
     if (ovalness == 0) return vonMisesFisherPointFrom(source, T, 3, mean_dir, kappa);
 
     const one: T = 1;
-    const two: T = 2;
-    const diff = kappa - proposal_lambda;
-    while (true) {
-        // Sample the proposal vMF cosine directly in the Kent frame instead of
-        // constructing a full 3D point and projecting it. Wood's constants are
-        // precomputed at construction time.
-        var w: T = undefined;
-        if (proposal_lambda == 0) {
-            w = vmfSampleWFrom(source, T, 0, 3);
-        } else {
-            while (true) {
-                const z = Rng.floatOpenClosedFrom(source, T);
-                w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
-                const e = standardExponentialFrom(source, T);
-                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c + e >= 0) break;
-            }
-        }
-        // Exact conditional sampler: accept w against the I₀-weighted marginal,
-        // then draw φ from the conditional von Mises density.
-        const s2 = @max(0, one - w * w);
-        const a = ovalness * s2;
-        const log_ratio = diff * w + logBesselI0(a) - marginal_max_log;
-        // Exp(1) race: E ≥ −log_ratio replaces log(u) ≤ log_ratio.
-        const e = standardExponentialFrom(source, T);
-        if (e >= -log_ratio) {
-            const phi = kentConditionalPhiFrom(source, T, a);
-            const s = @sqrt(s2);
-            const cos_phi = @cos(phi);
-            const sin_phi = @sin(phi);
-            var x: [3]T = undefined;
-            inline for (0..3) |i| x[i] = w * mean_dir[i] + s * (cos_phi * major_axis[i] + sin_phi * minor_axis[i]);
-            return x;
-        }
-    }
+    const w = kentSampleWFrom(source, T, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
+    const s2 = @max(0, one - w * w);
+    const a = ovalness * s2;
+    const phi = kentConditionalPhiFrom(source, T, a);
+    const s = @sqrt(s2);
+    const cos_phi = @cos(phi);
+    const sin_phi = @sin(phi);
+    var x: [3]T = undefined;
+    inline for (0..3) |i| x[i] = w * mean_dir[i] + s * (cos_phi * major_axis[i] + sin_phi * minor_axis[i]);
+    return x;
 }
 
 fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: *const [3]T, major_axis: *const [3]T, minor_axis: *const [3]T, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) void {
@@ -12074,6 +12077,21 @@ fn vectorKentPointFrom(
         const accept = pending & (e >= -log_ratio);
         w = @select(Child, accept, wcand, w);
         pending = @select(bool, accept, @as(B, @splat(false)), pending);
+
+        // Once only a few lanes remain, finish them with the scalar marginal
+        // sampler instead of redrawing full vectors.
+        var active_count: usize = 0;
+        inline for (0..L) |lane| {
+            if (pending[lane]) active_count += 1;
+        }
+        if (active_count <= 4) {
+            inline for (0..L) |lane| {
+                if (pending[lane]) {
+                    w[lane] = kentSampleWFrom(source, Child, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
+                }
+            }
+            break;
+        }
     }
 
     const s2 = @max(zero, one - w * w);
