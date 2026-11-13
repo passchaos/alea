@@ -9983,6 +9983,48 @@ fn vmfSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T {
 
 /// Sample a point on S^{n-1} ~ vMF(mean_dir, kappa) using Wood's algorithm.
 /// mean_dir must be a unit vector of length n.
+/// Best–Fisher sampler for the circular von Mises distribution that returns the
+/// 2D unit vector directly. This avoids the `atan2`/`acos`/`cos`/`sin` round
+/// trip used by the angle-based path, which matters for the matrix vMF Gibbs
+/// conditional draws.
+fn vonMises2dPointFrom(source: anytype, comptime T: type, mean_x: T, mean_y: T, kappa: T) [2]T {
+    const pi: T = @floatCast(std.math.pi);
+    if (kappa == 0) {
+        const angle = (Rng.floatOpenClosedFrom(source, T) * 2 - 1) * pi;
+        return .{ @cos(angle), @sin(angle) };
+    }
+    if (kappa > 1e12) return .{ mean_x, mean_y };
+    const disc = @sqrt(1 + 4 * kappa * kappa);
+    const tau = 1 + disc;
+    const rho = (2 * kappa * tau) / ((disc + 1) * (tau + @sqrt(2 * tau)));
+    const r = (1 + rho * rho) / (2 * rho);
+    if (!(r > 0) or !std.math.isFinite(r)) {
+        const angle = (Rng.floatOpenClosedFrom(source, T) * 2 - 1) * pi;
+        return .{ @cos(angle), @sin(angle) };
+    }
+    const vx = -mean_y;
+    const vy = mean_x;
+    while (true) {
+        const ua = Rng.floatOpenFrom(source, T);
+        const z = @cos(pi * ua);
+        const f = (1 + r * z) / (r + z);
+        const c = kappa * (r - f);
+        const ub = Rng.floatOpenFrom(source, T);
+        var accept = false;
+        if (c * (2 - c) - ub > 0) {
+            accept = true;
+        } else if (@log(c / ub) + 1 - c >= 0) {
+            accept = true;
+        }
+        if (accept) {
+            const uc = Rng.floatOpenClosedFrom(source, T);
+            const sign: T = if (uc >= 0.5) 1 else -1;
+            const sin_delta = sign * @sqrt(@max(@as(T, 0), 1 - f * f));
+            return .{ f * mean_x + sin_delta * vx, f * mean_y + sin_delta * vy };
+        }
+    }
+}
+
 fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize, mean_dir: *const [n]T, kappa: T) [n]T {
     comptime if (n < 2) @compileError("VonMisesFisher requires at least 2 dimensions (circle); for 1D circular distributions use VonMises with angle parameter");
 
@@ -9996,15 +10038,9 @@ fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize,
     }
 
     if (n == 2) {
-        // vMF on S^1 (circle) is exactly von Mises parameterized by mean angle.
-        // Convert mean direction (x,y) to angle mu = atan2(y,x), sample vonMises,
-        // then convert back to a unit vector (cos(angle), sin(angle)).
-        const pi_val = @as(T, @floatCast(std.math.pi));
-        const two_pi = 2 * pi_val;
-        const mu = std.math.atan2(mean_dir[1], mean_dir[0]);
-        const theta = vonMisesFrom(source, T, mu, kappa);
-        const angle = wrapAngle(theta, pi_val, two_pi);
-        return .{ @cos(angle), @sin(angle) };
+        // vMF on S^1 (circle) is exactly von Mises; sample the unit vector
+        // directly to avoid the angle conversions.
+        return vonMises2dPointFrom(source, T, mean_dir[0], mean_dir[1], kappa);
     }
 
     // Step 1: Sample w = cos(theta) from marginal distribution (works for n >= 3).
@@ -33513,13 +33549,10 @@ fn runtimeVonMisesFisherInto(source: anytype, comptime T: type, dim: usize, mean
     }
     if (dim == 2) {
         // The Wood cosine proposal is only exact for dim ≥ 3; S¹ is the
-        // circular von Mises distribution.
-        const pi_val = @as(T, @floatCast(std.math.pi));
-        const mu = std.math.atan2(mean_dir[1], mean_dir[0]);
-        const theta = vonMisesFrom(source, T, mu, kappa);
-        const angle = wrapAngle(theta, pi_val, 2 * pi_val);
-        out[0] = @cos(angle);
-        out[1] = @sin(angle);
+        // circular von Mises distribution, sampled directly as a unit vector.
+        const point = vonMises2dPointFrom(source, T, mean_dir[0], mean_dir[1], kappa);
+        out[0] = point[0];
+        out[1] = point[1];
         return;
     }
 
