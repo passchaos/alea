@@ -517,6 +517,44 @@ fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
     return if (t >= 0) cdf else 1 - cdf;
 }
 
+/// Vectorized integer-degree Student-t CDF for four lanes. Uses the same
+/// recurrence as `studentTCdfSmallInteger` with a vector `atan` and vector
+/// arithmetic; unused lanes must be set to zero by the caller.
+fn studentTCdfVec4(t: @Vector(4, f64), nu: f64) @Vector(4, f64) {
+    const V = @Vector(4, f64);
+    const pi: V = @splat(std.math.pi);
+    const abs_t = @abs(t);
+    const sqrt_nu = @sqrt(nu);
+    const theta = std.math.atan(abs_t / @as(V, @splat(sqrt_nu)));
+    const inv_norm = @as(V, @splat(1)) / @sqrt(@as(V, @splat(nu)) + abs_t * abs_t);
+    const x = @as(V, @splat(nu)) * inv_norm * inv_norm;
+    const sin_theta = abs_t * inv_norm;
+
+    const odd = @mod(@as(i64, @intFromFloat(nu)), 2) == 1;
+    var a: f64 = undefined;
+    var ib: V = undefined;
+    var x_to_a: V = undefined;
+    if (odd) {
+        a = 0.5;
+        ib = @as(V, @splat(1)) - @as(V, @splat(2)) * theta / pi;
+        x_to_a = @sqrt(x);
+    } else {
+        a = 1;
+        ib = @as(V, @splat(1)) - sin_theta;
+        x_to_a = x;
+    }
+    const inv_ab_table = if (odd) &student_t_inv_ab_odd else &student_t_inv_ab_even;
+    const target = nu / 2;
+    var step: usize = 0;
+    while (a < target) : (step += 1) {
+        ib -= x_to_a * sin_theta * @as(V, @splat(inv_ab_table[step]));
+        x_to_a *= x;
+        a += 1;
+    }
+    const cdf = @as(V, @splat(1)) - @as(V, @splat(0.5)) * ib;
+    return @select(f64, t >= @as(V, @splat(0)), cdf, @as(V, @splat(1)) - cdf);
+}
+
 /// Student-t cumulative distribution function with `nu` degrees of freedom.
 /// Uses the regularized incomplete beta representation
 ///   F(t) = 1 − ½·I_{ν/(ν+t²)}(ν/2, ½)   for t ≥ 0
@@ -31288,6 +31326,20 @@ pub fn StaticStudentTCopula(comptime T: type, comptime dimension: usize) type {
             var z = self.mvn.sampleFrom(source);
             const scale = @sqrt(chiSquaredFrom(source, T, self.df) / self.df);
             const eps: T = std.math.floatEps(T);
+            if (comptime (T == f64 and dimension <= 4)) {
+                var t_vec: @Vector(4, f64) = @splat(0);
+                inline for (0..dimension) |i| t_vec[i] = z[i] / scale;
+                const df: f64 = self.df;
+                if (df == @floor(df) and df >= 1 and df <= 64 and
+                    @reduce(.And, @abs(t_vec) < @as(@Vector(4, f64), @splat(std.math.inf(f64)))))
+                {
+                    const cdf = studentTCdfVec4(t_vec, df);
+                    inline for (0..dimension) |i| {
+                        z[i] = @min(@max(cdf[i], eps / 2), 1 - eps / 2);
+                    }
+                    return z;
+                }
+            }
             inline for (0..dimension) |i| {
                 z[i] = @min(@max(studentTCdf(z[i] / scale, self.df), eps / 2), 1 - eps / 2);
             }
@@ -34541,7 +34593,10 @@ pub fn MatrixFisherO3(comptime T: type) type {
         pub fn sampleFrom(self: Self, source: anytype) [3][3]T {
             const u = Rng.floatOpenFrom(source, T);
             const is_so = u < self.so_weight;
-            const q = if (is_so) self.sampler_so.sampleFrom(source) else self.sampler_ref.sampleFrom(source);
+            // Select the sampler once so both branches share one inlined
+            // Bingham body instead of duplicating it.
+            const sampler: *const Bingham(T, 4) = if (is_so) &self.sampler_so else &self.sampler_ref;
+            const q = sampler.sampleFrom(source);
             const r = matrixFisherQuaternionToRotation(T, q);
             if (is_so) return r;
             return .{
@@ -56701,7 +56756,11 @@ test "StudentTCopula (dynamic) validates parameters and matches static" {
     for (0..32) |_| {
         dynamic.sampleInto(dynamic_rng, &buf);
         const expected = static.sample(static_rng);
-        try std.testing.expectEqualSlices(f64, &expected, &buf);
+        // The static copula uses the vectorized CDF for 3D f64, which rounds
+        // differently from the dynamic scalar CDF; compare to fp tolerance.
+        for (expected, buf) |e, a| {
+            try std.testing.expectApproxEqAbs(e, a, 1e-12);
+        }
     }
 }
 
