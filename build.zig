@@ -116,6 +116,16 @@ pub fn build(b: *std.Build) void {
     const rank_distributions_example_step = b.step("run-rank-distributions", "Run the rank distributions alea example");
     rank_distributions_example_step.dependOn(&run_rank_distributions_example.step);
 
+    const run_copulas_example = addToolRun(b, target, optimize, module, "alea-copulas", "examples/copulas.zig");
+
+    const copulas_example_step = b.step("run-copulas", "Run the copula alea example");
+    copulas_example_step.dependOn(&run_copulas_example.step);
+
+    const run_matrix_normal_example = addToolRun(b, target, optimize, module, "alea-matrix-normal", "examples/matrix_normal.zig");
+
+    const matrix_normal_example_step = b.step("run-matrix-normal", "Run the matrix normal alea example");
+    matrix_normal_example_step.dependOn(&run_matrix_normal_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -134,6 +144,8 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_continuous_distributions_example.step);
     examples_step.dependOn(&run_advanced_continuous_distributions_example.step);
     examples_step.dependOn(&run_rank_distributions_example.step);
+    examples_step.dependOn(&run_copulas_example.step);
+    examples_step.dependOn(&run_matrix_normal_example.step);
 
     const run_bench = addToolRun(b, target, optimize, module, "alea-throughput", "bench/throughput.zig");
 

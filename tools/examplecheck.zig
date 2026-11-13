@@ -20,6 +20,18 @@ const examples = [_]Example{
     .{ .path = "examples/continuous_distributions.zig", .step = "zig build run-continuous-distributions", .aggregate_token = "examples_step.dependOn(&run_continuous_distributions_example.step)" },
     .{ .path = "examples/advanced_continuous_distributions.zig", .step = "zig build run-advanced-continuous-distributions", .aggregate_token = "examples_step.dependOn(&run_advanced_continuous_distributions_example.step)" },
     .{ .path = "examples/rank_distributions.zig", .step = "zig build run-rank-distributions", .aggregate_token = "examples_step.dependOn(&run_rank_distributions_example.step)" },
+    .{
+        .path = "examples/copulas.zig",
+        .step = "zig build run-copulas",
+        .aggregate_token = "examples_step.dependOn(&run_copulas_example.step)",
+        .source_tokens = &.{ "StaticGaussianCopula", "GaussianCopula(f64)", "StaticStudentTCopula", "StudentTCopula(f64)", "probit", "joint lower-tail rate" },
+    },
+    .{
+        .path = "examples/matrix_normal.zig",
+        .step = "zig build run-matrix-normal",
+        .aggregate_token = "examples_step.dependOn(&run_matrix_normal_example.step)",
+        .source_tokens = &.{ "MatrixNormal(f64)", "StaticMatrixNormal(f64, 2, 2)", "rowCovarianceAt", "colCovarianceAt", "sampleManyIntoFrom" },
+    },
     .{ .path = "examples/distribution_diagnostics.zig", .step = "zig build run-distribution-diagnostics", .aggregate_token = "examples_step.dependOn(&run_distribution_diagnostics_example.step)" },
     .{ .path = "examples/vector_profiles.zig", .step = "zig build run-vector-profiles", .aggregate_token = "examples_step.dependOn(&run_vector_profiles_example.step)" },
     .{ .path = "examples/native_f32_profiles.zig", .step = "zig build run-native-f32-profiles", .aggregate_token = "examples_step.dependOn(&run_native_f32_profiles_example.step)" },

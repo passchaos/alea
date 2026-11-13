@@ -6786,14 +6786,14 @@ All four noncentral distributions extend beyond local Rust `rand_distr` 0.6.0,
 which provides no noncentral distributions. All 730 tests pass (28 new tests
 across the batch); `zig build validate` passes all gates.
 
-The next product bar after S4-M1263, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, and S4-M1272 covers additional
+The next product bar after S4-M1263, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, and S4-M1273 covers additional
 directional/multivariate distributions (Matrix von Mises-Fisher, Kent), Noncentral/GeneralizedPareto/
 ScaledInvChiSq/Hoyt/ExGaussian/Rice/Nakagami/InverseGamma vector/SIMD sampling,
 SIMD spherical bulk sampling paths, weighted/alias sampling
 advances, string generation expansion, longer statistical validation runs,
 broader platform evidence, or newly discovered core random-workflow gaps.
 
-S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, and S4-M1272 are recorded in
+S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, and S4-M1273 are recorded in
 `compare/results/s4-m1264-vector-simd-advanced-distributions.md`,
 `compare/results/s4-m1265-wishart-inverse-wishart.md`,
 `compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md`,
@@ -6802,5 +6802,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1269-student-t-copula.md`,
 `compare/results/s4-m1270-dynamic-copulas.md`, and
 `compare/results/s4-m1271-matrix-normal.md`, and
-`compare/results/s4-m1272-static-matrix-normal.md`.
+`compare/results/s4-m1272-static-matrix-normal.md`, and
+`compare/results/s4-m1273-copula-matrix-normal-examples.md`.
 
