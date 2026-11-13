@@ -4868,9 +4868,44 @@ pub const Multinomial = struct {
             }
             return;
         }
+        const len = self.probabilities.len;
+        // The second conditional's normalized probability is fixed across
+        // samples while its trial count varies; a small local cache avoids
+        // recomputing the HIN setup for the common nearby counts.
+        const cache_second = len >= 3 and self.probabilities[0] > 0 and self.probabilities[1] > 0;
+        var second_p: f64 = 0;
+        var second_q: f64 = 0;
+        var second_flip = false;
+        if (cache_second) {
+            second_p = self.probabilities[1] / (self.total_probability - self.probabilities[0]);
+            second_q = if (second_p <= 0.5) second_p else 1.0 - second_p;
+            second_flip = second_p > 0.5;
+        }
+        var cache: [16]HinCacheEntry = undefined;
+        var cache_len: usize = 0;
+        var cache_next: usize = 0;
+
         var offset: usize = 0;
-        while (offset < out.len) : (offset += self.probabilities.len) {
-            self.sampleIntoFrom(source, out[offset..][0..self.probabilities.len]);
+        while (offset < out.len) : (offset += len) {
+            const sample_out = out[offset..][0..len];
+            @memset(sample_out, 0);
+            var remaining_trials = self.trials;
+            var remaining_probability = self.total_probability;
+            for (self.probabilities[0 .. len - 1], sample_out[0 .. len - 1], 0..) |p, *slot, index| {
+                if (remaining_trials == 0) break;
+                if (p == 0) continue;
+                const normalized = p / remaining_probability;
+                const count = if (index == 0)
+                    self.sampleFirstBinomialFrom(source, remaining_trials, normalized)
+                else if (index == 1 and cache_second)
+                    sampleCachedSecondBinomialFrom(source, remaining_trials, second_p, second_q, second_flip, &cache, &cache_len, &cache_next)
+                else
+                    binomialFrom(source, remaining_trials, normalized);
+                slot.* = count;
+                remaining_trials -= count;
+                remaining_probability -= p;
+            }
+            sample_out[len - 1] = remaining_trials;
         }
     }
 
@@ -5999,6 +6034,42 @@ fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
 fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const setup = binomialHinSetup(trials, p).?;
     return binomialHinSampleFrom(source, setup);
+}
+
+const HinCacheEntry = struct {
+    n: u64,
+    setup: BinomialHinSetup,
+    flip: bool,
+};
+
+/// Cached second-conditional draw for batch multinomial sampling. The
+/// normalized probability is fixed across samples, so only the trial count
+/// varies; nearby counts reuse their HIN setup.
+fn sampleCachedSecondBinomialFrom(
+    source: anytype,
+    trials: u64,
+    p: f64,
+    q: f64,
+    flip: bool,
+    cache: *[16]HinCacheEntry,
+    cache_len: *usize,
+    cache_next: *usize,
+) u64 {
+    var i: usize = 0;
+    while (i < cache_len.*) : (i += 1) {
+        if (cache[i].n == trials) {
+            const sampled = binomialHinSampleFrom(source, cache[i].setup);
+            return if (cache[i].flip) trials - sampled else sampled;
+        }
+    }
+    if (binomialHinSetup(trials, q)) |setup| {
+        const sampled = binomialHinSampleFrom(source, setup);
+        cache[cache_next.*] = .{ .n = trials, .setup = setup, .flip = flip };
+        if (cache_len.* < 16) cache_len.* += 1;
+        cache_next.* = (cache_next.* + 1) % 16;
+        return if (flip) trials - sampled else sampled;
+    }
+    return binomialFrom(source, trials, p);
 }
 
 fn UniformMoment(comptime T: type) type {
