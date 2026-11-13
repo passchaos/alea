@@ -29547,30 +29547,28 @@ pub fn Zipf(comptime T: type) type {
             return zipfQuantile(q, @as(f64, @floatCast(self.n)), @as(f64, @floatCast(self.exponent)));
         }
 
+        /// Rejection-inversion draw. The acceptance test
+        /// `u2 < x^-s * inv_b^s` is evaluated in log space with the
+        /// exponential race `E >= s * (log(x) - log(inv_b))`, replacing two
+        /// `pow` calls per iteration with two logs and one exponential.
+        inline fn nextSampleFrom(self: Self, source: anytype) T {
+            while (true) {
+                const inv_b = self.invCdf(Rng.floatFrom(source, T));
+                const x = @floor(inv_b + 1);
+                var threshold: T = 0;
+                if (x > 1) threshold = self.exponent * (@log(x) - @log(inv_b));
+                if (standardExponentialFrom(source, T) >= threshold) return x;
+            }
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return 1;
-
-            while (true) {
-                const inv_b = self.invCdf(Rng.floatFrom(rng, T));
-                const x = @floor(inv_b + 1);
-                var ratio = std.math.pow(T, x, -self.exponent);
-                if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
-
-                if (Rng.floatFrom(rng, T) < ratio) return x;
-            }
+            return self.nextSampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.isDegenerate()) return 1;
-
-            while (true) {
-                const inv_b = self.invCdf(Rng.floatFrom(source, T));
-                const x = @floor(inv_b + 1);
-                var ratio = std.math.pow(T, x, -self.exponent);
-                if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
-
-                if (Rng.floatFrom(source, T) < ratio) return x;
-            }
+            return self.nextSampleFrom(source);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
@@ -29578,19 +29576,7 @@ pub fn Zipf(comptime T: type) type {
                 @memset(dest, 1);
                 return;
             }
-            for (dest) |*item| {
-                while (true) {
-                    const inv_b = self.invCdf(Rng.floatFrom(rng, T));
-                    const x = @floor(inv_b + 1);
-                    var ratio = std.math.pow(T, x, -self.exponent);
-                    if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
-
-                    if (Rng.floatFrom(rng, T) < ratio) {
-                        item.* = x;
-                        break;
-                    }
-                }
-            }
+            for (dest) |*item| item.* = self.nextSampleFrom(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -29598,19 +29584,7 @@ pub fn Zipf(comptime T: type) type {
                 @memset(dest, 1);
                 return;
             }
-            for (dest) |*item| {
-                while (true) {
-                    const inv_b = self.invCdf(Rng.floatFrom(source, T));
-                    const x = @floor(inv_b + 1);
-                    var ratio = std.math.pow(T, x, -self.exponent);
-                    if (x > 1) ratio *= std.math.pow(T, inv_b, self.exponent);
-
-                    if (Rng.floatFrom(source, T) < ratio) {
-                        item.* = x;
-                        break;
-                    }
-                }
-            }
+            for (dest) |*item| item.* = self.nextSampleFrom(source);
         }
 
         fn isDegenerate(self: Self) bool {
