@@ -19009,6 +19009,122 @@ pub fn fillBetaPrimeCheckedFrom(source: anytype, comptime T: type, dest: []T, al
     dist.fillFrom(source, dest);
 }
 
+pub fn vectorBetaPrime(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    const sampler = VectorBetaPrime(VectorType).init(alpha, beta_param) catch unreachable;
+    return sampler.sample(rng);
+}
+
+pub fn vectorBetaPrimeFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
+    const sampler = VectorBetaPrime(VectorType).init(alpha, beta_param) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorBetaPrimeChecked(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) BetaPrimeError!VectorType {
+    const sampler = try VectorBetaPrime(VectorType).init(alpha, beta_param);
+    return sampler.sample(rng);
+}
+
+pub fn vectorBetaPrimeCheckedFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) BetaPrimeError!VectorType {
+    const sampler = try VectorBetaPrime(VectorType).init(alpha, beta_param);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorBetaPrime(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    const sampler = VectorBetaPrime(VectorType).init(alpha, beta_param) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+pub fn fillVectorBetaPrimeFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) void {
+    const sampler = VectorBetaPrime(VectorType).init(alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorBetaPrimeChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) BetaPrimeError!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorBetaPrime(VectorType).init(alpha, beta_param);
+    sampler.fill(rng, dest);
+}
+
+pub fn fillVectorBetaPrimeCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) BetaPrimeError!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorBetaPrime(VectorType).init(alpha, beta_param);
+    sampler.fillFrom(source, dest);
+}
+
+/// Reusable lane-wise BetaPrime sampler. Each vector lane is an independent
+/// scalar BetaPrime draw; the scalar sampler's exact Beta-ratio transform is
+/// reused per lane.
+pub fn VectorBetaPrime(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        sampler: BetaPrime(Child),
+
+        pub fn init(alpha: Child, beta_param: Child) BetaPrimeError!Self {
+            return .{ .sampler = try BetaPrime(Child).init(alpha, beta_param) };
+        }
+
+        pub fn new(alpha: Child, beta_param: Child) BetaPrimeError!Self {
+            return Self.init(alpha, beta_param);
+        }
+
+        pub fn alphaValue(self: Self) Child {
+            return self.sampler.alphaValue();
+        }
+
+        pub fn betaValue(self: Self) Child {
+            return self.sampler.betaValue();
+        }
+
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+
+        pub fn minValue(self: Self) Child {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn FisherF(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -49928,6 +50044,50 @@ test "BetaPrime free functions, fill, and f32 support" {
     const f32_dist = try BetaPrime(f32).init(2, 3);
     const f32_sample = f32_dist.sample(rng);
     try std.testing.expect(f32_sample > 0 and std.math.isFinite(f32_sample));
+}
+
+test "VectorBetaPrime samples, accessors, and lane parity work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbe7c);
+    const rng = Rng.init(&engine);
+
+    const Vec = @Vector(4, f64);
+    const dist = try VectorBetaPrime(Vec).init(3, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), dist.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4375), dist.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), dist.modeValue(), 1e-12);
+    try std.testing.expect(dist.medianValue() > 0);
+    try std.testing.expect(dist.maxValue() == null);
+
+    const sample = dist.sample(rng);
+    inline for (0..4) |lane| try std.testing.expect(sample[lane] > 0);
+
+    var batch: [2]Vec = undefined;
+    dist.fill(rng, &batch);
+    for (batch) |vec| {
+        inline for (0..4) |lane| try std.testing.expect(vec[lane] > 0);
+    }
+
+    try std.testing.expectError(error.InvalidParameter, VectorBetaPrime(Vec).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, vectorBetaPrimeChecked(rng, Vec, -1, 2));
+
+    // Lane-wise stream parity with the scalar sampler.
+    const vec_dist = try VectorBetaPrime(Vec).init(2, 3);
+    const scalar_dist = try BetaPrime(f64).init(2, 3);
+    var vec_engine = alea.DefaultPrng.init(0xbe7d);
+    var scalar_engine = alea.DefaultPrng.init(0xbe7d);
+    const vec_sample = vec_dist.sampleFrom(&vec_engine);
+    inline for (0..4) |lane| {
+        try std.testing.expectEqual(scalar_dist.sampleFrom(&scalar_engine), vec_sample[lane]);
+    }
+
+    // f32x8 support.
+    const VecF32 = @Vector(8, f32);
+    const f32_dist = try VectorBetaPrime(VecF32).init(2, 3);
+    const f32_sample = f32_dist.sampleFrom(&vec_engine);
+    inline for (0..8) |lane| {
+        try std.testing.expect(f32_sample[lane] > 0 and std.math.isFinite(f32_sample[lane]));
+    }
 }
 
 test "StudentTCopula constructor validates parameters" {
