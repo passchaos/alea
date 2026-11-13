@@ -185,6 +185,8 @@ most common checks are:
 
 ```sh
 zig build test
+zig build test -Dtest-filter="normal"
+zig build fmt-check
 zig build apicheck
 zig build examplecheck
 zig build toolingcheck
@@ -306,3 +308,7 @@ including the opt-in bounded f32 approximation, are summarized in
 `compare/results/lognormal-transform-notes.md`, and exact
 `(0, 1]` f64 endpoint-grid constraints are summarized in
 `compare/results/openclosed-endpoint-notes.md`.
+
+## License
+
+Alea is released under the MIT License. See `LICENSE` for the full text.

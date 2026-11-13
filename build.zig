@@ -3,6 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const test_filter = b.option([]const u8, "test-filter", "Only run unit tests whose name contains this substring");
 
     const module = b.addModule("alea", .{
         .root_source_file = b.path("src/root.zig"),
@@ -22,6 +23,7 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         }),
+        .filters = if (test_filter) |filter| &.{filter} else &.{},
     });
     const run_tests = b.addRunArtifact(tests);
 
@@ -1339,6 +1341,15 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run alea unit tests and documentation checks");
     test_step.dependOn(&run_tests.step);
     test_step.dependOn(doccheck_step);
+
+    const fmt_paths = &[_][]const u8{ "build.zig", "src", "tools", "bench", "examples" };
+    const fmt_step = b.step("fmt", "Format project Zig sources in place");
+    const fmt = b.addFmt(.{ .paths = fmt_paths });
+    fmt_step.dependOn(&fmt.step);
+
+    const fmt_check_step = b.step("fmt-check", "Fail when project Zig sources are not formatted");
+    const fmt_check = b.addFmt(.{ .paths = fmt_paths, .check = true });
+    fmt_check_step.dependOn(&fmt_check.step);
 
     const crosscheck_step = b.step("crosscheck", "Compile unit tests for secondary targets without executing them");
     inline for (cross_compile_targets) |cross_target| {

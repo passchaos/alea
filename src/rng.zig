@@ -14,12 +14,6 @@ const norm_ziggurat_ratio = blk: {
     break :blk out;
 };
 
-const exp_ziggurat_ratio = blk: {
-    var out: [256]f64 = undefined;
-    for (&out, 0..) |*item, i| item.* = std_ziggurat.ExpDist.x[i + 1] / std_ziggurat.ExpDist.x[i];
-    break :blk out;
-};
-
 const exp_ziggurat_mantissa_threshold = blk: {
     var out: [256]u64 = undefined;
     for (&out, 0..) |*item, i| {
@@ -1644,10 +1638,6 @@ fn sliceParamChild(comptime ParamType: ?type) ?type {
     return info.pointer.child;
 }
 
-fn fillBools(self: Rng, dest: []bool) void {
-    fillBoolsFrom(self, dest);
-}
-
 pub fn fillBytesFrom(source: anytype, buf: []u8) void {
     if (buf.len == 0) return;
     if (@TypeOf(source) == Rng) {
@@ -1761,10 +1751,6 @@ fn fillRatioPowerOfTwoFrom(source: anytype, dest: []bool, numerator: u32, denomi
     }
 }
 
-fn fillInts(self: Rng, comptime T: type, dest: []T) void {
-    fillIntsFrom(self, T, dest);
-}
-
 fn fillIntsFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireInt(T);
     const info = @typeInfo(T).int;
@@ -1792,10 +1778,6 @@ fn fillIntsFrom(source: anytype, comptime T: type, dest: []T) void {
             if (info.bits != 64) bits >>= @intCast(info.bits);
         }
     }
-}
-
-fn fillFloats(self: Rng, comptime T: type, dest: []T) void {
-    fillFloatsFrom(self, T, dest);
 }
 
 fn fillFloatsFrom(source: anytype, comptime T: type, dest: []T) void {
@@ -1918,10 +1900,6 @@ fn fillOpenClosedF64From(source: anytype, dest: []f64) void {
     } else {
         for (dest) |*item| item.* = floatOpenClosedFrom(source, f64);
     }
-}
-
-fn fillFloatRange(self: Rng, comptime T: type, dest: []T, min: T, max: T) void {
-    fillFloatRangeFrom(self, T, dest, min, max);
 }
 
 fn fillFloatRangeFrom(source: anytype, comptime T: type, dest: []T, min: T, max: T) void {
@@ -4302,10 +4280,6 @@ pub fn SampleIteratorFrom(comptime Source: type, comptime Sampler: type, comptim
             return unboundedSizeHint();
         }
     };
-}
-
-fn uintBits(self: Rng, comptime T: type, comptime bits: comptime_int) T {
-    return uintBitsFrom(self, T, bits);
 }
 
 fn uintBitsFrom(source: anytype, comptime T: type, comptime bits: comptime_int) T {

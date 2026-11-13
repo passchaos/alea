@@ -3729,10 +3729,6 @@ fn hypergeometricDrawLoopFrom(source: anytype, population: u64, successes: u64, 
     return hits;
 }
 
-fn binomialFair(rng: Rng, trials: u64) u64 {
-    return binomialFairFrom(rng, trials);
-}
-
 fn binomialFairFrom(source: anytype, trials: u64) u64 {
     var remaining = trials;
     var successes: u64 = 0;
@@ -3744,10 +3740,6 @@ fn binomialFairFrom(source: anytype, trials: u64) u64 {
         successes += @popCount(Rng.nextFrom(source) & mask);
     }
     return successes;
-}
-
-fn binomialSmallP(rng: Rng, trials: u64, p: f64) u64 {
-    return binomialSmallPFrom(rng, trials, p);
 }
 
 fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
@@ -3768,10 +3760,6 @@ fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     return binomialWaitingFrom(source, trials, -@log(1.0 - p));
 }
 
-fn binomialWaiting(rng: Rng, trials: u64, q: f64) u64 {
-    return binomialWaitingFrom(rng, trials, q);
-}
-
 fn binomialWaitingFrom(source: anytype, trials: u64, q: f64) u64 {
     var successes: u64 = 0;
     var sum: f64 = 0;
@@ -3782,10 +3770,6 @@ fn binomialWaitingFrom(source: anytype, trials: u64, q: f64) u64 {
         successes += 1;
         if (sum > q) return successes - 1;
     }
-}
-
-fn binomialRejectionSmallP(rng: Rng, trials: u64, p: f64) u64 {
-    return binomialRejectionSmallPFrom(rng, trials, p);
 }
 
 fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
@@ -15281,34 +15265,6 @@ fn poissonAdParts(method: PoissonAhrensDieter, k: f64) PoissonAdParts {
     };
 }
 
-fn poissonPtrs(rng: Rng, lambda: f64) u64 {
-    const sqrt_lambda = @sqrt(lambda);
-    const log_lambda = @log(lambda);
-    const b = 0.931 + 2.53 * sqrt_lambda;
-    const a = -0.059 + 0.02483 * b;
-    const inv_alpha = 1.1239 + 1.1328 / (b - 3.4);
-    const v_r = 0.9277 - 3.6224 / (b - 2.0);
-
-    while (true) {
-        const u = rng.float(f64) - 0.5;
-        const v = rng.floatOpen(f64);
-        const us = 0.5 - @abs(u);
-        const kf = @floor((2.0 * a / us + b) * u + lambda + 0.43);
-
-        if (us >= 0.07 and v <= v_r) return @intFromFloat(kf);
-        if (kf < 0 or (us < 0.013 and v > us)) continue;
-
-        const k: u64 = @intFromFloat(kf);
-        const lhs = @log(v) + @log(inv_alpha) - @log(a / (us * us) + b);
-        const rhs = -lambda + @as(f64, @floatFromInt(k)) * log_lambda - logFactorial(k);
-        if (lhs <= rhs) return k;
-    }
-}
-
-fn logFactorial(k: u64) f64 {
-    return std.math.lgamma(f64, @as(f64, @floatFromInt(k + 1)));
-}
-
 const geometricFailureMax: u64 = std.math.maxInt(u64);
 
 fn geometricFailuresSaturates(p: f64) bool {
@@ -25998,7 +25954,7 @@ pub fn StaticWishart(comptime T: type, comptime dim: usize) type {
 
             // Cholesky-Banachiewicz decomposition
             inline for (0..dim) |i| {
-                inline for (0..i+1) |j| {
+                inline for (0..i + 1) |j| {
                     var sum: T = scale[i][j];
                     comptime var k_comptime: usize = 0;
                     inline while (k_comptime < dim) : (k_comptime += 1) {
@@ -26176,7 +26132,7 @@ pub fn StaticInverseWishart(comptime T: type, comptime dim: usize) type {
 
             // Cholesky-Banachiewicz
             inline for (0..dim) |i| {
-                inline for (0..i+1) |j| {
+                inline for (0..i + 1) |j| {
                     var sum: T = scale[i][j];
                     comptime var k_comptime: usize = 0;
                     inline while (k_comptime < dim) : (k_comptime += 1) {
@@ -26304,7 +26260,7 @@ fn choleskyInvertMatrix(comptime T: type, comptime dim: usize, A: [dim][dim]T) [
         inline for (0..dim) |j| L[i][j] = 0;
     }
     inline for (0..dim) |i| {
-        inline for (0..i+1) |j| {
+        inline for (0..i + 1) |j| {
             var sum: T = A[i][j];
             comptime var k_comptime: usize = 0;
             inline while (k_comptime < dim) : (k_comptime += 1) {
@@ -26435,16 +26391,6 @@ fn choleskyInvertFlatScratch(comptime T: type, dim: usize, L: []const T, Linv: [
     }
 }
 
-/// Invert a symmetric positive-definite matrix given its lower-triangular
-/// Cholesky factor L (flat row-major). Allocates scratch from `allocator`.
-fn choleskyInvertFlat(comptime T: type, allocator: std.mem.Allocator, dim: usize, L: []const T, out: []T) !void {
-    std.debug.assert(L.len == dim * dim);
-    std.debug.assert(out.len == dim * dim);
-    const Linv = try allocator.alloc(T, dim * dim);
-    defer allocator.free(Linv);
-    choleskyInvertFlatScratch(T, dim, L, Linv, out);
-}
-
 /// Invert a symmetric positive-definite matrix A (flat row-major, dim*dim)
 /// by Cholesky decomposition, using caller-provided scratch buffers `L` and
 /// `Linv` (both dim*dim). No allocation.
@@ -26455,18 +26401,6 @@ fn choleskyInvertMatrixFlatScratch(comptime T: type, dim: usize, A: []const T, L
     std.debug.assert(out.len == dim * dim);
     try choleskyFactorizeFlat(T, dim, A, L);
     choleskyInvertFlatScratch(T, dim, L, Linv, out);
-}
-
-/// Invert a symmetric positive-definite matrix A (flat row-major, dim*dim)
-/// by Cholesky decomposition using `allocator` for scratch. Writes result into out.
-fn choleskyInvertMatrixFlat(comptime T: type, allocator: std.mem.Allocator, dim: usize, A: []const T, out: []T) !void {
-    std.debug.assert(A.len == dim * dim);
-    std.debug.assert(out.len == dim * dim);
-
-    const L = try allocator.alloc(T, dim * dim);
-    defer allocator.free(L);
-    try choleskyFactorizeFlat(T, dim, A, L);
-    choleskyInvertFlat(T, allocator, dim, L, out);
 }
 
 /// Compute X = L A A' L' for lower-triangular L and A (flat row-major, dim*dim).
@@ -26502,13 +26436,6 @@ fn wishartBartlettProductFlatScratch(comptime T: type, dim: usize, L: []const T,
             out[i * dim + j] = sum;
         }
     }
-}
-
-/// Compute X = L A A' L', allocating LA scratch from `allocator`.
-fn wishartBartlettProductFlat(comptime T: type, allocator: std.mem.Allocator, dim: usize, L: []const T, A: []const T, out: []T) !void {
-    const LA = try allocator.alloc(T, dim * dim);
-    defer allocator.free(LA);
-    wishartBartlettProductFlatScratch(T, dim, L, A, LA, out);
 }
 
 /// Dynamic (runtime-dimension, allocator-backed) Wishart distribution.
@@ -51609,7 +51536,7 @@ test "StaticWishart non-identity scale produces correct Monte Carlo mean" {
     const w = try StaticWishart(f64, 3).init(V, df);
 
     // Mean = df * V, check by Monte Carlo
-    var sum: [3][3]f64 = .{ .{0,0,0}, .{0,0,0}, .{0,0,0} };
+    var sum: [3][3]f64 = .{ .{ 0, 0, 0 }, .{ 0, 0, 0 }, .{ 0, 0, 0 } };
     const n = 5000;
     for (0..n) |_| {
         const X = w.sample(rng);
@@ -51729,7 +51656,7 @@ test "StaticInverseWishart 3x3 Monte Carlo mean" {
     const expected = iw.expectedValue() orelse unreachable;
 
     // Monte Carlo
-    var sum: [3][3]f64 = .{ .{0,0,0}, .{0,0,0}, .{0,0,0} };
+    var sum: [3][3]f64 = .{ .{ 0, 0, 0 }, .{ 0, 0, 0 }, .{ 0, 0, 0 } };
     const n = 3000;
     for (0..n) |_| {
         const X = iw.sample(rng);

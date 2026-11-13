@@ -569,6 +569,8 @@ const build_steps = [_]BuildStep{
     .{ .name = "runtimecheck", .build_token = "b.step(\"runtimecheck\"" },
     .{ .name = "doccheck", .build_token = "b.step(\"doccheck\"" },
     .{ .name = "test", .build_token = "b.step(\"test\"" },
+    .{ .name = "fmt", .build_token = "b.step(\"fmt\"" },
+    .{ .name = "fmt-check", .build_token = "b.step(\"fmt-check\"" },
     .{ .name = "crosscheck", .build_token = "b.step(\"crosscheck\"" },
     .{ .name = "test-wasi", .build_token = "b.step(\"test-wasi\"" },
     .{ .name = "wasi-dry-run", .build_token = "b.step(\"wasi-dry-run\"" },
