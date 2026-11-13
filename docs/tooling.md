@@ -21,7 +21,7 @@ with `build.zig` and the checked-in `tools/` directory.
 | `zig build runtimecheck` | Run runtimecheck helper tests, then check S4-M11 runtime-runner availability: required local tools (`node`, `cargo`, `rustc`) must exist, while extra runners such as QEMU/Wine/wasmtime/wasmer cause the check to fail so blocker evidence can be refreshed. |
 | `zig build doccheck` | Run API, examples, tooling, README, and roadmap documentation checks together. |
 | `zig build statcheck` | Run statcheck helper tests, then extended statistical smoke checks. |
-| `zig build distcheck` | Run distcheck helper tests, then parameter-grid distribution checks. |
+| `zig build distcheck` | Run distcheck helper tests, then parameter-grid distribution checks; pass `-- --long [samples]` for the opt-in longer seeded moment/tail/copula run (default 1,000,000 samples). |
 | `zig build distcheck-libc` | Run libc-linked distcheck helper tests, then distribution checks for platform-backed opt-ins. |
 | `zig build profilecheck` | Run profilecheck helper tests, then accepted vector profile distribution checks. |
 | `zig build profilecheck-tail` | Run profiletailcheck helper tests, then accepted vector profile tail checks. |
