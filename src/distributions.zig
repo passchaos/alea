@@ -10562,6 +10562,224 @@ pub fn fillKentCheckedFrom(source: anytype, comptime T: type, dest: [][3]T, mean
     dist.fillFrom(source, dest);
 }
 
+// -----------------------------------------------------------------------------
+// SIMD Kent sampling on S²
+// -----------------------------------------------------------------------------
+
+/// Per-lane Wood rejection for the Kent proposal marginal.
+fn vectorWoodW(source: anytype, comptime VectorType: type, lambda: vectorChild(VectorType), b: vectorChild(VectorType), x0: vectorChild(VectorType), c: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const L = vectorInfo(VectorType).len;
+    const V = @Vector(L, Child);
+    const B = @Vector(L, bool);
+
+    const one: V = @splat(1);
+    const two: V = @splat(2);
+    const lambda_v: V = @splat(lambda);
+    const b_v: V = @splat(b);
+    const x0_v: V = @splat(x0);
+    const c_v: V = @splat(c);
+
+    var w: V = undefined;
+    var active: B = @splat(true);
+    while (@reduce(.Or, active)) {
+        const z = Rng.vectorOpenClosedFrom(source, V);
+        const u = Rng.vectorOpenFrom(source, V);
+        const wcand = (one - (one + b_v) * z) / (one - (one - b_v) * z);
+        const accept = active & (lambda_v * wcand + two * @log(one - x0_v * wcand) - c_v >= @log(u));
+        w = @select(Child, accept, wcand, w);
+        active = @select(bool, accept, @as(B, @splat(false)), active);
+    }
+    return w;
+}
+
+/// Per-lane log I₀; the Bessel helper is scalar, so evaluate it lane by lane.
+fn vectorLogBesselI0(comptime VectorType: type, a: VectorType) VectorType {
+    const L = vectorInfo(VectorType).len;
+    var out: VectorType = undefined;
+    inline for (0..L) |lane| out[lane] = logBesselI0(a[lane]);
+    return out;
+}
+
+fn vectorKentPointFrom(
+    source: anytype,
+    comptime VectorType: type,
+    mean_dir: [3]vectorChild(VectorType),
+    major_axis: [3]vectorChild(VectorType),
+    minor_axis: [3]vectorChild(VectorType),
+    kappa: vectorChild(VectorType),
+    ovalness: vectorChild(VectorType),
+    proposal_lambda: vectorChild(VectorType),
+    marginal_max_log: vectorChild(VectorType),
+    wood_b: vectorChild(VectorType),
+    wood_x0: vectorChild(VectorType),
+    wood_c: vectorChild(VectorType),
+) [3]VectorType {
+    const Child = vectorChild(VectorType);
+    const L = vectorInfo(VectorType).len;
+    const V = @Vector(L, Child);
+    const B = @Vector(L, bool);
+
+    if (kappa == 0) return vectorUnitSphereFrom(source, VectorType);
+    if (kappa > 1e12) {
+        return .{
+            @as(V, @splat(mean_dir[0])),
+            @as(V, @splat(mean_dir[1])),
+            @as(V, @splat(mean_dir[2])),
+        };
+    }
+    if (ovalness == 0) return vectorVmfPointFrom(source, VectorType, mean_dir, kappa);
+
+    const zero: V = @splat(0);
+    const one: V = @splat(1);
+    const diff: V = @splat(kappa - proposal_lambda);
+    const beta_v: V = @splat(ovalness);
+    const max_log: V = @splat(marginal_max_log);
+
+    var w: V = undefined;
+    var pending: B = @splat(true);
+    while (@reduce(.Or, pending)) {
+        const wcand = vectorWoodW(source, VectorType, proposal_lambda, wood_b, wood_x0, wood_c);
+        const s2 = @max(zero, one - wcand * wcand);
+        const a = beta_v * s2;
+        const log_ratio = diff * wcand + vectorLogBesselI0(VectorType, a) - max_log;
+        const u = Rng.vectorOpenFrom(source, V);
+        const accept = pending & (@log(u) <= log_ratio);
+        w = @select(Child, accept, wcand, w);
+        pending = @select(bool, accept, @as(B, @splat(false)), pending);
+    }
+
+    const s2 = @max(zero, one - w * w);
+    const a = beta_v * s2;
+    const theta = vonMisesFrom(source, V, zero, a);
+    var phi = theta / @as(V, @splat(2));
+    const flip = Rng.vectorOpenFrom(source, V) < @as(V, @splat(0.5));
+    phi += @select(Child, flip, @as(V, @splat(@as(Child, @floatCast(std.math.pi)))), zero);
+
+    const s = @sqrt(s2);
+    const cos_phi = @cos(phi);
+    const sin_phi = @sin(phi);
+    const x = w * @as(V, @splat(mean_dir[0])) +
+        s * (cos_phi * @as(V, @splat(major_axis[0])) + sin_phi * @as(V, @splat(minor_axis[0])));
+    const y = w * @as(V, @splat(mean_dir[1])) +
+        s * (cos_phi * @as(V, @splat(major_axis[1])) + sin_phi * @as(V, @splat(minor_axis[1])));
+    const z = w * @as(V, @splat(mean_dir[2])) +
+        s * (cos_phi * @as(V, @splat(major_axis[2])) + sin_phi * @as(V, @splat(minor_axis[2])));
+    return .{ x, y, z };
+}
+
+/// SIMD-vectorized Kent (Fisher-Bingham F5) sampler on S². One vector holds
+/// one independent sample per lane; the frame, concentration, and ovalness
+/// are shared across lanes.
+pub fn VectorKent(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+
+        sampler: Kent(Child),
+
+        pub fn init(mean_dir: [3]Child, major_axis: [3]Child, kappa: Child, ovalness: Child) KentError!Self {
+            return Self{ .sampler = try Kent(Child).init(mean_dir, major_axis, kappa, ovalness) };
+        }
+
+        pub fn new(mean_dir: [3]Child, major_axis: [3]Child, kappa: Child, ovalness: Child) Self {
+            return Self.init(mean_dir, major_axis, kappa, ovalness) catch |e| {
+                std.debug.panic("VectorKent.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn meanDirection(self: Self) [3]Child {
+            return self.sampler.meanDirection();
+        }
+
+        pub fn majorAxis(self: Self) [3]Child {
+            return self.sampler.majorAxis();
+        }
+
+        pub fn minorAxis(self: Self) [3]Child {
+            return self.sampler.minorAxis();
+        }
+
+        pub fn concentrationValue(self: Self) Child {
+            return self.sampler.concentrationValue();
+        }
+
+        pub fn ovalnessValue(self: Self) Child {
+            return self.sampler.ovalnessValue();
+        }
+
+        pub fn meanResultantLength(self: Self) Child {
+            return self.sampler.meanResultantLength();
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3]VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3]VectorType {
+            return vectorKentPointFrom(
+                source,
+                VectorType,
+                self.sampler.meanDirection(),
+                self.sampler.majorAxis(),
+                self.sampler.minorAxis(),
+                self.sampler.concentrationValue(),
+                self.sampler.ovalnessValue(),
+                self.sampler.proposal_lambda,
+                self.sampler.marginal_max_log,
+                self.sampler.wood_b,
+                self.sampler.wood_x0,
+                self.sampler.wood_c,
+            );
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+pub fn vectorKent(rng: Rng, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) KentError![3]VectorType {
+    return vectorKentCheckedFrom(rng, VectorType, mean_dir, major_axis, kappa, ovalness);
+}
+
+pub fn vectorKentFrom(source: anytype, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) [3]VectorType {
+    const dist = VectorKent(VectorType).new(mean_dir, major_axis, kappa, ovalness);
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorKentChecked(rng: Rng, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) KentError![3]VectorType {
+    return vectorKentCheckedFrom(rng, VectorType, mean_dir, major_axis, kappa, ovalness);
+}
+
+pub fn vectorKentCheckedFrom(source: anytype, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) KentError![3]VectorType {
+    const dist = try VectorKent(VectorType).init(mean_dir, major_axis, kappa, ovalness);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorKent(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) KentError!void {
+    return fillVectorKentCheckedFrom(rng, VectorType, dest, mean_dir, major_axis, kappa, ovalness);
+}
+
+pub fn fillVectorKentFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) void {
+    const dist = VectorKent(VectorType).new(mean_dir, major_axis, kappa, ovalness);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorKentChecked(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) KentError!void {
+    return fillVectorKentCheckedFrom(rng, VectorType, dest, mean_dir, major_axis, kappa, ovalness);
+}
+
+pub fn fillVectorKentCheckedFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), major_axis: [3]vectorChild(VectorType), kappa: vectorChild(VectorType), ovalness: vectorChild(VectorType)) KentError!void {
+    const dist = try VectorKent(VectorType).init(mean_dir, major_axis, kappa, ovalness);
+    dist.fillFrom(source, dest);
+}
+
 // ============================================================================
 // Modified Bessel functions of the first kind, used by Rice/Nakagami/Rician
 // fading distributions. I₀(z) is the exponentially scaled version-free
@@ -58354,6 +58572,82 @@ test "Kent f32 sampling works" {
         try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
     }
     try std.testing.expect(std.math.isFinite(dist.meanResultantLength()));
+}
+
+test "VectorKent matches the scalar Kent moments" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x8f01);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const mean = [3]f64{ 0, 0, 1 };
+    const major = [3]f64{ 1, 0, 0 };
+    const dist = try VectorKent(V).init(mean, major, 5, 1.5);
+    const scalar = try Kent(f64).init(mean, major, 5, 1.5);
+
+    var sum_z: f64 = 0;
+    var sum_x2: f64 = 0;
+    var sum_y2: f64 = 0;
+    var count: usize = 0;
+    for (0..10_000) |_| {
+        const p = dist.sample(rng);
+        inline for (0..4) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+            sum_z += p[2][lane];
+            sum_x2 += p[0][lane] * p[0][lane];
+            sum_y2 += p[1][lane] * p[1][lane];
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(scalar.meanResultantLength(), sum_z / nf, 0.03);
+    try std.testing.expectApproxEqAbs(scalar.varianceAt(0), sum_x2 / nf, 0.03);
+    try std.testing.expectApproxEqAbs(scalar.varianceAt(1), sum_y2 / nf, 0.03);
+}
+
+test "VectorKent beta=0 matches VectorVonMisesFisher" {
+    const alea = @import("root.zig");
+    const V = @Vector(4, f64);
+    const mean = [3]f64{ 0, 0, 1 };
+    const major = [3]f64{ 1, 0, 0 };
+    const kent_dist = try VectorKent(V).init(mean, major, 6, 0);
+    const vmf = try VectorVonMisesFisher(V).init(mean, 6);
+
+    var kent_engine = alea.DefaultPrng.init(0x8f02);
+    var vmf_engine = alea.DefaultPrng.init(0x8f02);
+    const kent_rng = Rng.init(&kent_engine);
+    const vmf_rng = Rng.init(&vmf_engine);
+    for (0..16) |_| {
+        const a = kent_dist.sample(kent_rng);
+        const b = vmf.sample(vmf_rng);
+        inline for (0..3) |i| {
+            inline for (0..4) |lane| {
+                try std.testing.expectEqual(a[i][lane], b[i][lane]);
+            }
+        }
+    }
+}
+
+test "VectorKent f32x8 and free functions work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x8f03);
+    const rng = Rng.init(&engine);
+
+    const V8 = @Vector(8, f32);
+    const mean = [3]f32{ 0, 0, 1 };
+    const major = [3]f32{ 1, 0, 0 };
+    var buf: [4][3]V8 = undefined;
+    try fillVectorKent(rng, V8, &buf, mean, major, 4, 1);
+    for (buf) |p| {
+        inline for (0..8) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+        }
+    }
+
+    try std.testing.expectError(error.InvalidParameter, vectorKent(rng, V8, mean, major, 4, 2));
+    try std.testing.expectError(error.InvalidMeanDirection, vectorKent(rng, V8, .{ 1, 1, 0 }, major, 4, 1));
 }
 
 test "kummerM hypergeometric sanity checks" {
