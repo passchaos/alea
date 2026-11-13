@@ -573,7 +573,7 @@ self-forking.
   `Error`, `UniformError`, `BernoulliError`,
   `WeightedError`, `WeightError`, `weighted.Error`,
   `weighted.WeightedError`, `weighted.WeightError`, `slice.Empty`,
-  `NormalError`, `ExpError`, `GammaError`, `BetaError`, `BinomialError`,
+  `NormalError`, `ExpError`, `GammaError`, `BetaError`, `BetaPrimeError`, `BinomialError`,
   `CauchyError`, `ChiSquaredError`, `FisherFError`, `FrechetError`,
   `GeoError`, `GumbelError`, `HyperGeoError`, `InverseGaussianError`,
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
@@ -2500,6 +2500,31 @@ Reusable samplers:
 - `Beta(T).sampleFrom`
 - `Beta(T).fill`
 - `Beta(T).fillFrom`
+- `BetaPrime(T)`
+- `BetaPrime(T).init`
+- `BetaPrime(T).new`
+- `BetaPrime(T).alphaValue`
+- `BetaPrime(T).betaValue`
+- `BetaPrime(T).expectedValue`
+- `BetaPrime(T).varianceValue`
+- `BetaPrime(T).modeValue`
+- `BetaPrime(T).medianValue`
+- `BetaPrime(T).minValue`
+- `BetaPrime(T).maxValue`
+- `BetaPrime(T).cdf`
+- `BetaPrime(T).quantile`
+- `BetaPrime(T).sample`
+- `BetaPrime(T).sampleFrom`
+- `BetaPrime(T).fill`
+- `BetaPrime(T).fillFrom`
+- `betaPrime`
+- `betaPrimeFrom`
+- `betaPrimeChecked`
+- `betaPrimeCheckedFrom`
+- `fillBetaPrime`
+- `fillBetaPrimeFrom`
+- `fillBetaPrimeChecked`
+- `fillBetaPrimeCheckedFrom`
 - `VectorBeta(VectorType)`
 - `VectorBeta(VectorType).init`
 - `VectorBeta(VectorType).alphaValue`

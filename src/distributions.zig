@@ -861,6 +861,7 @@ pub const NormalError = Error;
 pub const ExpError = Error;
 pub const GammaError = Error;
 pub const BetaError = Error;
+pub const BetaPrimeError = Error;
 pub const BinomialError = Error;
 pub const CauchyError = Error;
 pub const ChiSquaredError = Error;
@@ -18861,6 +18862,151 @@ pub fn VectorFisherF(comptime VectorType: type) type {
             }
         }
     };
+}
+
+/// Beta prime (inverted beta / gamma-gamma) distribution on (0, ∞).
+///
+/// Density proportional to `x^{α−1} (1+x)^{−(α+β)} / B(α, β)`.
+/// Sampling uses `B ~ Beta(α, β)` followed by `X = B/(1−B)`, which is exact and
+/// rejection-free. The distribution is the ratio of two independent Gamma
+/// variates and generalizes the F distribution; `BetaPrime(1, 1)` is `F(2, 2)`.
+pub fn BetaPrime(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        alpha: T,
+        beta_param: T,
+
+        pub fn init(alpha: T, beta_param: T) BetaPrimeError!Self {
+            comptime requireFloat(T);
+            if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return error.InvalidParameter;
+            return .{ .alpha = alpha, .beta_param = beta_param };
+        }
+
+        pub fn new(alpha: T, beta_param: T) BetaPrimeError!Self {
+            return Self.init(alpha, beta_param);
+        }
+
+        pub fn alphaValue(self: Self) T {
+            return self.alpha;
+        }
+
+        pub fn betaValue(self: Self) T {
+            return self.beta_param;
+        }
+
+        /// Mean α/(β−1), or null for β ≤ 1 (infinite mean).
+        pub fn expectedValue(self: Self) ?T {
+            if (self.beta_param <= 1) return null;
+            return self.alpha / (self.beta_param - 1);
+        }
+
+        /// Variance α(α+β−1)/((β−2)(β−1)²), or null for β ≤ 2.
+        pub fn varianceValue(self: Self) ?T {
+            if (self.beta_param <= 2) return null;
+            const a = self.alpha;
+            const b = self.beta_param;
+            return a * (a + b - 1) / ((b - 2) * (b - 1) * (b - 1));
+        }
+
+        /// Mode (α−1)/(β+1) for α > 1, otherwise 0.
+        pub fn modeValue(self: Self) T {
+            if (self.alpha <= 1) return 0;
+            return (self.alpha - 1) / (self.beta_param + 1);
+        }
+
+        /// Median via the Beta median: `m = BetaQuantile(0.5)`, `x = m/(1−m)`.
+        pub fn medianValue(self: Self) T {
+            const m = betaQuantile(@as(T, 0.5), self.alpha, self.beta_param);
+            return m / (1 - m);
+        }
+
+        pub fn minValue(_: Self) T {
+            return 0;
+        }
+
+        pub fn maxValue(_: Self) ?T {
+            return null;
+        }
+
+        /// CDF `I_{x/(1+x)}(α, β)`.
+        pub fn cdf(self: Self, x: T) T {
+            if (std.math.isNan(x)) return std.math.nan(T);
+            if (x <= 0) return 0;
+            if (x == std.math.inf(T)) return 1;
+            return betaIncomplete(x / (1 + x), self.alpha, self.beta_param);
+        }
+
+        /// Quantile via the Beta quantile: `y = BetaQuantile(p)`, `x = y/(1−y)`.
+        pub fn quantile(self: Self, p: T) T {
+            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+            if (p == 0) return 0;
+            if (p == 1) return std.math.inf(T);
+            const y = betaQuantile(p, self.alpha, self.beta_param);
+            return y / (1 - y);
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            const b = betaFrom(source, T, self.alpha, self.beta_param);
+            return b / (1 - b);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            for (dest) |*value| value.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Sample a BetaPrime(α, β) variate. Returns error on invalid parameters.
+pub fn betaPrime(rng: Rng, comptime T: type, alpha: T, beta_param: T) BetaPrimeError!T {
+    return betaPrimeCheckedFrom(rng, T, alpha, beta_param);
+}
+
+/// Source-accepting variant of `betaPrime` (panics on invalid parameters).
+pub fn betaPrimeFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
+    const dist = BetaPrime(T).new(alpha, beta_param) catch unreachable;
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn betaPrimeChecked(rng: Rng, comptime T: type, alpha: T, beta_param: T) BetaPrimeError!T {
+    return betaPrimeCheckedFrom(rng, T, alpha, beta_param);
+}
+
+/// Checked source-accepting variant.
+pub fn betaPrimeCheckedFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) BetaPrimeError!T {
+    const dist = try BetaPrime(T).init(alpha, beta_param);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with BetaPrime variates. Validates parameters.
+pub fn fillBetaPrime(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) BetaPrimeError!void {
+    return fillBetaPrimeCheckedFrom(rng, T, dest, alpha, beta_param);
+}
+
+/// Source-accepting fill (panics on invalid parameters).
+pub fn fillBetaPrimeFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
+    const dist = BetaPrime(T).new(alpha, beta_param) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillBetaPrimeChecked(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) BetaPrimeError!void {
+    return fillBetaPrimeCheckedFrom(rng, T, dest, alpha, beta_param);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillBetaPrimeCheckedFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) BetaPrimeError!void {
+    const dist = try BetaPrime(T).init(alpha, beta_param);
+    dist.fillFrom(source, dest);
 }
 
 pub fn FisherF(comptime T: type) type {
@@ -49706,6 +49852,82 @@ test "Dirichlet and Multinomial marginal CDF/quantile methods work" {
     try std.testing.expectEqual(@as(f64, 0), try constant.marginalCdf(1, 9));
     try std.testing.expectEqual(@as(f64, 1), try constant.marginalCdf(1, 10));
     try std.testing.expectEqual(@as(f64, 1), try constant.marginalCdf(0, 0));
+}
+
+test "BetaPrime constructor, moments, and degeneracies" {
+    try std.testing.expectError(error.InvalidParameter, BetaPrime(f64).init(0, 1));
+    try std.testing.expectError(error.InvalidParameter, BetaPrime(f64).init(1, 0));
+    try std.testing.expectError(error.InvalidParameter, BetaPrime(f64).init(std.math.nan(f64), 1));
+
+    const dist = try BetaPrime(f64).init(3, 5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), dist.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4375), dist.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), dist.modeValue(), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), dist.minValue());
+    try std.testing.expect(dist.maxValue() == null);
+
+    const heavy = try BetaPrime(f64).init(0.5, 1);
+    try std.testing.expect(heavy.expectedValue() == null);
+    try std.testing.expect(heavy.varianceValue() == null);
+    try std.testing.expectEqual(@as(f64, 0), heavy.modeValue());
+
+    const beta_two = try BetaPrime(f64).init(2, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), beta_two.medianValue(), 1e-9);
+}
+
+test "BetaPrime sampling and CDF match the Beta transform" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbe7a);
+    const rng = Rng.init(&engine);
+
+    const dist = try BetaPrime(f64).init(3, 5);
+    const count = 20_000;
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    for (0..count) |_| {
+        const x = dist.sample(rng);
+        try std.testing.expect(x > 0);
+        sum += x;
+        sum_sq += x * x;
+    }
+    const nf: f64 = @floatFromInt(count);
+    const mean = sum / nf;
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), mean, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4375), sum_sq / nf - mean * mean, 0.08);
+
+    // BetaPrime(1,1) is F(2,2): CDF x/(1+x).
+    const f22 = try BetaPrime(f64).init(1, 1);
+    inline for ([_]f64{ 0.25, 1, 4 }) |x| {
+        try std.testing.expectApproxEqAbs(x / (1 + x), f22.cdf(x), 1e-12);
+        try std.testing.expectApproxEqAbs(fisherFCdf(x, @as(f64, 2), @as(f64, 2)), f22.cdf(x), 1e-12);
+    }
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const x = dist.quantile(p);
+        try std.testing.expectApproxEqAbs(p, dist.cdf(x), 1e-9);
+    }
+    try std.testing.expectEqual(@as(f64, 0), dist.cdf(-1));
+    try std.testing.expectEqual(@as(f64, 1), dist.cdf(std.math.inf(f64)));
+    try std.testing.expectEqual(@as(f64, 0), dist.quantile(0));
+    try std.testing.expectEqual(std.math.inf(f64), dist.quantile(1));
+}
+
+test "BetaPrime free functions, fill, and f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbe7b);
+    const rng = Rng.init(&engine);
+
+    const x = try betaPrime(rng, f64, 2, 3);
+    try std.testing.expect(x > 0);
+    var buf: [32]f64 = undefined;
+    try fillBetaPrime(rng, f64, &buf, 2, 3);
+    for (buf) |value| try std.testing.expect(value > 0);
+    try std.testing.expectError(error.InvalidParameter, fillBetaPrime(rng, f64, &buf, 0, 3));
+    try std.testing.expectError(error.InvalidParameter, betaPrime(rng, f64, 2, -1));
+
+    const f32_dist = try BetaPrime(f32).init(2, 3);
+    const f32_sample = f32_dist.sample(rng);
+    try std.testing.expect(f32_sample > 0 and std.math.isFinite(f32_sample));
 }
 
 test "StudentTCopula constructor validates parameters" {
