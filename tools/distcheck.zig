@@ -516,6 +516,13 @@ fn checkAdvancedMultivariate() !void {
         const nak_m: f64 = 2;
         const nak_omega: f64 = 3;
         try expectFloatBetween("nakagami quantile", alea.distributions.nakagamiCdf(alea.distributions.nakagamiQuantile(p, nak_m, nak_omega), nak_m, nak_omega), p - 1e-9, p + 1e-9);
+        const eg_mu: f64 = 1;
+        const eg_sigma: f64 = 0.5;
+        const eg_tau: f64 = 1.5;
+        try expectFloatBetween("ex-gaussian quantile", alea.distributions.exGaussianCdf(alea.distributions.exGaussianQuantile(p, eg_mu, eg_sigma, eg_tau), eg_mu, eg_sigma, eg_tau), p - 1e-4, p + 1e-4);
+        const inv_gauss_mean: f64 = 1;
+        const inv_gauss_shape: f64 = 2;
+        try expectFloatBetween("inverse-gaussian quantile", alea.distributions.inverseGaussianCdf(alea.distributions.inverseGaussianQuantile(p, inv_gauss_mean, inv_gauss_shape), inv_gauss_mean, inv_gauss_shape), p - 1e-6, p + 1e-6);
         const discrete_q: f64 = 0.7;
         const poisson_lambda: f64 = 5;
         try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);
@@ -1946,6 +1953,8 @@ fn checkLongRun(samples: usize) !void {
         var log_normal = try alea.distributions.LogNormal(f64).init(0, 0.5);
         const log_logistic = try alea.distributions.LogLogistic(f64).init(1.5, 2.5);
         const nakagami = try alea.distributions.Nakagami(f64).init(2, 3);
+        const ex_gaussian = try alea.distributions.ExGaussian(f64).init(1, 0.5, 1.5);
+        const inverse_gaussian = try alea.distributions.InverseGaussian(f64).init(1, 2);
         var beta_hits = [_]usize{0} ** 3;
         var gamma_hits = [_]usize{0} ** 3;
         var student_hits = [_]usize{0} ** 3;
@@ -1954,6 +1963,8 @@ fn checkLongRun(samples: usize) !void {
         var log_normal_hits = [_]usize{0} ** 3;
         var log_logistic_hits = [_]usize{0} ** 3;
         var nakagami_hits = [_]usize{0} ** 3;
+        var ex_gaussian_hits = [_]usize{0} ** 3;
+        var inverse_gaussian_hits = [_]usize{0} ** 3;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
             const b = beta.sample(rng);
@@ -1988,6 +1999,14 @@ fn checkLongRun(samples: usize) !void {
             if (nk <= 1) nakagami_hits[0] += 1;
             if (nk <= 2) nakagami_hits[1] += 1;
             if (nk <= 3) nakagami_hits[2] += 1;
+            const eg = ex_gaussian.sample(rng);
+            if (eg <= 1) ex_gaussian_hits[0] += 1;
+            if (eg <= 2) ex_gaussian_hits[1] += 1;
+            if (eg <= 3) ex_gaussian_hits[2] += 1;
+            const ig = inverse_gaussian.sample(rng);
+            if (ig <= 0.5) inverse_gaussian_hits[0] += 1;
+            if (ig <= 1) inverse_gaussian_hits[1] += 1;
+            if (ig <= 2) inverse_gaussian_hits[2] += 1;
         }
         const beta_x = [_]f64{ 0.1, 0.3, 0.6 };
         const gamma_x = [_]f64{ 1, 3, 5 };
@@ -1997,6 +2016,8 @@ fn checkLongRun(samples: usize) !void {
         const log_normal_x = [_]f64{ 0.5, 1, 2 };
         const log_logistic_x = [_]f64{ 0.75, 1.5, 3 };
         const nakagami_x = [_]f64{ 1, 2, 3 };
+        const ex_gaussian_x = [_]f64{ 1, 2, 3 };
+        const inverse_gaussian_x = [_]f64{ 0.5, 1, 2 };
         try expectEmpiricalCdf("long beta cdf(0.1)", beta_hits[0], samples, beta.cdf(beta_x[0]));
         try expectEmpiricalCdf("long beta cdf(0.3)", beta_hits[1], samples, beta.cdf(beta_x[1]));
         try expectEmpiricalCdf("long beta cdf(0.6)", beta_hits[2], samples, beta.cdf(beta_x[2]));
@@ -2021,8 +2042,14 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long nakagami cdf(1)", nakagami_hits[0], samples, nakagami.cdf(nakagami_x[0]));
         try expectEmpiricalCdf("long nakagami cdf(2)", nakagami_hits[1], samples, nakagami.cdf(nakagami_x[1]));
         try expectEmpiricalCdf("long nakagami cdf(3)", nakagami_hits[2], samples, nakagami.cdf(nakagami_x[2]));
+        try expectEmpiricalCdf("long ex-gaussian cdf(1)", ex_gaussian_hits[0], samples, ex_gaussian.cdf(ex_gaussian_x[0]));
+        try expectEmpiricalCdf("long ex-gaussian cdf(2)", ex_gaussian_hits[1], samples, ex_gaussian.cdf(ex_gaussian_x[1]));
+        try expectEmpiricalCdf("long ex-gaussian cdf(3)", ex_gaussian_hits[2], samples, ex_gaussian.cdf(ex_gaussian_x[2]));
+        try expectEmpiricalCdf("long inverse-gaussian cdf(0.5)", inverse_gaussian_hits[0], samples, inverse_gaussian.cdf(inverse_gaussian_x[0]));
+        try expectEmpiricalCdf("long inverse-gaussian cdf(1)", inverse_gaussian_hits[1], samples, inverse_gaussian.cdf(inverse_gaussian_x[1]));
+        try expectEmpiricalCdf("long inverse-gaussian cdf(2)", inverse_gaussian_hits[2], samples, inverse_gaussian.cdf(inverse_gaussian_x[2]));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
-        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6} log-logistic(1.5)={d:.6} nakagami(2)={d:.6}\n", .{
+        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6} log-logistic(1.5)={d:.6} nakagami(2)={d:.6} ex-gaussian(2)={d:.6} inverse-gaussian(1)={d:.6}\n", .{
             @as(f64, @floatFromInt(beta_hits[1])) * inv_n,
             @as(f64, @floatFromInt(gamma_hits[1])) * inv_n,
             @as(f64, @floatFromInt(student_hits[1])) * inv_n,
@@ -2031,6 +2058,8 @@ fn checkLongRun(samples: usize) !void {
             @as(f64, @floatFromInt(log_normal_hits[1])) * inv_n,
             @as(f64, @floatFromInt(log_logistic_hits[1])) * inv_n,
             @as(f64, @floatFromInt(nakagami_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(ex_gaussian_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(inverse_gaussian_hits[1])) * inv_n,
         });
     }
 

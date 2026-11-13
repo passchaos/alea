@@ -649,6 +649,8 @@ self-forking.
   `erlangCdf`, `erlangQuantile`, `maxwellCdf`, `maxwellQuantile`,
   `betaPrimeCdf`, `betaPrimeQuantile`, `logLogisticCdf`, `logLogisticQuantile`,
   `inverseGammaCdf`, `inverseGammaQuantile`, `nakagamiCdf`, `nakagamiQuantile`,
+  `exGaussianCdf`, `exGaussianQuantile`, `inverseGaussianCdf`,
+  `inverseGaussianQuantile`,
   `binomialCdf`, `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
   `hypergeometricCdf`, `hypergeometricQuantile`,
@@ -783,7 +785,8 @@ self-forking.
   `ExGaussian(T).exponentialMeanValue`, `ExGaussian(T).tauValue`, `ExGaussian(T).rateValue`,
   `ExGaussian(T).expectedValue`, `ExGaussian(T).varianceValue`, `ExGaussian(T).standardDeviationValue`,
   `ExGaussian(T).skewnessValue`, `ExGaussian(T).modeValue`, `ExGaussian(T).minValue`,
-  `ExGaussian(T).maxValue`, `ExGaussian(T).sample`, `ExGaussian(T).sampleFrom`,
+  `ExGaussian(T).maxValue`, `ExGaussian(T).cdf`, `ExGaussian(T).quantile`,
+  `ExGaussian(T).sample`, `ExGaussian(T).sampleFrom`,
   `ExGaussian(T).fill`, `ExGaussian(T).fillFrom`,
   `exGaussian`, `exGaussianFrom`, `exGaussianChecked`, `exGaussianCheckedFrom`,
   `fillExGaussian`, `fillExGaussianFrom`, `fillExGaussianChecked`, `fillExGaussianCheckedFrom`,
@@ -3293,6 +3296,8 @@ Reusable samplers:
 - `InverseGaussian(T).varianceValue`
 - `InverseGaussian(T).minValue`
 - `InverseGaussian(T).maxValue`
+- `InverseGaussian(T).cdf`
+- `InverseGaussian(T).quantile`
 - `InverseGaussian(T).sample`
 - `InverseGaussian(T).sampleFrom`
 - `InverseGaussian(T).fill`

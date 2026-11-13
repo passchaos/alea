@@ -1431,6 +1431,142 @@ pub fn nakagamiQuantile(p: anytype, m_param: anytype, omega: anytype) @TypeOf(p,
     return @sqrt(gammaQuantile(p, m_param, omega / m_param));
 }
 
+/// `log Φ(x)` with an asymptotic tail expansion for `x < −10`, used by the
+/// ExGaussian and inverse-Gaussian CDFs to avoid `exp(large)·Φ(very negative)`.
+fn normLogCdf(x: f64) f64 {
+    if (x > -10) return @log(normCdf(x));
+    const w = -x;
+    const inv2 = 1 / (w * w);
+    const correction = 1 + inv2 * (-1 + inv2 * (3 + inv2 * (-15 + inv2 * (105 + inv2 * (-945 + inv2 * 10395)))));
+    return -0.5 * w * w - @log(w) - 0.5 * @log(2 * std.math.pi) + @log(correction);
+}
+
+/// ExGaussian CDF: `Φ(z) − exp(σ²/(2τ²) − (x−μ)/τ)·Φ(z − σ/τ)` with
+/// `z = (x − μ)/σ`; `σ = 0` is the shifted exponential.
+pub fn exGaussianCdf(x: anytype, mu: anytype, sigma: anytype, tau: anytype) @TypeOf(x, mu, sigma, tau) {
+    const T = @TypeOf(x, mu, sigma, tau);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu)) return std.math.nan(T);
+    if (!(sigma >= 0) or !std.math.isFinite(sigma)) return std.math.nan(T);
+    if (!(tau > 0) or !std.math.isFinite(tau)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    const x_f: f64 = @floatCast(x);
+    const mu_f: f64 = @floatCast(mu);
+    const sigma_f: f64 = @floatCast(sigma);
+    const tau_f: f64 = @floatCast(tau);
+    if (x_f == std.math.inf(f64)) return 1;
+    if (sigma_f == 0) {
+        if (x_f <= mu_f) return 0;
+        return @floatCast(1 - @exp(-(x_f - mu_f) / tau_f));
+    }
+    const z = (x_f - mu_f) / sigma_f;
+    const w = z - sigma_f / tau_f;
+    const exponent = sigma_f * sigma_f / (2 * tau_f * tau_f) - (x_f - mu_f) / tau_f;
+    var term: f64 = 0;
+    if (!std.math.isNan(exponent)) {
+        const log_term = exponent + normLogCdf(w);
+        if (!std.math.isNan(log_term)) term = @exp(log_term);
+    }
+    const cdf = normCdf(z) - term;
+    return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
+}
+
+/// ExGaussian quantile via deterministic bisection. `p = 0 → −∞`,
+/// `p = 1 → +∞`.
+pub fn exGaussianQuantile(p: anytype, mu: anytype, sigma: anytype, tau: anytype) @TypeOf(p, mu, sigma, tau) {
+    const T = @TypeOf(p, mu, sigma, tau);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu)) return std.math.nan(T);
+    if (!(sigma >= 0) or !std.math.isFinite(sigma)) return std.math.nan(T);
+    if (!(tau > 0) or !std.math.isFinite(tau)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    const spread = @sqrt(sigma * sigma + tau * tau);
+    var lo: f64 = mu - 40 * spread;
+    var hi: f64 = mu + 40 * spread;
+    var expansion: usize = 0;
+    while (exGaussianCdf(@as(f64, lo), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) > p and expansion < 64) : (expansion += 1) {
+        lo -= spread;
+        if (!std.math.isFinite(lo)) return -std.math.inf(T);
+    }
+    expansion = 0;
+    while (exGaussianCdf(@as(f64, hi), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) < p and expansion < 64) : (expansion += 1) {
+        hi += spread;
+        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    }
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (exGaussianCdf(@as(f64, mid), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
+/// Inverse-Gaussian CDF:
+/// `Φ(z₁) + exp(2λ/μ)·Φ(z₂)` with
+/// `z₁ = √(λ/x)(x/μ − 1)` and `z₂ = −√(λ/x)(x/μ + 1)`.
+/// `mean = 0` and `shape = +∞` are point masses at 0 and `mean`.
+pub fn inverseGaussianCdf(x: anytype, mean: anytype, shape: anytype) @TypeOf(x, mean, shape) {
+    const T = @TypeOf(x, mean, shape);
+    comptime requireFloat(T);
+    if (!(mean >= 0) or std.math.isNan(mean)) return std.math.nan(T);
+    if (!(shape > 0) or std.math.isNan(shape)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    const x_f: f64 = @floatCast(x);
+    const mean_f: f64 = @floatCast(mean);
+    const shape_f: f64 = @floatCast(shape);
+    if (mean_f == 0) return if (x_f < 0) 0 else 1;
+    if (x_f <= 0) return 0;
+    if (x_f == std.math.inf(f64)) return 1;
+    if (mean_f == std.math.inf(f64)) return 0;
+    if (shape_f == std.math.inf(f64)) return if (x_f < mean_f) 0 else 1;
+    const sqrt_term = @sqrt(shape_f / x_f);
+    const z1 = sqrt_term * (x_f / mean_f - 1);
+    const z2 = -sqrt_term * (x_f / mean_f + 1);
+    var term: f64 = 0;
+    const log_term = 2 * shape_f / mean_f + normLogCdf(z2);
+    if (!std.math.isNan(log_term)) term = @exp(log_term);
+    const cdf = normCdf(z1) + term;
+    return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
+}
+
+/// Inverse-Gaussian quantile via deterministic bisection. `p = 0 → 0`,
+/// `p = 1 → +∞`.
+pub fn inverseGaussianQuantile(p: anytype, mean: anytype, shape: anytype) @TypeOf(p, mean, shape) {
+    const T = @TypeOf(p, mean, shape);
+    comptime requireFloat(T);
+    if (!(mean >= 0) or std.math.isNan(mean)) return std.math.nan(T);
+    if (!(shape > 0) or std.math.isNan(shape)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    if (mean == 0) return 0;
+    if (mean == std.math.inf(T)) return std.math.inf(T);
+    if (shape == std.math.inf(T)) return mean;
+    var lo: f64 = 0;
+    var hi: f64 = mean;
+    var expansion: usize = 0;
+    while (inverseGaussianCdf(@as(f64, hi), @as(f64, mean), @as(f64, shape)) < p and expansion < 1024) : (expansion += 1) {
+        if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
+        hi *= 2;
+    }
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (inverseGaussianCdf(@as(f64, mid), @as(f64, mean), @as(f64, shape)) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -12901,6 +13037,16 @@ pub fn ExGaussian(comptime T: type) type {
         pub fn maxValue(self: Self) ?T {
             _ = self;
             return null;
+        }
+
+        /// ExGaussian CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return exGaussianCdf(x, self.mu, self.sigma, self.tau);
+        }
+
+        /// ExGaussian quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return exGaussianQuantile(p, self.mu, self.sigma, self.tau);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -28240,6 +28386,16 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn maxValue(self: Self) ?T {
             return if (self.isDegenerate()) self.degenerateValue() else null;
+        }
+
+        /// Inverse-Gaussian CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return inverseGaussianCdf(x, self.mean, self.shape);
+        }
+
+        /// Inverse-Gaussian quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return inverseGaussianQuantile(p, self.mean, self.shape);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -54221,6 +54377,43 @@ test "advanced continuous CDF and quantile helpers match known values" {
     try std.testing.expectApproxEqAbs(inverseGammaCdf(@as(f64, 2), @as(f64, 3), @as(f64, 2)), ig.cdf(2), 0);
     const nk = try Nakagami(f64).init(2, 3);
     try std.testing.expectApproxEqAbs(nakagamiCdf(@as(f64, 2), @as(f64, 2), @as(f64, 3)), nk.cdf(2), 0);
+}
+
+test "ExGaussian and InverseGaussian CDF and quantile helpers" {
+    // ExGaussian with sigma=0 is a shifted exponential.
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - @exp(@as(f64, -1))), exGaussianCdf(@as(f64, 2), @as(f64, 0), @as(f64, 0), @as(f64, 2)), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0), exGaussianCdf(@as(f64, 0), @as(f64, 0), @as(f64, 0), @as(f64, 2)));
+    try std.testing.expectApproxEqAbs(@as(f64, 2), exGaussianQuantile(1 - @exp(@as(f64, -1)), @as(f64, 0), @as(f64, 0), @as(f64, 2)), 1e-9);
+    // General case against a numerical convolution reference.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.46044048020761147), exGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5)), 1e-5);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const q = exGaussianQuantile(p, @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5));
+        try std.testing.expectApproxEqAbs(p, exGaussianCdf(q, @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5)), 1e-5);
+    }
+    try std.testing.expectEqual(-std.math.inf(f64), exGaussianQuantile(@as(f64, 0), @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5)));
+    try std.testing.expectEqual(std.math.inf(f64), exGaussianQuantile(@as(f64, 1), @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5)));
+
+    // InverseGaussian(1,2) reference values.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.23235718919184356), inverseGaussianCdf(@as(f64, 0.5), @as(f64, 1), @as(f64, 2)), 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6276978381552535), inverseGaussianCdf(@as(f64, 1), @as(f64, 1), @as(f64, 2)), 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9150466813289294), inverseGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 2)), 1e-5);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const q = inverseGaussianQuantile(p, @as(f64, 1), @as(f64, 2));
+        try std.testing.expectApproxEqAbs(p, inverseGaussianCdf(q, @as(f64, 1), @as(f64, 2)), 1e-5);
+    }
+    try std.testing.expectEqual(@as(f64, 1), inverseGaussianCdf(@as(f64, 0), @as(f64, 0), @as(f64, 2)));
+    try std.testing.expectEqual(@as(f64, 1), inverseGaussianCdf(@as(f64, 2), @as(f64, 1), std.math.inf(f64)));
+    try std.testing.expectEqual(@as(f64, 1), inverseGaussianQuantile(@as(f64, 0.5), @as(f64, 1), std.math.inf(f64)));
+
+    try std.testing.expect(std.math.isNan(exGaussianCdf(@as(f64, 1), @as(f64, 0), @as(f64, -1), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(exGaussianCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 0))));
+    try std.testing.expect(std.math.isNan(inverseGaussianCdf(@as(f64, 1), @as(f64, 1), @as(f64, 0))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.4604405), exGaussianCdf(@as(f32, 2), @as(f32, 1), @as(f32, 0.5), @as(f32, 1.5)), 1e-4);
+
+    const eg = try ExGaussian(f64).init(1, 0.5, 1.5);
+    try std.testing.expectApproxEqAbs(exGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 0.5), @as(f64, 1.5)), eg.cdf(2), 0);
+    const ig = try InverseGaussian(f64).init(1, 2);
+    try std.testing.expectApproxEqAbs(inverseGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 2)), ig.cdf(2), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {
