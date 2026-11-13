@@ -384,20 +384,9 @@ pub fn probit(p: anytype) @TypeOf(p) {
     }
 }
 
-pub const Error = error{
-    EmptyRange,
-    NonFinite,
-    InvalidProbability,
-    InvalidInput,
-    InvalidCovariance,
-    InvalidWeight,
-    InsufficientNonZero,
-    Overflow,
-    InvalidParameter,
-    InvalidLength,
-    LibmvecUnavailable,
-    LibmUnavailable,
-};
+const common = @import("distributions/common.zig");
+
+pub const Error = common.Error;
 
 pub const SizeHint = struct {
     lower: usize,

@@ -2305,6 +2305,32 @@ test "power-of-two uint ranges preserve the Lemire mapping and stream shape" {
     }
 }
 
+test "bounded integer helpers stay in range across widths and bounds" {
+    const StepRng = @import("engines/step.zig");
+    var engine = StepRng.init(0xabcdef, 0x9e3779b97f4a7c15);
+
+    inline for (.{ u8, u16, u32, u64 }) |T| {
+        inline for ([_]u16{ 2, 7, 64, 255 }) |raw_bound| {
+            const bound: T = @intCast(raw_bound);
+            var i: usize = 0;
+            while (i < 256) : (i += 1) {
+                try std.testing.expect(uintLessThanFrom(&engine, T, bound) < bound);
+                try std.testing.expect(uintAtMostFrom(&engine, T, bound - 1) <= bound - 1);
+            }
+        }
+    }
+
+    inline for (.{ i8, i16, i32, i64 }) |T| {
+        var i: usize = 0;
+        while (i < 256) : (i += 1) {
+            const less = intRangeLessThanFrom(&engine, T, -50, 50);
+            try std.testing.expect(less >= -50 and less < 50);
+            const at_most = intRangeAtMostFrom(&engine, T, -50, 50);
+            try std.testing.expect(at_most >= -50 and at_most <= 50);
+        }
+    }
+}
+
 pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) T {
     return intRangeLessThanFrom(self, T, at_least, less_than);
 }

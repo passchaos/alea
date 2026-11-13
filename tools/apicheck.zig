@@ -10,6 +10,7 @@ const checks = [_]Check{
     .{ .path = "src/rng.zig", .label = "Rng" },
     .{ .path = "src/distributions.zig", .label = "distributions" },
     .{ .path = "src/seq.zig", .label = "seq" },
+    .{ .path = "src/seq/indexvec.zig", .label = "IndexVec" },
     .{ .path = "src/ascii.zig", .label = "ascii" },
     .{ .path = "src/quality.zig", .label = "quality" },
     .{ .path = "src/seed.zig", .label = "Seed" },
