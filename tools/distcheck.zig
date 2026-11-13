@@ -31,6 +31,161 @@ fn runChecks() !void {
     try checkVectorDistributions();
     try checkMultivariateNormal();
     try checkConstructorErgonomics();
+    try checkAdvancedMultivariate();
+}
+
+fn checkAdvancedMultivariate() !void {
+    var engine = alea.FastPrng.init(0xa0d1);
+    const rng = alea.Rng.init(&engine);
+
+    // Bingham 3D concentration along the dominant axis.
+    {
+        const matrix = [3][3]f64{
+            .{ 0, 0, 0 },
+            .{ 0, -10, 0 },
+            .{ 0, 0, -10 },
+        };
+        const dist = try alea.distributions.Bingham(f64, 3).init(matrix);
+        const samples = 20_000;
+        var sum_w2: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const point = dist.sample(rng);
+            const norm_sq = point[0] * point[0] + point[1] * point[1] + point[2] * point[2];
+            try expectFloatBetween("bingham norm", norm_sq, 1 - 1e-9, 1 + 1e-9);
+            sum_w2 += point[0] * point[0];
+        }
+        try expectFloatBetween("bingham concentration", sum_w2 / @as(f64, @floatFromInt(samples)), 0.86, 0.92);
+    }
+
+    // Gaussian copula correlation recovery through probit coordinates.
+    {
+        const correlation = [2][2]f64{ .{ 1, 0.7 }, .{ 0.7, 1 } };
+        const dist = try alea.distributions.StaticGaussianCopula(f64, 2).init(correlation);
+        const samples = 10_000;
+        var sum0: f64 = 0;
+        var sum1: f64 = 0;
+        var sum00: f64 = 0;
+        var sum11: f64 = 0;
+        var sum01: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const u = dist.sample(rng);
+            try expectFloatBetween("gaussian copula u0", u[0], 1e-12, 1 - 1e-12);
+            try expectFloatBetween("gaussian copula u1", u[1], 1e-12, 1 - 1e-12);
+            const z0 = alea.distributions.probit(u[0]);
+            const z1 = alea.distributions.probit(u[1]);
+            sum0 += z0;
+            sum1 += z1;
+            sum00 += z0 * z0;
+            sum11 += z1 * z1;
+            sum01 += z0 * z1;
+        }
+        const nf = @as(f64, @floatFromInt(samples));
+        const mean0 = sum0 / nf;
+        const mean1 = sum1 / nf;
+        const var0 = sum00 / nf - mean0 * mean0;
+        const var1 = sum11 / nf - mean1 * mean1;
+        const covariance = sum01 / nf - mean0 * mean1;
+        try expectFloatBetween("gaussian copula rho", covariance / @sqrt(var0 * var1), 0.65, 0.75);
+    }
+
+    // Student-t copula lower-tail dependence.
+    {
+        const correlation = [2][2]f64{ .{ 1, 0.8 }, .{ 0.8, 1 } };
+        const dist = try alea.distributions.StaticStudentTCopula(f64, 2).init(correlation, 3);
+        const samples = 10_000;
+        var both_low: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const u = dist.sample(rng);
+            if (u[0] < 0.1 and u[1] < 0.1) both_low += 1;
+        }
+        try expectFloatBetween("student-t copula tail", @as(f64, @floatFromInt(both_low)) / @as(f64, @floatFromInt(samples)), 0.03, 0.15);
+    }
+
+    // Static matrix normal row/column covariance recovery.
+    {
+        const mean = [2][2]f64{ .{ 0, 0 }, .{ 0, 0 } };
+        const row_covariance = [2][2]f64{ .{ 1, 0.6 }, .{ 0.6, 1 } };
+        const col_covariance = [2][2]f64{ .{ 1, 0.4 }, .{ 0.4, 1 } };
+        const dist = try alea.distributions.StaticMatrixNormal(f64, 2, 2).init(mean, row_covariance, col_covariance);
+        const samples = 20_000;
+        var row_cross: f64 = 0;
+        var col_cross: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const sample = dist.sample(rng);
+            row_cross += sample[0][0] * sample[1][0];
+            col_cross += sample[0][0] * sample[0][1];
+        }
+        const nf = @as(f64, @floatFromInt(samples));
+        try expectFloatBetween("matrix normal row covariance", row_cross / nf, 0.55, 0.65);
+        try expectFloatBetween("matrix normal col covariance", col_cross / nf, 0.35, 0.45);
+    }
+
+    // Static matrix-t variance formula.
+    {
+        const mean = [2][2]f64{ .{ 0, 0 }, .{ 0, 0 } };
+        const identity = [2][2]f64{ .{ 1, 0 }, .{ 0, 1 } };
+        const dist = try alea.distributions.StaticMatrixT(f64, 2, 2).init(mean, identity, identity, 5);
+        const samples = 20_000;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const sample = dist.sample(rng);
+            sum_sq += sample[0][0] * sample[0][0];
+        }
+        try expectFloatBetween("matrix t variance", sum_sq / @as(f64, @floatFromInt(samples)), 1.5, 1.85);
+    }
+
+    // Continuous and discrete CDF/quantile round-trips.
+    {
+        const p: f64 = 0.3;
+        const beta_a: f64 = 2;
+        const beta_b: f64 = 5;
+        try expectFloatBetween("beta quantile", alea.distributions.betaCdf(alea.distributions.betaQuantile(p, beta_a, beta_b), beta_a, beta_b), p - 1e-9, p + 1e-9);
+        const gamma_shape: f64 = 2.5;
+        const gamma_scale: f64 = 1.5;
+        try expectFloatBetween("gamma quantile", alea.distributions.gammaCdf(alea.distributions.gammaQuantile(p, gamma_shape, gamma_scale), gamma_shape, gamma_scale), p - 1e-9, p + 1e-9);
+        const chi_dof: f64 = 4;
+        try expectFloatBetween("chi-squared quantile", alea.distributions.chiSquaredCdf(alea.distributions.chiSquaredQuantile(p, chi_dof), chi_dof), p - 1e-9, p + 1e-9);
+        const t_dof: f64 = 5;
+        try expectFloatBetween("student-t quantile", alea.distributions.studentTCdf(alea.distributions.studentTQuantile(p, t_dof), t_dof), p - 1e-9, p + 1e-9);
+        const f_d1: f64 = 5;
+        const f_d2: f64 = 10;
+        try expectFloatBetween("fisher-f quantile", alea.distributions.fisherFCdf(alea.distributions.fisherFQuantile(p, f_d1, f_d2), f_d1, f_d2), p - 1e-9, p + 1e-9);
+        const discrete_q: f64 = 0.7;
+        const poisson_lambda: f64 = 5;
+        try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);
+        const binomial_n: f64 = 20;
+        const binomial_p: f64 = 0.3;
+        try expectFloatBetween("binomial quantile", alea.distributions.binomialCdf(alea.distributions.binomialQuantile(discrete_q, binomial_n, binomial_p), binomial_n, binomial_p), discrete_q, 1.0);
+        const geometric_p: f64 = 0.4;
+        try expectFloatBetween("geometric quantile", alea.distributions.geometricCdf(alea.distributions.geometricQuantile(discrete_q, geometric_p), geometric_p), discrete_q, 1.0);
+        const negative_binomial_s: f64 = 3;
+        const negative_binomial_p: f64 = 0.5;
+        try expectFloatBetween("negative binomial quantile", alea.distributions.negativeBinomialCdf(alea.distributions.negativeBinomialQuantile(discrete_q, negative_binomial_s, negative_binomial_p), negative_binomial_s, negative_binomial_p), discrete_q, 1.0);
+    }
+
+    // Multivariate marginal diagnostics.
+    {
+        const alpha = [_]f64{ 2, 3, 5 };
+        const dirichlet = try alea.distributions.Dirichlet(f64).init(&alpha);
+        const x: f64 = 0.3;
+        const dirichlet_a: f64 = 2;
+        const dirichlet_b: f64 = 8;
+        const expected_beta = alea.distributions.betaCdf(x, dirichlet_a, dirichlet_b);
+        try expectFloatBetween("dirichlet marginal", try dirichlet.marginalCdf(0, x), expected_beta - 1e-12, expected_beta + 1e-12);
+
+        const probabilities = [_]f64{ 1, 3 };
+        const multinomial = try alea.distributions.Multinomial.init(20, &probabilities);
+        const marginal_k: f64 = 5;
+        const marginal_n: f64 = 20;
+        const marginal_p: f64 = 0.25;
+        const expected_binomial = alea.distributions.binomialCdf(marginal_k, marginal_n, marginal_p);
+        try expectFloatBetween("multinomial marginal", try multinomial.marginalCdf(0, marginal_k), expected_binomial - 1e-12, expected_binomial + 1e-12);
+    }
 }
 
 fn checkConstructorErgonomics() !void {
