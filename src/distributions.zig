@@ -33888,14 +33888,20 @@ fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows:
 /// manifold V_{k,p}: p×k matrices with orthonormal columns and density
 /// `exp(tr(FᵀX))`.
 ///
-/// Sampling uses a Gibbs sampler whose per-column conditional distributions
-/// are exact von Mises-Fisher draws on the orthogonal complement of the other
-/// columns. The 3×2 case uses a fully unrolled cross-product kernel; other
-/// shapes use the generic Gram-Schmidt path. Draws are approximate
-/// (correlated) samples from the stationary distribution; `initWithOptions`
-/// controls burn-in and thinning. The columns stay orthonormal up to
-/// floating-point drift, which is corrected by a Gram-Schmidt pass every 64
-/// sweeps (drift stays below ~1e-11 over 10M sweeps).
+/// The 3×2 case is sampled exactly and independently: V_{3,2} is
+/// diffeomorphic to SO(3) (complete each frame with its cross product), and
+/// the matrix Langevin density becomes a matrix Fisher density whose third
+/// parameter column is zero, so `MatrixFisher` provides exact draws. The
+/// `burnin` and `thin` options are ignored for 3×2.
+///
+/// Other shapes use a Gibbs sampler whose per-column conditional
+/// distributions are exact von Mises-Fisher draws on the orthogonal complement
+/// of the other columns. The 3×2 Gibbs kernel remains as a fallback when the
+/// matrix Fisher construction is rejected. Draws are approximate (correlated)
+/// samples from the stationary distribution; `initWithOptions` controls
+/// burn-in and thinning. The columns stay orthonormal up to floating-point
+/// drift, which is corrected by a Gram-Schmidt pass every 64 sweeps (drift
+/// stays below ~1e-11 over 10M sweeps).
 ///
 /// Requires `p > k`. Square orthogonal matrices (`p = k`) make the conditional
 /// complement one-dimensional and the fixed-sweep chain periodic, so they are
@@ -33919,6 +33925,8 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
         z: []T,
         initialized: bool,
         ortho_countdown: usize,
+        /// Exact 3×2 sampler through the SO(3) matrix Fisher reduction.
+        exact_3x2: ?MatrixFisher(T),
 
         /// Construct with default burn-in (100 sweeps) and thinning (10 sweeps).
         pub fn init(allocator: std.mem.Allocator, parameter: []const T, rows: usize, cols: usize) !Self {
@@ -33955,6 +33963,21 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
 
             @memcpy(f, parameter);
             @memset(x, 0);
+
+            // V_{3,2} is diffeomorphic to SO(3): completing a frame with its
+            // cross product maps the matrix Langevin density to a matrix
+            // Fisher density with a zero third parameter column. The exact
+            // sampler is used when that construction succeeds.
+            var exact_3x2: ?MatrixFisher(T) = null;
+            if (rows == 3 and cols == 2) {
+                const k = [3][3]T{
+                    .{ parameter[0], parameter[1], 0 },
+                    .{ parameter[2], parameter[3], 0 },
+                    .{ parameter[4], parameter[5], 0 },
+                };
+                exact_3x2 = MatrixFisher(T).init(k) catch null;
+            }
+
             return Self{
                 .allocator = allocator,
                 .rows = rows,
@@ -33970,6 +33993,7 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 .z = z,
                 .initialized = false,
                 .ortho_countdown = 0,
+                .exact_3x2 = exact_3x2,
             };
         }
 
@@ -34047,6 +34071,16 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
 
         pub fn sampleIntoFrom(self: *Self, source: anytype, out: []T) !void {
             if (out.len != self.rows * self.cols) return error.InvalidLength;
+            if (self.exact_3x2) |*exact| {
+                const rotation = exact.sampleFrom(source);
+                out[0] = rotation[0][0];
+                out[1] = rotation[0][1];
+                out[2] = rotation[1][0];
+                out[3] = rotation[1][1];
+                out[4] = rotation[2][0];
+                out[5] = rotation[2][1];
+                return;
+            }
             self.ensureInitialized(source);
             self.advance(source, self.thin);
             @memcpy(out, self.x);
@@ -34060,10 +34094,8 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
             for (out) |item| {
                 if (item.len != self.rows * self.cols) return error.InvalidLength;
             }
-            self.ensureInitialized(source);
             for (out) |item| {
-                self.advance(source, self.thin);
-                @memcpy(item, self.x);
+                try self.sampleIntoFrom(source, item);
             }
         }
 
@@ -57173,7 +57205,7 @@ test "MatrixVonMisesFisher zero second column leaves the first vMF" {
 
     const vmf = try VonMisesFisher(f64, 3).init(.{ 0, 0, 1 }, kappa);
     const rho = vmf.meanResultantLength();
-    const count = 20_000;
+    const count = 100_000;
     var sums_col0 = [_]f64{0} ** 3;
     var sums_col1 = [_]f64{0} ** 3;
     var out: [6]f64 = undefined;
