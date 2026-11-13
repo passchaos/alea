@@ -969,6 +969,10 @@ pub const multi = struct {
         return distributions_module.MultivariateLaplace(T);
     }
 
+    pub fn MultivariateSkewNormal(comptime T: type) type {
+        return distributions_module.MultivariateSkewNormal(T);
+    }
+
     pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) type {
         return distributions_module.StaticMultivariateNormal(T, dimension);
     }
@@ -27377,6 +27381,278 @@ pub fn MultivariateLaplace(comptime T: type) type {
     };
 }
 
+/// Allocator-backed multivariate skew-normal distribution.
+///
+/// Uses the Azzalini–Dalla Valle construction:
+///
+///   Y = δ|Z₀| + L·Z,   Z₀ ~ N(0,1),   Z ~ N(0, I),
+///   X = ξ + Y,
+///
+/// where `δ = Ψα / √(1 + αᵀΨα)` and `L` is the Cholesky factor of
+/// `Ψ − δδᵀ`. `α = 0` recovers
+/// `MultivariateNormal(ξ, Ψ)`. Mean `ξ + √(2/π)·δ`; covariance
+/// `Ψ − (2/π)·δδᵀ`. Absent from local Rust `rand` / `rand_distr` core.
+pub fn MultivariateSkewNormal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mvn: MultivariateNormal(T),
+        mvn_residual: MultivariateNormal(T),
+        location: []T,
+        shape: []T,
+        delta: []T,
+        allocator: std.mem.Allocator,
+
+        pub fn init(
+            allocator: std.mem.Allocator,
+            location: []const T,
+            scale: []const T,
+            shape: []const T,
+        ) !Self {
+            comptime requireFloat(T);
+            if (location.len == 0) return error.EmptyRange;
+            const dimension = location.len;
+            if (shape.len != dimension) return error.InvalidLength;
+            const matrix_len = std.math.mul(usize, dimension, dimension) catch return error.InvalidLength;
+            if (scale.len != matrix_len) return error.InvalidLength;
+
+            for (location) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidParameter;
+            }
+            for (shape) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidParameter;
+            }
+
+            var alpha_psi_alpha: T = 0;
+            var i: usize = 0;
+            while (i < dimension) : (i += 1) {
+                var psi_alpha_i: T = 0;
+                var j: usize = 0;
+                while (j < dimension) : (j += 1) {
+                    psi_alpha_i += scale[i * dimension + j] * shape[j];
+                }
+                alpha_psi_alpha += shape[i] * psi_alpha_i;
+            }
+            if (!(alpha_psi_alpha >= 0) or !std.math.isFinite(alpha_psi_alpha)) return error.InvalidParameter;
+
+            const denominator = @sqrt(1 + alpha_psi_alpha);
+            const owned_location = try allocator.dupe(T, location);
+            errdefer allocator.free(owned_location);
+            const owned_shape = try allocator.dupe(T, shape);
+            errdefer allocator.free(owned_shape);
+            const delta = try allocator.alloc(T, dimension);
+            errdefer allocator.free(delta);
+
+            i = 0;
+            while (i < dimension) : (i += 1) {
+                var psi_alpha_i: T = 0;
+                var j: usize = 0;
+                while (j < dimension) : (j += 1) {
+                    psi_alpha_i += scale[i * dimension + j] * shape[j];
+                }
+                delta[i] = psi_alpha_i / denominator;
+            }
+
+            const zero_mean = try allocator.alloc(T, dimension);
+            defer allocator.free(zero_mean);
+            @memset(zero_mean, 0);
+            var mvn = try MultivariateNormal(T).init(allocator, zero_mean, scale);
+            errdefer mvn.deinit();
+
+            const residual = try allocator.alloc(T, matrix_len);
+            defer allocator.free(residual);
+            i = 0;
+            while (i < dimension) : (i += 1) {
+                var j: usize = 0;
+                while (j < dimension) : (j += 1) {
+                    residual[i * dimension + j] = scale[i * dimension + j] - delta[i] * delta[j];
+                }
+            }
+            var mvn_residual = try MultivariateNormal(T).init(allocator, zero_mean, residual);
+            errdefer mvn_residual.deinit();
+
+            return .{
+                .mvn = mvn,
+                .mvn_residual = mvn_residual,
+                .location = owned_location,
+                .shape = owned_shape,
+                .delta = delta,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(
+            allocator: std.mem.Allocator,
+            location: []const T,
+            scale: []const T,
+            shape: []const T,
+        ) !Self {
+            return Self.init(allocator, location, scale, shape);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.mvn.deinit();
+            self.mvn_residual.deinit();
+            self.allocator.free(self.location);
+            self.allocator.free(self.shape);
+            self.allocator.free(self.delta);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const location = try allocator.dupe(T, self.location);
+            errdefer allocator.free(location);
+            const shape = try allocator.dupe(T, self.shape);
+            errdefer allocator.free(shape);
+            const delta = try allocator.dupe(T, self.delta);
+            errdefer allocator.free(delta);
+            var mvn = try self.mvn.clone(allocator);
+            errdefer mvn.deinit();
+            var mvn_residual = try self.mvn_residual.clone(allocator);
+            errdefer mvn_residual.deinit();
+            return .{
+                .mvn = mvn,
+                .mvn_residual = mvn_residual,
+                .location = location,
+                .shape = shape,
+                .delta = delta,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.location.len;
+        }
+
+        pub fn rankValue(self: Self) usize {
+            return self.mvn.rankValue();
+        }
+
+        pub fn isDegenerate(self: Self) bool {
+            return self.mvn.isDegenerate();
+        }
+
+        pub fn locationValues(self: Self) []const T {
+            return self.location;
+        }
+
+        pub fn locationAt(self: Self, index: usize) Error!T {
+            if (index >= self.location.len) return error.InvalidParameter;
+            return self.location[index];
+        }
+
+        pub fn scaleAt(self: Self, row: usize, col: usize) Error!T {
+            return self.mvn.covarianceAt(row, col);
+        }
+
+        pub fn shapeValues(self: Self) []const T {
+            return self.shape;
+        }
+
+        pub fn shapeAt(self: Self, index: usize) Error!T {
+            if (index >= self.shape.len) return error.InvalidParameter;
+            return self.shape[index];
+        }
+
+        pub fn deltaValues(self: Self) []const T {
+            return self.delta;
+        }
+
+        pub fn deltaAt(self: Self, index: usize) Error!T {
+            if (index >= self.delta.len) return error.InvalidParameter;
+            return self.delta[index];
+        }
+
+        /// Mean ξ + √(2/π)·δ.
+        pub fn expectedValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            try self.expectedValueInto(out);
+            return out;
+        }
+
+        pub fn expectedValueInto(self: Self, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            const factor = @sqrt(2 / @as(T, @floatCast(std.math.pi)));
+            for (out, self.location, self.delta) |*value, location, delta| {
+                value.* = location + factor * delta;
+            }
+        }
+
+        /// Covariance Ψ − (2/π)·δδᵀ.
+        pub fn covarianceAt(self: Self, row: usize, col: usize) Error!T {
+            const scale = try self.mvn.covarianceAt(row, col);
+            const factor = 2 / @as(T, @floatCast(std.math.pi));
+            return scale - factor * self.delta[row] * self.delta[col];
+        }
+
+        pub fn varianceAt(self: Self, index: usize) Error!T {
+            return self.covarianceAt(index, index);
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(rng, out[offset..][0..dimension]);
+            }
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(source, out[offset..][0..dimension]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            self.mvn_residual.sampleIntoFrom(source, out);
+            const z0 = standardNormalFrom(source, T);
+            const abs_z0 = @abs(z0);
+            for (out, self.location, self.delta) |*value, location, delta| {
+                value.* = location + delta * abs_z0 + value.*;
+            }
+        }
+    };
+}
+
 /// Fixed-dimension, allocation-free multivariate normal sampler.
 ///
 /// Use this shape when the dimension is known at compile time. Construction
@@ -51082,6 +51358,165 @@ test "MultivariateLaplace clone, caller buffers, batches, and f32 work" {
     const f32_mean = [_]f32{ 0, 0 };
     const f32_cov = [_]f32{ 1, 0.2, 0.2, 1 };
     var f32_dist = try MultivariateLaplace(f32).init(allocator, &f32_mean, &f32_cov);
+    defer f32_dist.deinit();
+    var f32_out: [2]f32 = undefined;
+    f32_dist.sampleInto(rng, &f32_out);
+    for (f32_out) |value| try std.testing.expect(std.math.isFinite(value));
+}
+
+test "MultivariateSkewNormal alpha=0 reduces to multivariate normal" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7f01);
+    const rng = Rng.init(&engine);
+
+    const location = [_]f64{ 1, -2 };
+    const scale = [_]f64{ 1, 0.5, 0.5, 2 };
+    const shape = [_]f64{ 0, 0 };
+    var dist = try MultivariateSkewNormal(f64).init(allocator, &location, &scale, &shape);
+    defer dist.deinit();
+
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try dist.deltaAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), try dist.deltaAt(1), 1e-12);
+    const mean = try dist.expectedValue(allocator);
+    defer allocator.free(mean);
+    try std.testing.expectApproxEqAbs(location[0], mean[0], 1e-12);
+    try std.testing.expectApproxEqAbs(location[1], mean[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.varianceAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), try dist.covarianceAt(0, 1), 1e-12);
+
+    const count = 20_000;
+    var sums = [_]f64{0} ** 2;
+    var out: [2]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        sums[0] += out[0];
+        sums[1] += out[1];
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(location[0], sums[0] / nf, 0.06);
+    try std.testing.expectApproxEqAbs(location[1], sums[1] / nf, 0.08);
+}
+
+test "MultivariateSkewNormal sampling matches the Azzalini moments" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7f02);
+    const rng = Rng.init(&engine);
+
+    const location = [_]f64{ 1, -2 };
+    const scale = [_]f64{ 1, 0.5, 0.5, 2 };
+    const shape = [_]f64{ 2, -1 };
+    var dist = try MultivariateSkewNormal(f64).init(allocator, &location, &scale, &shape);
+    defer dist.deinit();
+
+    const inv_sqrt5: f64 = 1.0 / @sqrt(5.0);
+    const delta0: f64 = 1.5 * inv_sqrt5;
+    const delta1: f64 = -1.0 * inv_sqrt5;
+    const normal_factor: f64 = @sqrt(2.0 / std.math.pi);
+    const expected_mean0 = location[0] + normal_factor * delta0;
+    const expected_mean1 = location[1] + normal_factor * delta1;
+    const cov_factor: f64 = 2.0 / std.math.pi;
+    const expected_var0 = 1 - cov_factor * delta0 * delta0;
+    const expected_var1 = 2 - cov_factor * delta1 * delta1;
+    const expected_cov01 = 0.5 - cov_factor * delta0 * delta1;
+
+    const mean = try dist.expectedValue(allocator);
+    defer allocator.free(mean);
+    try std.testing.expectApproxEqAbs(expected_mean0, mean[0], 1e-12);
+    try std.testing.expectApproxEqAbs(expected_mean1, mean[1], 1e-12);
+    try std.testing.expectApproxEqAbs(expected_var0, try dist.varianceAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(expected_var1, try dist.varianceAt(1), 1e-12);
+    try std.testing.expectApproxEqAbs(expected_cov01, try dist.covarianceAt(0, 1), 1e-12);
+
+    const count = 40_000;
+    var sums = [_]f64{0} ** 2;
+    var sums_sq = [_]f64{0} ** 2;
+    var cross: f64 = 0;
+    var out: [2]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        sums[0] += out[0];
+        sums[1] += out[1];
+        sums_sq[0] += out[0] * out[0];
+        sums_sq[1] += out[1] * out[1];
+        cross += out[0] * out[1];
+    }
+    const nf: f64 = @floatFromInt(count);
+    const mean0 = sums[0] / nf;
+    const mean1 = sums[1] / nf;
+    try std.testing.expectApproxEqAbs(expected_mean0, mean0, 0.06);
+    try std.testing.expectApproxEqAbs(expected_mean1, mean1, 0.08);
+    try std.testing.expectApproxEqAbs(expected_var0, sums_sq[0] / nf - mean0 * mean0, 0.1);
+    try std.testing.expectApproxEqAbs(expected_var1, sums_sq[1] / nf - mean1 * mean1, 0.15);
+    try std.testing.expectApproxEqAbs(expected_cov01, cross / nf - mean0 * mean1, 0.08);
+}
+
+test "MultivariateSkewNormal matches manual composition" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var skew_engine = alea.DefaultPrng.init(0x7f03);
+    var manual_engine = alea.DefaultPrng.init(0x7f03);
+    const skew_rng = Rng.init(&skew_engine);
+
+    const location = [_]f64{ 1, -2 };
+    const scale = [_]f64{ 1, 0.5, 0.5, 2 };
+    const shape = [_]f64{ 2, -1 };
+    var dist = try MultivariateSkewNormal(f64).init(allocator, &location, &scale, &shape);
+    defer dist.deinit();
+    const zero = [_]f64{ 0, 0 };
+    const delta0 = try dist.deltaAt(0);
+    const delta1 = try dist.deltaAt(1);
+    const residual = [_]f64{
+        scale[0] - delta0 * delta0, scale[1] - delta0 * delta1,
+        scale[2] - delta1 * delta0, scale[3] - delta1 * delta1,
+    };
+    var mvn = try MultivariateNormal(f64).init(allocator, &zero, &residual);
+    defer mvn.deinit();
+
+    var skew_buf: [2]f64 = undefined;
+    var manual_buf: [2]f64 = undefined;
+    for (0..16) |_| {
+        dist.sampleInto(skew_rng, &skew_buf);
+        mvn.sampleIntoFrom(&manual_engine, &manual_buf);
+        const z0 = Rng.standardNormalFastFrom(&manual_engine, f64);
+        const abs_z0 = @abs(z0);
+        manual_buf[0] = location[0] + delta0 * abs_z0 + manual_buf[0];
+        manual_buf[1] = location[1] + delta1 * abs_z0 + manual_buf[1];
+        try std.testing.expectEqualSlices(f64, &skew_buf, &manual_buf);
+    }
+}
+
+test "MultivariateSkewNormal clone, caller buffers, batches, and f32 work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7f04);
+    const rng = Rng.init(&engine);
+
+    const location = [_]f64{ 0, 0 };
+    const scale = [_]f64{ 1, 0.2, 0.2, 1 };
+    const shape = [_]f64{ 1, -1 };
+    var dist = try MultivariateSkewNormal(f64).init(allocator, &location, &scale, &shape);
+    defer dist.deinit();
+
+    var clone = try dist.clone(allocator);
+    defer clone.deinit();
+
+    var out: [2]f64 = undefined;
+    try dist.sampleIntoChecked(rng, &out);
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, out[0..1]));
+
+    var batch: [6]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+
+    const allocated = try dist.sample(allocator, rng);
+    defer allocator.free(allocated);
+    try std.testing.expectEqual(@as(usize, 2), allocated.len);
+
+    const f32_location = [_]f32{ 0, 0 };
+    const f32_scale = [_]f32{ 1, 0.2, 0.2, 1 };
+    const f32_shape = [_]f32{ 1, -1 };
+    var f32_dist = try MultivariateSkewNormal(f32).init(allocator, &f32_location, &f32_scale, &f32_shape);
     defer f32_dist.deinit();
     var f32_out: [2]f32 = undefined;
     f32_dist.sampleInto(rng, &f32_out);

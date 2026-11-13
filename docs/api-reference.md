@@ -1473,6 +1473,34 @@ Reusable samplers:
 - `MultivariateLaplace(T).sampleIntoCheckedFrom`
 - `MultivariateLaplace(T).sampleManyInto`
 - `MultivariateLaplace(T).sampleManyIntoFrom`
+- `MultivariateSkewNormal(T)`
+- `multi.MultivariateSkewNormal(T)`
+- `MultivariateSkewNormal(T).init`
+- `MultivariateSkewNormal(T).new`
+- `MultivariateSkewNormal(T).deinit`
+- `MultivariateSkewNormal(T).clone`
+- `MultivariateSkewNormal(T).dimensionValue`
+- `MultivariateSkewNormal(T).rankValue`
+- `MultivariateSkewNormal(T).isDegenerate`
+- `MultivariateSkewNormal(T).locationValues`
+- `MultivariateSkewNormal(T).locationAt`
+- `MultivariateSkewNormal(T).scaleAt`
+- `MultivariateSkewNormal(T).shapeValues`
+- `MultivariateSkewNormal(T).shapeAt`
+- `MultivariateSkewNormal(T).deltaValues`
+- `MultivariateSkewNormal(T).deltaAt`
+- `MultivariateSkewNormal(T).expectedValue`
+- `MultivariateSkewNormal(T).expectedValueInto`
+- `MultivariateSkewNormal(T).covarianceAt`
+- `MultivariateSkewNormal(T).varianceAt`
+- `MultivariateSkewNormal(T).sample`
+- `MultivariateSkewNormal(T).sampleFrom`
+- `MultivariateSkewNormal(T).sampleInto`
+- `MultivariateSkewNormal(T).sampleIntoFrom`
+- `MultivariateSkewNormal(T).sampleIntoChecked`
+- `MultivariateSkewNormal(T).sampleIntoCheckedFrom`
+- `MultivariateSkewNormal(T).sampleManyInto`
+- `MultivariateSkewNormal(T).sampleManyIntoFrom`
 - `MultivariateNormalError`
 - `StaticMultivariateNormal(T, dimension)`
 - `multi.StaticMultivariateNormal(T, dimension)`
