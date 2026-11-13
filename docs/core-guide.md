@@ -467,11 +467,12 @@ Directional distributions on the circle and sphere:
   distribution with closed-form inverse-CDF sampling and SIMD vector support.
 - `VonMisesFisher(T, n)` — vMF on Sⁿ⁻¹ for comptime `n ≥ 2` with Wood (1994)
   rejection sampling, `κ = 0` uniform, and `κ → ∞` point-mass fast paths.
-- `VectorVonMises(T)` / `VectorVonMisesFisher(T)` — per-lane SIMD samplers:
-  one independent circular von Mises or S² vMF sample per vector lane, with
-  lane retirement in the Best–Fisher/Wood rejection loops. `VectorVonMisesFisher`
-  returns `[3]VectorType` and shares the mean direction/concentration across
-  lanes.
+- `VectorVonMises(T)` / `VectorVonMisesFisher(T)` / `VectorWatson(T)` —
+  per-lane SIMD samplers: one independent circular von Mises, S² vMF, or S²
+  axial Watson sample per vector lane, with lane retirement in the
+  Best–Fisher/Wood/Beta rejection loops. The S² samplers return
+  `[3]VectorType` and share the mean direction or axis and concentration
+  across lanes.
 - `Watson(T, n)` — axial vMF counterpart with bipolar (`κ > 0`), girdle
   (`κ < 0`), and uniform (`κ = 0`) regimes plus Kummer-function moment
   diagnostics.

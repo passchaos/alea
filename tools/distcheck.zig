@@ -354,6 +354,29 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("vector vmf mean resultant", sum_z / nf, expected - 0.03, expected + 0.03);
     }
 
+    // SIMD Watson f64x4 axial moment recovery.
+    {
+        const V = @Vector(4, f64);
+        const dist = try alea.distributions.VectorWatson(V).init(.{ 0, 0, 1 }, 5);
+        const scalar = try alea.distributions.Watson(f64, 3).init(.{ 0, 0, 1 }, 5);
+        const expected = scalar.meanCosineSquared();
+        const samples = 10_000;
+        var sum_z2: f64 = 0;
+        var count: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const p = dist.sampleFrom(&engine);
+            inline for (0..4) |lane| {
+                const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+                if (@abs(norm_sq - 1) > 1e-9) return error.DistributionCheckFailed;
+                sum_z2 += p[2][lane] * p[2][lane];
+                count += 1;
+            }
+        }
+        const nf: f64 = @floatFromInt(count);
+        try expectFloatBetween("vector watson mean cosine squared", sum_z2 / nf, expected - 0.03, expected + 0.03);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;
