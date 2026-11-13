@@ -32,6 +32,7 @@ fn runChecks() !void {
     try checkMultivariateNormal();
     try checkConstructorErgonomics();
     try checkAdvancedMultivariate();
+    try checkBetaFamilies();
 }
 
 fn checkAdvancedMultivariate() !void {
@@ -185,6 +186,70 @@ fn checkAdvancedMultivariate() !void {
         const marginal_p: f64 = 0.25;
         const expected_binomial = alea.distributions.binomialCdf(marginal_k, marginal_n, marginal_p);
         try expectFloatBetween("multinomial marginal", try multinomial.marginalCdf(0, marginal_k), expected_binomial - 1e-12, expected_binomial + 1e-12);
+    }
+}
+
+fn checkBetaFamilies() !void {
+    var engine = alea.FastPrng.init(0xbe7e);
+    const rng = alea.Rng.init(&engine);
+
+    // BetaPrime(3, 5) moments and quantile round-trip.
+    {
+        const dist = try alea.distributions.BetaPrime(f64).init(3, 5);
+        const samples = 20_000;
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x = dist.sample(rng);
+            sum += x;
+            sum_sq += x * x;
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const mean = sum / nf;
+        try expectFloatBetween("beta prime mean", mean, 0.72, 0.78);
+        try expectFloatBetween("beta prime variance", sum_sq / nf - mean * mean, 0.36, 0.52);
+        try expectFloatBetween("beta prime quantile", dist.cdf(dist.quantile(0.3)), 0.3 - 1e-9, 0.3 + 1e-9);
+    }
+
+    // BetaBinomial uniform and overdispersed moments.
+    {
+        const uniform_dist = try alea.distributions.BetaBinomial.init(10, 1, 1);
+        const samples = 20_000;
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x: f64 = @floatFromInt(uniform_dist.sample(rng));
+            sum += x;
+            sum_sq += x * x;
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const mean = sum / nf;
+        try expectFloatBetween("beta binomial uniform mean", mean, 4.9, 5.1);
+        try expectFloatBetween("beta binomial uniform variance", sum_sq / nf - mean * mean, 9.0, 11.0);
+
+        const over_dist = try alea.distributions.BetaBinomial.init(20, 0.5, 0.5);
+        var over_sum: f64 = 0;
+        var over_sum_sq: f64 = 0;
+        i = 0;
+        while (i < samples) : (i += 1) {
+            const x: f64 = @floatFromInt(over_dist.sample(rng));
+            over_sum += x;
+            over_sum_sq += x * x;
+        }
+        const over_mean = over_sum / nf;
+        try expectFloatBetween("beta binomial overdispersed mean", over_mean, 9.8, 10.2);
+        try expectFloatBetween("beta binomial overdispersed variance", over_sum_sq / nf - over_mean * over_mean, 48.0, 57.0);
+
+        var pmf_sum: f64 = 0;
+        var k: u64 = 0;
+        while (k <= 20) : (k += 1) pmf_sum += over_dist.pmf(@floatFromInt(k));
+        try expectFloatBetween("beta binomial pmf sum", pmf_sum, 1.0 - 1e-10, 1.0 + 1e-10);
+
+        const q: f64 = 0.7;
+        const quantile = over_dist.quantile(q);
+        try expectFloatBetween("beta binomial quantile", over_dist.cdf(quantile), q, 1.0);
     }
 }
 
