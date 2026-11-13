@@ -199,8 +199,8 @@ The current Linux-first roadmap is intentionally broad:
   `arcsineCdf` / `arcsineQuantile`, `triangularCdf` / `triangularQuantile`,
   `Dirichlet(T).marginalCdf` / `marginalQuantile`, and
   `Multinomial.marginalCdf` / `marginalQuantile`, plus sampler-level
-  `cdf(x)` / `quantile(p)` methods on the core continuous and discrete
-  samplers
+  `cdf(x)` / `quantile(p)` methods on the core and derived continuous and
+  discrete samplers
 - O(1) repeated weighted sampling through alias tables
 
 The local Linux roadmap has progressed beyond basic feature bring-up into

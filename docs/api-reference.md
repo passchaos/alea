@@ -2794,6 +2794,8 @@ Reusable samplers:
 - `Triangular(T).sampleFrom`
 - `Triangular(T).fill`
 - `Triangular(T).fillFrom`
+- `Triangular(T).cdf`
+- `Triangular(T).quantile`
 - `VectorTriangular(VectorType)`
 - `VectorTriangular(VectorType).init`
 - `VectorTriangular(VectorType).minValue`
@@ -2817,6 +2819,8 @@ Reusable samplers:
 - `Arcsine(T).sampleFrom`
 - `Arcsine(T).fill`
 - `Arcsine(T).fillFrom`
+- `Arcsine(T).cdf`
+- `Arcsine(T).quantile`
 - `VectorArcsine(VectorType)`
 - `VectorArcsine(VectorType).init`
 - `VectorArcsine(VectorType).minValue`
@@ -2842,6 +2846,8 @@ Reusable samplers:
 - `Cauchy(T).sampleFrom`
 - `Cauchy(T).fill`
 - `Cauchy(T).fillFrom`
+- `Cauchy(T).cdf`
+- `Cauchy(T).quantile`
 - `VectorCauchy(VectorType)`
 - `VectorCauchy(VectorType).init`
 - `VectorCauchy(VectorType).medianValue`
@@ -2869,6 +2875,8 @@ Reusable samplers:
 - `Laplace(T).sampleFrom`
 - `Laplace(T).fill`
 - `Laplace(T).fillFrom`
+- `Laplace(T).cdf`
+- `Laplace(T).quantile`
 - `VectorLaplace(VectorType)`
 - `VectorLaplace(VectorType).init`
 - `VectorLaplace(VectorType).locationValue`
@@ -2897,6 +2905,8 @@ Reusable samplers:
 - `Logistic(T).sampleFrom`
 - `Logistic(T).fill`
 - `Logistic(T).fillFrom`
+- `Logistic(T).cdf`
+- `Logistic(T).quantile`
 - `VectorLogistic(VectorType)`
 - `VectorLogistic(VectorType).init`
 - `VectorLogistic(VectorType).locationValue`
@@ -2953,6 +2963,8 @@ Reusable samplers:
 - `Kumaraswamy(T).sampleFrom`
 - `Kumaraswamy(T).fill`
 - `Kumaraswamy(T).fillFrom`
+- `Kumaraswamy(T).cdf`
+- `Kumaraswamy(T).quantile`
 - `VectorKumaraswamy(VectorType)`
 - `VectorKumaraswamy(VectorType).init`
 - `VectorKumaraswamy(VectorType).alphaValue`
@@ -2979,6 +2991,8 @@ Reusable samplers:
 - `PowerFunction(T).sampleFrom`
 - `PowerFunction(T).fill`
 - `PowerFunction(T).fillFrom`
+- `PowerFunction(T).cdf`
+- `PowerFunction(T).quantile`
 - `VectorPowerFunction(VectorType)`
 - `VectorPowerFunction(VectorType).init`
 - `VectorPowerFunction(VectorType).minValue`
@@ -3004,6 +3018,8 @@ Reusable samplers:
 - `Rayleigh(T).sampleFrom`
 - `Rayleigh(T).fill`
 - `Rayleigh(T).fillFrom`
+- `Rayleigh(T).cdf`
+- `Rayleigh(T).quantile`
 - `VectorRayleigh(VectorType)`
 - `VectorRayleigh(VectorType).init`
 - `VectorRayleigh(VectorType).scaleValue`
@@ -3056,6 +3072,8 @@ Reusable samplers:
 - `Pareto(T).sampleFrom`
 - `Pareto(T).fill`
 - `Pareto(T).fillFrom`
+- `Pareto(T).cdf`
+- `Pareto(T).quantile`
 - `VectorPareto(VectorType)`
 - `VectorPareto(VectorType).init`
 - `VectorPareto(VectorType).scaleValue`
@@ -3085,6 +3103,8 @@ Reusable samplers:
 - `Weibull(T).sampleFrom`
 - `Weibull(T).fill`
 - `Weibull(T).fillFrom`
+- `Weibull(T).cdf`
+- `Weibull(T).quantile`
 - `VectorWeibull(VectorType)`
 - `VectorWeibull(VectorType).init`
 - `VectorWeibull(VectorType).scaleValue`
@@ -3114,6 +3134,8 @@ Reusable samplers:
 - `Gumbel(T).sampleFrom`
 - `Gumbel(T).fill`
 - `Gumbel(T).fillFrom`
+- `Gumbel(T).cdf`
+- `Gumbel(T).quantile`
 - `VectorGumbel(VectorType)`
 - `VectorGumbel(VectorType).init`
 - `VectorGumbel(VectorType).locationValue`
@@ -3144,6 +3166,8 @@ Reusable samplers:
 - `Frechet(T).sampleFrom`
 - `Frechet(T).fill`
 - `Frechet(T).fillFrom`
+- `Frechet(T).cdf`
+- `Frechet(T).quantile`
 - `VectorFrechet(VectorType)`
 - `VectorFrechet(VectorType).init`
 - `VectorFrechet(VectorType).locationValue`

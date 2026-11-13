@@ -21728,6 +21728,13 @@ pub fn Triangular(comptime T: type) type {
         fn isDegenerate(self: Self) bool {
             return self.min == self.max;
         }
+        pub fn cdf(self: Self, x: T) T {
+            return triangularCdf(x, self.min, self.mode, self.max);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return triangularQuantile(p, self.min, self.mode, self.max);
+        }
     };
 }
 
@@ -21955,6 +21962,13 @@ pub fn Arcsine(comptime T: type) type {
 
         fn isDegenerate(self: Self) bool {
             return self.min == self.max;
+        }
+        pub fn cdf(self: Self, x: T) T {
+            return arcsineCdf(x, self.min, self.max);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return arcsineQuantile(p, self.min, self.max);
         }
     };
 }
@@ -22204,6 +22218,13 @@ pub fn Cauchy(comptime T: type) type {
 
         fn isDegenerate(self: Self) bool {
             return self.scale == 0;
+        }
+        pub fn cdf(self: Self, x: T) T {
+            return cauchyCdf(x, self.median, self.scale);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return cauchyQuantile(p, self.median, self.scale);
         }
     };
 }
@@ -22464,6 +22485,13 @@ pub fn Laplace(comptime T: type) type {
         fn isDegenerate(self: Self) bool {
             return self.scale == 0;
         }
+        pub fn cdf(self: Self, x: T) T {
+            return laplaceCdf(x, self.location, self.scale);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return laplaceQuantile(p, self.location, self.scale);
+        }
     };
 }
 
@@ -22712,6 +22740,13 @@ pub fn Logistic(comptime T: type) type {
 
         fn isDegenerate(self: Self) bool {
             return self.scale == 0;
+        }
+        pub fn cdf(self: Self, x: T) T {
+            return logisticCdf(x, self.location, self.scale);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return logisticQuantile(p, self.location, self.scale);
         }
     };
 }
@@ -23458,6 +23493,18 @@ pub fn Kumaraswamy(comptime T: type) type {
         fn degenerateValue(self: Self) T {
             return if (self.method == .point_one) 1 else 0;
         }
+        pub fn cdf(self: Self, x: T) T {
+            if (self.method == .point_one) return if (x < 1) 0 else 1;
+            if (self.method == .point_zero) return if (x < 0) 0 else 1;
+            return kumaraswamyCdf(x, 1 / self.inverse_alpha, 1 / self.inverse_beta);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+            if (self.method == .point_one) return if (p == 0) 0 else 1;
+            if (self.method == .point_zero) return 0;
+            return kumaraswamyQuantile(p, 1 / self.inverse_alpha, 1 / self.inverse_beta);
+        }
     };
 }
 
@@ -23850,6 +23897,21 @@ pub fn PowerFunction(comptime T: type) type {
         fn degenerateValue(self: Self) T {
             return if (self.method == .point_max) self.maxValue() else self.min;
         }
+        pub fn cdf(self: Self, x: T) T {
+            if (self.method == .point_max) {
+                const max = self.min + self.range;
+                return if (x < max) 0 else 1;
+            }
+            return powerFunctionCdf(x, self.min, self.min + self.range, 1 / self.inverse_shape);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+            if (self.method == .point_max) {
+                return if (p == 0) self.min else self.min + self.range;
+            }
+            return powerFunctionQuantile(p, self.min, self.min + self.range, 1 / self.inverse_shape);
+        }
     };
 }
 
@@ -24085,6 +24147,13 @@ pub fn Rayleigh(comptime T: type) type {
 
         fn isDegenerate(self: Self) bool {
             return self.scale == 0;
+        }
+        pub fn cdf(self: Self, x: T) T {
+            return rayleighCdf(x, self.scale);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return rayleighQuantile(p, self.scale);
         }
     };
 }
@@ -24614,6 +24683,13 @@ pub fn Pareto(comptime T: type) type {
         fn degenerateValue(self: Self) T {
             return self.scale;
         }
+        pub fn cdf(self: Self, x: T) T {
+            return paretoCdf(x, self.scale, self.shape);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return paretoQuantile(p, self.scale, self.shape);
+        }
     };
 }
 
@@ -24912,6 +24988,13 @@ pub fn Weibull(comptime T: type) type {
         fn degenerateValue(self: Self) T {
             return self.scale;
         }
+        pub fn cdf(self: Self, x: T) T {
+            return weibullCdf(x, self.scale, self.shape);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return weibullQuantile(p, self.scale, self.shape);
+        }
     };
 }
 
@@ -25163,6 +25246,13 @@ pub fn Gumbel(comptime T: type) type {
 
         fn isDegenerate(self: Self) bool {
             return self.scale == 0;
+        }
+        pub fn cdf(self: Self, x: T) T {
+            return gumbelCdf(x, self.location, self.scale);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return gumbelQuantile(p, self.location, self.scale);
         }
     };
 }
@@ -25480,6 +25570,13 @@ pub fn Frechet(comptime T: type) type {
 
         fn degenerateValue(self: Self) T {
             return if (self.shape == std.math.inf(T)) self.location + self.scale else self.location;
+        }
+        pub fn cdf(self: Self, x: T) T {
+            return frechetCdf(x, self.location, self.scale, self.shape);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return frechetQuantile(p, self.location, self.scale, self.shape);
         }
     };
 }
@@ -53109,6 +53206,78 @@ test "derived-family CDF edge cases and f32" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.5), arcsineCdf(0.5, zf, of), 1e-6);
     const modef: f32 = 0.5;
     try std.testing.expectApproxEqAbs(@as(f32, 0.5), triangularCdf(0.5, zf, modef, of), 1e-6);
+}
+
+test "derived sampler cdf and quantile methods delegate to the free helpers" {
+    const x: f64 = 0.7;
+    const p: f64 = 0.6;
+    const z: f64 = 0;
+    const o: f64 = 1;
+    const two: f64 = 2;
+    const three: f64 = 3;
+    const tri_mode: f64 = 0.5;
+
+    const laplace_dist = try Laplace(f64).init(two, three);
+    try std.testing.expectApproxEqAbs(laplaceCdf(x, two, three), laplace_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(laplaceQuantile(p, two, three), laplace_dist.quantile(p), 1e-12);
+
+    const logistic_dist = try Logistic(f64).init(o, two);
+    try std.testing.expectApproxEqAbs(logisticCdf(x, o, two), logistic_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(logisticQuantile(p, o, two), logistic_dist.quantile(p), 1e-12);
+
+    const cauchy_dist = try Cauchy(f64).init(z, two);
+    try std.testing.expectApproxEqAbs(cauchyCdf(x, z, two), cauchy_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(cauchyQuantile(p, z, two), cauchy_dist.quantile(p), 1e-12);
+
+    const rayleigh_dist = try Rayleigh(f64).init(two);
+    try std.testing.expectApproxEqAbs(rayleighCdf(x, two), rayleigh_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(rayleighQuantile(p, two), rayleigh_dist.quantile(p), 1e-12);
+
+    const weibull_dist = try Weibull(f64).init(two, three);
+    try std.testing.expectApproxEqAbs(weibullCdf(x, two, three), weibull_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(weibullQuantile(p, two, three), weibull_dist.quantile(p), 1e-12);
+
+    const gumbel_dist = try Gumbel(f64).init(o, two);
+    try std.testing.expectApproxEqAbs(gumbelCdf(x, o, two), gumbel_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(gumbelQuantile(p, o, two), gumbel_dist.quantile(p), 1e-12);
+
+    const frechet_dist = try Frechet(f64).init(z, two, three);
+    try std.testing.expectApproxEqAbs(frechetCdf(x, z, two, three), frechet_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(frechetQuantile(p, z, two, three), frechet_dist.quantile(p), 1e-12);
+
+    const pareto_dist = try Pareto(f64).init(two, three);
+    try std.testing.expectApproxEqAbs(paretoCdf(x, two, three), pareto_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(paretoQuantile(p, two, three), pareto_dist.quantile(p), 1e-12);
+
+    const power_dist = try PowerFunction(f64).init(z, two, two);
+    try std.testing.expectApproxEqAbs(powerFunctionCdf(x, z, two, two), power_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(powerFunctionQuantile(p, z, two, two), power_dist.quantile(p), 1e-12);
+    const power_max = try PowerFunction(f64).init(z, two, std.math.inf(f64));
+    try std.testing.expectEqual(@as(f64, 0), power_max.cdf(1.9));
+    try std.testing.expectEqual(@as(f64, 1), power_max.cdf(two));
+    try std.testing.expectEqual(@as(f64, 0), power_max.quantile(z));
+    try std.testing.expectEqual(@as(f64, 2), power_max.quantile(0.5));
+
+    const kumaraswamy_dist = try Kumaraswamy(f64).init(two, three);
+    try std.testing.expectApproxEqAbs(kumaraswamyCdf(x, two, three), kumaraswamy_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(kumaraswamyQuantile(p, two, three), kumaraswamy_dist.quantile(p), 1e-12);
+    const kumaraswamy_one = try Kumaraswamy(f64).init(std.math.inf(f64), three);
+    try std.testing.expectEqual(@as(f64, 0), kumaraswamy_one.cdf(0.5));
+    try std.testing.expectEqual(@as(f64, 1), kumaraswamy_one.cdf(o));
+    try std.testing.expectEqual(@as(f64, 0), kumaraswamy_one.quantile(z));
+    try std.testing.expectEqual(@as(f64, 1), kumaraswamy_one.quantile(0.5));
+    const kumaraswamy_zero = try Kumaraswamy(f64).init(two, std.math.inf(f64));
+    try std.testing.expectEqual(@as(f64, 0), kumaraswamy_zero.cdf(-1));
+    try std.testing.expectEqual(@as(f64, 1), kumaraswamy_zero.cdf(z));
+    try std.testing.expectEqual(@as(f64, 0), kumaraswamy_zero.quantile(0.5));
+
+    const arcsine_dist = try Arcsine(f64).init(z, o);
+    try std.testing.expectApproxEqAbs(arcsineCdf(x, z, o), arcsine_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(arcsineQuantile(p, z, o), arcsine_dist.quantile(p), 1e-12);
+
+    const triangular_dist = try Triangular(f64).init(z, tri_mode, o);
+    try std.testing.expectApproxEqAbs(triangularCdf(x, z, tri_mode, o), triangular_dist.cdf(x), 1e-12);
+    try std.testing.expectApproxEqAbs(triangularQuantile(p, z, tri_mode, o), triangular_dist.quantile(p), 1e-12);
 }
 
 test "sampler cdf and quantile methods delegate to the free helpers" {

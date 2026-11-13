@@ -548,6 +548,11 @@ CDF and quantile helpers complement the samplers:
   `triangularCdf` / `triangularQuantile`; collapsed ranges are point masses.
 - multivariate marginals: `Dirichlet(T).marginalCdf` /
   `marginalQuantile` and `Multinomial.marginalCdf` / `marginalQuantile`.
+
+The reusable sampler types expose `cdf(x)` / `quantile(p)` methods that
+delegate to these helpers, including the derived continuous types
+(`Laplace`, `Logistic`, `Cauchy`, `Rayleigh`, `Weibull`, `Gumbel`, `Frechet`,
+`Pareto`, `PowerFunction`, `Kumaraswamy`, `Arcsine`, and `Triangular`).
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,
   `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Binomial`, `Geometric`,
   `NegativeBinomial`, and `Poisson`.
