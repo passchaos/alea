@@ -3337,6 +3337,30 @@ Reusable samplers:
 - `MatrixT(T).sampleIntoCheckedFrom`
 - `MatrixT(T).sampleManyInto`
 - `MatrixT(T).sampleManyIntoFrom`
+- `StaticMatrixT(T, rows, cols)`
+- `multi.StaticMatrixT(T, rows, cols)`
+- `StaticMatrixT(T, rows, cols).Matrix`
+- `StaticMatrixT(T, rows, cols).RowCovariance`
+- `StaticMatrixT(T, rows, cols).ColCovariance`
+- `StaticMatrixT(T, rows, cols).init`
+- `StaticMatrixT(T, rows, cols).new`
+- `StaticMatrixT(T, rows, cols).rowsValue`
+- `StaticMatrixT(T, rows, cols).colsValue`
+- `StaticMatrixT(T, rows, cols).degreesOfFreedomValue`
+- `StaticMatrixT(T, rows, cols).dfValue`
+- `StaticMatrixT(T, rows, cols).meanValue`
+- `StaticMatrixT(T, rows, cols).meanAt`
+- `StaticMatrixT(T, rows, cols).expectedValue`
+- `StaticMatrixT(T, rows, cols).modeValue`
+- `StaticMatrixT(T, rows, cols).rowCovarianceAt`
+- `StaticMatrixT(T, rows, cols).colCovarianceAt`
+- `StaticMatrixT(T, rows, cols).varianceAt`
+- `StaticMatrixT(T, rows, cols).sample`
+- `StaticMatrixT(T, rows, cols).sampleFrom`
+- `StaticMatrixT(T, rows, cols).sampleInto`
+- `StaticMatrixT(T, rows, cols).sampleIntoFrom`
+- `StaticMatrixT(T, rows, cols).sampleManyInto`
+- `StaticMatrixT(T, rows, cols).sampleManyIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`

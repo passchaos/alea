@@ -609,6 +609,10 @@ pub const multi = struct {
     pub fn MatrixT(comptime T: type) type {
         return distributions_module.MatrixT(T);
     }
+
+    pub fn StaticMatrixT(comptime T: type, comptime rows: usize, comptime cols: usize) type {
+        return distributions_module.StaticMatrixT(T, rows, cols);
+    }
 };
 
 pub const BernoulliError = error{
@@ -28558,6 +28562,127 @@ pub fn MatrixT(comptime T: type) type {
     };
 }
 
+/// Comptime-dimension matrix-variate Student-t distribution MT(M, U, V, ν).
+/// Stores a `StaticMatrixNormal(T, rows, cols)` inline and divides each draw by
+/// a shared `√(s/ν)` scale. Requires no allocator and no deinit.
+pub fn StaticMatrixT(comptime T: type, comptime rows: usize, comptime cols: usize) type {
+    if (rows == 0 or cols == 0) @compileError("StaticMatrixT dimensions must be greater than zero");
+    comptime requireFloat(T);
+
+    return struct {
+        const Self = @This();
+        pub const Matrix = [rows][cols]T;
+        pub const RowCovariance = [rows][rows]T;
+        pub const ColCovariance = [cols][cols]T;
+
+        matrix_normal: StaticMatrixNormal(T, rows, cols),
+        df: T,
+
+        pub fn init(
+            mean: Matrix,
+            row_covariance: RowCovariance,
+            col_covariance: ColCovariance,
+            degrees_of_freedom: T,
+        ) MatrixTError!Self {
+            if (!(degrees_of_freedom > 0) or !std.math.isFinite(degrees_of_freedom)) return error.InvalidParameter;
+            const matrix_normal = try StaticMatrixNormal(T, rows, cols).init(mean, row_covariance, col_covariance);
+            return .{
+                .matrix_normal = matrix_normal,
+                .df = degrees_of_freedom,
+            };
+        }
+
+        pub fn new(
+            mean: Matrix,
+            row_covariance: RowCovariance,
+            col_covariance: ColCovariance,
+            degrees_of_freedom: T,
+        ) Self {
+            return Self.init(mean, row_covariance, col_covariance, degrees_of_freedom) catch |err| {
+                std.debug.panic("StaticMatrixT.new: invalid parameters: {}", .{err});
+            };
+        }
+
+        pub fn rowsValue(_: Self) usize {
+            return rows;
+        }
+
+        pub fn colsValue(_: Self) usize {
+            return cols;
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn meanValue(self: Self) Matrix {
+            return self.matrix_normal.meanValue();
+        }
+
+        pub fn meanAt(self: Self, row: usize, col: usize) MatrixTError!T {
+            return self.matrix_normal.meanAt(row, col);
+        }
+
+        pub fn expectedValue(self: Self) Matrix {
+            return self.matrix_normal.expectedValue();
+        }
+
+        pub fn modeValue(self: Self) Matrix {
+            return self.matrix_normal.modeValue();
+        }
+
+        pub fn rowCovarianceAt(self: Self, row: usize, col: usize) MatrixTError!T {
+            return self.matrix_normal.rowCovarianceAt(row, col);
+        }
+
+        pub fn colCovarianceAt(self: Self, row: usize, col: usize) MatrixTError!T {
+            return self.matrix_normal.colCovarianceAt(row, col);
+        }
+
+        /// Variance of X[row, col] = U[row,row]·V[col,col]·ν/(ν−2), valid for
+        /// ν > 2. Returns null for ν ≤ 2 (infinite variance).
+        pub fn varianceAt(self: Self, row: usize, col: usize) MatrixTError!?T {
+            const base = try self.matrix_normal.varianceAt(row, col);
+            if (self.df <= 2) return null;
+            return base * self.df / (self.df - 2);
+        }
+
+        pub fn sample(self: Self, rng: Rng) Matrix {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) Matrix {
+            var out: Matrix = undefined;
+            self.sampleIntoFrom(source, &out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: *Matrix) void {
+            self.sampleIntoFrom(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: *Matrix) void {
+            self.matrix_normal.sampleIntoFrom(source, out);
+            const scale = @sqrt(chiSquaredFrom(source, T, self.df) / self.df);
+            inline for (0..rows) |row| {
+                inline for (0..cols) |col| out[row][col] /= scale;
+            }
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []Matrix) void {
+            for (out) |*item| self.sampleIntoFrom(rng, item);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []Matrix) void {
+            for (out) |*item| self.sampleIntoFrom(source, item);
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -49555,6 +49680,99 @@ test "MatrixT clone, caller buffers, batches, and f32 work" {
     var f32_out: [4]f32 = undefined;
     f32_dist.sampleInto(rng, &f32_out);
     for (f32_out) |value| try std.testing.expect(std.math.isFinite(value));
+}
+
+test "StaticMatrixT constructor validates parameters" {
+    const mean = [2][2]f64{ .{ 0, 0 }, .{ 0, 0 } };
+    const identity = [2][2]f64{ .{ 1, 0 }, .{ 0, 1 } };
+    try std.testing.expectError(error.InvalidParameter, StaticMatrixT(f64, 2, 2).init(mean, identity, identity, 0));
+    try std.testing.expectError(error.InvalidParameter, StaticMatrixT(f64, 2, 2).init(mean, identity, identity, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidCovariance, StaticMatrixT(f64, 2, 2).init(mean, .{ .{ 1, 2 }, .{ 2, 1 } }, identity, 5));
+}
+
+test "StaticMatrixT matches the dynamic matrix-t" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var static_engine = alea.DefaultPrng.init(0xf6);
+    var dynamic_engine = alea.DefaultPrng.init(0xf6);
+    const static_rng = Rng.init(&static_engine);
+    const dynamic_rng = Rng.init(&dynamic_engine);
+
+    const mean = [2][3]f64{
+        .{ 0.5, -0.5, 1 },
+        .{ 2, 3, -1 },
+    };
+    const row_covariance = [2][2]f64{ .{ 1, 0.3 }, .{ 0.3, 1 } };
+    const col_covariance = [3][3]f64{
+        .{ 1, 0.2, 0.1 },
+        .{ 0.2, 1, 0.15 },
+        .{ 0.1, 0.15, 1 },
+    };
+    const static_dist = try StaticMatrixT(f64, 2, 3).init(mean, row_covariance, col_covariance, 5);
+
+    const dynamic_mean = [_]f64{ 0.5, -0.5, 1, 2, 3, -1 };
+    const dynamic_row = [_]f64{ 1, 0.3, 0.3, 1 };
+    const dynamic_col = [_]f64{ 1, 0.2, 0.1, 0.2, 1, 0.15, 0.1, 0.15, 1 };
+    var dynamic_dist = try MatrixT(f64).init(allocator, &dynamic_mean, &dynamic_row, &dynamic_col, 5);
+    defer dynamic_dist.deinit();
+
+    var dynamic_buf: [6]f64 = undefined;
+    for (0..32) |_| {
+        const static_sample = static_dist.sample(static_rng);
+        dynamic_dist.sampleInto(dynamic_rng, &dynamic_buf);
+        inline for (0..2) |r| {
+            inline for (0..3) |c| {
+                try std.testing.expectEqual(static_sample[r][c], dynamic_buf[r * 3 + c]);
+            }
+        }
+    }
+}
+
+test "StaticMatrixT sampling, variance, batches, and f32 work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xf7);
+    const rng = Rng.init(&engine);
+
+    const mean = [2][2]f64{ .{ 0, 0 }, .{ 0, 0 } };
+    const identity = [2][2]f64{ .{ 1, 0 }, .{ 0, 1 } };
+    const dist = try StaticMatrixT(f64, 2, 2).init(mean, identity, identity, 5);
+    try std.testing.expectEqual(@as(usize, 2), dist.rowsValue());
+    try std.testing.expectEqual(@as(usize, 2), dist.colsValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dist.dfValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dist.degreesOfFreedomValue(), 1e-12);
+    const variance = try dist.varianceAt(0, 0);
+    try std.testing.expect(variance != null);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 3.0), variance.?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.rowCovarianceAt(0, 0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.colCovarianceAt(1, 1), 1e-12);
+
+    var out: [2][2]f64 = undefined;
+    dist.sampleInto(rng, &out);
+    for (0..2) |r| {
+        for (0..2) |c| try std.testing.expect(std.math.isFinite(out[r][c]));
+    }
+
+    var batch: [3][2][2]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+    for (batch) |sample| {
+        for (0..2) |r| {
+            for (0..2) |c| try std.testing.expect(std.math.isFinite(sample[r][c]));
+        }
+    }
+
+    const infinite_variance = try StaticMatrixT(f64, 2, 2).init(mean, identity, identity, 2);
+    try std.testing.expect(try infinite_variance.varianceAt(0, 0) == null);
+
+    const f32_dist = try StaticMatrixT(f32, 2, 2).init(
+        .{ .{ 0, 0 }, .{ 0, 0 } },
+        .{ .{ 1, 0 }, .{ 0, 1 } },
+        .{ .{ 1, 0 }, .{ 0, 1 } },
+        5,
+    );
+    const f32_sample = f32_dist.sample(rng);
+    for (0..2) |r| {
+        for (0..2) |c| try std.testing.expect(std.math.isFinite(f32_sample[r][c]));
+    }
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {
