@@ -443,6 +443,12 @@ pub const WatsonError = error{
     InvalidMeanDirection,
 };
 
+/// Bingham distribution error set.
+pub const BinghamError = error{
+    /// Matrix contains non-finite entries or the spectral spread is not finite.
+    InvalidParameter,
+};
+
 pub fn weightedErrorMessage(err: WeightedError) []const u8 {
     return switch (err) {
         error.InvalidInput => "Weights sequence is empty/too long/unordered",
@@ -8541,6 +8547,417 @@ pub fn fillWatsonChecked(rng: Rng, comptime T: type, comptime n: usize, dest: []
 /// Checked source-accepting fill variant.
 pub fn fillWatsonCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_axis: [n]T, kappa: T) WatsonError!void {
     const dist = try Watson(T, n).init(mean_axis, kappa);
+    dist.fillFrom(source, dest);
+}
+
+// -----------------------------------------------------------------------------
+// Bingham distribution on S^{n-1} (n-dimensional unit sphere, n ≥ 2)
+//
+// The Bingham distribution is the general quadratic-exponential distribution
+// on the unit sphere:
+//
+//   f(x | A) ∝ exp(xᵀ A x),   x ∈ S^{n-1},   A symmetric.
+//
+// It generalizes the axial Watson distribution (A = κ μμᵀ) to a full symmetric
+// matrix and is the canonical model for undirected axes with anisotropic
+// concentrations. The density depends only on the symmetric part of A; any
+// antisymmetric part is ignored.
+//
+// Sampling uses the angular central Gaussian (ACG) rejection method of Kent,
+// Ganeiber & Mardia (2013):
+//   * Eigendecompose A = V Λ Vᵀ with λ₁ ≥ ... ≥ λₙ.
+//   * Work in the eigenbasis with B = λ₁ I − Λ ≥ 0. The target density is
+//     proportional to exp(−yᵀ B y) on the sphere.
+//   * Propose y from an ACG distribution with precision P = I + 2B/ν:
+//     draw w ~ N(0, I), set zᵢ = wᵢ/√Pᵢ, y = z/‖z‖.
+//   * Accept with probability exp(−t)(1 + 2t/ν)^{n/2} / C(ν), where
+//     t = yᵀ B y and C(ν) is the envelope maximum.
+//   * Rotate x = V y back to the original frame.
+// The ACG proposal adapts to the concentration, so acceptance stays usable
+// over a wide range of matrices; ν is chosen at construction time from a
+// deterministic scan of candidate values. When λ₁ − λ₂ is enormous the
+// distribution is numerically a point mass at ±mode axis, matching the
+// Watson/vMF high-concentration fast paths.
+//
+// Reference: Kent, J. T., Ganeiber, A. M., & Mardia, K. V. (2013). "A new
+// method to simulate the Bingham and related distributions in directional
+// data analysis." arXiv:1310.8110.
+// -----------------------------------------------------------------------------
+
+fn BinghamEigen(comptime T: type, comptime n: usize) type {
+    return struct {
+        values: [n]T,
+        vectors: [n][n]T,
+    };
+}
+
+/// Symmetric Jacobi eigendecomposition. Returns eigenvalues sorted in
+/// descending order together with orthonormal eigenvectors stored as columns
+/// (`vectors[component][eigen_index]`). Deterministic and allocation-free;
+/// suitable for the small fixed dimensions used by directional distributions.
+fn binghamJacobiEigen(comptime T: type, comptime n: usize, input: [n][n]T) BinghamEigen(T, n) {
+    var a: [n][n]T = input;
+    var v: [n][n]T = undefined;
+    inline for (0..n) |i| {
+        inline for (0..n) |j| v[i][j] = if (i == j) @as(T, 1) else @as(T, 0);
+    }
+
+    var scale: T = 0;
+    inline for (0..n) |i| {
+        inline for (0..n) |j| scale = @max(scale, @abs(a[i][j]));
+    }
+    const tolerance = 64 * std.math.floatEps(T) * scale;
+    const theta_limit = @sqrt(std.math.floatMax(T)) / 4;
+
+    var sweep: usize = 0;
+    while (sweep < 64) : (sweep += 1) {
+        var p: usize = 0;
+        var q: usize = 1;
+        var max_off: T = 0;
+        for (0..n) |i| {
+            for (i + 1..n) |j| {
+                const magnitude = @abs(a[i][j]);
+                if (magnitude > max_off) {
+                    max_off = magnitude;
+                    p = i;
+                    q = j;
+                }
+            }
+        }
+        if (max_off <= tolerance) break;
+
+        const app = a[p][p];
+        const aqq = a[q][q];
+        const apq = a[p][q];
+        const theta = (aqq - app) / (2 * apq);
+        const abs_theta = @abs(theta);
+        const t = if (abs_theta > theta_limit)
+            (if (theta >= 0) @as(T, 0.5) / abs_theta else -@as(T, 0.5) / abs_theta)
+        else if (theta >= 0)
+            @as(T, 1) / (theta + @sqrt(theta * theta + 1))
+        else
+            -@as(T, 1) / (-theta + @sqrt(theta * theta + 1));
+        const c = @as(T, 1) / @sqrt(t * t + 1);
+        const s = t * c;
+
+        for (0..n) |k| {
+            if (k == p or k == q) continue;
+            const akp = a[k][p];
+            const akq = a[k][q];
+            a[k][p] = c * akp - s * akq;
+            a[p][k] = a[k][p];
+            a[k][q] = s * akp + c * akq;
+            a[q][k] = a[k][q];
+        }
+        a[p][p] = c * c * app - 2 * s * c * apq + s * s * aqq;
+        a[q][q] = s * s * app + 2 * s * c * apq + c * c * aqq;
+        a[p][q] = 0;
+        a[q][p] = 0;
+
+        for (0..n) |k| {
+            const vkp = v[k][p];
+            const vkq = v[k][q];
+            v[k][p] = c * vkp - s * vkq;
+            v[k][q] = s * vkp + c * vkq;
+        }
+    }
+
+    var values: [n]T = undefined;
+    inline for (0..n) |i| values[i] = a[i][i];
+
+    // Selection sort descending, permuting eigenvector columns in lockstep.
+    for (0..n) |i| {
+        var max_index = i;
+        for (i + 1..n) |j| {
+            if (values[j] > values[max_index]) max_index = j;
+        }
+        if (max_index != i) {
+            const tmp = values[i];
+            values[i] = values[max_index];
+            values[max_index] = tmp;
+            for (0..n) |k| {
+                const tv = v[k][i];
+                v[k][i] = v[k][max_index];
+                v[k][max_index] = tv;
+            }
+        }
+    }
+
+    return .{ .values = values, .vectors = v };
+}
+
+/// Log of the ACG envelope maximum C(ν) for dimension n.
+fn binghamLogEnvelope(comptime T: type, comptime n: usize, nu: T) T {
+    const nf: T = @floatFromInt(n);
+    const t_star = @max(0, (nf - nu) / 2);
+    return -t_star + (nf / 2) * std.math.log1p(2 * t_star / nu);
+}
+
+/// Heuristic log-acceptance score used to pick ν at construction time. The
+/// proposal's exact mean of t is Σ bᵢ qᵢ / Σ qᵢ with qᵢ = 1/(1 + 2bᵢ/ν);
+/// comparing that typical ratio with the envelope gives a cheap, deterministic
+/// way to avoid the two bad extremes (too-uniform and too-concentrated).
+fn binghamEstimateLogAcceptance(comptime T: type, comptime n: usize, b: *const [n]T, nu: T) T {
+    const nf: T = @floatFromInt(n);
+    var sum_q: T = 0;
+    var sum_bq: T = 0;
+    inline for (0..n) |i| {
+        const q = 1 / (1 + 2 * b[i] / nu);
+        sum_q += q;
+        sum_bq += b[i] * q;
+    }
+    const t_typical = sum_bq / sum_q;
+    const log_ratio = -t_typical + (nf / 2) * std.math.log1p(2 * t_typical / nu);
+    return log_ratio - binghamLogEnvelope(T, n, nu);
+}
+
+fn binghamChooseNu(comptime T: type, comptime n: usize, b: *const [n]T) T {
+    var best_nu: T = 1;
+    var best_score = -std.math.inf(T);
+    var candidate: T = 1;
+    const nf: T = @floatFromInt(n);
+    while (candidate <= 2 * nf) : (candidate *= 2) {
+        const score = binghamEstimateLogAcceptance(T, n, b, candidate);
+        if (score > best_score) {
+            best_score = score;
+            best_nu = candidate;
+        }
+    }
+    if (n > 2) {
+        const n_minus_one: T = @floatFromInt(n - 1);
+        const score = binghamEstimateLogAcceptance(T, n, b, n_minus_one);
+        if (score > best_score) {
+            best_score = score;
+            best_nu = n_minus_one;
+        }
+    }
+    return best_nu;
+}
+
+/// Bingham distribution on S^{n-1} (n-dimensional unit sphere, n ≥ 2).
+/// Density proportional to exp(xᵀ A x) for a symmetric matrix A. Only the
+/// symmetric part of the supplied matrix contributes; the distribution is
+/// antipodally symmetric, so E[x] = 0.
+pub fn Bingham(comptime T: type, comptime n: usize) type {
+    comptime if (n < 2) @compileError("Bingham requires at least 2 dimensions (S¹ circle)");
+
+    return struct {
+        const Self = @This();
+
+        matrix: [n][n]T,
+        eigenvalues: [n]T,
+        eigenvectors: [n][n]T,
+        b: [n]T,
+        precision: [n]T,
+        nu: T,
+        log_envelope: T,
+        uniform: bool,
+        point_mass: bool,
+        mode_axis: [n]T,
+
+        /// Construct a Bingham distribution from a symmetric (or general)
+        /// matrix. Non-finite entries and non-finite spectral spreads are
+        /// rejected. The matrix is symmetrized as (A + Aᵀ)/2.
+        pub fn init(matrix: [n][n]T) BinghamError!Self {
+            comptime requireFloat(T);
+
+            inline for (0..n) |i| {
+                inline for (0..n) |j| {
+                    if (!std.math.isFinite(matrix[i][j])) return error.InvalidParameter;
+                }
+            }
+
+            var symmetric: [n][n]T = undefined;
+            var scale: T = 0;
+            inline for (0..n) |i| {
+                inline for (i..n) |j| {
+                    const value = (matrix[i][j] + matrix[j][i]) / 2;
+                    symmetric[i][j] = value;
+                    symmetric[j][i] = value;
+                    scale = @max(scale, @abs(value));
+                }
+            }
+            if (scale > std.math.floatMax(T) / 16) return error.InvalidParameter;
+
+            const eigen = binghamJacobiEigen(T, n, symmetric);
+
+            var b: [n]T = undefined;
+            var max_b: T = 0;
+            inline for (0..n) |i| {
+                b[i] = @max(0, eigen.values[0] - eigen.values[i]);
+                max_b = @max(max_b, b[i]);
+            }
+            if (!std.math.isFinite(max_b)) return error.InvalidParameter;
+
+            const gap = eigen.values[0] - eigen.values[1];
+            const is_uniform = max_b == 0;
+            const is_point_mass = !is_uniform and gap > 1e12;
+
+            var mode_axis: [n]T = undefined;
+            inline for (0..n) |i| mode_axis[i] = eigen.vectors[i][0];
+            // Canonical sign: largest-magnitude component positive.
+            var pivot: usize = 0;
+            inline for (1..n) |i| {
+                if (@abs(mode_axis[i]) > @abs(mode_axis[pivot])) pivot = i;
+            }
+            if (mode_axis[pivot] < 0) {
+                inline for (0..n) |i| mode_axis[i] = -mode_axis[i];
+            }
+
+            var nu: T = 1;
+            var log_envelope: T = 0;
+            var precision: [n]T = undefined;
+            if (is_uniform or is_point_mass) {
+                inline for (0..n) |i| precision[i] = 1;
+            } else {
+                nu = binghamChooseNu(T, n, &b);
+                log_envelope = binghamLogEnvelope(T, n, nu);
+                inline for (0..n) |i| precision[i] = 1 + 2 * b[i] / nu;
+            }
+
+            return .{
+                .matrix = symmetric,
+                .eigenvalues = eigen.values,
+                .eigenvectors = eigen.vectors,
+                .b = b,
+                .precision = precision,
+                .nu = nu,
+                .log_envelope = log_envelope,
+                .uniform = is_uniform,
+                .point_mass = is_point_mass,
+                .mode_axis = mode_axis,
+            };
+        }
+
+        /// Debug-only constructor: panics on invalid matrices.
+        pub fn new(matrix: [n][n]T) Self {
+            return Self.init(matrix) catch |err| {
+                std.debug.panic("Bingham.new: invalid matrix: {}", .{err});
+            };
+        }
+
+        /// Symmetrized matrix parameter.
+        pub fn matrixValue(self: Self) [n][n]T {
+            return self.matrix;
+        }
+
+        /// Eigenvalues of the symmetrized matrix, sorted descending.
+        pub fn eigenvaluesValue(self: Self) [n]T {
+            return self.eigenvalues;
+        }
+
+        /// Spectral gap λ₁ − λ₂, the concentration along the dominant axis.
+        pub fn spectralGapValue(self: Self) T {
+            return self.eigenvalues[0] - self.eigenvalues[1];
+        }
+
+        /// Unit eigenvector of the largest eigenvalue, sign-canonicalized so
+        /// its largest-magnitude component is positive.
+        pub fn modeAxis(self: Self) [n]T {
+            return self.mode_axis;
+        }
+
+        pub fn dimensionValue(_: Self) usize {
+            return n;
+        }
+
+        pub fn sample(self: Self, rng: Rng) [n]T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [n]T {
+            if (self.uniform) return unitSphereSurfaceFrom(source, T, n);
+
+            if (self.point_mass) {
+                const sign: T = if (Rng.booleanFrom(source)) -1 else 1;
+                var result: [n]T = undefined;
+                inline for (0..n) |i| result[i] = sign * self.mode_axis[i];
+                return result;
+            }
+
+            const nf: T = @floatFromInt(n);
+            while (true) {
+                var y: [n]T = undefined;
+                var norm_sq: T = 0;
+                inline for (0..n) |i| {
+                    const w = Rng.standardNormalFastFrom(source, T);
+                    y[i] = w / @sqrt(self.precision[i]);
+                    norm_sq += y[i] * y[i];
+                }
+                if (!(norm_sq > 0) or !std.math.isFinite(norm_sq)) continue;
+
+                const inv_norm = 1 / @sqrt(norm_sq);
+                var t: T = 0;
+                inline for (0..n) |i| {
+                    y[i] *= inv_norm;
+                    t += self.b[i] * y[i] * y[i];
+                }
+                t = @max(0, t);
+                const log_ratio = -t + (nf / 2) * std.math.log1p(2 * t / self.nu);
+                const u = Rng.floatOpenFrom(source, T);
+                if (@log(u) <= log_ratio - self.log_envelope) {
+                    var result: [n]T = undefined;
+                    inline for (0..n) |i| {
+                        var sum: T = 0;
+                        inline for (0..n) |j| sum += self.eigenvectors[i][j] * y[j];
+                        result[i] = sum;
+                    }
+                    return result;
+                }
+            }
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][n]T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][n]T) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Sample a Bingham-distributed point on S^{n-1}. Returns error on invalid matrices.
+pub fn bingham(rng: Rng, comptime T: type, comptime n: usize, matrix: [n][n]T) BinghamError![n]T {
+    return binghamCheckedFrom(rng, T, n, matrix);
+}
+
+/// Source-accepting variant of `bingham` (panics on invalid matrices).
+pub fn binghamFrom(source: anytype, comptime T: type, comptime n: usize, matrix: [n][n]T) [n]T {
+    const dist = Bingham(T, n).new(matrix);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid matrices.
+pub fn binghamChecked(rng: Rng, comptime T: type, comptime n: usize, matrix: [n][n]T) BinghamError![n]T {
+    return binghamCheckedFrom(rng, T, n, matrix);
+}
+
+/// Checked source-accepting variant.
+pub fn binghamCheckedFrom(source: anytype, comptime T: type, comptime n: usize, matrix: [n][n]T) BinghamError![n]T {
+    const dist = try Bingham(T, n).init(matrix);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Bingham-distributed points. Validates the matrix.
+pub fn fillBingham(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T, matrix: [n][n]T) BinghamError!void {
+    return fillBinghamCheckedFrom(rng, T, n, dest, matrix);
+}
+
+/// Source-accepting fill (panics on invalid matrices).
+pub fn fillBinghamFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, matrix: [n][n]T) void {
+    const dist = Bingham(T, n).new(matrix);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillBinghamChecked(rng: Rng, comptime T: type, comptime n: usize, dest: [][n]T, matrix: [n][n]T) BinghamError!void {
+    return fillBinghamCheckedFrom(rng, T, n, dest, matrix);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillBinghamCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, matrix: [n][n]T) BinghamError!void {
+    const dist = try Bingham(T, n).init(matrix);
     dist.fillFrom(source, dest);
 }
 
@@ -49981,6 +50398,381 @@ test "Watson f32 sampling works" {
 
     const mu: [3]f32 = .{ 1, 0, 0 };
     const dist = try Watson(f32, 3).init(mu, 2);
+    for (0..64) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+    }
+}
+
+test "Bingham constructor validates matrices and symmetrizes" {
+    try std.testing.expectError(error.InvalidParameter, Bingham(f64, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, std.math.nan(f64), 0 },
+        .{ 0, 0, 0 },
+    }));
+    try std.testing.expectError(error.InvalidParameter, Bingham(f64, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, std.math.inf(f64), 0 },
+        .{ 0, 0, 0 },
+    }));
+
+    const asymmetric = [3][3]f64{
+        .{ 0, 1, 0 },
+        .{ -1, -2, 0 },
+        .{ 0, 0, 0 },
+    };
+    const dist = try Bingham(f64, 3).init(asymmetric);
+    const m = dist.matrixValue();
+    try std.testing.expectApproxEqAbs(@as(f64, 0), m[0][0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), m[0][1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), m[1][0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -2), m[1][1], 1e-12);
+    try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
+
+    // Eigenvalues [0, 0, -2]: the top eigenvalue is degenerate, so the
+    // spectral gap is zero and the distribution is a girdle.
+    const values = dist.eigenvaluesValue();
+    try std.testing.expectApproxEqAbs(@as(f64, 0), values[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), values[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -2), values[2], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), dist.spectralGapValue(), 1e-12);
+}
+
+test "Bingham Jacobi eigendecomposition matches analytic spectrum" {
+    const matrix = [3][3]f64{
+        .{ 2, 1, 0 },
+        .{ 1, 2, 0 },
+        .{ 0, 0, 5 },
+    };
+    const eigen = binghamJacobiEigen(f64, 3, matrix);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), eigen.values[0], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3), eigen.values[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), eigen.values[2], 1e-12);
+
+    // Eigenvectors are orthonormal: VᵀV = I.
+    inline for (0..3) |i| {
+        inline for (0..3) |j| {
+            var dot: f64 = 0;
+            inline for (0..3) |k| dot += eigen.vectors[k][i] * eigen.vectors[k][j];
+            try std.testing.expectApproxEqAbs(@as(f64, if (i == j) 1 else 0), dot, 1e-12);
+        }
+    }
+}
+
+test "Bingham isotropic matrix is uniform on the sphere" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb1);
+    const rng = Rng.init(&engine);
+
+    const dist = try Bingham(f64, 3).init(.{
+        .{ 2.5, 0, 0 },
+        .{ 0, 2.5, 0 },
+        .{ 0, 0, 2.5 },
+    });
+    var sum_sq: [3]f64 = .{ 0, 0, 0 };
+    const count = 3000;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        inline for (0..3) |i| sum_sq[i] += p[i] * p[i];
+    }
+    const nf: f64 = @floatFromInt(count);
+    inline for (0..3) |i| {
+        try std.testing.expect(@abs(sum_sq[i] / nf - 1.0 / 3.0) < 0.05);
+    }
+}
+
+test "Bingham 3D concentrated samples are unit vectors around the dominant axis" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb2);
+    const rng = Rng.init(&engine);
+
+    const dist = try Bingham(f64, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, -10, 0 },
+        .{ 0, 0, -10 },
+    });
+    var sum_w2: f64 = 0;
+    const count = 2000;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[0] * p[0];
+    }
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(count));
+    try std.testing.expect(mean_w2 > 0.8);
+    const axis = dist.modeAxis();
+    try std.testing.expectApproxEqAbs(@as(f64, 1), @abs(axis[0]), 1e-10);
+}
+
+test "Bingham 3D girdle samples concentrate near the equatorial subspace" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb3);
+    const rng = Rng.init(&engine);
+
+    const dist = try Bingham(f64, 3).init(.{
+        .{ -10, 0, 0 },
+        .{ 0, 0, 0 },
+        .{ 0, 0, 0 },
+    });
+    var sum_w2: f64 = 0;
+    const count = 1000;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[0] * p[0];
+    }
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(count));
+    try std.testing.expect(mean_w2 < 0.15);
+}
+
+test "Bingham rotated dominant axis concentrates around the expected eigenvector" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb4);
+    const rng = Rng.init(&engine);
+
+    // Dominant eigenvector is e2.
+    const dist = try Bingham(f64, 3).init(.{
+        .{ -10, 0, 0 },
+        .{ 0, 0, 0 },
+        .{ 0, 0, -10 },
+    });
+    var sum_w2: f64 = 0;
+    const count = 1000;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[1] * p[1];
+    }
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(count));
+    try std.testing.expect(mean_w2 > 0.8);
+    const axis = dist.modeAxis();
+    try std.testing.expectApproxEqAbs(@as(f64, 0), axis[0], 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), axis[1], 1e-10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), axis[2], 1e-10);
+}
+
+test "Bingham 2D axial concentration" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb5);
+    const rng = Rng.init(&engine);
+
+    const dist = try Bingham(f64, 2).init(.{
+        .{ 0, 0 },
+        .{ 0, -5 },
+    });
+    var sum_w2: f64 = 0;
+    const count = 1000;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const norm_sq = p[0] * p[0] + p[1] * p[1];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        sum_w2 += p[0] * p[0];
+    }
+    const mean_w2 = sum_w2 / @as(f64, @floatFromInt(count));
+    try std.testing.expect(mean_w2 > 0.6);
+}
+
+test "Bingham high concentration degenerates to the dominant axis" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb6);
+    const rng = Rng.init(&engine);
+
+    const dist = try Bingham(f64, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, -1e13, 0 },
+        .{ 0, 0, -1e13 },
+    });
+    for (0..32) |_| {
+        const p = dist.sample(rng);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), @abs(p[0]), 1e-12);
+        try std.testing.expectApproxEqAbs(@as(f64, 0), p[1], 1e-12);
+        try std.testing.expectApproxEqAbs(@as(f64, 0), p[2], 1e-12);
+    }
+}
+
+test "Bingham free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb7);
+    const rng = Rng.init(&engine);
+
+    const matrix = [3][3]f64{
+        .{ 0, 0, 0 },
+        .{ 0, -4, 0 },
+        .{ 0, 0, -4 },
+    };
+    var buf: [16][3]f64 = undefined;
+    try fillBingham(rng, f64, 3, &buf, matrix);
+    for (buf) |p| {
+        const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+
+    const bad = [3][3]f64{
+        .{ 0, 0, 0 },
+        .{ 0, std.math.nan(f64), 0 },
+        .{ 0, 0, 0 },
+    };
+    try std.testing.expectError(error.InvalidParameter, fillBingham(rng, f64, 3, &buf, bad));
+    try std.testing.expectError(error.InvalidParameter, bingham(rng, f64, 3, bad));
+
+    const p = try binghamChecked(rng, f64, 3, matrix);
+    const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
+    try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+}
+
+test "Bingham direct-source sampling matches facade and is reproducible" {
+    const alea = @import("root.zig");
+    var facade_engine = alea.DefaultPrng.init(0xb8);
+    var direct_engine = alea.DefaultPrng.init(0xb8);
+    const rng = Rng.init(&facade_engine);
+
+    const matrix = [3][3]f64{
+        .{ 0, 0, 0 },
+        .{ 0, -3, 0 },
+        .{ 0, 0, -3 },
+    };
+    const dist = try Bingham(f64, 3).init(matrix);
+    for (0..16) |_| {
+        const facade_sample = dist.sample(rng);
+        const direct_sample = binghamFrom(&direct_engine, f64, 3, matrix);
+        try std.testing.expectEqualSlices(f64, &facade_sample, &direct_sample);
+    }
+}
+
+test "Bingham 3D moment matches numerical integration" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xba);
+    const rng = Rng.init(&engine);
+
+    const k: f64 = 3;
+    const dist = try Bingham(f64, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, -k, 0 },
+        .{ 0, 0, -k },
+    });
+
+    // Exact E[x1²] for the density ∝ exp(-k(x2²+x3²)) = exp(k x1²): with
+    // x1 uniform on [-1,1] under the spherical measure, the expectation is
+    // ∫ w² exp(k w²) dw / ∫ exp(k w²) dw.
+    const steps: usize = 20000;
+    var num: f64 = 0;
+    var den: f64 = 0;
+    for (0..steps) |i| {
+        const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+        const weight = @exp(k * w * w);
+        num += w * w * weight;
+        den += weight;
+    }
+    const expected = num / den;
+
+    const count = 20000;
+    var sum: f64 = 0;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        sum += p[0] * p[0];
+    }
+    const observed = sum / @as(f64, @floatFromInt(count));
+    try std.testing.expect(@abs(observed - expected) < 0.01);
+}
+
+test "Bingham rotated matrix matches diagonal moment" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbb);
+    const rng = Rng.init(&engine);
+
+    // A = Q diag(0, -3, -3) Qᵀ with Q a rotation about e3.
+    const theta: f64 = 0.7;
+    const c = @cos(theta);
+    const s = @sin(theta);
+    const q1 = [3]f64{ c, s, 0 };
+    var matrix: [3][3]f64 = undefined;
+    inline for (0..3) |i| {
+        inline for (0..3) |j| {
+            matrix[i][j] = -3 * ((if (i == j) @as(f64, 1) else 0) - q1[i] * q1[j]);
+        }
+    }
+
+    const dist = try Bingham(f64, 3).init(matrix);
+    const axis = dist.modeAxis();
+    try std.testing.expect(@abs(@abs(axis[0]) - c) < 1e-9);
+    try std.testing.expect(@abs(@abs(axis[1]) - s) < 1e-9);
+    try std.testing.expect(@abs(axis[2]) < 1e-9);
+
+    // E[(q1ᵀx)²] is the same as the diagonal E[x1²] from the previous test.
+    const steps: usize = 20000;
+    const k: f64 = 3;
+    var num: f64 = 0;
+    var den: f64 = 0;
+    for (0..steps) |i| {
+        const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+        const weight = @exp(k * w * w);
+        num += w * w * weight;
+        den += weight;
+    }
+    const expected = num / den;
+
+    const count = 20000;
+    var sum: f64 = 0;
+    for (0..count) |_| {
+        const p = dist.sample(rng);
+        const projection = q1[0] * p[0] + q1[1] * p[1] + q1[2] * p[2];
+        sum += projection * projection;
+    }
+    const observed = sum / @as(f64, @floatFromInt(count));
+    try std.testing.expect(@abs(observed - expected) < 0.01);
+}
+
+test "Bingham high-dimensional anisotropic matrices remain samplable" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbc);
+    const rng = Rng.init(&engine);
+
+    // Isotropic transverse concentration: all non-dominant eigenvalues equal.
+    var isotropic: [8][8]f64 = undefined;
+    inline for (0..8) |i| {
+        inline for (0..8) |j| isotropic[i][j] = 0;
+    }
+    inline for (1..8) |i| isotropic[i][i] = -100;
+    const dist_isotropic = try Bingham(f64, 8).init(isotropic);
+    for (0..64) |_| {
+        const p = dist_isotropic.sample(rng);
+        var norm_sq: f64 = 0;
+        inline for (0..8) |i| norm_sq += p[i] * p[i];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+
+    // Single concentrated direction: the adaptive proposal must avoid the
+    // high-dimensional one-direction acceptance collapse.
+    var single: [8][8]f64 = undefined;
+    inline for (0..8) |i| {
+        inline for (0..8) |j| single[i][j] = 0;
+    }
+    single[1][1] = -100;
+    const dist_single = try Bingham(f64, 8).init(single);
+    for (0..64) |_| {
+        const p = dist_single.sample(rng);
+        var norm_sq: f64 = 0;
+        inline for (0..8) |i| norm_sq += p[i] * p[i];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+}
+
+test "Bingham f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xb9);
+    const rng = Rng.init(&engine);
+
+    const dist = try Bingham(f32, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, -2, 0 },
+        .{ 0, 0, -2 },
+    });
     for (0..64) |_| {
         const p = dist.sample(rng);
         const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
