@@ -555,9 +555,10 @@ CDF and quantile helpers complement the samplers:
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via
-  adaptive Simpson, and PERT maps to the equivalent scaled Beta distribution
+  adaptive Simpson, PERT maps to the equivalent scaled Beta distribution
   (infinite shape follows the sampler's `rand_distr`-compatible NaN
-  semantics).
+  semantics), and Rice uses the Marcum Q series `e^{−a²/2} Σ (a²/2)^k/k!
+  Q(k+1, b²/2)` with a Gaussian tail fallback above `ν/σ > 200`.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
@@ -590,7 +591,7 @@ delegate to these helpers, including the derived continuous types
   `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Exponential`, `LogNormal`,
   `HalfNormal`, `Chi`, `Erlang`, `Maxwell`, `BetaPrime`, `LogLogistic`,
   `InverseGamma`, `Nakagami`, `ExGaussian`, `InverseGaussian`, `SkewNormal`,
-  `Pert`, `Bernoulli`, `Binomial`, `Geometric`, `NegativeBinomial`,
+  `Pert`, `Rice`, `Bernoulli`, `Binomial`, `Geometric`, `NegativeBinomial`,
   `Hypergeometric`, `Zipf`, `Zeta`, and `Poisson`.
 
 Quantiles use deterministic bisection (and a closed form for the geometric

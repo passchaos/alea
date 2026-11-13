@@ -1716,6 +1716,106 @@ pub fn pertQuantile(p: anytype, min: anytype, mode: anytype, max: anytype, shape
     return @floatCast(min_f + (max_f - min_f) * betaQuantile(p_f, params.alpha, params.beta));
 }
 
+/// Marcum Q-function of order 1:
+/// `Q1(a, b) = e^{−a²/2} Σ_{k≥0} (a²/2)^k/k! · Q(k+1, b²/2)`.
+///
+/// Terms are evaluated in log space so the `e^{−a²/2}` prefactor cannot
+/// overflow, and each term is bounded by `Q1 ≤ 1`. Intended for `a ≤ 200`;
+/// `riceCdf` switches to a Gaussian tail approximation above that.
+fn marcumQ1(a: f64, b: f64) f64 {
+    if (b == 0) return 1;
+    if (a == 0) return @exp(-0.5 * b * b);
+    const half_a2 = 0.5 * a * a;
+    const y = 0.5 * b * b;
+    const log_base = @log(half_a2);
+    const peak = half_a2 + 10 * @sqrt(half_a2 + 1) + 10;
+    const eps = 64 * std.math.floatEps(f64);
+    var log_coeff: f64 = 0;
+    var sum: f64 = 0;
+    var k: usize = 0;
+    while (k < 2_000_000) : (k += 1) {
+        const q = gammaIncompleteQ(@as(f64, @floatFromInt(k + 1)), y);
+        var term: f64 = 0;
+        if (q > 0) {
+            const log_term = log_coeff + @log(q) - half_a2;
+            if (log_term > -745.0) {
+                term = @exp(log_term);
+                sum += term;
+            }
+        }
+        const kf: f64 = @floatFromInt(k);
+        if (kf > peak and term <= sum * eps) break;
+        log_coeff += log_base - @log(@as(f64, @floatFromInt(k + 1)));
+    }
+    return @min(@as(f64, 1), @max(@as(f64, 0), sum));
+}
+
+/// Rice mean used by the large-noncentrality Gaussian fallback.
+fn riceMeanForCdf(nu: f64, sigma: f64) f64 {
+    if (nu == 0) return sigma * @sqrt(std.math.pi / 2.0);
+    const t = nu * nu / (4 * sigma * sigma);
+    const log_i0 = logBesselI0(t);
+    const i1_ratio = if (t > 30) 1 - 1 / (2 * t) else besselI1Ratio(t);
+    return sigma * @sqrt(std.math.pi / 2.0) * @exp(-t + log_i0) * ((1 + 2 * t) + 2 * t * i1_ratio);
+}
+
+/// Rice (Rician) CDF: `1 − Q1(ν/σ, x/σ)`. `σ = 0` is the point mass at `ν`.
+/// For `ν/σ > 200` a Gaussian tail approximation with the exact Rice mean and
+/// variance is used instead of the Marcum series.
+pub fn riceCdf(x: anytype, nu: anytype, sigma: anytype) @TypeOf(x, nu, sigma) {
+    const T = @TypeOf(x, nu, sigma);
+    comptime requireFloat(T);
+    if (!(nu >= 0) or !std.math.isFinite(nu)) return std.math.nan(T);
+    if (!(sigma >= 0) or !std.math.isFinite(sigma)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    const x_f: f64 = @floatCast(x);
+    const nu_f: f64 = @floatCast(nu);
+    const sigma_f: f64 = @floatCast(sigma);
+    if (sigma_f == 0) return if (x_f < nu_f) 0 else 1;
+    if (x_f <= 0) return 0;
+    if (x_f == std.math.inf(f64)) return 1;
+    const a = nu_f / sigma_f;
+    if (a > 200) {
+        const mean = riceMeanForCdf(nu_f, sigma_f);
+        const variance = 2 * sigma_f * sigma_f + nu_f * nu_f - mean * mean;
+        const sd = @sqrt(@max(@as(f64, 0), variance));
+        if (sd == 0) return if (x_f < mean) 0 else 1;
+        return @floatCast(normCdf((x_f - mean) / sd));
+    }
+    return @floatCast(1 - marcumQ1(a, x_f / sigma_f));
+}
+
+/// Rice quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn riceQuantile(p: anytype, nu: anytype, sigma: anytype) @TypeOf(p, nu, sigma) {
+    const T = @TypeOf(p, nu, sigma);
+    comptime requireFloat(T);
+    if (!(nu >= 0) or !std.math.isFinite(nu)) return std.math.nan(T);
+    if (!(sigma >= 0) or !std.math.isFinite(sigma)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    const nu_f: f64 = @floatCast(nu);
+    const sigma_f: f64 = @floatCast(sigma);
+    if (sigma_f == 0) return nu;
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    var lo: f64 = 0;
+    var hi: f64 = @max(sigma_f, nu_f) + sigma_f;
+    var expansion: usize = 0;
+    while (riceCdf(@as(f64, hi), nu_f, sigma_f) < p and expansion < 1024) : (expansion += 1) {
+        if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
+        hi *= 2;
+    }
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (riceCdf(@as(f64, mid), nu_f, sigma_f) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -12241,6 +12341,16 @@ pub fn Rice(comptime T: type) type {
 
         pub fn maxValue(self: Self) ?T {
             return if (self.isDegenerate()) self.nu else null;
+        }
+
+        /// Rice CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return riceCdf(x, self.nu, self.sigma);
+        }
+
+        /// Rice quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return riceQuantile(p, self.nu, self.sigma);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -54638,6 +54748,35 @@ test "SkewNormal and PERT CDF and quantile helpers" {
     const pert_dist = try Pert(f64).init(0, 0.5, 1, 4);
     try std.testing.expectApproxEqAbs(pertCdf(@as(f64, 0.25), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), pert_dist.cdf(0.25), 0);
     try std.testing.expectApproxEqAbs(pertQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), pert_dist.quantile(0.5), 0);
+}
+
+test "Rice CDF and quantile helpers match Marcum Q values" {
+    // nu = 0 is Rayleigh(sigma).
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - @exp(@as(f64, -0.5))), riceCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1)), 1e-12);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const rayleigh_q = @sqrt(2 * @log(1 / (1 - p)));
+        try std.testing.expectApproxEqAbs(rayleigh_q, riceQuantile(p, @as(f64, 0), @as(f64, 1)), 1e-6);
+    }
+    // Rice(1,1) references from numerical integration of the Rice density.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.07347260204335158), riceCdf(@as(f64, 0.5), @as(f64, 1), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2671201962031832), riceCdf(@as(f64, 1), @as(f64, 1), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7309879399641127), riceCdf(@as(f64, 2), @as(f64, 1), @as(f64, 1)), 1e-6);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const q = riceQuantile(p, @as(f64, 1), @as(f64, 1));
+        try std.testing.expectApproxEqAbs(p, riceCdf(q, @as(f64, 1), @as(f64, 1)), 1e-5);
+    }
+    // sigma = 0 is the point mass at nu.
+    try std.testing.expectEqual(@as(f64, 1), riceCdf(@as(f64, 2), @as(f64, 2), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), riceCdf(@as(f64, 1), @as(f64, 2), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 2), riceQuantile(@as(f64, 0.5), @as(f64, 2), @as(f64, 0)));
+
+    try std.testing.expect(std.math.isNan(riceCdf(@as(f64, 1), @as(f64, -1), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(riceCdf(@as(f64, 1), @as(f64, 0), @as(f64, -1))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.39346933), riceCdf(@as(f32, 1), @as(f32, 0), @as(f32, 1)), 1e-5);
+
+    const rice_dist = try Rice(f64).init(1, 1);
+    try std.testing.expectApproxEqAbs(riceCdf(@as(f64, 1), @as(f64, 1), @as(f64, 1)), rice_dist.cdf(1), 0);
+    try std.testing.expectApproxEqAbs(riceQuantile(@as(f64, 0.5), @as(f64, 1), @as(f64, 1)), rice_dist.quantile(0.5), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {
