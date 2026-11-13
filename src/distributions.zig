@@ -965,6 +965,10 @@ pub const multi = struct {
         return distributions_module.MultivariateT(T);
     }
 
+    pub fn MultivariateLaplace(comptime T: type) type {
+        return distributions_module.MultivariateLaplace(T);
+    }
+
     pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) type {
         return distributions_module.StaticMultivariateNormal(T, dimension);
     }
@@ -27230,6 +27234,149 @@ pub fn MultivariateT(comptime T: type) type {
     };
 }
 
+/// Allocator-backed multivariate Laplace distribution.
+///
+/// Density proportional to `exp(-√(2·(x−μ)ᵀΣ⁻¹(x−μ)))`, with mean `μ` and
+/// covariance `Σ`. Sampling uses the scale-mixture representation
+/// `z ~ N(0, Σ)`, `s ~ Exp(1)`, `x = μ + √s·z`, which is exact and
+/// rejection-free. The type reuses `MultivariateNormal(T)` for covariance
+/// validation, Cholesky factoring, and allocation-free sampling.
+pub fn MultivariateLaplace(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mvn: MultivariateNormal(T),
+        allocator: std.mem.Allocator,
+
+        pub fn init(
+            allocator: std.mem.Allocator,
+            mean: []const T,
+            covariance: []const T,
+        ) !Self {
+            var mvn = try MultivariateNormal(T).init(allocator, mean, covariance);
+            errdefer mvn.deinit();
+            return .{
+                .mvn = mvn,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(
+            allocator: std.mem.Allocator,
+            mean: []const T,
+            covariance: []const T,
+        ) !Self {
+            return Self.init(allocator, mean, covariance);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.mvn.deinit();
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            var mvn = try self.mvn.clone(allocator);
+            errdefer mvn.deinit();
+            return .{
+                .mvn = mvn,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.mvn.dimensionValue();
+        }
+
+        pub fn rankValue(self: Self) usize {
+            return self.mvn.rankValue();
+        }
+
+        pub fn isDegenerate(self: Self) bool {
+            return self.mvn.isDegenerate();
+        }
+
+        pub fn meanValues(self: Self) []const T {
+            return self.mvn.meanValues();
+        }
+
+        pub fn meanAt(self: Self, index: usize) Error!T {
+            return self.mvn.meanAt(index);
+        }
+
+        /// Scale/covariance matrix entry Σ[row, col].
+        pub fn scaleAt(self: Self, row: usize, col: usize) Error!T {
+            return self.mvn.covarianceAt(row, col);
+        }
+
+        pub fn varianceAt(self: Self, index: usize) Error!T {
+            return self.mvn.varianceAt(index);
+        }
+
+        pub fn covarianceAt(self: Self, row: usize, col: usize) Error!T {
+            return self.mvn.covarianceAt(row, col);
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(rng, out[offset..][0..dimension]);
+            }
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(source, out[offset..][0..dimension]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            self.mvn.sampleIntoFrom(source, out);
+            const scale = @sqrt(exponentialFrom(source, T, 1));
+            const means = self.mvn.meanValues();
+            for (out, means) |*value, mean| value.* = mean + (value.* - mean) * scale;
+        }
+    };
+}
+
 /// Fixed-dimension, allocation-free multivariate normal sampler.
 ///
 /// Use this shape when the dimension is known at compile time. Construction
@@ -50837,6 +50984,104 @@ test "MultivariateT clone, caller buffers, batches, and f32 work" {
     const f32_mean = [_]f32{ 0, 0 };
     const f32_cov = [_]f32{ 1, 0.2, 0.2, 1 };
     var f32_dist = try MultivariateT(f32).init(allocator, &f32_mean, &f32_cov, 5);
+    defer f32_dist.deinit();
+    var f32_out: [2]f32 = undefined;
+    f32_dist.sampleInto(rng, &f32_out);
+    for (f32_out) |value| try std.testing.expect(std.math.isFinite(value));
+}
+
+test "MultivariateLaplace constructor and sampling moments work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7e01);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{ 1, -2 };
+    const covariance = [_]f64{ 1, 0.5, 0.5, 2 };
+    try std.testing.expectError(error.EmptyRange, MultivariateLaplace(f64).init(allocator, &[_]f64{}, &covariance));
+
+    var dist = try MultivariateLaplace(f64).init(allocator, &mean, &covariance);
+    defer dist.deinit();
+    try std.testing.expectEqual(@as(usize, 2), dist.dimensionValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.varianceAt(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), try dist.covarianceAt(0, 1), 1e-12);
+
+    const count = 40_000;
+    var sums = [_]f64{0} ** 2;
+    var sums_sq = [_]f64{0} ** 2;
+    var cross: f64 = 0;
+    var out: [2]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        sums[0] += out[0];
+        sums[1] += out[1];
+        sums_sq[0] += out[0] * out[0];
+        sums_sq[1] += out[1] * out[1];
+        cross += out[0] * out[1];
+    }
+    const nf: f64 = @floatFromInt(count);
+    const mean0 = sums[0] / nf;
+    const mean1 = sums[1] / nf;
+    try std.testing.expectApproxEqAbs(mean[0], mean0, 0.06);
+    try std.testing.expectApproxEqAbs(mean[1], mean1, 0.08);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), sums_sq[0] / nf - mean0 * mean0, 0.12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), sums_sq[1] / nf - mean1 * mean1, 0.2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), cross / nf - mean0 * mean1, 0.08);
+}
+
+test "MultivariateLaplace matches manual normal plus exponential composition" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var laplace_engine = alea.DefaultPrng.init(0x7e02);
+    var manual_engine = alea.DefaultPrng.init(0x7e02);
+    const laplace_rng = Rng.init(&laplace_engine);
+
+    const mean = [_]f64{ 1, -2 };
+    const covariance = [_]f64{ 1, 0.5, 0.5, 2 };
+    var dist = try MultivariateLaplace(f64).init(allocator, &mean, &covariance);
+    defer dist.deinit();
+    var mvn = try MultivariateNormal(f64).init(allocator, &mean, &covariance);
+    defer mvn.deinit();
+
+    var laplace_buf: [2]f64 = undefined;
+    var manual_buf: [2]f64 = undefined;
+    for (0..16) |_| {
+        dist.sampleInto(laplace_rng, &laplace_buf);
+        mvn.sampleIntoFrom(&manual_engine, &manual_buf);
+        const scale = @sqrt(exponentialFrom(&manual_engine, f64, 1));
+        for (0..2) |i| manual_buf[i] = mean[i] + (manual_buf[i] - mean[i]) * scale;
+        try std.testing.expectEqualSlices(f64, &laplace_buf, &manual_buf);
+    }
+}
+
+test "MultivariateLaplace clone, caller buffers, batches, and f32 work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7e03);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{ 0, 0 };
+    const covariance = [_]f64{ 1, 0.2, 0.2, 1 };
+    var dist = try MultivariateLaplace(f64).init(allocator, &mean, &covariance);
+    defer dist.deinit();
+
+    var clone = try dist.clone(allocator);
+    defer clone.deinit();
+
+    var out: [2]f64 = undefined;
+    try dist.sampleIntoChecked(rng, &out);
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, out[0..1]));
+
+    var batch: [6]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+
+    const allocated = try dist.sample(allocator, rng);
+    defer allocator.free(allocated);
+    try std.testing.expectEqual(@as(usize, 2), allocated.len);
+
+    const f32_mean = [_]f32{ 0, 0 };
+    const f32_cov = [_]f32{ 1, 0.2, 0.2, 1 };
+    var f32_dist = try MultivariateLaplace(f32).init(allocator, &f32_mean, &f32_cov);
     defer f32_dist.deinit();
     var f32_out: [2]f32 = undefined;
     f32_dist.sampleInto(rng, &f32_out);

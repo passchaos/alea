@@ -1451,6 +1451,28 @@ Reusable samplers:
 - `MultivariateT(T).sampleIntoCheckedFrom`
 - `MultivariateT(T).sampleManyInto`
 - `MultivariateT(T).sampleManyIntoFrom`
+- `MultivariateLaplace(T)`
+- `multi.MultivariateLaplace(T)`
+- `MultivariateLaplace(T).init`
+- `MultivariateLaplace(T).new`
+- `MultivariateLaplace(T).deinit`
+- `MultivariateLaplace(T).clone`
+- `MultivariateLaplace(T).dimensionValue`
+- `MultivariateLaplace(T).rankValue`
+- `MultivariateLaplace(T).isDegenerate`
+- `MultivariateLaplace(T).meanValues`
+- `MultivariateLaplace(T).meanAt`
+- `MultivariateLaplace(T).scaleAt`
+- `MultivariateLaplace(T).varianceAt`
+- `MultivariateLaplace(T).covarianceAt`
+- `MultivariateLaplace(T).sample`
+- `MultivariateLaplace(T).sampleFrom`
+- `MultivariateLaplace(T).sampleInto`
+- `MultivariateLaplace(T).sampleIntoFrom`
+- `MultivariateLaplace(T).sampleIntoChecked`
+- `MultivariateLaplace(T).sampleIntoCheckedFrom`
+- `MultivariateLaplace(T).sampleManyInto`
+- `MultivariateLaplace(T).sampleManyIntoFrom`
 - `MultivariateNormalError`
 - `StaticMultivariateNormal(T, dimension)`
 - `multi.StaticMultivariateNormal(T, dimension)`
