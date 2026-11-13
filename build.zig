@@ -27,291 +27,87 @@ pub fn build(b: *std.Build) void {
     });
     const run_tests = b.addRunArtifact(tests);
 
-    const example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/basic.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    example_mod.addImport("alea", module);
-
-    const example = b.addExecutable(.{
-        .name = "alea-basic",
-        .root_module = example_mod,
-    });
-    const run_example = b.addRunArtifact(example);
-    if (b.args) |args| run_example.addArgs(args);
+    const run_example = addToolRun(b, target, optimize, module, "alea-basic", "examples/basic.zig");
 
     const example_step = b.step("run-basic", "Run the basic alea example");
     example_step.dependOn(&run_example.step);
 
-    const vector_profiles_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/vector_profiles.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    vector_profiles_example_mod.addImport("alea", module);
-
-    const vector_profiles_example = b.addExecutable(.{
-        .name = "alea-vector-profiles",
-        .root_module = vector_profiles_example_mod,
-    });
-    const run_vector_profiles_example = b.addRunArtifact(vector_profiles_example);
-    if (b.args) |args| run_vector_profiles_example.addArgs(args);
+    const run_vector_profiles_example = addToolRun(b, target, optimize, module, "alea-vector-profiles", "examples/vector_profiles.zig");
 
     const vector_profiles_example_step = b.step("run-vector-profiles", "Run the vector profile alea example");
     vector_profiles_example_step.dependOn(&run_vector_profiles_example.step);
 
-    const lognormal_profiles_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/lognormal_profiles.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    lognormal_profiles_example_mod.addImport("alea", module);
-
-    const lognormal_profiles_example = b.addExecutable(.{
-        .name = "alea-lognormal-profiles",
-        .root_module = lognormal_profiles_example_mod,
-    });
-    const run_lognormal_profiles_example = b.addRunArtifact(lognormal_profiles_example);
-    if (b.args) |args| run_lognormal_profiles_example.addArgs(args);
+    const run_lognormal_profiles_example = addToolRun(b, target, optimize, module, "alea-lognormal-profiles", "examples/lognormal_profiles.zig");
 
     const lognormal_profiles_example_step = b.step("run-lognormal-profiles", "Run the LogNormal profile alea example");
     lognormal_profiles_example_step.dependOn(&run_lognormal_profiles_example.step);
 
-    const native_f32_profiles_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/native_f32_profiles.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    native_f32_profiles_example_mod.addImport("alea", module);
-
-    const native_f32_profiles_example = b.addExecutable(.{
-        .name = "alea-native-f32-profiles",
-        .root_module = native_f32_profiles_example_mod,
-    });
-    const run_native_f32_profiles_example = b.addRunArtifact(native_f32_profiles_example);
-    if (b.args) |args| run_native_f32_profiles_example.addArgs(args);
+    const run_native_f32_profiles_example = addToolRun(b, target, optimize, module, "alea-native-f32-profiles", "examples/native_f32_profiles.zig");
 
     const native_f32_profiles_example_step = b.step("run-native-f32-profiles", "Run the native-f32 profile alea example");
     native_f32_profiles_example_step.dependOn(&run_native_f32_profiles_example.step);
 
-    const weighted_sampling_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/weighted_sampling.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    weighted_sampling_example_mod.addImport("alea", module);
-
-    const weighted_sampling_example = b.addExecutable(.{
-        .name = "alea-weighted-sampling",
-        .root_module = weighted_sampling_example_mod,
-    });
-    const run_weighted_sampling_example = b.addRunArtifact(weighted_sampling_example);
-    if (b.args) |args| run_weighted_sampling_example.addArgs(args);
+    const run_weighted_sampling_example = addToolRun(b, target, optimize, module, "alea-weighted-sampling", "examples/weighted_sampling.zig");
 
     const weighted_sampling_example_step = b.step("run-weighted-sampling", "Run the weighted sampling alea example");
     weighted_sampling_example_step.dependOn(&run_weighted_sampling_example.step);
 
-    const multivariate_sampling_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/multivariate_sampling.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    multivariate_sampling_example_mod.addImport("alea", module);
-
-    const multivariate_sampling_example = b.addExecutable(.{
-        .name = "alea-multivariate-sampling",
-        .root_module = multivariate_sampling_example_mod,
-    });
-    const run_multivariate_sampling_example = b.addRunArtifact(multivariate_sampling_example);
-    if (b.args) |args| run_multivariate_sampling_example.addArgs(args);
+    const run_multivariate_sampling_example = addToolRun(b, target, optimize, module, "alea-multivariate-sampling", "examples/multivariate_sampling.zig");
 
     const multivariate_sampling_example_step = b.step("run-multivariate-sampling", "Run the multivariate sampling alea example");
     multivariate_sampling_example_step.dependOn(&run_multivariate_sampling_example.step);
 
-    const sequence_sampling_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/sequence_sampling.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    sequence_sampling_example_mod.addImport("alea", module);
-
-    const sequence_sampling_example = b.addExecutable(.{
-        .name = "alea-sequence-sampling",
-        .root_module = sequence_sampling_example_mod,
-    });
-    const run_sequence_sampling_example = b.addRunArtifact(sequence_sampling_example);
-    if (b.args) |args| run_sequence_sampling_example.addArgs(args);
+    const run_sequence_sampling_example = addToolRun(b, target, optimize, module, "alea-sequence-sampling", "examples/sequence_sampling.zig");
 
     const sequence_sampling_example_step = b.step("run-sequence-sampling", "Run the sequence sampling alea example");
     sequence_sampling_example_step.dependOn(&run_sequence_sampling_example.step);
 
-    const caller_owned_sampling_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/caller_owned_sampling.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    caller_owned_sampling_example_mod.addImport("alea", module);
-
-    const caller_owned_sampling_example = b.addExecutable(.{
-        .name = "alea-caller-owned-sampling",
-        .root_module = caller_owned_sampling_example_mod,
-    });
-    const run_caller_owned_sampling_example = b.addRunArtifact(caller_owned_sampling_example);
-    if (b.args) |args| run_caller_owned_sampling_example.addArgs(args);
+    const run_caller_owned_sampling_example = addToolRun(b, target, optimize, module, "alea-caller-owned-sampling", "examples/caller_owned_sampling.zig");
 
     const caller_owned_sampling_example_step = b.step("run-caller-owned-sampling", "Run the caller-owned sampling alea example");
     caller_owned_sampling_example_step.dependOn(&run_caller_owned_sampling_example.step);
 
-    const string_generation_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/string_generation.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    string_generation_example_mod.addImport("alea", module);
-
-    const string_generation_example = b.addExecutable(.{
-        .name = "alea-string-generation",
-        .root_module = string_generation_example_mod,
-    });
-    const run_string_generation_example = b.addRunArtifact(string_generation_example);
-    if (b.args) |args| run_string_generation_example.addArgs(args);
+    const run_string_generation_example = addToolRun(b, target, optimize, module, "alea-string-generation", "examples/string_generation.zig");
 
     const string_generation_example_step = b.step("run-string-generation", "Run the string generation alea example");
     string_generation_example_step.dependOn(&run_string_generation_example.step);
 
-    const unit_geometry_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/unit_geometry.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    unit_geometry_example_mod.addImport("alea", module);
-
-    const unit_geometry_example = b.addExecutable(.{
-        .name = "alea-unit-geometry",
-        .root_module = unit_geometry_example_mod,
-    });
-    const run_unit_geometry_example = b.addRunArtifact(unit_geometry_example);
-    if (b.args) |args| run_unit_geometry_example.addArgs(args);
+    const run_unit_geometry_example = addToolRun(b, target, optimize, module, "alea-unit-geometry", "examples/unit_geometry.zig");
 
     const unit_geometry_example_step = b.step("run-unit-geometry", "Run the unit geometry alea example");
     unit_geometry_example_step.dependOn(&run_unit_geometry_example.step);
 
-    const distribution_diagnostics_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/distribution_diagnostics.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    distribution_diagnostics_example_mod.addImport("alea", module);
-
-    const distribution_diagnostics_example = b.addExecutable(.{
-        .name = "alea-distribution-diagnostics",
-        .root_module = distribution_diagnostics_example_mod,
-    });
-    const run_distribution_diagnostics_example = b.addRunArtifact(distribution_diagnostics_example);
-    if (b.args) |args| run_distribution_diagnostics_example.addArgs(args);
+    const run_distribution_diagnostics_example = addToolRun(b, target, optimize, module, "alea-distribution-diagnostics", "examples/distribution_diagnostics.zig");
 
     const distribution_diagnostics_example_step = b.step("run-distribution-diagnostics", "Run the distribution diagnostics alea example");
     distribution_diagnostics_example_step.dependOn(&run_distribution_diagnostics_example.step);
 
-    const reproducible_streams_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/reproducible_streams.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    reproducible_streams_example_mod.addImport("alea", module);
-
-    const reproducible_streams_example = b.addExecutable(.{
-        .name = "alea-reproducible-streams",
-        .root_module = reproducible_streams_example_mod,
-    });
-    const run_reproducible_streams_example = b.addRunArtifact(reproducible_streams_example);
-    if (b.args) |args| run_reproducible_streams_example.addArgs(args);
+    const run_reproducible_streams_example = addToolRun(b, target, optimize, module, "alea-reproducible-streams", "examples/reproducible_streams.zig");
 
     const reproducible_streams_example_step = b.step("run-reproducible-streams", "Run the reproducible streams alea example");
     reproducible_streams_example_step.dependOn(&run_reproducible_streams_example.step);
 
-    const range_sampling_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/range_sampling.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    range_sampling_example_mod.addImport("alea", module);
-
-    const range_sampling_example = b.addExecutable(.{
-        .name = "alea-range-sampling",
-        .root_module = range_sampling_example_mod,
-    });
-    const run_range_sampling_example = b.addRunArtifact(range_sampling_example);
-    if (b.args) |args| run_range_sampling_example.addArgs(args);
+    const run_range_sampling_example = addToolRun(b, target, optimize, module, "alea-range-sampling", "examples/range_sampling.zig");
 
     const range_sampling_example_step = b.step("run-range-sampling", "Run the range sampling alea example");
     range_sampling_example_step.dependOn(&run_range_sampling_example.step);
 
-    const discrete_distributions_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/discrete_distributions.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    discrete_distributions_example_mod.addImport("alea", module);
-
-    const discrete_distributions_example = b.addExecutable(.{
-        .name = "alea-discrete-distributions",
-        .root_module = discrete_distributions_example_mod,
-    });
-    const run_discrete_distributions_example = b.addRunArtifact(discrete_distributions_example);
-    if (b.args) |args| run_discrete_distributions_example.addArgs(args);
+    const run_discrete_distributions_example = addToolRun(b, target, optimize, module, "alea-discrete-distributions", "examples/discrete_distributions.zig");
 
     const discrete_distributions_example_step = b.step("run-discrete-distributions", "Run the discrete distributions alea example");
     discrete_distributions_example_step.dependOn(&run_discrete_distributions_example.step);
 
-    const continuous_distributions_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/continuous_distributions.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    continuous_distributions_example_mod.addImport("alea", module);
-
-    const continuous_distributions_example = b.addExecutable(.{
-        .name = "alea-continuous-distributions",
-        .root_module = continuous_distributions_example_mod,
-    });
-    const run_continuous_distributions_example = b.addRunArtifact(continuous_distributions_example);
-    if (b.args) |args| run_continuous_distributions_example.addArgs(args);
+    const run_continuous_distributions_example = addToolRun(b, target, optimize, module, "alea-continuous-distributions", "examples/continuous_distributions.zig");
 
     const continuous_distributions_example_step = b.step("run-continuous-distributions", "Run the continuous distributions alea example");
     continuous_distributions_example_step.dependOn(&run_continuous_distributions_example.step);
 
-    const advanced_continuous_distributions_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/advanced_continuous_distributions.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    advanced_continuous_distributions_example_mod.addImport("alea", module);
-
-    const advanced_continuous_distributions_example = b.addExecutable(.{
-        .name = "alea-advanced-continuous-distributions",
-        .root_module = advanced_continuous_distributions_example_mod,
-    });
-    const run_advanced_continuous_distributions_example = b.addRunArtifact(advanced_continuous_distributions_example);
-    if (b.args) |args| run_advanced_continuous_distributions_example.addArgs(args);
+    const run_advanced_continuous_distributions_example = addToolRun(b, target, optimize, module, "alea-advanced-continuous-distributions", "examples/advanced_continuous_distributions.zig");
 
     const advanced_continuous_distributions_example_step = b.step("run-advanced-continuous-distributions", "Run the advanced continuous distributions alea example");
     advanced_continuous_distributions_example_step.dependOn(&run_advanced_continuous_distributions_example.step);
 
-    const rank_distributions_example_mod = b.createModule(.{
-        .root_source_file = b.path("examples/rank_distributions.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    rank_distributions_example_mod.addImport("alea", module);
-
-    const rank_distributions_example = b.addExecutable(.{
-        .name = "alea-rank-distributions",
-        .root_module = rank_distributions_example_mod,
-    });
-    const run_rank_distributions_example = b.addRunArtifact(rank_distributions_example);
-    if (b.args) |args| run_rank_distributions_example.addArgs(args);
+    const run_rank_distributions_example = addToolRun(b, target, optimize, module, "alea-rank-distributions", "examples/rank_distributions.zig");
 
     const rank_distributions_example_step = b.step("run-rank-distributions", "Run the rank distributions alea example");
     rank_distributions_example_step.dependOn(&run_rank_distributions_example.step);
@@ -335,19 +131,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_advanced_continuous_distributions_example.step);
     examples_step.dependOn(&run_rank_distributions_example.step);
 
-    const bench_mod = b.createModule(.{
-        .root_source_file = b.path("bench/throughput.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    bench_mod.addImport("alea", module);
-
-    const bench = b.addExecutable(.{
-        .name = "alea-throughput",
-        .root_module = bench_mod,
-    });
-    const run_bench = b.addRunArtifact(bench);
-    if (b.args) |args| run_bench.addArgs(args);
+    const run_bench = addToolRun(b, target, optimize, module, "alea-throughput", "bench/throughput.zig");
 
     const bench_tests = b.addTest(.{
         .name = "alea-bench-tests",
@@ -402,19 +186,7 @@ pub fn build(b: *std.Build) void {
     bench_libc_step.dependOn(&run_bench_libc_tests.step);
     bench_libc_step.dependOn(&run_bench_libc.step);
 
-    const vectorbench_mod = b.createModule(.{
-        .root_source_file = b.path("bench/vector.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    vectorbench_mod.addImport("alea", module);
-
-    const vectorbench = b.addExecutable(.{
-        .name = "alea-vectorbench",
-        .root_module = vectorbench_mod,
-    });
-    const run_vectorbench = b.addRunArtifact(vectorbench);
-    if (b.args) |args| run_vectorbench.addArgs(args);
+    const run_vectorbench = addToolRun(b, target, optimize, module, "alea-vectorbench", "bench/vector.zig");
 
     const vectorbench_tests = b.addTest(.{
         .name = "alea-vectorbench-tests",
@@ -466,70 +238,22 @@ pub fn build(b: *std.Build) void {
     const rand_bench_smoke_self_test_step = b.step("rand-bench-smoke-self-test", "Run Rust comparison smoke wrapper self-tests without cargo");
     rand_bench_smoke_self_test_step.dependOn(&run_rand_bench_smoke_self_test.step);
 
-    const ziggurat_stats_mod = b.createModule(.{
-        .root_source_file = b.path("tools/ziggurat_stats.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    ziggurat_stats_mod.addImport("alea", module);
-
-    const ziggurat_stats = b.addExecutable(.{
-        .name = "alea-ziggurat-stats",
-        .root_module = ziggurat_stats_mod,
-    });
-    const run_ziggurat_stats = b.addRunArtifact(ziggurat_stats);
-    if (b.args) |args| run_ziggurat_stats.addArgs(args);
+    const run_ziggurat_stats = addToolRun(b, target, optimize, module, "alea-ziggurat-stats", "tools/ziggurat_stats.zig");
 
     const ziggurat_stats_step = b.step("ziggurat-stats", "Report ziggurat branch frequencies");
     ziggurat_stats_step.dependOn(&run_ziggurat_stats.step);
 
-    const ziggurat_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/ziggurat_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    ziggurat_probe_mod.addImport("alea", module);
-
-    const ziggurat_probe = b.addExecutable(.{
-        .name = "alea-ziggurat-probe",
-        .root_module = ziggurat_probe_mod,
-    });
-    const run_ziggurat_probe = b.addRunArtifact(ziggurat_probe);
-    if (b.args) |args| run_ziggurat_probe.addArgs(args);
+    const run_ziggurat_probe = addToolRun(b, target, optimize, module, "alea-ziggurat-probe", "tools/ziggurat_probe.zig");
 
     const ziggurat_probe_step = b.step("ziggurat-probe", "Run ziggurat expression-shape microbenchmarks");
     ziggurat_probe_step.dependOn(&run_ziggurat_probe.step);
 
-    const cauchy_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/cauchy_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    cauchy_probe_mod.addImport("alea", module);
-
-    const cauchy_probe = b.addExecutable(.{
-        .name = "alea-cauchy-probe",
-        .root_module = cauchy_probe_mod,
-    });
-    const run_cauchy_probe = b.addRunArtifact(cauchy_probe);
-    if (b.args) |args| run_cauchy_probe.addArgs(args);
+    const run_cauchy_probe = addToolRun(b, target, optimize, module, "alea-cauchy-probe", "tools/cauchy_probe.zig");
 
     const cauchy_probe_step = b.step("cauchy-probe", "Run Cauchy expression-shape microbenchmarks");
     cauchy_probe_step.dependOn(&run_cauchy_probe.step);
 
-    const open_closed_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/open_closed_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    open_closed_probe_mod.addImport("alea", module);
-
-    const open_closed_probe = b.addExecutable(.{
-        .name = "alea-open-closed-probe",
-        .root_module = open_closed_probe_mod,
-    });
-    const run_open_closed_probe = b.addRunArtifact(open_closed_probe);
-    if (b.args) |args| run_open_closed_probe.addArgs(args);
+    const run_open_closed_probe = addToolRun(b, target, optimize, module, "alea-open-closed-probe", "tools/open_closed_probe.zig");
 
     const open_closed_probe_step = b.step("open-closed-probe", "Run OpenClosed01 f64 bulk conversion microbenchmarks");
     open_closed_probe_step.dependOn(&run_open_closed_probe.step);
@@ -555,529 +279,157 @@ pub fn build(b: *std.Build) void {
     const log_normal_probe_step = b.step("log-normal-probe", "Run LogNormal bulk expression-shape microbenchmarks");
     log_normal_probe_step.dependOn(&run_log_normal_probe.step);
 
-    const nig_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/nig_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    nig_probe_mod.addImport("alea", module);
-
-    const nig_probe = b.addExecutable(.{
-        .name = "alea-nig-probe",
-        .root_module = nig_probe_mod,
-    });
-    const run_nig_probe = b.addRunArtifact(nig_probe);
-    if (b.args) |args| run_nig_probe.addArgs(args);
+    const run_nig_probe = addToolRun(b, target, optimize, module, "alea-nig-probe", "tools/nig_probe.zig");
 
     const nig_probe_step = b.step("nig-probe", "Run NormalInverseGaussian bulk expression-shape microbenchmarks");
     nig_probe_step.dependOn(&run_nig_probe.step);
 
-    const inverse_gaussian_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/inverse_gaussian_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    inverse_gaussian_probe_mod.addImport("alea", module);
-
-    const inverse_gaussian_probe = b.addExecutable(.{
-        .name = "alea-inverse-gaussian-probe",
-        .root_module = inverse_gaussian_probe_mod,
-    });
-    const run_inverse_gaussian_probe = b.addRunArtifact(inverse_gaussian_probe);
-    if (b.args) |args| run_inverse_gaussian_probe.addArgs(args);
+    const run_inverse_gaussian_probe = addToolRun(b, target, optimize, module, "alea-inverse-gaussian-probe", "tools/inverse_gaussian_probe.zig");
 
     const inverse_gaussian_probe_step = b.step("inverse-gaussian-probe", "Run InverseGaussian bulk expression-shape microbenchmarks");
     inverse_gaussian_probe_step.dependOn(&run_inverse_gaussian_probe.step);
 
-    const poisson_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/poisson_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    poisson_probe_mod.addImport("alea", module);
-
-    const poisson_probe = b.addExecutable(.{
-        .name = "alea-poisson-probe",
-        .root_module = poisson_probe_mod,
-    });
-    const run_poisson_probe = b.addRunArtifact(poisson_probe);
-    if (b.args) |args| run_poisson_probe.addArgs(args);
+    const run_poisson_probe = addToolRun(b, target, optimize, module, "alea-poisson-probe", "tools/poisson_probe.zig");
 
     const poisson_probe_step = b.step("poisson-probe", "Run Poisson lambda=20 profile microbenchmarks");
     poisson_probe_step.dependOn(&run_poisson_probe.step);
 
-    const skew_normal_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/skew_normal_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    skew_normal_probe_mod.addImport("alea", module);
-
-    const skew_normal_probe = b.addExecutable(.{
-        .name = "alea-skew-normal-probe",
-        .root_module = skew_normal_probe_mod,
-    });
-    const run_skew_normal_probe = b.addRunArtifact(skew_normal_probe);
-    if (b.args) |args| run_skew_normal_probe.addArgs(args);
+    const run_skew_normal_probe = addToolRun(b, target, optimize, module, "alea-skew-normal-probe", "tools/skew_normal_probe.zig");
 
     const skew_normal_probe_step = b.step("skew-normal-probe", "Run SkewNormal bulk expression-shape microbenchmarks");
     skew_normal_probe_step.dependOn(&run_skew_normal_probe.step);
 
-    const triangular_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/triangular_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    triangular_probe_mod.addImport("alea", module);
-
-    const triangular_probe = b.addExecutable(.{
-        .name = "alea-triangular-probe",
-        .root_module = triangular_probe_mod,
-    });
-    const run_triangular_probe = b.addRunArtifact(triangular_probe);
-    if (b.args) |args| run_triangular_probe.addArgs(args);
+    const run_triangular_probe = addToolRun(b, target, optimize, module, "alea-triangular-probe", "tools/triangular_probe.zig");
 
     const triangular_probe_step = b.step("triangular-probe", "Run Triangular bulk expression-shape microbenchmarks");
     triangular_probe_step.dependOn(&run_triangular_probe.step);
 
-    const rayleigh_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/rayleigh_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    rayleigh_probe_mod.addImport("alea", module);
-
-    const rayleigh_probe = b.addExecutable(.{
-        .name = "alea-rayleigh-probe",
-        .root_module = rayleigh_probe_mod,
-    });
-    const run_rayleigh_probe = b.addRunArtifact(rayleigh_probe);
-    if (b.args) |args| run_rayleigh_probe.addArgs(args);
+    const run_rayleigh_probe = addToolRun(b, target, optimize, module, "alea-rayleigh-probe", "tools/rayleigh_probe.zig");
 
     const rayleigh_probe_step = b.step("rayleigh-probe", "Run Rayleigh bulk expression-shape microbenchmarks");
     rayleigh_probe_step.dependOn(&run_rayleigh_probe.step);
 
-    const logistic_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/logistic_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    logistic_probe_mod.addImport("alea", module);
-
-    const logistic_probe = b.addExecutable(.{
-        .name = "alea-logistic-probe",
-        .root_module = logistic_probe_mod,
-    });
-    const run_logistic_probe = b.addRunArtifact(logistic_probe);
-    if (b.args) |args| run_logistic_probe.addArgs(args);
+    const run_logistic_probe = addToolRun(b, target, optimize, module, "alea-logistic-probe", "tools/logistic_probe.zig");
 
     const logistic_probe_step = b.step("logistic-probe", "Run Logistic bulk expression-shape microbenchmarks");
     logistic_probe_step.dependOn(&run_logistic_probe.step);
 
-    const laplace_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/laplace_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    laplace_probe_mod.addImport("alea", module);
-
-    const laplace_probe = b.addExecutable(.{
-        .name = "alea-laplace-probe",
-        .root_module = laplace_probe_mod,
-    });
-    const run_laplace_probe = b.addRunArtifact(laplace_probe);
-    if (b.args) |args| run_laplace_probe.addArgs(args);
+    const run_laplace_probe = addToolRun(b, target, optimize, module, "alea-laplace-probe", "tools/laplace_probe.zig");
 
     const laplace_probe_step = b.step("laplace-probe", "Run Laplace bulk expression-shape microbenchmarks");
     laplace_probe_step.dependOn(&run_laplace_probe.step);
 
-    const log_logistic_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/log_logistic_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    log_logistic_probe_mod.addImport("alea", module);
-
-    const log_logistic_probe = b.addExecutable(.{
-        .name = "alea-log-logistic-probe",
-        .root_module = log_logistic_probe_mod,
-    });
-    const run_log_logistic_probe = b.addRunArtifact(log_logistic_probe);
-    if (b.args) |args| run_log_logistic_probe.addArgs(args);
+    const run_log_logistic_probe = addToolRun(b, target, optimize, module, "alea-log-logistic-probe", "tools/log_logistic_probe.zig");
 
     const log_logistic_probe_step = b.step("log-logistic-probe", "Run LogLogistic bulk expression-shape microbenchmarks");
     log_logistic_probe_step.dependOn(&run_log_logistic_probe.step);
 
-    const power_function_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/power_function_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    power_function_probe_mod.addImport("alea", module);
-
-    const power_function_probe = b.addExecutable(.{
-        .name = "alea-power-function-probe",
-        .root_module = power_function_probe_mod,
-    });
-    const run_power_function_probe = b.addRunArtifact(power_function_probe);
-    if (b.args) |args| run_power_function_probe.addArgs(args);
+    const run_power_function_probe = addToolRun(b, target, optimize, module, "alea-power-function-probe", "tools/power_function_probe.zig");
 
     const power_function_probe_step = b.step("power-function-probe", "Run PowerFunction bulk expression-shape microbenchmarks");
     power_function_probe_step.dependOn(&run_power_function_probe.step);
 
-    const kumaraswamy_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/kumaraswamy_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    kumaraswamy_probe_mod.addImport("alea", module);
-
-    const kumaraswamy_probe = b.addExecutable(.{
-        .name = "alea-kumaraswamy-probe",
-        .root_module = kumaraswamy_probe_mod,
-    });
-    const run_kumaraswamy_probe = b.addRunArtifact(kumaraswamy_probe);
-    if (b.args) |args| run_kumaraswamy_probe.addArgs(args);
+    const run_kumaraswamy_probe = addToolRun(b, target, optimize, module, "alea-kumaraswamy-probe", "tools/kumaraswamy_probe.zig");
 
     const kumaraswamy_probe_step = b.step("kumaraswamy-probe", "Run Kumaraswamy bulk expression-shape microbenchmarks");
     kumaraswamy_probe_step.dependOn(&run_kumaraswamy_probe.step);
 
-    const gumbel_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/gumbel_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    gumbel_probe_mod.addImport("alea", module);
-
-    const gumbel_probe = b.addExecutable(.{
-        .name = "alea-gumbel-probe",
-        .root_module = gumbel_probe_mod,
-    });
-    const run_gumbel_probe = b.addRunArtifact(gumbel_probe);
-    if (b.args) |args| run_gumbel_probe.addArgs(args);
+    const run_gumbel_probe = addToolRun(b, target, optimize, module, "alea-gumbel-probe", "tools/gumbel_probe.zig");
 
     const gumbel_probe_step = b.step("gumbel-probe", "Run Gumbel bulk expression-shape microbenchmarks");
     gumbel_probe_step.dependOn(&run_gumbel_probe.step);
 
-    const frechet_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/frechet_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    frechet_probe_mod.addImport("alea", module);
-
-    const frechet_probe = b.addExecutable(.{
-        .name = "alea-frechet-probe",
-        .root_module = frechet_probe_mod,
-    });
-    const run_frechet_probe = b.addRunArtifact(frechet_probe);
-    if (b.args) |args| run_frechet_probe.addArgs(args);
+    const run_frechet_probe = addToolRun(b, target, optimize, module, "alea-frechet-probe", "tools/frechet_probe.zig");
 
     const frechet_probe_step = b.step("frechet-probe", "Run Frechet bulk expression-shape microbenchmarks");
     frechet_probe_step.dependOn(&run_frechet_probe.step);
 
-    const pert_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/pert_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    pert_probe_mod.addImport("alea", module);
-
-    const pert_probe = b.addExecutable(.{
-        .name = "alea-pert-probe",
-        .root_module = pert_probe_mod,
-    });
-    const run_pert_probe = b.addRunArtifact(pert_probe);
-    if (b.args) |args| run_pert_probe.addArgs(args);
+    const run_pert_probe = addToolRun(b, target, optimize, module, "alea-pert-probe", "tools/pert_probe.zig");
 
     const pert_probe_step = b.step("pert-probe", "Run PERT special-case microbenchmarks");
     pert_probe_step.dependOn(&run_pert_probe.step);
 
-    const arcsine_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/arcsine_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    arcsine_probe_mod.addImport("alea", module);
-
-    const arcsine_probe = b.addExecutable(.{
-        .name = "alea-arcsine-probe",
-        .root_module = arcsine_probe_mod,
-    });
-    const run_arcsine_probe = b.addRunArtifact(arcsine_probe);
-    if (b.args) |args| run_arcsine_probe.addArgs(args);
+    const run_arcsine_probe = addToolRun(b, target, optimize, module, "alea-arcsine-probe", "tools/arcsine_probe.zig");
 
     const arcsine_probe_step = b.step("arcsine-probe", "Run Arcsine bulk expression-shape microbenchmarks");
     arcsine_probe_step.dependOn(&run_arcsine_probe.step);
 
-    const maxwell_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/maxwell_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    maxwell_probe_mod.addImport("alea", module);
-
-    const maxwell_probe = b.addExecutable(.{
-        .name = "alea-maxwell-probe",
-        .root_module = maxwell_probe_mod,
-    });
-    const run_maxwell_probe = b.addRunArtifact(maxwell_probe);
-    if (b.args) |args| run_maxwell_probe.addArgs(args);
+    const run_maxwell_probe = addToolRun(b, target, optimize, module, "alea-maxwell-probe", "tools/maxwell_probe.zig");
 
     const maxwell_probe_step = b.step("maxwell-probe", "Run Maxwell bulk expression-shape microbenchmarks");
     maxwell_probe_step.dependOn(&run_maxwell_probe.step);
 
-    const chi_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/chi_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    chi_probe_mod.addImport("alea", module);
-
-    const chi_probe = b.addExecutable(.{
-        .name = "alea-chi-probe",
-        .root_module = chi_probe_mod,
-    });
-    const run_chi_probe = b.addRunArtifact(chi_probe);
-    if (b.args) |args| run_chi_probe.addArgs(args);
+    const run_chi_probe = addToolRun(b, target, optimize, module, "alea-chi-probe", "tools/chi_probe.zig");
 
     const chi_probe_step = b.step("chi-probe", "Run Chi bulk expression-shape microbenchmarks");
     chi_probe_step.dependOn(&run_chi_probe.step);
 
-    const erlang_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/erlang_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    erlang_probe_mod.addImport("alea", module);
-
-    const erlang_probe = b.addExecutable(.{
-        .name = "alea-erlang-probe",
-        .root_module = erlang_probe_mod,
-    });
-    const run_erlang_probe = b.addRunArtifact(erlang_probe);
-    if (b.args) |args| run_erlang_probe.addArgs(args);
+    const run_erlang_probe = addToolRun(b, target, optimize, module, "alea-erlang-probe", "tools/erlang_probe.zig");
 
     const erlang_probe_step = b.step("erlang-probe", "Run Erlang bulk expression-shape microbenchmarks");
     erlang_probe_step.dependOn(&run_erlang_probe.step);
 
-    const pareto_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/pareto_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    pareto_probe_mod.addImport("alea", module);
-
-    const pareto_probe = b.addExecutable(.{
-        .name = "alea-pareto-probe",
-        .root_module = pareto_probe_mod,
-    });
-    const run_pareto_probe = b.addRunArtifact(pareto_probe);
-    if (b.args) |args| run_pareto_probe.addArgs(args);
+    const run_pareto_probe = addToolRun(b, target, optimize, module, "alea-pareto-probe", "tools/pareto_probe.zig");
 
     const pareto_probe_step = b.step("pareto-probe", "Run Pareto bulk expression-shape microbenchmarks");
     pareto_probe_step.dependOn(&run_pareto_probe.step);
 
-    const weibull_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/weibull_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    weibull_probe_mod.addImport("alea", module);
-
-    const weibull_probe = b.addExecutable(.{
-        .name = "alea-weibull-probe",
-        .root_module = weibull_probe_mod,
-    });
-    const run_weibull_probe = b.addRunArtifact(weibull_probe);
-    if (b.args) |args| run_weibull_probe.addArgs(args);
+    const run_weibull_probe = addToolRun(b, target, optimize, module, "alea-weibull-probe", "tools/weibull_probe.zig");
 
     const weibull_probe_step = b.step("weibull-probe", "Run Weibull bulk expression-shape microbenchmarks");
     weibull_probe_step.dependOn(&run_weibull_probe.step);
 
-    const half_normal_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/half_normal_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    half_normal_probe_mod.addImport("alea", module);
-
-    const half_normal_probe = b.addExecutable(.{
-        .name = "alea-half-normal-probe",
-        .root_module = half_normal_probe_mod,
-    });
-    const run_half_normal_probe = b.addRunArtifact(half_normal_probe);
-    if (b.args) |args| run_half_normal_probe.addArgs(args);
+    const run_half_normal_probe = addToolRun(b, target, optimize, module, "alea-half-normal-probe", "tools/half_normal_probe.zig");
 
     const half_normal_probe_step = b.step("half-normal-probe", "Run HalfNormal bulk expression-shape microbenchmarks");
     half_normal_probe_step.dependOn(&run_half_normal_probe.step);
 
-    const unit_geometry_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/unit_geometry_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    unit_geometry_probe_mod.addImport("alea", module);
-
-    const unit_geometry_probe = b.addExecutable(.{
-        .name = "alea-unit-geometry-probe",
-        .root_module = unit_geometry_probe_mod,
-    });
-    const run_unit_geometry_probe = b.addRunArtifact(unit_geometry_probe);
-    if (b.args) |args| run_unit_geometry_probe.addArgs(args);
+    const run_unit_geometry_probe = addToolRun(b, target, optimize, module, "alea-unit-geometry-probe", "tools/unit_geometry_probe.zig");
 
     const unit_geometry_probe_step = b.step("unit-geometry-probe", "Run unit geometry bulk expression-shape microbenchmarks");
     unit_geometry_probe_step.dependOn(&run_unit_geometry_probe.step);
 
-    const weighted_tree_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/weighted_tree_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    weighted_tree_probe_mod.addImport("alea", module);
-
-    const weighted_tree_probe = b.addExecutable(.{
-        .name = "alea-weighted-tree-probe",
-        .root_module = weighted_tree_probe_mod,
-    });
-    const run_weighted_tree_probe = b.addRunArtifact(weighted_tree_probe);
-    if (b.args) |args| run_weighted_tree_probe.addArgs(args);
+    const run_weighted_tree_probe = addToolRun(b, target, optimize, module, "alea-weighted-tree-probe", "tools/weighted_tree_probe.zig");
 
     const weighted_tree_probe_step = b.step("weighted-tree-probe", "Run WeightedTree expression-shape microbenchmarks");
     weighted_tree_probe_step.dependOn(&run_weighted_tree_probe.step);
 
-    const standard_fill_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/standard_fill_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    standard_fill_probe_mod.addImport("alea", module);
-
-    const standard_fill_probe = b.addExecutable(.{
-        .name = "alea-standard-fill-probe",
-        .root_module = standard_fill_probe_mod,
-    });
-    const run_standard_fill_probe = b.addRunArtifact(standard_fill_probe);
-    if (b.args) |args| run_standard_fill_probe.addArgs(args);
+    const run_standard_fill_probe = addToolRun(b, target, optimize, module, "alea-standard-fill-probe", "tools/standard_fill_probe.zig");
 
     const standard_fill_probe_step = b.step("standard-fill-probe", "Run standard distribution fill microbenchmarks");
     standard_fill_probe_step.dependOn(&run_standard_fill_probe.step);
 
-    const exponential_rate_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/exponential_rate_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    exponential_rate_probe_mod.addImport("alea", module);
-
-    const exponential_rate_probe = b.addExecutable(.{
-        .name = "alea-exponential-rate-probe",
-        .root_module = exponential_rate_probe_mod,
-    });
-    const run_exponential_rate_probe = b.addRunArtifact(exponential_rate_probe);
-    if (b.args) |args| run_exponential_rate_probe.addArgs(args);
+    const run_exponential_rate_probe = addToolRun(b, target, optimize, module, "alea-exponential-rate-probe", "tools/exponential_rate_probe.zig");
 
     const exponential_rate_probe_step = b.step("exponential-rate-probe", "Run exponential rate bulk microbenchmarks");
     exponential_rate_probe_step.dependOn(&run_exponential_rate_probe.step);
 
-    const normal_affine_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/normal_affine_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    normal_affine_probe_mod.addImport("alea", module);
-
-    const normal_affine_probe = b.addExecutable(.{
-        .name = "alea-normal-affine-probe",
-        .root_module = normal_affine_probe_mod,
-    });
-    const run_normal_affine_probe = b.addRunArtifact(normal_affine_probe);
-    if (b.args) |args| run_normal_affine_probe.addArgs(args);
+    const run_normal_affine_probe = addToolRun(b, target, optimize, module, "alea-normal-affine-probe", "tools/normal_affine_probe.zig");
 
     const normal_affine_probe_step = b.step("normal-affine-probe", "Run normal affine bulk microbenchmarks");
     normal_affine_probe_step.dependOn(&run_normal_affine_probe.step);
 
-    const gamma_shape_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/gamma_shape_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    gamma_shape_probe_mod.addImport("alea", module);
-
-    const gamma_shape_probe = b.addExecutable(.{
-        .name = "alea-gamma-shape-probe",
-        .root_module = gamma_shape_probe_mod,
-    });
-    const run_gamma_shape_probe = b.addRunArtifact(gamma_shape_probe);
-    if (b.args) |args| run_gamma_shape_probe.addArgs(args);
+    const run_gamma_shape_probe = addToolRun(b, target, optimize, module, "alea-gamma-shape-probe", "tools/gamma_shape_probe.zig");
 
     const gamma_shape_probe_step = b.step("gamma-shape-probe", "Run gamma shape-specialization microbenchmarks");
     gamma_shape_probe_step.dependOn(&run_gamma_shape_probe.step);
 
-    const student_t_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/student_t_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    student_t_probe_mod.addImport("alea", module);
-
-    const student_t_probe = b.addExecutable(.{
-        .name = "alea-student-t-probe",
-        .root_module = student_t_probe_mod,
-    });
-    const run_student_t_probe = b.addRunArtifact(student_t_probe);
-    if (b.args) |args| run_student_t_probe.addArgs(args);
+    const run_student_t_probe = addToolRun(b, target, optimize, module, "alea-student-t-probe", "tools/student_t_probe.zig");
 
     const student_t_probe_step = b.step("student-t-probe", "Run StudentT special-case microbenchmarks");
     student_t_probe_step.dependOn(&run_student_t_probe.step);
 
-    const fisher_f_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/fisher_f_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    fisher_f_probe_mod.addImport("alea", module);
-
-    const fisher_f_probe = b.addExecutable(.{
-        .name = "alea-fisher-f-probe",
-        .root_module = fisher_f_probe_mod,
-    });
-    const run_fisher_f_probe = b.addRunArtifact(fisher_f_probe);
-    if (b.args) |args| run_fisher_f_probe.addArgs(args);
+    const run_fisher_f_probe = addToolRun(b, target, optimize, module, "alea-fisher-f-probe", "tools/fisher_f_probe.zig");
 
     const fisher_f_probe_step = b.step("fisher-f-probe", "Run Fisher-F special-case microbenchmarks");
     fisher_f_probe_step.dependOn(&run_fisher_f_probe.step);
 
-    const beta_special_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/beta_special_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    beta_special_probe_mod.addImport("alea", module);
-
-    const beta_special_probe = b.addExecutable(.{
-        .name = "alea-beta-special-probe",
-        .root_module = beta_special_probe_mod,
-    });
-    const run_beta_special_probe = b.addRunArtifact(beta_special_probe);
-    if (b.args) |args| run_beta_special_probe.addArgs(args);
+    const run_beta_special_probe = addToolRun(b, target, optimize, module, "alea-beta-special-probe", "tools/beta_special_probe.zig");
 
     const beta_special_probe_step = b.step("beta-special-probe", "Run Beta special-case microbenchmarks");
     beta_special_probe_step.dependOn(&run_beta_special_probe.step);
 
-    const statcheck_mod = b.createModule(.{
-        .root_source_file = b.path("tools/statcheck.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    statcheck_mod.addImport("alea", module);
-
-    const statcheck = b.addExecutable(.{
-        .name = "alea-statcheck",
-        .root_module = statcheck_mod,
-    });
-    const run_statcheck = b.addRunArtifact(statcheck);
-    if (b.args) |args| run_statcheck.addArgs(args);
+    const run_statcheck = addToolRun(b, target, optimize, module, "alea-statcheck", "tools/statcheck.zig");
 
     const statcheck_tests = b.addTest(.{
         .name = "alea-statcheck-tests",
@@ -1419,19 +771,7 @@ pub fn build(b: *std.Build) void {
         wasi_self_test_step.dependOn(&node_missing.step);
     }
 
-    const stream_mod = b.createModule(.{
-        .root_source_file = b.path("tools/stream.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    stream_mod.addImport("alea", module);
-
-    const stream = b.addExecutable(.{
-        .name = "alea-stream",
-        .root_module = stream_mod,
-    });
-    const run_stream = b.addRunArtifact(stream);
-    if (b.args) |args| run_stream.addArgs(args);
+    const run_stream = addToolRun(b, target, optimize, module, "alea-stream", "tools/stream.zig");
 
     const stream_tests = b.addTest(.{
         .name = "alea-stream-tests",
@@ -1458,19 +798,7 @@ pub fn build(b: *std.Build) void {
     const practrand_self_test_step = b.step("practrand-self-test", "Run PractRand wrapper self-tests without RNG_test");
     practrand_self_test_step.dependOn(&run_practrand_self_test.step);
 
-    const distcheck_mod = b.createModule(.{
-        .root_source_file = b.path("tools/distcheck.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    distcheck_mod.addImport("alea", module);
-
-    const distcheck = b.addExecutable(.{
-        .name = "alea-distcheck",
-        .root_module = distcheck_mod,
-    });
-    const run_distcheck = b.addRunArtifact(distcheck);
-    if (b.args) |args| run_distcheck.addArgs(args);
+    const run_distcheck = addToolRun(b, target, optimize, module, "alea-distcheck", "tools/distcheck.zig");
 
     const distcheck_tests = b.addTest(.{
         .name = "alea-distcheck-tests",
@@ -1518,19 +846,7 @@ pub fn build(b: *std.Build) void {
     distcheck_libc_step.dependOn(&run_distcheck_libc_tests.step);
     distcheck_libc_step.dependOn(&run_distcheck_libc.step);
 
-    const profilecheck_mod = b.createModule(.{
-        .root_source_file = b.path("tools/profilecheck.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    profilecheck_mod.addImport("alea", module);
-
-    const profilecheck = b.addExecutable(.{
-        .name = "alea-profilecheck",
-        .root_module = profilecheck_mod,
-    });
-    const run_profilecheck = b.addRunArtifact(profilecheck);
-    if (b.args) |args| run_profilecheck.addArgs(args);
+    const run_profilecheck = addToolRun(b, target, optimize, module, "alea-profilecheck", "tools/profilecheck.zig");
 
     const profilecheck_tests = b.addTest(.{
         .name = "alea-profilecheck-tests",
@@ -1547,19 +863,7 @@ pub fn build(b: *std.Build) void {
     profilecheck_step.dependOn(&run_profilecheck_tests.step);
     profilecheck_step.dependOn(&run_profilecheck.step);
 
-    const profiletailcheck_mod = b.createModule(.{
-        .root_source_file = b.path("tools/profiletailcheck.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    profiletailcheck_mod.addImport("alea", module);
-
-    const profiletailcheck = b.addExecutable(.{
-        .name = "alea-profiletailcheck",
-        .root_module = profiletailcheck_mod,
-    });
-    const run_profiletailcheck = b.addRunArtifact(profiletailcheck);
-    if (b.args) |args| run_profiletailcheck.addArgs(args);
+    const run_profiletailcheck = addToolRun(b, target, optimize, module, "alea-profiletailcheck", "tools/profiletailcheck.zig");
 
     const profiletailcheck_tests = b.addTest(.{
         .name = "alea-profiletailcheck-tests",
@@ -1576,19 +880,7 @@ pub fn build(b: *std.Build) void {
     profiletailcheck_step.dependOn(&run_profiletailcheck_tests.step);
     profiletailcheck_step.dependOn(&run_profiletailcheck.step);
 
-    const profilestresscheck_mod = b.createModule(.{
-        .root_source_file = b.path("tools/profilestresscheck.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    profilestresscheck_mod.addImport("alea", module);
-
-    const profilestresscheck = b.addExecutable(.{
-        .name = "alea-profilestresscheck",
-        .root_module = profilestresscheck_mod,
-    });
-    const run_profilestresscheck = b.addRunArtifact(profilestresscheck);
-    if (b.args) |args| run_profilestresscheck.addArgs(args);
+    const run_profilestresscheck = addToolRun(b, target, optimize, module, "alea-profilestresscheck", "tools/profilestresscheck.zig");
 
     const profilestresscheck_tests = b.addTest(.{
         .name = "alea-profilestresscheck-tests",
@@ -1605,19 +897,7 @@ pub fn build(b: *std.Build) void {
     profilestresscheck_step.dependOn(&run_profilestresscheck_tests.step);
     profilestresscheck_step.dependOn(&run_profilestresscheck.step);
 
-    const profilelongcheck_mod = b.createModule(.{
-        .root_source_file = b.path("tools/profilelongcheck.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    profilelongcheck_mod.addImport("alea", module);
-
-    const profilelongcheck = b.addExecutable(.{
-        .name = "alea-profilelongcheck",
-        .root_module = profilelongcheck_mod,
-    });
-    const run_profilelongcheck = b.addRunArtifact(profilelongcheck);
-    if (b.args) |args| run_profilelongcheck.addArgs(args);
+    const run_profilelongcheck = addToolRun(b, target, optimize, module, "alea-profilelongcheck", "tools/profilelongcheck.zig");
 
     const profilelongcheck_tests = b.addTest(.{
         .name = "alea-profilelongcheck-tests",
@@ -1664,36 +944,12 @@ pub fn build(b: *std.Build) void {
     validate_all_step.dependOn(wasi_self_test_step);
     validate_all_step.dependOn(wasi_report_step);
 
-    const hypergeo_h2pe_probe_mod = b.createModule(.{
-        .root_source_file = b.path("tools/hypergeo_h2pe_probe.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    hypergeo_h2pe_probe_mod.addImport("alea", module);
-
-    const hypergeo_h2pe_probe = b.addExecutable(.{
-        .name = "alea-hypergeo-h2pe-probe",
-        .root_module = hypergeo_h2pe_probe_mod,
-    });
-    const run_hypergeo_h2pe_probe = b.addRunArtifact(hypergeo_h2pe_probe);
-    if (b.args) |args| run_hypergeo_h2pe_probe.addArgs(args);
+    const run_hypergeo_h2pe_probe = addToolRun(b, target, optimize, module, "alea-hypergeo-h2pe-probe", "tools/hypergeo_h2pe_probe.zig");
 
     const hypergeo_h2pe_probe_step = b.step("hypergeo-h2pe-probe", "Run isolated Hypergeometric H2PE experiments");
     hypergeo_h2pe_probe_step.dependOn(&run_hypergeo_h2pe_probe.step);
 
-    const repro_mod = b.createModule(.{
-        .root_source_file = b.path("tools/repro.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    repro_mod.addImport("alea", module);
-
-    const repro = b.addExecutable(.{
-        .name = "alea-repro",
-        .root_module = repro_mod,
-    });
-    const run_repro = b.addRunArtifact(repro);
-    if (b.args) |args| run_repro.addArgs(args);
+    const run_repro = addToolRun(b, target, optimize, module, "alea-repro", "tools/repro.zig");
 
     const repro_tests = b.addTest(.{
         .name = "alea-repro-tests",
@@ -1709,6 +965,30 @@ pub fn build(b: *std.Build) void {
     const repro_step = b.step("repro", "Print deterministic reproducibility snapshots");
     repro_step.dependOn(&run_repro_tests.step);
     repro_step.dependOn(&run_repro.step);
+}
+
+fn addToolRun(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    alea_mod: *std.Build.Module,
+    comptime exe_name: []const u8,
+    comptime source_path: []const u8,
+) *std.Build.Step.Run {
+    const tool_mod = b.createModule(.{
+        .root_source_file = b.path(source_path),
+        .target = target,
+        .optimize = optimize,
+    });
+    tool_mod.addImport("alea", alea_mod);
+
+    const tool = b.addExecutable(.{
+        .name = exe_name,
+        .root_module = tool_mod,
+    });
+    const run_tool = b.addRunArtifact(tool);
+    if (b.args) |args| run_tool.addArgs(args);
+    return run_tool;
 }
 
 fn addWasiTool(

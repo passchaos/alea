@@ -235,6 +235,7 @@ new helpers that need documentation.
 | `tools/profilelongcheck.zig` | Accepted vector profile long-sweep checker with focused helper tests. |
 | `tools/profilestresscheck.zig` | Accepted vector profile multi-seed stress checker with focused helper tests. |
 | `tools/profiletailcheck.zig` | Accepted vector profile tail checker with focused helper tests. |
+| `tools/probe_common.zig` | Shared sample/fill benchmark harness used by focused probe tools. |
 | `tools/rayleigh_probe.zig` | Rayleigh performance probe. |
 | `tools/repro.zig` | Reproducibility snapshot printer with focused helper tests. |
 | `tools/readmecheck.zig` | README discovery and quick-start token checker. |

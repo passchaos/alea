@@ -607,6 +607,7 @@ const tools = [_]Tool{
     .{ .path = "tools/chi_probe.zig", .build_token = "tools/chi_probe.zig" },
     .{ .path = "tools/distcheck.zig", .build_token = "tools/distcheck.zig" },
     .{ .path = "tools/erlang_probe.zig", .build_token = "tools/erlang_probe.zig" },
+    .{ .path = "tools/probe_common.zig", .build_token = "" },
     .{ .path = "tools/examplecheck.zig", .build_token = "tools/examplecheck.zig" },
     .{ .path = "tools/exponential_rate_probe.zig", .build_token = "tools/exponential_rate_probe.zig" },
     .{ .path = "tools/fisher_f_probe.zig", .build_token = "tools/fisher_f_probe.zig" },

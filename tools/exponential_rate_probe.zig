@@ -1,6 +1,9 @@
 const std = @import("std");
 const alea = @import("alea");
 
+const probe_common = @import("probe_common.zig");
+const benchFill = probe_common.benchFill4096;
+
 const trials = 3;
 const default_count = 16 * 1024 * 1024;
 
@@ -10,13 +13,7 @@ pub fn main(init: std.process.Init) !void {
     var stdout_file = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_file.interface;
 
-    var args = std.process.Args.Iterator.init(init.minimal.args);
-    defer args.deinit();
-    _ = args.next();
-    const sample_count = if (args.next()) |arg|
-        std.fmt.parseInt(usize, arg, 10) catch default_count
-    else
-        default_count;
+    const sample_count = probe_common.parseCount(init, default_count);
 
     try stdout.print("exponential rate probe count={}\n", .{sample_count});
     try benchFill(alea.FastPrng, io, stdout, "fast current fill rate=2", 0xe157, sample_count, currentFill);
@@ -36,46 +33,6 @@ pub fn main(init: std.process.Init) !void {
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 standard then vector8 scale", 0xe15c, sample_count, standardThenVectorScaleF32);
     try benchFillF32(alea.ScalarPrng, io, stdout, "scalar f32 standard then vector8 divide", 0xe15c, sample_count, standardThenVectorDivideF32);
     try stdout.flush();
-}
-
-fn benchFill(
-    comptime Source: type,
-    io: std.Io,
-    stdout: *std.Io.Writer,
-    comptime name: []const u8,
-    seed: u64,
-    sample_count: usize,
-    comptime fillFn: anytype,
-) !void {
-    var best_million_per_s: f64 = 0;
-    var best_checksum: f64 = 0;
-    var out: [4096]f64 = undefined;
-
-    var trial: usize = 0;
-    while (trial < trials) : (trial += 1) {
-        var engine = Source.init(seed);
-        const start = std.Io.Clock.awake.now(io).nanoseconds;
-
-        var remaining = sample_count;
-        var checksum: f64 = 0;
-        while (remaining > 0) {
-            const n = @min(remaining, out.len);
-            fillFn(&engine, out[0..n]);
-            for (out[0..n]) |item| checksum += item;
-            remaining -= n;
-        }
-
-        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
-        const million_per_s = (@as(f64, @floatFromInt(sample_count)) / 1_000_000.0) /
-            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
-        if (million_per_s > best_million_per_s) {
-            best_million_per_s = million_per_s;
-            best_checksum = checksum;
-        }
-    }
-
-    std.mem.doNotOptimizeAway(best_checksum);
-    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
 fn benchFillF32(
