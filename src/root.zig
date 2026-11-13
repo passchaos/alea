@@ -13,6 +13,7 @@ fn oversizedU32LenForTest() usize {
 }
 
 pub const Rng = @import("rng.zig");
+pub const RngOf = Rng.RngOf;
 pub const Seed = @import("seed.zig");
 pub const distributions = @import("distributions.zig");
 pub const distr = distributions;
@@ -67,6 +68,7 @@ pub const rngs = struct {
 
 pub const prelude = struct {
     pub const Rng = @import("rng.zig");
+    pub const RngOf = @import("rng.zig").RngOf;
     pub const Seed = @import("seed.zig");
     pub const distributions = @import("distributions.zig");
     pub const seq = @import("seq.zig");
@@ -5736,6 +5738,8 @@ test "root RngReader aliases mirror Rng namespace adapter" {
 test "root prelude namespace mirrors common aliases" {
     comptime {
         std.debug.assert(prelude.Rng == Rng);
+        std.debug.assert(prelude.RngOf == RngOf);
+        std.debug.assert(RngOf == Rng.RngOf);
         std.debug.assert(prelude.Seed == Seed);
         std.debug.assert(prelude.distributions == distributions);
         std.debug.assert(prelude.seq == seq);

@@ -138,6 +138,145 @@ pub fn fromRandom(random_source: *std.Random) Rng {
     };
 }
 
+/// A comptime-specialized view over a concrete engine pointer.
+///
+/// Unlike `Rng`, this wrapper does not erase the engine type, so hot-path
+/// calls inline directly into the engine's draw functions. Use it for
+/// throughput-sensitive loops that do not need to store heterogeneous
+/// engines in one value.
+pub fn RngOf(comptime Engine: type) type {
+    return struct {
+        engine: *Engine,
+
+        const Self = @This();
+
+        pub fn init(engine: *Engine) Self {
+            return .{ .engine = engine };
+        }
+
+        pub fn next(self: Self) u64 {
+            return nextFrom(self.engine);
+        }
+
+        pub fn nextU64(self: Self) u64 {
+            return self.next();
+        }
+
+        pub fn nextU32(self: Self) u32 {
+            return nextU32From(self.engine);
+        }
+
+        pub fn fill(self: Self, comptime T: type, dest: []T) void {
+            fillFrom(self.engine, T, dest);
+        }
+
+        pub fn fillBytes(self: Self, dest: []u8) void {
+            fillBytesFrom(self.engine, dest);
+        }
+
+        pub fn uintLessThan(self: Self, comptime T: type, less_than: T) T {
+            return uintLessThanFrom(self.engine, T, less_than);
+        }
+
+        pub fn uintAtMost(self: Self, comptime T: type, at_most: T) T {
+            return uintAtMostFrom(self.engine, T, at_most);
+        }
+
+        pub fn intRangeLessThan(self: Self, comptime T: type, at_least: T, less_than: T) T {
+            return intRangeLessThanFrom(self.engine, T, at_least, less_than);
+        }
+
+        pub fn intRangeAtMost(self: Self, comptime T: type, at_least: T, at_most: T) T {
+            return intRangeAtMostFrom(self.engine, T, at_least, at_most);
+        }
+
+        pub fn float(self: Self, comptime T: type) T {
+            return floatFrom(self.engine, T);
+        }
+
+        pub fn floatOpen(self: Self, comptime T: type) T {
+            return floatOpenFrom(self.engine, T);
+        }
+
+        pub fn floatOpenClosed(self: Self, comptime T: type) T {
+            return floatOpenClosedFrom(self.engine, T);
+        }
+
+        pub fn floatRange(self: Self, comptime T: type, min: T, max: T) T {
+            return floatRangeFrom(self.engine, T, min, max);
+        }
+
+        pub fn boolean(self: Self) bool {
+            return booleanFrom(self.engine);
+        }
+
+        pub fn chance(self: Self, p: f64) bool {
+            return chanceFrom(self.engine, p);
+        }
+
+        pub fn ratio(self: Self, numerator: u32, denominator: u32) bool {
+            return ratioFrom(self.engine, numerator, denominator);
+        }
+
+        pub fn normal(self: Self, comptime T: type, mean: T, stddev: T) T {
+            return normalFastFrom(self.engine, T, mean, stddev);
+        }
+
+        pub fn exponential(self: Self, comptime T: type, rate: T) T {
+            return exponentialFastFrom(self.engine, T, rate);
+        }
+
+        pub fn fillNormal(self: Self, comptime T: type, dest: []T, mean: T, stddev: T) void {
+            fillNormalFrom(self.engine, T, dest, mean, stddev);
+        }
+
+        pub fn fillExponential(self: Self, comptime T: type, dest: []T, rate: T) void {
+            fillExponentialFrom(self.engine, T, dest, rate);
+        }
+
+        pub fn fillRange(self: Self, comptime T: type, dest: []T, min: T, max: T) void {
+            fillRangeFrom(self.engine, T, dest, min, max);
+        }
+
+        pub fn fillOpen(self: Self, comptime T: type, dest: []T) void {
+            fillOpenFrom(self.engine, T, dest);
+        }
+
+        pub fn fillOpenClosed(self: Self, comptime T: type, dest: []T) void {
+            fillOpenClosedFrom(self.engine, T, dest);
+        }
+
+        pub fn value(self: Self, comptime T: type) T {
+            return valueFrom(self.engine, T);
+        }
+
+        pub fn chooseIndex(self: Self, length: usize) ?usize {
+            return chooseIndexFrom(self.engine, length);
+        }
+    };
+}
+
+test "RngOf matches direct-source helpers and advances the engine" {
+    const Xoshiro256 = @import("engines/xoshiro256.zig");
+    var direct_engine = Xoshiro256.init(0x5eed);
+    var wrapped_engine = Xoshiro256.init(0x5eed);
+    const wrapped = RngOf(Xoshiro256).init(&wrapped_engine);
+
+    try std.testing.expectEqual(uintLessThanFrom(&direct_engine, u32, 1024), wrapped.uintLessThan(u32, 1024));
+    try std.testing.expectEqual(intRangeLessThanFrom(&direct_engine, i32, -5, 5), wrapped.intRangeLessThan(i32, -5, 5));
+    try std.testing.expectEqual(floatFrom(&direct_engine, f64), wrapped.float(f64));
+    try std.testing.expectEqual(normalFastFrom(&direct_engine, f64, 0, 1), wrapped.normal(f64, 0, 1));
+    try std.testing.expectEqual(exponentialFastFrom(&direct_engine, f64, 2), wrapped.exponential(f64, 2));
+
+    var direct_buf: [8]f64 = undefined;
+    var wrapped_buf: [8]f64 = undefined;
+    fillNormalFrom(&direct_engine, f64, &direct_buf, 1, 2);
+    wrapped.fillNormal(f64, &wrapped_buf, 1, 2);
+    try std.testing.expectEqualSlices(f64, &direct_buf, &wrapped_buf);
+
+    try std.testing.expectEqual(direct_engine.next(), wrapped_engine.next());
+}
+
 pub fn random(self: Rng) std.Random {
     return .{
         .ptr = self.ptr,
@@ -2113,6 +2252,15 @@ pub fn uintLessThanFrom(source: anytype, comptime T: type, less_than: T) T {
     const bits = @typeInfo(T).int.bits;
     if (bits == 0) unreachable;
 
+    // For a power-of-two bound the Lemire threshold is always zero, so the
+    // multiply-high result is exactly `x >> (bits - log2(less_than))`. This
+    // preserves the accepted value and consumes exactly one draw.
+    if (std.math.isPowerOfTwo(less_than)) {
+        const k = std.math.log2_int(T, less_than);
+        const shift: std.math.Log2Int(T) = @intCast(bits - k);
+        return uintFrom(source, T) >> shift;
+    }
+
     var x = uintFrom(source, T);
     var m = std.math.mulWide(T, x, less_than);
     var l: T = @truncate(m);
@@ -2140,6 +2288,21 @@ pub fn uintAtMostFrom(source: anytype, comptime T: type, at_most: T) T {
     if (at_most == 0) return 0;
     if (at_most == std.math.maxInt(T)) return uintFrom(source, T);
     return uintLessThanFrom(source, T, at_most + 1);
+}
+
+test "power-of-two uint ranges preserve the Lemire mapping and stream shape" {
+    const StepRng = @import("engines/step.zig");
+    var fast_engine = StepRng.init(0x1234, 0x9e3779b97f4a7c15);
+    var reference_engine = StepRng.init(0x1234, 0x9e3779b97f4a7c15);
+
+    inline for ([_]u8{ 2, 4, 8, 16, 32, 64, 128 }) |less_than| {
+        const got = uintLessThanFrom(&fast_engine, u8, less_than);
+        const raw = uintFrom(&reference_engine, u8);
+        const wide = std.math.mulWide(u8, raw, less_than);
+        const expected: u8 = @intCast(wide >> 8);
+        try std.testing.expectEqual(expected, got);
+        try std.testing.expectEqual(reference_engine.next(), fast_engine.next());
+    }
 }
 
 pub fn intRangeLessThan(self: Rng, comptime T: type, at_least: T, less_than: T) T {

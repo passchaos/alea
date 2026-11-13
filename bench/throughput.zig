@@ -76,8 +76,10 @@ pub fn main(init: std.process.Init) !void {
     try benchFillOpenClosedF64Direct(io, stdout, "alea fillOpenClosed f64 direct", bytes / 8);
     try benchFillOpenClosedF64Scalar(io, stdout, "alea fillOpenClosed f64 scalar direct", bytes / 8);
     try stdout.print("\nrange throughput\n", .{});
-    try benchRangeFacade(io, stdout, "alea bounded u32 facade", bytes / 8);
-    try benchRangeDirect(io, stdout, "alea bounded u32 direct", bytes / 8);
+    try benchRangeFacade(io, stdout, "alea bounded u32 facade", bytes / 8, 1_000_003);
+    try benchRangeFacade(io, stdout, "alea bounded u32 pow2 facade", bytes / 8, 1 << 20);
+    try benchRangeDirect(io, stdout, "alea bounded u32 direct", bytes / 8, 1_000_003);
+    try benchRangeDirect(io, stdout, "alea bounded u32 pow2 direct", bytes / 8, 1 << 20);
     try benchFloatF32(io, stdout, "alea float f32 facade", bytes / 4);
     try benchFloatF32Direct(io, stdout, "alea float f32 direct", bytes / 4);
     try benchFloatOpenF32(io, stdout, "alea floatOpen f32 facade", bytes / 4);
@@ -155,6 +157,7 @@ pub fn main(init: std.process.Init) !void {
     try benchNormalWyhashStdRandom(io, stdout, "alea normal wyhash64 std.Random", bytes / 64);
     try benchNormalStdRandom(io, stdout, "alea normal std.Random direct", bytes / 64);
     try benchNormalFast(io, stdout, "alea normal fast direct", bytes / 64);
+    try benchNormalRngOf(io, stdout, "alea normal RngOf direct", bytes / 64);
     try benchNormalNativeF32(io, stdout, "alea normal native f32", bytes / 64);
     try benchNormalNativeF32Scalar(io, stdout, "alea normal native f32 scalar direct", bytes / 64);
     try benchStandardNormalScalar(io, stdout, "alea standard-normal scalar direct", bytes / 64);
@@ -1110,7 +1113,7 @@ fn benchFillOpenClosedF64Scalar(io: std.Io, stdout: *std.Io.Writer, name: []cons
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn benchRangeFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+fn benchRangeFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, less_than: u32) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
@@ -1122,7 +1125,7 @@ fn benchRangeFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) {
-            checksum +%= rng.uintLessThan(u32, 1_000_003);
+            checksum +%= rng.uintLessThan(u32, less_than);
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
@@ -1137,7 +1140,7 @@ fn benchRangeFacade(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn benchRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+fn benchRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, less_than: u32) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
@@ -1148,7 +1151,7 @@ fn benchRangeDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count:
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) {
-            checksum +%= alea.Rng.uintLessThanFrom(&engine, u32, 1_000_003);
+            checksum +%= alea.Rng.uintLessThanFrom(&engine, u32, less_than);
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
@@ -2335,6 +2338,31 @@ fn benchNormalFast(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
         var i: usize = 0;
         var checksum: f64 = 0;
         while (i < count) : (i += 1) checksum += alea.Rng.normalFastFrom(&engine, f64, 0, 1);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchNormalRngOf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xd15e);
+        const rng = alea.RngOf(alea.FastPrng).init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += rng.normal(f64, 0, 1);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

@@ -24,7 +24,7 @@ command matrix evidence.
   `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
   `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
   `rngs.Xoshiro256PlusPlus`
-- `prelude` namespace aliases: `prelude.Rng`, `prelude.Seed`,
+- `prelude` namespace aliases: `prelude.Rng`, `prelude.RngOf`, `prelude.Seed`,
   `prelude.distributions`, `prelude.seq`, `prelude.ascii`, `prelude.StdRng`,
   `prelude.SmallRng`, `prelude.SysRng`, `prelude.SysError`,
   `prelude.WeightError`, `prelude.WeightedError`, `prelude.weightedErrorMessage`, `prelude.WeightedIndex`, `prelude.WeightedAliasIndex`, `prelude.WeightedTreeIndex`, `prelude.WeightedIntTreeIndex`
@@ -225,6 +225,15 @@ command matrix evidence.
   `SysRng.tryNextU32`, `SysRng.tryFillBytes`
 - Construction and interop: `init`, `fromRandom`, `random`, `reader`,
   `readerFrom`, `RngReader`, `rngReader`
+- `RngOf(Engine)`: comptime-specialized engine view for hot paths that do not
+  need type erasure. Members: `RngOf.init`, `RngOf.next`, `RngOf.nextU64`,
+  `RngOf.nextU32`, `RngOf.fill`, `RngOf.fillBytes`, `RngOf.uintLessThan`,
+  `RngOf.uintAtMost`, `RngOf.intRangeLessThan`, `RngOf.intRangeAtMost`,
+  `RngOf.float`, `RngOf.floatOpen`, `RngOf.floatOpenClosed`,
+  `RngOf.floatRange`, `RngOf.boolean`, `RngOf.chance`, `RngOf.ratio`,
+  `RngOf.normal`, `RngOf.exponential`, `RngOf.fillNormal`,
+  `RngOf.fillExponential`, `RngOf.fillRange`, `RngOf.fillOpen`,
+  `RngOf.fillOpenClosed`, `RngOf.value`, `RngOf.chooseIndex`.
 - `RngReader(Source)`: `RngReader.init`, `RngReader.reader`,
   `RngReader.read`, `RngReader.readAll`, `RngReader.lastError`
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
