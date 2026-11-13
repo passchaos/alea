@@ -648,7 +648,7 @@ self-forking.
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
   `hypergeometricCdf`, `hypergeometricQuantile`,
   `hypergeometricExactSdLimit`, `zipfCdf`, `zipfQuantile`, `zetaCdf`,
-  `zetaQuantile`,
+  `zetaQuantile`, `bernoulliCdf`, `bernoulliQuantile`,
   `laplaceCdf`, `laplaceQuantile`, `logisticCdf`, `logisticQuantile`,
   `cauchyCdf`, `cauchyQuantile`, `rayleighCdf`, `rayleighQuantile`,
   `weibullCdf`, `weibullQuantile`, `gumbelCdf`, `gumbelQuantile`,
@@ -1391,6 +1391,8 @@ Reusable samplers:
 - `Bernoulli.probability`
 - `Bernoulli.p`
 - `Bernoulli.probabilityValue`
+- `Bernoulli.cdf`
+- `Bernoulli.quantile`
 - `Bernoulli.expectedValue`
 - `Bernoulli.varianceValue`
 - `Bernoulli.modeValue`

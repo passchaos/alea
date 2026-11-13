@@ -1159,6 +1159,29 @@ pub fn zetaQuantile(q: anytype, exponent: anytype) @TypeOf(q, exponent) {
     return @floatCast(zipfQuantile(@as(f64, @floatCast(q)), std.math.inf(f64), @as(f64, @floatCast(exponent))));
 }
 
+/// Bernoulli CDF: `P(X ≤ k) = 0` for `k < 0`, `1 − p` for `0 ≤ k < 1`, and
+/// `1` for `k ≥ 1`.
+pub fn bernoulliCdf(k: anytype, p: anytype) @TypeOf(k, p) {
+    const T = @TypeOf(k, p);
+    comptime requireFloat(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (std.math.isNan(k)) return std.math.nan(T);
+    if (k < 0) return 0;
+    if (k < 1) return 1 - p;
+    return 1;
+}
+
+/// Smallest integer `k` with `bernoulliCdf(k, p) ≥ q` (0 or 1).
+pub fn bernoulliQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
+    const T = @TypeOf(q, p);
+    comptime requireFloat(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (!(q >= 0 and q <= 1)) return std.math.nan(T);
+    if (q == 0) return 0;
+    if (q <= 1 - p) return 0;
+    return 1;
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -3072,6 +3095,16 @@ pub const Bernoulli = struct {
 
     pub fn probabilityValue(self: Bernoulli) f64 {
         return self.probability();
+    }
+
+    /// Bernoulli CDF at integer-valued `k`.
+    pub fn cdf(self: Bernoulli, k: f64) f64 {
+        return bernoulliCdf(k, self.probability());
+    }
+
+    /// Bernoulli quantile for probability `q`.
+    pub fn quantile(self: Bernoulli, q: f64) f64 {
+        return bernoulliQuantile(q, self.probability());
     }
 
     pub fn expectedValue(self: Bernoulli) f64 {
@@ -53714,6 +53747,31 @@ test "zetaCdf and zetaQuantile match Riemann zeta values" {
     const zipf_dist = try Zipf(f64).init(10, 1.5);
     try std.testing.expectApproxEqAbs(zipfCdf(@as(f64, 5), @as(f64, 10), @as(f64, 1.5)), zipf_dist.cdf(5), 0);
     try std.testing.expectApproxEqAbs(zipfQuantile(@as(f64, 0.5), @as(f64, 10), @as(f64, 1.5)), zipf_dist.quantile(0.5), 0);
+}
+
+test "bernoulliCdf and bernoulliQuantile match the two-point law" {
+    try std.testing.expectEqual(@as(f64, 0), bernoulliCdf(@as(f64, -1), @as(f64, 0.3)));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7), bernoulliCdf(@as(f64, 0), @as(f64, 0.3)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7), bernoulliCdf(@as(f64, 0.9), @as(f64, 0.3)), 1e-15);
+    try std.testing.expectEqual(@as(f64, 1), bernoulliCdf(@as(f64, 1), @as(f64, 0.3)));
+    try std.testing.expectEqual(@as(f64, 1), bernoulliCdf(std.math.inf(f64), @as(f64, 0.3)));
+
+    try std.testing.expectEqual(@as(f64, 0), bernoulliQuantile(@as(f64, 0), @as(f64, 0.3)));
+    try std.testing.expectEqual(@as(f64, 0), bernoulliQuantile(@as(f64, 0.69), @as(f64, 0.3)));
+    try std.testing.expectEqual(@as(f64, 0), bernoulliQuantile(@as(f64, 1) - @as(f64, 0.3), @as(f64, 0.3)));
+    try std.testing.expectEqual(@as(f64, 1), bernoulliQuantile(@as(f64, 0.71), @as(f64, 0.3)));
+    try std.testing.expectEqual(@as(f64, 1), bernoulliQuantile(@as(f64, 1), @as(f64, 0.3)));
+    try std.testing.expectEqual(@as(f64, 0), bernoulliQuantile(@as(f64, 1), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 1), bernoulliQuantile(@as(f64, 0.5), @as(f64, 1)));
+
+    try std.testing.expect(std.math.isNan(bernoulliCdf(@as(f64, 0), @as(f64, 1.5))));
+    try std.testing.expect(std.math.isNan(bernoulliQuantile(@as(f64, 1.5), @as(f64, 0.3))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.7), bernoulliCdf(@as(f32, 0), @as(f32, 0.3)), 1e-6);
+
+    const b = try Bernoulli.init(0.3);
+    try std.testing.expectApproxEqAbs(b.cdf(0), 1 - b.probability(), 0);
+    try std.testing.expectEqual(@as(f64, 0), b.quantile(0.5));
+    try std.testing.expectEqual(@as(f64, 1), b.quantile(0.9));
 }
 
 test "poissonQuantile returns the smallest covering count" {
