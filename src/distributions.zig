@@ -893,6 +893,7 @@ pub const GaussianCopulaError = Error;
 pub const StudentTCopulaError = Error;
 pub const MatrixNormalError = Error;
 pub const MatrixTError = Error;
+pub const MatrixVonMisesFisherError = Error;
 
 /// Von Mises-Fisher distribution error set.
 pub const VonMisesFisherError = error{
@@ -1015,6 +1016,10 @@ pub const multi = struct {
 
     pub fn StaticMatrixT(comptime T: type, comptime rows: usize, comptime cols: usize) type {
         return distributions_module.StaticMatrixT(T, rows, cols);
+    }
+
+    pub fn MatrixVonMisesFisher(comptime T: type) type {
+        return distributions_module.MatrixVonMisesFisher(T);
     }
 };
 
@@ -30868,6 +30873,407 @@ pub fn StaticMatrixT(comptime T: type, comptime rows: usize, comptime cols: usiz
     };
 }
 
+// ============================================================================
+// Matrix von Mises-Fisher (matrix Langevin) distribution on the Stiefel manifold
+// ============================================================================
+//
+// The matrix Langevin distribution L(F) on the Stiefel manifold V_{k,p}
+// (p×k matrices X with XᵀX = I_k) has density
+//
+//     f(X) ∝ etr(FᵀX) = exp(tr(FᵀX)).
+//
+// Exact independent sampling for k ≥ 2 is substantially harder than the
+// vector vMF case. This implementation uses the standard Gibbs sampler
+// (Hoff 2009): each column x_j is updated from its exact conditional
+// distribution, which is a von Mises-Fisher distribution on the orthogonal
+// complement of the other columns. The chain is irreducible and leaves the
+// matrix Langevin distribution invariant, so after burn-in and thinning the
+// draws are approximate (correlated) samples from L(F).
+
+/// Orthonormalize a row-major p×k matrix in place using modified Gram-Schmidt.
+fn matrixVmfOrthonormalize(comptime T: type, x: []T, rows: usize, cols: usize) bool {
+    const tol: T = if (T == f32) @floatCast(1e-5) else @floatCast(1e-10);
+    var j: usize = 0;
+    while (j < cols) : (j += 1) {
+        var l: usize = 0;
+        while (l < j) : (l += 1) {
+            var dot: T = 0;
+            var m: usize = 0;
+            while (m < rows) : (m += 1) dot += x[m * cols + l] * x[m * cols + j];
+            var i: usize = 0;
+            while (i < rows) : (i += 1) x[i * cols + j] -= dot * x[i * cols + l];
+        }
+        var norm_sq: T = 0;
+        var i: usize = 0;
+        while (i < rows) : (i += 1) {
+            const value = x[i * cols + j];
+            norm_sq += value * value;
+        }
+        if (!(norm_sq > tol)) return false;
+        const inv = 1 / @sqrt(norm_sq);
+        i = 0;
+        while (i < rows) : (i += 1) x[i * cols + j] *= inv;
+    }
+    return true;
+}
+
+fn matrixVmfInitUniform(source: anytype, comptime T: type, x: []T, rows: usize, cols: usize) void {
+    while (true) {
+        for (x) |*value| value.* = standardNormalFrom(source, T);
+        if (matrixVmfOrthonormalize(T, x, rows, cols)) return;
+    }
+}
+
+/// Fill `q` (p×d, row-major) with an orthonormal basis of the orthogonal
+/// complement of all columns of `x` except column `skip`.
+fn matrixVmfComplement(comptime T: type, x: []const T, rows: usize, cols: usize, skip: usize, q: []T, d: usize, scratch: []T) void {
+    const tol: T = if (T == f32) @floatCast(1e-5) else @floatCast(1e-10);
+    var count: usize = 0;
+    var candidate: usize = 0;
+    while (candidate < rows and count < d) : (candidate += 1) {
+        var i: usize = 0;
+        while (i < rows) : (i += 1) scratch[i] = 0;
+        scratch[candidate] = 1;
+
+        var l: usize = 0;
+        while (l < cols) : (l += 1) {
+            if (l == skip) continue;
+            var dot: T = 0;
+            i = 0;
+            while (i < rows) : (i += 1) dot += x[i * cols + l] * scratch[i];
+            i = 0;
+            while (i < rows) : (i += 1) scratch[i] -= dot * x[i * cols + l];
+        }
+
+        var qcol: usize = 0;
+        while (qcol < count) : (qcol += 1) {
+            var dot: T = 0;
+            i = 0;
+            while (i < rows) : (i += 1) dot += q[i * d + qcol] * scratch[i];
+            i = 0;
+            while (i < rows) : (i += 1) scratch[i] -= dot * q[i * d + qcol];
+        }
+
+        var norm_sq: T = 0;
+        i = 0;
+        while (i < rows) : (i += 1) {
+            const value = scratch[i];
+            norm_sq += value * value;
+        }
+        if (!(norm_sq > tol)) continue;
+        const inv = 1 / @sqrt(norm_sq);
+        i = 0;
+        while (i < rows) : (i += 1) q[i * d + count] = scratch[i] * inv;
+        count += 1;
+    }
+    while (count < d) : (count += 1) {
+        var i: usize = 0;
+        while (i < rows) : (i += 1) q[i * d + count] = 0;
+    }
+    std.debug.assert(count == d);
+}
+
+/// Uniform point on the runtime-dimension sphere S^{dim-1}.
+fn runtimeUnitSphereFrom(source: anytype, comptime T: type, dim: usize, out: []T) void {
+    while (true) {
+        var norm_sq: T = 0;
+        var i: usize = 0;
+        while (i < dim) : (i += 1) {
+            const value = standardNormalFrom(source, T);
+            out[i] = value;
+            norm_sq += value * value;
+        }
+        if (norm_sq > 1e-20 and std.math.isFinite(norm_sq)) {
+            const inv = 1 / @sqrt(norm_sq);
+            i = 0;
+            while (i < dim) : (i += 1) out[i] *= inv;
+            return;
+        }
+    }
+}
+
+/// Runtime-dimension von Mises-Fisher sample on S^{dim-1}.
+fn runtimeVonMisesFisherInto(source: anytype, comptime T: type, dim: usize, mean_dir: []const T, kappa: T, out: []T, scratch: []T) void {
+    if (dim == 1) {
+        const p_plus = 1 / (1 + @exp(-2 * kappa));
+        const u = Rng.floatOpenFrom(source, T);
+        out[0] = if (u < p_plus) mean_dir[0] else -mean_dir[0];
+        return;
+    }
+    if (kappa == 0) {
+        runtimeUnitSphereFrom(source, T, dim, out);
+        return;
+    }
+    if (kappa > 1e12) {
+        var i: usize = 0;
+        while (i < dim) : (i += 1) out[i] = mean_dir[i];
+        return;
+    }
+
+    const w = vmfSampleWFrom(source, T, kappa, dim);
+    runtimeUnitSphereFrom(source, T, dim - 1, out[0 .. dim - 1]);
+    const s = @sqrt(@max(0, 1 - w * w));
+    var i: usize = dim - 1;
+    while (i > 0) : (i -= 1) out[i] = s * out[i - 1];
+    out[0] = w;
+
+    const mu0 = mean_dir[0];
+    const tol: T = if (T == f32) @floatCast(1e-5) else @floatCast(1e-12);
+    if (@abs(mu0 - 1) < tol) return;
+    if (@abs(mu0 + 1) < tol) {
+        out[0] = -out[0];
+        return;
+    }
+    var vv: T = 0;
+    var vx: T = 0;
+    scratch[0] = 1 - mu0;
+    vv = scratch[0] * scratch[0];
+    vx = scratch[0] * out[0];
+    i = 1;
+    while (i < dim) : (i += 1) {
+        scratch[i] = -mean_dir[i];
+        vv += scratch[i] * scratch[i];
+        vx += scratch[i] * out[i];
+    }
+    const factor = 2 * vx / vv;
+    i = 0;
+    while (i < dim) : (i += 1) out[i] -= factor * scratch[i];
+}
+
+fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows: usize, cols: usize, q: []T, g: []T, scratch: []T, h: []T, z: []T, d: usize) void {
+    const tol: T = if (T == f32) @floatCast(1e-5) else @floatCast(1e-10);
+    var j: usize = 0;
+    while (j < cols) : (j += 1) {
+        matrixVmfComplement(T, x, rows, cols, j, q, d, scratch[0..rows]);
+
+        var i: usize = 0;
+        while (i < rows) : (i += 1) g[i] = f[i * cols + j];
+        var l: usize = 0;
+        while (l < cols) : (l += 1) {
+            if (l == j) continue;
+            var dot: T = 0;
+            i = 0;
+            while (i < rows) : (i += 1) dot += x[i * cols + l] * f[i * cols + j];
+            i = 0;
+            while (i < rows) : (i += 1) g[i] -= dot * x[i * cols + l];
+        }
+
+        var a: usize = 0;
+        while (a < d) : (a += 1) {
+            var dot: T = 0;
+            i = 0;
+            while (i < rows) : (i += 1) dot += q[i * d + a] * g[i];
+            h[a] = dot;
+        }
+        var norm_sq: T = 0;
+        a = 0;
+        while (a < d) : (a += 1) norm_sq += h[a] * h[a];
+
+        if (norm_sq > tol) {
+            const norm = @sqrt(norm_sq);
+            a = 0;
+            while (a < d) : (a += 1) h[a] /= norm;
+            runtimeVonMisesFisherInto(source, T, d, h[0..d], norm, z[0..d], scratch[0..d]);
+        } else {
+            runtimeUnitSphereFrom(source, T, d, z[0..d]);
+        }
+
+        i = 0;
+        while (i < rows) : (i += 1) {
+            var value: T = 0;
+            a = 0;
+            while (a < d) : (a += 1) value += q[i * d + a] * z[a];
+            x[i * cols + j] = value;
+        }
+    }
+    if (!matrixVmfOrthonormalize(T, x, rows, cols)) {
+        matrixVmfInitUniform(source, T, x, rows, cols);
+    }
+}
+
+/// Matrix von Mises-Fisher (matrix Langevin) distribution on the Stiefel
+/// manifold V_{k,p}: p×k matrices with orthonormal columns and density
+/// `exp(tr(FᵀX))`.
+///
+/// Sampling uses a Gibbs sampler whose per-column conditional distributions
+/// are exact von Mises-Fisher draws on the orthogonal complement of the other
+/// columns. Draws are approximate (correlated) samples from the stationary
+/// distribution; `initWithOptions` controls burn-in and thinning.
+///
+/// Requires `p > k`. Square orthogonal matrices (`p = k`) make the conditional
+/// complement one-dimensional and the fixed-sweep chain periodic, so they are
+/// rejected rather than sampled incorrectly.
+pub fn MatrixVonMisesFisher(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        allocator: std.mem.Allocator,
+        rows: usize,
+        cols: usize,
+        burnin: usize,
+        thin: usize,
+        f: []T,
+        x: []T,
+        q: []T,
+        g: []T,
+        scratch: []T,
+        h: []T,
+        z: []T,
+        initialized: bool,
+
+        /// Construct with default burn-in (100 sweeps) and thinning (10 sweeps).
+        pub fn init(allocator: std.mem.Allocator, parameter: []const T, rows: usize, cols: usize) !Self {
+            return initWithOptions(allocator, parameter, rows, cols, 100, 10);
+        }
+
+        /// Construct with explicit burn-in and thinning sweep counts.
+        pub fn initWithOptions(allocator: std.mem.Allocator, parameter: []const T, rows: usize, cols: usize, burnin: usize, thin: usize) !Self {
+            comptime requireFloat(T);
+            if (rows == 0 or cols == 0 or cols >= rows) return error.InvalidParameter;
+            if (thin == 0) return error.InvalidParameter;
+            const total = std.math.mul(usize, rows, cols) catch return error.InvalidParameter;
+            if (parameter.len != total) return error.InvalidLength;
+            for (parameter) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidParameter;
+            }
+            const d = rows - cols + 1;
+            const q_len = std.math.mul(usize, rows, d) catch return error.InvalidParameter;
+
+            const f = try allocator.alloc(T, total);
+            errdefer allocator.free(f);
+            const x = try allocator.alloc(T, total);
+            errdefer allocator.free(x);
+            const q = try allocator.alloc(T, q_len);
+            errdefer allocator.free(q);
+            const g = try allocator.alloc(T, rows);
+            errdefer allocator.free(g);
+            const scratch = try allocator.alloc(T, @max(rows, d));
+            errdefer allocator.free(scratch);
+            const h = try allocator.alloc(T, d);
+            errdefer allocator.free(h);
+            const z = try allocator.alloc(T, d);
+            errdefer allocator.free(z);
+
+            @memcpy(f, parameter);
+            @memset(x, 0);
+            return Self{
+                .allocator = allocator,
+                .rows = rows,
+                .cols = cols,
+                .burnin = burnin,
+                .thin = thin,
+                .f = f,
+                .x = x,
+                .q = q,
+                .g = g,
+                .scratch = scratch,
+                .h = h,
+                .z = z,
+                .initialized = false,
+            };
+        }
+
+        /// Debug-only constructor: panics on invalid parameters.
+        pub fn new(allocator: std.mem.Allocator, parameter: []const T, rows: usize, cols: usize) Self {
+            return Self.init(allocator, parameter, rows, cols) catch |e| {
+                std.debug.panic("MatrixVonMisesFisher.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.allocator.free(self.f);
+            self.allocator.free(self.x);
+            self.allocator.free(self.q);
+            self.allocator.free(self.g);
+            self.allocator.free(self.scratch);
+            self.allocator.free(self.h);
+            self.allocator.free(self.z);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self) !Self {
+            var copy = try Self.initWithOptions(self.allocator, self.f, self.rows, self.cols, self.burnin, self.thin);
+            @memcpy(copy.x, self.x);
+            copy.initialized = self.initialized;
+            return copy;
+        }
+
+        pub fn rowsValue(self: Self) usize {
+            return self.rows;
+        }
+
+        pub fn colsValue(self: Self) usize {
+            return self.cols;
+        }
+
+        pub fn burninValue(self: Self) usize {
+            return self.burnin;
+        }
+
+        pub fn thinValue(self: Self) usize {
+            return self.thin;
+        }
+
+        pub fn parameterAt(self: Self, row: usize, col: usize) T {
+            std.debug.assert(row < self.rows and col < self.cols);
+            return self.f[row * self.cols + col];
+        }
+
+        fn ensureInitialized(self: *Self, source: anytype) void {
+            if (self.initialized) return;
+            matrixVmfInitUniform(source, T, self.x, self.rows, self.cols);
+            self.initialized = true;
+            self.advance(source, self.burnin);
+        }
+
+        fn advance(self: *Self, source: anytype, sweeps: usize) void {
+            const d = self.rows - self.cols + 1;
+            var i: usize = 0;
+            while (i < sweeps) : (i += 1) {
+                matrixVmfSweep(source, T, self.f, self.x, self.rows, self.cols, self.q, self.g, self.scratch, self.h, self.z, d);
+            }
+        }
+
+        pub fn sampleIntoFrom(self: *Self, source: anytype, out: []T) !void {
+            if (out.len != self.rows * self.cols) return error.InvalidLength;
+            self.ensureInitialized(source);
+            self.advance(source, self.thin);
+            @memcpy(out, self.x);
+        }
+
+        pub fn sampleInto(self: *Self, rng: Rng, out: []T) !void {
+            return self.sampleIntoFrom(rng, out);
+        }
+
+        pub fn sampleManyIntoFrom(self: *Self, source: anytype, out: [][]T) !void {
+            for (out) |item| {
+                if (item.len != self.rows * self.cols) return error.InvalidLength;
+            }
+            self.ensureInitialized(source);
+            for (out) |item| {
+                self.advance(source, self.thin);
+                @memcpy(item, self.x);
+            }
+        }
+
+        pub fn sampleManyInto(self: *Self, rng: Rng, out: [][]T) !void {
+            return self.sampleManyIntoFrom(rng, out);
+        }
+
+        pub fn sampleFrom(self: *Self, source: anytype) ![]T {
+            const out = try self.allocator.alloc(T, self.rows * self.cols);
+            errdefer self.allocator.free(out);
+            try self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sample(self: *Self, rng: Rng) ![]T {
+            return self.sampleFrom(rng);
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -52876,6 +53282,154 @@ test "StaticMatrixT sampling, variance, batches, and f32 work" {
     const f32_sample = f32_dist.sample(rng);
     for (0..2) |r| {
         for (0..2) |c| try std.testing.expect(std.math.isFinite(f32_sample[r][c]));
+    }
+}
+
+test "MatrixVonMisesFisher constructor validates parameters" {
+    const allocator = std.testing.allocator;
+    const parameter = [_]f64{ 1, 2, 3, 4, 5, 6 };
+    try std.testing.expectError(error.InvalidParameter, MatrixVonMisesFisher(f64).init(allocator, &parameter, 2, 3));
+    try std.testing.expectError(error.InvalidParameter, MatrixVonMisesFisher(f64).init(allocator, &parameter, 2, 2));
+    try std.testing.expectError(error.InvalidParameter, MatrixVonMisesFisher(f64).init(allocator, &parameter, 0, 1));
+    try std.testing.expectError(error.InvalidLength, MatrixVonMisesFisher(f64).init(allocator, parameter[0..5], 3, 2));
+    try std.testing.expectError(error.InvalidParameter, MatrixVonMisesFisher(f64).initWithOptions(allocator, &parameter, 3, 2, 10, 0));
+    const bad = [_]f64{ 1, std.math.nan(f64), 3, 4, 5, 6 };
+    try std.testing.expectError(error.InvalidParameter, MatrixVonMisesFisher(f64).init(allocator, &bad, 3, 2));
+}
+
+test "MatrixVonMisesFisher k=1 reduces to the vector von Mises-Fisher" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x2a01);
+    const rng = Rng.init(&engine);
+
+    const mu = [3]f64{ 0, 0, 1 };
+    const kappa: f64 = 5;
+    const parameter = [3]f64{ 0, 0, kappa };
+    var dist = try MatrixVonMisesFisher(f64).initWithOptions(allocator, &parameter, 3, 1, 0, 1);
+    defer dist.deinit();
+
+    const vmf = try VonMisesFisher(f64, 3).init(mu, kappa);
+    const rho = vmf.meanResultantLength();
+    const expected = [3]f64{ rho * mu[0], rho * mu[1], rho * mu[2] };
+    const count = 20_000;
+    var sums = [_]f64{0} ** 3;
+    var out: [3]f64 = undefined;
+    for (0..count) |_| {
+        try dist.sampleInto(rng, &out);
+        inline for (0..3) |i| sums[i] += out[i];
+    }
+    const nf: f64 = @floatFromInt(count);
+    inline for (0..3) |i| {
+        try std.testing.expectApproxEqAbs(expected[i], sums[i] / nf, 0.02);
+    }
+}
+
+test "MatrixVonMisesFisher zero second column leaves the first vMF" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x2a02);
+    const rng = Rng.init(&engine);
+
+    const kappa: f64 = 5;
+    // Row-major 3x2: column 0 = [0, 0, 5], column 1 = 0.
+    const f = [6]f64{ 0, 0, 0, 0, kappa, 0 };
+    var dist = try MatrixVonMisesFisher(f64).initWithOptions(allocator, &f, 3, 2, 100, 10);
+    defer dist.deinit();
+
+    const vmf = try VonMisesFisher(f64, 3).init(.{ 0, 0, 1 }, kappa);
+    const rho = vmf.meanResultantLength();
+    const count = 20_000;
+    var sums_col0 = [_]f64{0} ** 3;
+    var sums_col1 = [_]f64{0} ** 3;
+    var out: [6]f64 = undefined;
+    for (0..count) |_| {
+        try dist.sampleInto(rng, &out);
+        inline for (0..3) |i| {
+            sums_col0[i] += out[i * 2];
+            sums_col1[i] += out[i * 2 + 1];
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col0[0] / nf, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col0[1] / nf, 0.03);
+    try std.testing.expectApproxEqAbs(rho, sums_col0[2] / nf, 0.03);
+    inline for (0..3) |i| {
+        try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col1[i] / nf, 0.03);
+    }
+}
+
+test "MatrixVonMisesFisher samples are orthonormal and batches work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x2a03);
+    const rng = Rng.init(&engine);
+
+    const f = [6]f64{ 1, 0.2, 0.3, -0.4, 0.5, 0.1 };
+    var dist = try MatrixVonMisesFisher(f64).initWithOptions(allocator, &f, 3, 2, 50, 5);
+    defer dist.deinit();
+
+    var out: [6]f64 = undefined;
+    for (0..200) |_| {
+        try dist.sampleInto(rng, &out);
+        var dot00: f64 = 0;
+        var dot11: f64 = 0;
+        var dot01: f64 = 0;
+        inline for (0..3) |i| {
+            dot00 += out[i * 2] * out[i * 2];
+            dot11 += out[i * 2 + 1] * out[i * 2 + 1];
+            dot01 += out[i * 2] * out[i * 2 + 1];
+        }
+        try std.testing.expectApproxEqAbs(@as(f64, 1), dot00, 1e-9);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), dot11, 1e-9);
+        try std.testing.expectApproxEqAbs(@as(f64, 0), dot01, 1e-9);
+    }
+
+    var batch: [4][6]f64 = undefined;
+    var batch_slices: [4][]f64 = undefined;
+    for (&batch, 0..) |*item, i| batch_slices[i] = item;
+    try dist.sampleManyInto(rng, batch_slices[0..]);
+    for (batch) |item| {
+        var norm_sq: f64 = 0;
+        inline for (0..6) |i| norm_sq += item[i] * item[i];
+        try std.testing.expect(std.math.isFinite(norm_sq));
+    }
+}
+
+test "MatrixVonMisesFisher clone and f32 work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    const f = [6]f64{ 0.5, 0.2, -0.1, 0.9, 0.3, -0.4 };
+    var dist = try MatrixVonMisesFisher(f64).initWithOptions(allocator, &f, 3, 2, 20, 2);
+    defer dist.deinit();
+
+    var warmup: [6]f64 = undefined;
+    var engine0 = alea.DefaultPrng.init(0x2a04);
+    try dist.sampleInto(Rng.init(&engine0), &warmup);
+
+    var copy = try dist.clone();
+    defer copy.deinit();
+
+    var engine_a = alea.DefaultPrng.init(0x2a05);
+    var engine_b = alea.DefaultPrng.init(0x2a05);
+    const rng_a = Rng.init(&engine_a);
+    const rng_b = Rng.init(&engine_b);
+    var a: [6]f64 = undefined;
+    var b: [6]f64 = undefined;
+    for (0..8) |_| {
+        try dist.sampleInto(rng_a, &a);
+        try copy.sampleInto(rng_b, &b);
+        try std.testing.expectEqualSlices(f64, &a, &b);
+    }
+
+    const f32_param = [6]f32{ 0.5, 0.2, -0.1, 0.9, 0.3, -0.4 };
+    var dist32 = try MatrixVonMisesFisher(f32).initWithOptions(allocator, &f32_param, 3, 2, 10, 2);
+    defer dist32.deinit();
+    var engine32 = alea.DefaultPrng.init(0x2a06);
+    var out32: [6]f32 = undefined;
+    for (0..16) |_| {
+        try dist32.sampleInto(Rng.init(&engine32), &out32);
+        for (out32) |value| try std.testing.expect(std.math.isFinite(value));
     }
 }
 

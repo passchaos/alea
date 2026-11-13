@@ -3423,6 +3423,7 @@ Reusable samplers:
 - `InverseWishartError`
 - `MatrixNormalError`
 - `MatrixTError`
+- `MatrixVonMisesFisherError`
 - `Wishart(T)`
 - `Wishart(T).init`
 - `Wishart(T).new`
@@ -3573,6 +3574,24 @@ Reusable samplers:
 - `StaticMatrixT(T, rows, cols).sampleIntoFrom`
 - `StaticMatrixT(T, rows, cols).sampleManyInto`
 - `StaticMatrixT(T, rows, cols).sampleManyIntoFrom`
+- `MatrixVonMisesFisher(T)`
+- `multi.MatrixVonMisesFisher(T)`
+- `MatrixVonMisesFisher(T).init`
+- `MatrixVonMisesFisher(T).initWithOptions`
+- `MatrixVonMisesFisher(T).new`
+- `MatrixVonMisesFisher(T).deinit`
+- `MatrixVonMisesFisher(T).clone`
+- `MatrixVonMisesFisher(T).rowsValue`
+- `MatrixVonMisesFisher(T).colsValue`
+- `MatrixVonMisesFisher(T).burninValue`
+- `MatrixVonMisesFisher(T).thinValue`
+- `MatrixVonMisesFisher(T).parameterAt`
+- `MatrixVonMisesFisher(T).sample`
+- `MatrixVonMisesFisher(T).sampleFrom`
+- `MatrixVonMisesFisher(T).sampleInto`
+- `MatrixVonMisesFisher(T).sampleIntoFrom`
+- `MatrixVonMisesFisher(T).sampleManyInto`
+- `MatrixVonMisesFisher(T).sampleManyIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`
