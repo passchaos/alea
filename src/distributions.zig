@@ -961,6 +961,10 @@ pub const multi = struct {
         return distributions_module.MultivariateNormal(T);
     }
 
+    pub fn MultivariateT(comptime T: type) type {
+        return distributions_module.MultivariateT(T);
+    }
+
     pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) type {
         return distributions_module.StaticMultivariateNormal(T, dimension);
     }
@@ -27063,6 +27067,169 @@ pub fn MultivariateNormal(comptime T: type) type {
     };
 }
 
+/// Allocator-backed multivariate Student-t distribution.
+///
+/// Sampling uses `z ~ N(0, Σ)` followed by `x = μ + z / √(s/ν)` with a shared
+/// `s ~ χ²(ν)`, which produces heavier joint tails than `MultivariateNormal`.
+/// `ν → ∞` recovers the multivariate normal. The type reuses
+/// `MultivariateNormal(T)` for covariance validation, Cholesky factoring, and
+/// allocation-free `sampleInto` sampling.
+pub fn MultivariateT(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mvn: MultivariateNormal(T),
+        df: T,
+        allocator: std.mem.Allocator,
+
+        pub fn init(
+            allocator: std.mem.Allocator,
+            mean: []const T,
+            covariance: []const T,
+            degrees_of_freedom: T,
+        ) !Self {
+            if (!(degrees_of_freedom > 0) or !std.math.isFinite(degrees_of_freedom)) return error.InvalidParameter;
+            var mvn = try MultivariateNormal(T).init(allocator, mean, covariance);
+            errdefer mvn.deinit();
+            return .{
+                .mvn = mvn,
+                .df = degrees_of_freedom,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(
+            allocator: std.mem.Allocator,
+            mean: []const T,
+            covariance: []const T,
+            degrees_of_freedom: T,
+        ) !Self {
+            return Self.init(allocator, mean, covariance, degrees_of_freedom);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.mvn.deinit();
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            var mvn = try self.mvn.clone(allocator);
+            errdefer mvn.deinit();
+            return .{
+                .mvn = mvn,
+                .df = self.df,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn dimensionValue(self: Self) usize {
+            return self.mvn.dimensionValue();
+        }
+
+        pub fn rankValue(self: Self) usize {
+            return self.mvn.rankValue();
+        }
+
+        pub fn isDegenerate(self: Self) bool {
+            return self.mvn.isDegenerate();
+        }
+
+        pub fn degreesOfFreedomValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn dfValue(self: Self) T {
+            return self.df;
+        }
+
+        pub fn meanValues(self: Self) []const T {
+            return self.mvn.meanValues();
+        }
+
+        pub fn meanAt(self: Self, index: usize) Error!T {
+            return self.mvn.meanAt(index);
+        }
+
+        /// Scale matrix entry Σ[row, col] (the input covariance).
+        pub fn scaleAt(self: Self, row: usize, col: usize) Error!T {
+            return self.mvn.covarianceAt(row, col);
+        }
+
+        /// Actual variance Σ[i,i]·ν/(ν−2), or null for ν ≤ 2.
+        pub fn varianceAt(self: Self, index: usize) Error!?T {
+            if (self.df <= 2) return null;
+            const scale = try self.mvn.varianceAt(index);
+            return scale * self.df / (self.df - 2);
+        }
+
+        /// Actual covariance Σ[row,col]·ν/(ν−2), or null for ν ≤ 2.
+        pub fn covarianceAt(self: Self, row: usize, col: usize) Error!?T {
+            if (self.df <= 2) return null;
+            const scale = try self.mvn.covarianceAt(row, col);
+            return scale * self.df / (self.df - 2);
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.dimensionValue());
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.dimensionValue());
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.dimensionValue()) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(rng, out[offset..][0..dimension]);
+            }
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            const dimension = self.dimensionValue();
+            std.debug.assert(out.len % dimension == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += dimension) {
+                self.sampleIntoUnchecked(source, out[offset..][0..dimension]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            self.mvn.sampleIntoFrom(source, out);
+            const scale = @sqrt(chiSquaredFrom(source, T, self.df) / self.df);
+            const means = self.mvn.meanValues();
+            for (out, means) |*value, mean| value.* = mean + (value.* - mean) / scale;
+        }
+    };
+}
+
 /// Fixed-dimension, allocation-free multivariate normal sampler.
 ///
 /// Use this shape when the dimension is known at compile time. Construction
@@ -50567,6 +50734,113 @@ test "VectorBetaBinomial samples, accessors, and lane parity work" {
     inline for (0..4) |lane| {
         try std.testing.expectEqual(scalar_dist.sampleFrom(&scalar_engine), vec_sample[lane]);
     }
+}
+
+test "MultivariateT constructor, moments, and sampling work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7d01);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{ 1, -2, 0.5 };
+    const covariance = [_]f64{
+        1.0,  0.6, -0.2,
+        0.6,  2.0, 0.3,
+        -0.2, 0.3, 0.5,
+    };
+    try std.testing.expectError(error.InvalidParameter, MultivariateT(f64).init(allocator, &mean, &covariance, 0));
+    try std.testing.expectError(error.InvalidParameter, MultivariateT(f64).init(allocator, &mean, &covariance, std.math.nan(f64)));
+
+    var dist = try MultivariateT(f64).init(allocator, &mean, &covariance, 5);
+    defer dist.deinit();
+    try std.testing.expectEqual(@as(usize, 3), dist.dimensionValue());
+    try std.testing.expectApproxEqAbs(@as(f64, 5), dist.dfValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.scaleAt(0, 0), 1e-12);
+    const variance = try dist.varianceAt(0);
+    try std.testing.expect(variance != null);
+    try std.testing.expectApproxEqAbs(@as(f64, 5.0 / 3.0), variance.?, 1e-12);
+
+    const count = 20_000;
+    var sums = [_]f64{0} ** 3;
+    var sums_sq = [_]f64{0} ** 3;
+    var out: [3]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        for (0..3) |i| {
+            sums[i] += out[i];
+            sums_sq[i] += out[i] * out[i];
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    for (0..3) |i| {
+        const observed_mean = sums[i] / nf;
+        try std.testing.expectApproxEqAbs(mean[i], observed_mean, 0.06);
+        const expected_variance = covariance[i * 3 + i] * 5.0 / 3.0;
+        try std.testing.expectApproxEqAbs(expected_variance, sums_sq[i] / nf - observed_mean * observed_mean, 0.25);
+    }
+
+    var infinite = try MultivariateT(f64).init(allocator, &mean, &covariance, 2);
+    defer infinite.deinit();
+    try std.testing.expect(try infinite.varianceAt(0) == null);
+}
+
+test "MultivariateT matches manual multivariate-normal plus chi-squared composition" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var t_engine = alea.DefaultPrng.init(0x7d02);
+    var manual_engine = alea.DefaultPrng.init(0x7d02);
+    const t_rng = Rng.init(&t_engine);
+
+    const mean = [_]f64{ 1, -2 };
+    const covariance = [_]f64{ 1, 0.5, 0.5, 2 };
+    var dist = try MultivariateT(f64).init(allocator, &mean, &covariance, 5);
+    defer dist.deinit();
+    var mvn = try MultivariateNormal(f64).init(allocator, &mean, &covariance);
+    defer mvn.deinit();
+
+    var t_buf: [2]f64 = undefined;
+    var manual_buf: [2]f64 = undefined;
+    for (0..16) |_| {
+        dist.sampleInto(t_rng, &t_buf);
+        mvn.sampleIntoFrom(&manual_engine, &manual_buf);
+        const scale = @sqrt(chiSquaredFrom(&manual_engine, f64, 5) / 5);
+        for (0..2) |i| manual_buf[i] = mean[i] + (manual_buf[i] - mean[i]) / scale;
+        try std.testing.expectEqualSlices(f64, &t_buf, &manual_buf);
+    }
+}
+
+test "MultivariateT clone, caller buffers, batches, and f32 work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7d03);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{ 0, 0 };
+    const covariance = [_]f64{ 1, 0.2, 0.2, 1 };
+    var dist = try MultivariateT(f64).init(allocator, &mean, &covariance, 6);
+    defer dist.deinit();
+
+    var clone = try dist.clone(allocator);
+    defer clone.deinit();
+
+    var out: [2]f64 = undefined;
+    try dist.sampleIntoChecked(rng, &out);
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, out[0..1]));
+
+    var batch: [6]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+
+    const allocated = try dist.sample(allocator, rng);
+    defer allocator.free(allocated);
+    try std.testing.expectEqual(@as(usize, 2), allocated.len);
+
+    const f32_mean = [_]f32{ 0, 0 };
+    const f32_cov = [_]f32{ 1, 0.2, 0.2, 1 };
+    var f32_dist = try MultivariateT(f32).init(allocator, &f32_mean, &f32_cov, 5);
+    defer f32_dist.deinit();
+    var f32_out: [2]f32 = undefined;
+    f32_dist.sampleInto(rng, &f32_out);
+    for (f32_out) |value| try std.testing.expect(std.math.isFinite(value));
 }
 
 test "StudentTCopula constructor validates parameters" {
