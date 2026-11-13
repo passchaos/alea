@@ -1695,6 +1695,98 @@ fn checkLongRun(samples: usize) !void {
         try expectFloatBetween("long vector vmf mean", sum_z / lane_nf, expected - 0.003, expected + 0.003);
     }
 
+    // Scalar Watson bipolar and girdle mean cosine-squared moments.
+    {
+        var engine = alea.FastPrng.init(0x10d2);
+        const rng = alea.Rng.init(&engine);
+        const bipolar = try alea.distributions.Watson(f64, 3).init(.{ 0, 0, 1 }, 5);
+        const girdle = try alea.distributions.Watson(f64, 3).init(.{ 0, 0, 1 }, -3);
+        const bipolar_expected = bipolar.meanCosineSquared();
+        const girdle_expected = girdle.meanCosineSquared();
+        var bipolar_sum: f64 = 0;
+        var girdle_sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const p = bipolar.sample(rng);
+            bipolar_sum += p[2] * p[2];
+            const q = girdle.sample(rng);
+            girdle_sum += q[2] * q[2];
+        }
+        try expectFloatBetween("long watson bipolar mean cos2", bipolar_sum / nf, bipolar_expected - 0.003, bipolar_expected + 0.003);
+        try expectFloatBetween("long watson girdle mean cos2", girdle_sum / nf, girdle_expected - 0.003, girdle_expected + 0.003);
+    }
+
+    // SIMD Watson lane mean cosine-squared moment.
+    {
+        var engine = alea.FastPrng.init(0x10d3);
+        const rng = alea.Rng.init(&engine);
+        const V = @Vector(4, f64);
+        const kappa: f64 = 5;
+        const dist = try alea.distributions.VectorWatson(V).init(.{ 0, 0, 1 }, kappa);
+        const scalar = try alea.distributions.Watson(f64, 3).init(.{ 0, 0, 1 }, kappa);
+        const expected = scalar.meanCosineSquared();
+        const vector_count = samples / 4;
+        var sum_z2: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| sum_z2 += point[2][lane] * point[2][lane];
+        }
+        const lane_nf: f64 = @floatFromInt(vector_count * 4);
+        try expectFloatBetween("long vector watson mean cos2", sum_z2 / lane_nf, expected - 0.003, expected + 0.003);
+    }
+
+    // SIMD Bingham lane axial moment.
+    {
+        var engine = alea.FastPrng.init(0x10d4);
+        const rng = alea.Rng.init(&engine);
+        const V = @Vector(4, f64);
+        const matrix = [3][3]f64{
+            .{ 0, 0, 0 },
+            .{ 0, -5, 0 },
+            .{ 0, 0, -5 },
+        };
+        const dist = try alea.distributions.VectorBingham(V).init(matrix);
+        const steps: usize = 20_000;
+        var num: f64 = 0;
+        var den: f64 = 0;
+        var j: usize = 0;
+        while (j < steps) : (j += 1) {
+            const w = -1 + 2 * (@as(f64, @floatFromInt(j)) + 0.5) / @as(f64, @floatFromInt(steps));
+            const weight = @exp(5 * w * w);
+            num += w * w * weight;
+            den += weight;
+        }
+        const expected = num / den;
+        const vector_count = samples / 4;
+        var sum_x0_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| sum_x0_sq += point[0][lane] * point[0][lane];
+        }
+        const lane_nf: f64 = @floatFromInt(vector_count * 4);
+        try expectFloatBetween("long vector bingham mean x0^2", sum_x0_sq / lane_nf, expected - 0.003, expected + 0.003);
+    }
+
+    // SIMD Kent lane mean-resultant recovery.
+    {
+        var engine = alea.FastPrng.init(0x10d5);
+        const rng = alea.Rng.init(&engine);
+        const V = @Vector(4, f64);
+        const dist = try alea.distributions.VectorKent(V).init(.{ 0, 0, 1 }, .{ 1, 0, 0 }, 5, 1.5);
+        const expected = dist.meanResultantLength();
+        const vector_count = samples / 4;
+        var sum_z: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| sum_z += point[2][lane];
+        }
+        const lane_nf: f64 = @floatFromInt(vector_count * 4);
+        try expectFloatBetween("long vector kent mean resultant", sum_z / lane_nf, expected - 0.003, expected + 0.003);
+    }
+
     // Gibbs matrix Langevin marginal moments.
     {
         var engine = alea.FastPrng.init(0x10d0);

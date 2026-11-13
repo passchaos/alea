@@ -8162,11 +8162,19 @@ pub fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
     }
 
     // Best & Fisher (1979) algorithm constants for rejection sampling.
-    // This algorithm works uniformly well across all kappa ≥ 0 without
-    // special-case branches for small or large concentration.
-    const tau = 1 + @sqrt(1 + 4 * kappa * kappa);
-    const rho = (tau - @sqrt(2 * tau)) / (2 * kappa);
+    // `rho` is rearranged as `2κτ / ((disc+1)(τ+√(2τ)))` because the direct
+    // `(τ − √(2τ))/(2κ)` form cancels to zero for tiny κ, making `r` infinite
+    // and the rejection test permanently false.
+    const disc = @sqrt(1 + 4 * kappa * kappa);
+    const tau = 1 + disc;
+    const rho = (2 * kappa * tau) / ((disc + 1) * (tau + @sqrt(2 * tau)));
     const r = (1 + rho * rho) / (2 * rho);
+    if (!(r > 0) or !std.math.isFinite(r)) {
+        // κ is below the representable Best–Fisher range; the density is
+        // uniform to within floating-point resolution.
+        const delta = (Rng.floatOpenClosedFrom(source, T) * 2 - 1) * pi;
+        return mu + delta;
+    }
 
     while (true) {
         const ua = Rng.floatOpenFrom(source, T);
@@ -8220,9 +8228,21 @@ fn vonMisesVectorFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
     }
     if (!@reduce(.Or, pending)) return result;
 
-    const tau = one + @sqrt(one + two * two * kappa * kappa);
-    const rho = (tau - @sqrt(two * tau)) / (two * kappa);
+    const disc = @sqrt(one + two * two * kappa * kappa);
+    const tau = one + disc;
+    // Cancellation-free rearrangement of `(τ − √(2τ))/(2κ)`; the direct form
+    // collapses to zero for tiny κ and makes `r` infinite.
+    const rho = (two * kappa * tau) / ((disc + one) * (tau + @sqrt(two * tau)));
     const r = (one + rho * rho) / (two * rho);
+    const max_float: V = @splat(std.math.floatMax(Child));
+    const invalid = ((r <= zero) | (r > max_float) | (r != r)) & pending;
+    if (@reduce(.Or, invalid)) {
+        const u = Rng.vectorOpenClosedFrom(source, V);
+        const uniform_value = mu + (u * two - one) * pi;
+        result = @select(Child, invalid, uniform_value, result);
+        pending = @select(bool, invalid, @as(B, @splat(false)), pending);
+        if (!@reduce(.Or, pending)) return result;
+    }
 
     var active = pending;
     while (@reduce(.Or, active)) {
@@ -32374,6 +32394,17 @@ fn runtimeVonMisesFisherInto(source: anytype, comptime T: type, dim: usize, mean
         while (i < dim) : (i += 1) out[i] = mean_dir[i];
         return;
     }
+    if (dim == 2) {
+        // The Wood cosine proposal is only exact for dim ≥ 3; S¹ is the
+        // circular von Mises distribution.
+        const pi_val = @as(T, @floatCast(std.math.pi));
+        const mu = std.math.atan2(mean_dir[1], mean_dir[0]);
+        const theta = vonMisesFrom(source, T, mu, kappa);
+        const angle = wrapAngle(theta, pi_val, 2 * pi_val);
+        out[0] = @cos(angle);
+        out[1] = @sin(angle);
+        return;
+    }
 
     const w = vmfSampleWFrom(source, T, kappa, dim);
     runtimeUnitSphereFrom(source, T, dim - 1, out[0 .. dim - 1]);
@@ -55381,11 +55412,11 @@ test "MatrixVonMisesFisher zero second column leaves the first vMF" {
         }
     }
     const nf: f64 = @floatFromInt(count);
-    try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col0[0] / nf, 0.03);
-    try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col0[1] / nf, 0.03);
-    try std.testing.expectApproxEqAbs(rho, sums_col0[2] / nf, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col0[0] / nf, 0.01);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col0[1] / nf, 0.01);
+    try std.testing.expectApproxEqAbs(rho, sums_col0[2] / nf, 0.01);
     inline for (0..3) |i| {
-        try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col1[i] / nf, 0.03);
+        try std.testing.expectApproxEqAbs(@as(f64, 0), sums_col1[i] / nf, 0.01);
     }
 }
 
@@ -58076,6 +58107,59 @@ test "VonMises kappa=0 produces uniform distribution on circle" {
         try std.testing.expect(count > 800);
         try std.testing.expect(count < 1200);
     }
+}
+
+test "VonMises tiny kappa stays finite instead of stalling" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead_beef);
+    const rng = Rng.init(&engine);
+    const pi = std.math.pi;
+
+    // kappa = 1e-8 previously cancelled the Best-Fisher `rho` to zero, making
+    // `r` infinite and the rejection test permanently false.
+    inline for ([_]f64{ 1e-8, 1e-12, 1e-100 }) |kappa| {
+        const vm = try VonMises(f64).new(0, kappa);
+        var sum_cos: f64 = 0;
+        var i: usize = 0;
+        while (i < 2000) : (i += 1) {
+            const x = vm.sample(rng);
+            try std.testing.expect(std.math.isFinite(x));
+            try std.testing.expect(x >= -pi and x <= pi);
+            sum_cos += @cos(x);
+        }
+        try std.testing.expect(@abs(sum_cos / 2000) < 0.06);
+    }
+
+    // The SIMD path must handle mixed per-lane tiny/zero kappa values.
+    const V = @Vector(4, f64);
+    const mixed_kappa = V{ 1e-8, 2.0, 0.0, 5.0 };
+    var i: usize = 0;
+    while (i < 500) : (i += 1) {
+        const x = vonMisesFrom(rng, V, @as(V, @splat(0)), mixed_kappa);
+        inline for (0..4) |lane| {
+            try std.testing.expect(std.math.isFinite(x[lane]));
+            try std.testing.expect(x[lane] >= -pi and x[lane] <= pi);
+        }
+    }
+}
+
+test "runtimeVonMisesFisherInto dim2 matches the circular von Mises" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x77a2);
+    const rng = Rng.init(&engine);
+    const kappa: f64 = 5;
+    const expected = besselI1Ratio(kappa);
+    var out: [2]f64 = undefined;
+    var scratch: [2]f64 = undefined;
+    var sum: f64 = 0;
+    const count = 20_000;
+    for (0..count) |_| {
+        runtimeVonMisesFisherInto(rng, f64, 2, &[_]f64{ 1, 0 }, kappa, &out, &scratch);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), out[0] * out[0] + out[1] * out[1], 1e-12);
+        sum += out[0];
+    }
+    // The old Wood proposal is biased on S¹ (about 0.882 instead of 0.893).
+    try std.testing.expectApproxEqAbs(expected, sum / @as(f64, @floatFromInt(count)), 0.01);
 }
 
 test "VonMises large kappa concentrates around mean direction" {
