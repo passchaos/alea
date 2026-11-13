@@ -542,6 +542,10 @@ CDF and quantile helpers complement the samplers:
   `rayleighQuantile`, `weibullCdf` / `weibullQuantile`, `gumbelCdf` /
   `gumbelQuantile`; degenerate zero scales are point masses at the
   location (or zero for Rayleigh/Weibull).
+- bounded/derived continuous: `frechetCdf` / `frechetQuantile`, `paretoCdf` /
+  `paretoQuantile`, `powerFunctionCdf` / `powerFunctionQuantile`,
+  `kumaraswamyCdf` / `kumaraswamyQuantile`, `arcsineCdf` / `arcsineQuantile`,
+  `triangularCdf` / `triangularQuantile`; collapsed ranges are point masses.
 - multivariate marginals: `Dirichlet(T).marginalCdf` /
   `marginalQuantile` and `Multinomial.marginalCdf` / `marginalQuantile`.
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,

@@ -989,6 +989,165 @@ pub fn gumbelQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, 
     return location - scale * @log(-@log(p));
 }
 
+/// Frechet(location, scale, shape) CDF.
+pub fn frechetCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(x, location, scale, shape) {
+    const T = @TypeOf(x, location, scale, shape);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < location) 0 else 1;
+    if (x <= location) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return @exp(-std.math.pow(T, (x - location) / scale, -shape));
+}
+
+/// Inverse Frechet(location, scale, shape) CDF. p=0 → location, p=1 → +∞.
+pub fn frechetQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(p, location, scale, shape) {
+    const T = @TypeOf(p, location, scale, shape);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or scale == 0) return location;
+    if (p == 1) return std.math.inf(T);
+    return location + scale * std.math.pow(T, -@log(p), -1 / shape);
+}
+
+/// Pareto(scale, shape) CDF.
+pub fn paretoCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, shape) {
+    const T = @TypeOf(x, scale, shape);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < 0) 0 else 1;
+    if (x <= scale) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return 1 - std.math.pow(T, scale / x, shape);
+}
+
+/// Inverse Pareto(scale, shape) CDF. p=0 → scale, p=1 → +∞.
+pub fn paretoQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, scale, shape) {
+    const T = @TypeOf(p, scale, shape);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or scale == 0) return scale;
+    if (p == 1) return std.math.inf(T);
+    return scale / std.math.pow(T, 1 - p, 1 / shape);
+}
+
+/// PowerFunction(min, max, shape) CDF.
+pub fn powerFunctionCdf(x: anytype, min: anytype, max: anytype, shape: anytype) @TypeOf(x, min, max, shape) {
+    const T = @TypeOf(x, min, max, shape);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (max == min) return if (x < min) 0 else 1;
+    if (x <= min) return 0;
+    if (x >= max) return 1;
+    return std.math.pow(T, (x - min) / (max - min), shape);
+}
+
+/// Inverse PowerFunction(min, max, shape) CDF. p=0 → min, p=1 → max.
+pub fn powerFunctionQuantile(p: anytype, min: anytype, max: anytype, shape: anytype) @TypeOf(p, min, max, shape) {
+    const T = @TypeOf(p, min, max, shape);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or max == min) return min;
+    if (p == 1) return max;
+    return min + (max - min) * std.math.pow(T, p, 1 / shape);
+}
+
+/// Kumaraswamy(alpha, beta) CDF on [0, 1].
+pub fn kumaraswamyCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, alpha, beta_param) {
+    const T = @TypeOf(x, alpha, beta_param);
+    comptime requireFloat(T);
+    if (!(alpha > 0) or !std.math.isFinite(alpha)) return std.math.nan(T);
+    if (!(beta_param > 0) or !std.math.isFinite(beta_param)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    return 1 - std.math.pow(T, 1 - std.math.pow(T, x, alpha), beta_param);
+}
+
+/// Inverse Kumaraswamy(alpha, beta_param) CDF. p=0 → 0, p=1 → 1.
+pub fn kumaraswamyQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, alpha, beta_param) {
+    const T = @TypeOf(p, alpha, beta_param);
+    comptime requireFloat(T);
+    if (!(alpha > 0) or !std.math.isFinite(alpha)) return std.math.nan(T);
+    if (!(beta_param > 0) or !std.math.isFinite(beta_param)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+    return std.math.pow(T, 1 - std.math.pow(T, 1 - p, 1 / beta_param), 1 / alpha);
+}
+
+/// Arcsine(min, max) CDF.
+pub fn arcsineCdf(x: anytype, min: anytype, max: anytype) @TypeOf(x, min, max) {
+    const T = @TypeOf(x, min, max);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (max == min) return if (x < min) 0 else 1;
+    if (x <= min) return 0;
+    if (x >= max) return 1;
+    const pi: T = @floatCast(std.math.pi);
+    return (2 / pi) * std.math.asin(@sqrt((x - min) / (max - min)));
+}
+
+/// Inverse Arcsine(min, max) CDF. p=0 → min, p=1 → max.
+pub fn arcsineQuantile(p: anytype, min: anytype, max: anytype) @TypeOf(p, min, max) {
+    const T = @TypeOf(p, min, max);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or max == min) return min;
+    if (p == 1) return max;
+    const pi: T = @floatCast(std.math.pi);
+    const s = @sin(pi * p / 2);
+    return min + (max - min) * s * s;
+}
+
+/// Triangular(min, mode, max) CDF.
+pub fn triangularCdf(x: anytype, min: anytype, mode: anytype, max: anytype) @TypeOf(x, min, mode, max) {
+    const T = @TypeOf(x, min, mode, max);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return std.math.nan(T);
+    if (!(min <= mode and mode <= max)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (max == min) return if (x < min) 0 else 1;
+    if (x <= min) return 0;
+    if (x >= max) return 1;
+    if (x <= mode) {
+        const numerator = (x - min) * (x - min);
+        return numerator / ((max - min) * (mode - min));
+    }
+    const numerator = (max - x) * (max - x);
+    return 1 - numerator / ((max - min) * (max - mode));
+}
+
+/// Inverse Triangular(min, mode, max) CDF. p=0 → min, p=1 → max.
+pub fn triangularQuantile(p: anytype, min: anytype, mode: anytype, max: anytype) @TypeOf(p, min, mode, max) {
+    const T = @TypeOf(p, min, mode, max);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return std.math.nan(T);
+    if (!(min <= mode and mode <= max)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or max == min) return min;
+    if (p == 1) return max;
+    const f_mode = (mode - min) / (max - min);
+    if (p <= f_mode) {
+        return min + @sqrt(p * (max - min) * (mode - min));
+    }
+    return max - @sqrt((1 - p) * (max - min) * (max - mode));
+}
+
 const common = @import("distributions/common.zig");
 
 pub const Error = common.Error;
@@ -52845,6 +53004,111 @@ test "closed-form continuous CDF edge cases and f32" {
     try std.testing.expectApproxEqAbs(@as(f32, 1 - @exp(@as(f32, -0.5))), rayleighCdf(of, of), 1e-6);
     try std.testing.expectApproxEqAbs(@as(f32, 1 - @exp(@as(f32, -1))), weibullCdf(of, of, twof), 1e-6);
     try std.testing.expectApproxEqAbs(@as(f32, @exp(@as(f32, -1))), gumbelCdf(zf, zf, of), 1e-6);
+}
+
+test "derived-family CDF and quantile round-trips" {
+    const z: f64 = 0;
+    const o: f64 = 1;
+    const two: f64 = 2;
+
+    // Frechet(0, 1, 2).
+    try std.testing.expectApproxEqAbs(@exp(@as(f64, -1)), frechetCdf(o, z, o, two), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, frechetCdf(frechetQuantile(p, z, o, two), z, o, two), 1e-12);
+    }
+
+    // Pareto(1, 2).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), paretoCdf(two, o, two), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, paretoCdf(paretoQuantile(p, o, two), o, two), 1e-12);
+    }
+
+    // PowerFunction(0, 1, 2).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), powerFunctionCdf(0.5, z, o, two), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), powerFunctionQuantile(0.25, z, o, two), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, powerFunctionCdf(powerFunctionQuantile(p, z, o, two), z, o, two), 1e-12);
+    }
+
+    // Kumaraswamy(2, 3).
+    const three: f64 = 3;
+    try std.testing.expectApproxEqAbs(@as(f64, 0.578125), kumaraswamyCdf(0.5, two, three), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, kumaraswamyCdf(kumaraswamyQuantile(p, two, three), two, three), 1e-12);
+    }
+
+    // Arcsine(0, 1).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), arcsineCdf(0.5, z, o), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 3.0), arcsineCdf(0.25, z, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, arcsineCdf(arcsineQuantile(p, z, o), z, o), 1e-12);
+    }
+
+    // Triangular(0, 0.5, 1).
+    const mode: f64 = 0.5;
+    try std.testing.expectApproxEqAbs(@as(f64, 0.125), triangularCdf(0.25, z, mode, o), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), triangularCdf(mode, z, mode, o), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.875), triangularCdf(0.75, z, mode, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, triangularCdf(triangularQuantile(p, z, mode, o), z, mode, o), 1e-12);
+    }
+    // Mode at a boundary.
+    for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, triangularCdf(triangularQuantile(p, z, z, o), z, z, o), 1e-12);
+        try std.testing.expectApproxEqAbs(p, triangularCdf(triangularQuantile(p, z, o, o), z, o, o), 1e-12);
+    }
+}
+
+test "derived-family CDF edge cases and f32" {
+    const z: f64 = 0;
+    const o: f64 = 1;
+    const two: f64 = 2;
+    const m1: f64 = -1;
+    const m01: f64 = -0.1;
+
+    // Degenerate supports are point masses.
+    try std.testing.expectEqual(@as(f64, 0), frechetCdf(m01, z, z, two));
+    try std.testing.expectEqual(@as(f64, 1), frechetCdf(z, z, z, two));
+    try std.testing.expectEqual(@as(f64, 0), paretoCdf(m01, z, two));
+    try std.testing.expectEqual(@as(f64, 1), paretoCdf(z, z, two));
+    try std.testing.expectEqual(@as(f64, 0), powerFunctionCdf(m01, z, z, two));
+    try std.testing.expectEqual(@as(f64, 1), powerFunctionCdf(z, z, z, two));
+    try std.testing.expectEqual(@as(f64, 0), arcsineCdf(m01, z, z));
+    try std.testing.expectEqual(@as(f64, 1), arcsineCdf(z, z, z));
+    try std.testing.expectEqual(@as(f64, 0), triangularCdf(m01, z, z, z));
+    try std.testing.expectEqual(@as(f64, 1), triangularCdf(z, z, z, z));
+
+    // Endpoints and invalid inputs.
+    try std.testing.expectEqual(z, frechetQuantile(z, z, o, two));
+    try std.testing.expect(std.math.isPositiveInf(frechetQuantile(o, z, o, two)));
+    try std.testing.expectEqual(o, paretoQuantile(z, o, two));
+    try std.testing.expect(std.math.isPositiveInf(paretoQuantile(o, o, two)));
+    try std.testing.expectEqual(z, powerFunctionQuantile(z, z, o, two));
+    try std.testing.expectEqual(o, powerFunctionQuantile(o, z, o, two));
+    try std.testing.expectEqual(z, kumaraswamyQuantile(z, two, two));
+    try std.testing.expectEqual(o, kumaraswamyQuantile(o, two, two));
+    try std.testing.expectEqual(z, arcsineQuantile(z, z, o));
+    try std.testing.expectEqual(o, arcsineQuantile(o, z, o));
+    const mode: f64 = 0.5;
+    try std.testing.expectEqual(z, triangularQuantile(z, z, mode, o));
+    try std.testing.expectEqual(o, triangularQuantile(o, z, mode, o));
+    try std.testing.expect(std.math.isNan(frechetCdf(o, z, m1, two)));
+    try std.testing.expect(std.math.isNan(frechetCdf(o, z, o, z)));
+    try std.testing.expect(std.math.isNan(paretoCdf(o, o, z)));
+    try std.testing.expect(std.math.isNan(powerFunctionCdf(0.5, o, z, two)));
+    try std.testing.expect(std.math.isNan(kumaraswamyCdf(0.5, z, o)));
+    try std.testing.expect(std.math.isNan(arcsineQuantile(1.5, z, o)));
+    try std.testing.expect(std.math.isNan(triangularCdf(0.5, z, two, o)));
+
+    // f32 support.
+    const zf: f32 = 0;
+    const of: f32 = 1;
+    const twof: f32 = 2;
+    try std.testing.expectApproxEqAbs(@as(f32, 0.75), paretoCdf(twof, of, twof), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.25), powerFunctionCdf(0.5, zf, of, twof), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), arcsineCdf(0.5, zf, of), 1e-6);
+    const modef: f32 = 0.5;
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), triangularCdf(0.5, zf, modef, of), 1e-6);
 }
 
 test "sampler cdf and quantile methods delegate to the free helpers" {
