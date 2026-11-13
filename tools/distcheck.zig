@@ -273,6 +273,32 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("kent trace identity", trace_observed, trace_expected - 1e-9, trace_expected + 1e-9);
     }
 
+    // Matrix von Mises-Fisher Gibbs sampler with a zero second column.
+    {
+        const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;
+        const kappa: f64 = 5;
+        const parameter = [6]f64{ 0, 0, 0, 0, kappa, 0 };
+        var dist = try alea.distributions.MatrixVonMisesFisher(f64).initWithOptions(allocator, &parameter, 3, 2, 100, 10);
+        defer dist.deinit();
+        const vmf = try alea.distributions.VonMisesFisher(f64, 3).init(.{ 0, 0, 1 }, kappa);
+        const expected_z = vmf.meanResultantLength();
+        const samples = 20_000;
+        var sum_z: f64 = 0;
+        var sum_col1 = [_]f64{0} ** 3;
+        var out: [6]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            try dist.sampleIntoFrom(&engine, &out);
+            sum_z += out[4];
+            inline for (0..3) |k| sum_col1[k] += out[k * 2 + 1];
+        }
+        const nf: f64 = @floatFromInt(samples);
+        try expectFloatBetween("matrix vmf first-column mean", sum_z / nf, expected_z - 0.03, expected_z + 0.03);
+        inline for (0..3) |k| {
+            try expectFloatBetween("matrix vmf second-column mean", sum_col1[k] / nf, -0.03, 0.03);
+        }
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;

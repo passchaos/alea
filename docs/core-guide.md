@@ -478,6 +478,12 @@ Directional distributions on the circle and sphere:
   and ovalness `0 ≤ β < κ/2`; exact rejection sampling from a mean-matched
   Von Mises-Fisher proposal, `β = 0` vMF reduction, and deterministic-quadrature
   mean/covariance diagnostics including γ₂/γ₃ anisotropy.
+- `MatrixVonMisesFisher(T)` — matrix Langevin distribution on the Stiefel
+  manifold V_{k,p} (`p > k`) with density `exp(tr(FᵀX))`; a Gibbs sampler
+  updates each column from its exact von Mises-Fisher conditional on the
+  orthogonal complement of the other columns, with configurable burn-in and
+  thinning. Square `p = k` matrices are rejected because the fixed-sweep
+  chain is periodic.
 
 Copulas on the unit hypercube:
 
