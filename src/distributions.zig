@@ -426,6 +426,7 @@ pub const NoncentralChiSquaredError = Error;
 pub const NoncentralTError = Error;
 pub const NoncentralFError = Error;
 pub const NoncentralChiError = Error;
+pub const GaussianCopulaError = Error;
 
 /// Von Mises-Fisher distribution error set.
 pub const VonMisesFisherError = error{
@@ -496,6 +497,10 @@ pub const multi = struct {
 
     pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) type {
         return distributions_module.StaticMultivariateNormal(T, dimension);
+    }
+
+    pub fn StaticGaussianCopula(comptime T: type, comptime dimension: usize) type {
+        return distributions_module.StaticGaussianCopula(T, dimension);
     }
 };
 
@@ -26002,6 +26007,149 @@ pub fn StaticMultivariateNormal(comptime T: type, comptime dimension: usize) typ
     };
 }
 
+/// Gaussian copula on the unit hypercube (0,1)^dimension.
+///
+/// The Gaussian copula couples `dimension` uniform marginals through a
+/// correlation matrix R:
+///
+///   z ~ N(0, R),   u_i = Φ(z_i).
+///
+/// It is the standard dependence model for correlated uniforms in finance,
+/// simulation, and uncertainty quantification: users supply their own marginal
+/// quantile functions and apply them to the returned uniforms. `R` must be
+/// symmetric with unit diagonal and positive semi-definite; the underlying
+/// `StaticMultivariateNormal` factor handles positive-definite and
+/// rank-deficient (e.g. perfectly correlated) matrices without allocation.
+pub fn StaticGaussianCopula(comptime T: type, comptime dimension: usize) type {
+    if (dimension == 0) @compileError("StaticGaussianCopula dimension must be greater than zero");
+    comptime requireFloat(T);
+
+    return struct {
+        const Self = @This();
+        pub const Vector = [dimension]T;
+        pub const Matrix = [dimension][dimension]T;
+
+        correlation: Matrix,
+        mvn: StaticMultivariateNormal(T, dimension),
+
+        /// Construct a Gaussian copula from a correlation matrix. Non-finite
+        /// entries, non-unit diagonals, out-of-range correlations, and
+        /// non-positive-semidefinite matrices are rejected. A non-symmetric
+        /// matrix is symmetrized as (R + Rᵀ)/2.
+        pub fn init(correlation: Matrix) GaussianCopulaError!Self {
+            inline for (0..dimension) |i| {
+                inline for (0..dimension) |j| {
+                    if (!std.math.isFinite(correlation[i][j])) return error.InvalidParameter;
+                }
+            }
+
+            var symmetric: Matrix = undefined;
+            inline for (0..dimension) |i| {
+                inline for (i..dimension) |j| {
+                    const value = (correlation[i][j] + correlation[j][i]) / 2;
+                    symmetric[i][j] = value;
+                    symmetric[j][i] = value;
+                }
+            }
+
+            inline for (0..dimension) |i| {
+                if (@abs(symmetric[i][i] - 1) > 1e-6) return error.InvalidParameter;
+                inline for (0..dimension) |j| {
+                    if (@abs(symmetric[i][j]) > 1 + 1e-6) return error.InvalidParameter;
+                }
+            }
+
+            const zero: Vector = @splat(0);
+            const mvn = try StaticMultivariateNormal(T, dimension).init(zero, symmetric);
+            return .{ .correlation = symmetric, .mvn = mvn };
+        }
+
+        /// Debug-only constructor: panics on invalid correlation matrices.
+        pub fn new(correlation: Matrix) Self {
+            return Self.init(correlation) catch |err| {
+                std.debug.panic("StaticGaussianCopula.new: invalid correlation: {}", .{err});
+            };
+        }
+
+        /// Symmetrized correlation matrix parameter.
+        pub fn correlationValue(self: *const Self) Matrix {
+            return self.correlation;
+        }
+
+        pub fn dimensionValue(_: *const Self) usize {
+            return dimension;
+        }
+
+        /// Draw a vector of correlated uniforms. Values are clamped to the
+        /// open interval (ε/2, 1−ε/2) so they remain valid inputs to marginal
+        /// inverse-CDF helpers even at extreme normal quantiles.
+        pub fn sample(self: *const Self, rng: Rng) Vector {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: *const Self, source: anytype) Vector {
+            var z = self.mvn.sampleFrom(source);
+            const eps: T = std.math.floatEps(T);
+            inline for (0..dimension) |i| {
+                z[i] = @min(@max(normCdf(z[i]), eps / 2), 1 - eps / 2);
+            }
+            return z;
+        }
+
+        pub fn fill(self: *const Self, rng: Rng, dest: []Vector) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: *const Self, source: anytype, dest: []Vector) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Sample a Gaussian-copula vector of correlated uniforms on (0,1)^dimension.
+pub fn gaussianCopula(rng: Rng, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T) GaussianCopulaError![dimension]T {
+    return gaussianCopulaCheckedFrom(rng, T, dimension, correlation);
+}
+
+/// Source-accepting variant of `gaussianCopula` (panics on invalid matrices).
+pub fn gaussianCopulaFrom(source: anytype, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T) [dimension]T {
+    const dist = StaticGaussianCopula(T, dimension).new(correlation);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid correlation matrices.
+pub fn gaussianCopulaChecked(rng: Rng, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T) GaussianCopulaError![dimension]T {
+    return gaussianCopulaCheckedFrom(rng, T, dimension, correlation);
+}
+
+/// Checked source-accepting variant.
+pub fn gaussianCopulaCheckedFrom(source: anytype, comptime T: type, comptime dimension: usize, correlation: [dimension][dimension]T) GaussianCopulaError![dimension]T {
+    const dist = try StaticGaussianCopula(T, dimension).init(correlation);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice with Gaussian-copula vectors. Validates the correlation matrix.
+pub fn fillGaussianCopula(rng: Rng, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T) GaussianCopulaError!void {
+    return fillGaussianCopulaCheckedFrom(rng, T, dimension, dest, correlation);
+}
+
+/// Source-accepting fill (panics on invalid matrices).
+pub fn fillGaussianCopulaFrom(source: anytype, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T) void {
+    const dist = StaticGaussianCopula(T, dimension).new(correlation);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillGaussianCopulaChecked(rng: Rng, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T) GaussianCopulaError!void {
+    return fillGaussianCopulaCheckedFrom(rng, T, dimension, dest, correlation);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillGaussianCopulaCheckedFrom(source: anytype, comptime T: type, comptime dimension: usize, dest: [][dimension]T, correlation: [dimension][dimension]T) GaussianCopulaError!void {
+    const dist = try StaticGaussianCopula(T, dimension).init(correlation);
+    dist.fillFrom(source, dest);
+}
+
 pub fn Dirichlet(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -47228,6 +47376,189 @@ test "static eight-dimensional multivariate normal recovers moments" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), observed_mean, 0.03);
     try std.testing.expectApproxEqAbs(@as(f64, 1), variance, 0.04);
     try std.testing.expectApproxEqAbs(@as(f64, 0.1), covariance_0_7, 0.035);
+}
+
+test "Gaussian copula constructor validates correlation matrices" {
+    try std.testing.expectError(error.InvalidParameter, StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, std.math.nan(f64) },
+        .{ 0.5, 1 },
+    }));
+    // Non-unit diagonal.
+    try std.testing.expectError(error.InvalidParameter, StaticGaussianCopula(f64, 2).init(.{
+        .{ 1.5, 0.2 },
+        .{ 0.2, 1 },
+    }));
+    // Out-of-range correlation.
+    try std.testing.expectError(error.InvalidParameter, StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, 1.2 },
+        .{ 1.2, 1 },
+    }));
+    // Non-positive-semidefinite correlation.
+    try std.testing.expectError(error.InvalidCovariance, StaticGaussianCopula(f64, 3).init(.{
+        .{ 1, 0.9, -0.9 },
+        .{ 0.9, 1, 0.9 },
+        .{ -0.9, 0.9, 1 },
+    }));
+
+    // Non-symmetric input is symmetrized.
+    const dist = try StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, 0.5 },
+        .{ 0.2, 1 },
+    });
+    const correlation = dist.correlationValue();
+    try std.testing.expectApproxEqAbs(@as(f64, 0.35), correlation[0][1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.35), correlation[1][0], 1e-12);
+    try std.testing.expectEqual(@as(usize, 2), dist.dimensionValue());
+}
+
+test "Gaussian copula with identity correlation has uniform independent marginals" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc0);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, 0 },
+        .{ 0, 1 },
+    });
+    const count = 5000;
+    var sums: [2]f64 = .{ 0, 0 };
+    var sum_sq: [2]f64 = .{ 0, 0 };
+    var cross: f64 = 0;
+    for (0..count) |_| {
+        const u = dist.sample(rng);
+        inline for (0..2) |i| {
+            try std.testing.expect(u[i] > 0 and u[i] < 1);
+            sums[i] += u[i];
+            sum_sq[i] += u[i] * u[i];
+        }
+        cross += probit(u[0]) * probit(u[1]);
+    }
+    const nf: f64 = @floatFromInt(count);
+    inline for (0..2) |i| {
+        const mean = sums[i] / nf;
+        try std.testing.expectApproxEqAbs(@as(f64, 0.5), mean, 0.02);
+        try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 12.0), sum_sq[i] / nf - mean * mean, 0.01);
+    }
+    try std.testing.expect(@abs(cross / nf) < 0.05);
+}
+
+test "Gaussian copula with perfect correlation returns equal uniforms" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc1);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, 1 },
+        .{ 1, 1 },
+    });
+    for (0..64) |_| {
+        const u = dist.sample(rng);
+        try std.testing.expectApproxEqAbs(u[0], u[1], 1e-15);
+    }
+}
+
+test "Gaussian copula recovers the input correlation" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc2);
+    const rng = Rng.init(&engine);
+
+    const rho: f64 = 0.8;
+    const dist = try StaticGaussianCopula(f64, 2).init(.{
+        .{ 1, rho },
+        .{ rho, 1 },
+    });
+    const count = 5000;
+    var sum0: f64 = 0;
+    var sum1: f64 = 0;
+    var sum00: f64 = 0;
+    var sum11: f64 = 0;
+    var sum01: f64 = 0;
+    for (0..count) |_| {
+        const u = dist.sample(rng);
+        const z0 = probit(u[0]);
+        const z1 = probit(u[1]);
+        sum0 += z0;
+        sum1 += z1;
+        sum00 += z0 * z0;
+        sum11 += z1 * z1;
+        sum01 += z0 * z1;
+    }
+    const nf: f64 = @floatFromInt(count);
+    const mean0 = sum0 / nf;
+    const mean1 = sum1 / nf;
+    const var0 = sum00 / nf - mean0 * mean0;
+    const var1 = sum11 / nf - mean1 * mean1;
+    const cov = sum01 / nf - mean0 * mean1;
+    const observed = cov / @sqrt(var0 * var1);
+    try std.testing.expectApproxEqAbs(rho, observed, 0.03);
+}
+
+test "Gaussian copula free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc3);
+    const rng = Rng.init(&engine);
+
+    const correlation = [3][3]f64{
+        .{ 1, 0.3, 0.2 },
+        .{ 0.3, 1, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+    var buf: [16][3]f64 = undefined;
+    try fillGaussianCopula(rng, f64, 3, &buf, correlation);
+    for (buf) |u| {
+        inline for (0..3) |i| {
+            try std.testing.expect(u[i] > 0 and u[i] < 1);
+        }
+    }
+
+    const bad = [3][3]f64{
+        .{ 1, 0.3, 0.2 },
+        .{ 0.3, 2, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+    try std.testing.expectError(error.InvalidParameter, fillGaussianCopula(rng, f64, 3, &buf, bad));
+    try std.testing.expectError(error.InvalidParameter, gaussianCopula(rng, f64, 3, bad));
+
+    const u = try gaussianCopulaChecked(rng, f64, 3, correlation);
+    inline for (0..3) |i| {
+        try std.testing.expect(u[i] > 0 and u[i] < 1);
+    }
+}
+
+test "Gaussian copula direct-source sampling matches facade" {
+    const alea = @import("root.zig");
+    var facade_engine = alea.DefaultPrng.init(0xc4);
+    var direct_engine = alea.DefaultPrng.init(0xc4);
+    const rng = Rng.init(&facade_engine);
+
+    const correlation = [2][2]f64{
+        .{ 1, 0.4 },
+        .{ 0.4, 1 },
+    };
+    const dist = try StaticGaussianCopula(f64, 2).init(correlation);
+    for (0..16) |_| {
+        const facade_sample = dist.sample(rng);
+        const direct_sample = gaussianCopulaFrom(&direct_engine, f64, 2, correlation);
+        try std.testing.expectEqualSlices(f64, &facade_sample, &direct_sample);
+    }
+}
+
+test "Gaussian copula f32 sampling works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xc5);
+    const rng = Rng.init(&engine);
+
+    const dist = try StaticGaussianCopula(f32, 3).init(.{
+        .{ 1, 0.5, 0.25 },
+        .{ 0.5, 1, 0.1 },
+        .{ 0.25, 0.1, 1 },
+    });
+    for (0..64) |_| {
+        const u = dist.sample(rng);
+        inline for (0..3) |i| {
+            try std.testing.expect(u[i] > 0 and u[i] < 1);
+        }
+    }
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {

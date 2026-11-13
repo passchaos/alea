@@ -579,7 +579,8 @@ self-forking.
   `NormalInverseGaussianError`, `ParetoError`, `PertError`, `PoissonError`,
   `SkewNormalError`, `TriangularError`, `WeibullError`, `ZetaError`,
   `ZipfError`, `TruncatedNormalError`, `VonMisesError`, `WrappedCauchyError`,
-  `VonMisesFisherError`, `WatsonError`, `BinghamError`, `RiceError`, `NakagamiError`,
+  `VonMisesFisherError`, `WatsonError`, `BinghamError`, `GaussianCopulaError`,
+  `RiceError`, `NakagamiError`,
   `InverseGammaError`, `ExGaussianError`, `GeneralizedParetoError`,
   `ScaledInverseChiSquaredError`, `HoytError`,
   `NoncentralChiSquaredError`, `NoncentralTError`, `NoncentralFError`, `NoncentralChiError`;
@@ -1441,6 +1442,26 @@ Reusable samplers:
 - `StaticMultivariateNormal(T, dimension).sampleIntoFrom`
 - `StaticMultivariateNormal(T, dimension).sampleManyInto`
 - `StaticMultivariateNormal(T, dimension).sampleManyIntoFrom`
+- `StaticGaussianCopula(T, dimension)`
+- `multi.StaticGaussianCopula(T, dimension)`
+- `StaticGaussianCopula(T, dimension).Vector`
+- `StaticGaussianCopula(T, dimension).Matrix`
+- `StaticGaussianCopula(T, dimension).init`
+- `StaticGaussianCopula(T, dimension).new`
+- `StaticGaussianCopula(T, dimension).correlationValue`
+- `StaticGaussianCopula(T, dimension).dimensionValue`
+- `StaticGaussianCopula(T, dimension).sample`
+- `StaticGaussianCopula(T, dimension).sampleFrom`
+- `StaticGaussianCopula(T, dimension).fill`
+- `StaticGaussianCopula(T, dimension).fillFrom`
+- `gaussianCopula`
+- `gaussianCopulaFrom`
+- `gaussianCopulaChecked`
+- `gaussianCopulaCheckedFrom`
+- `fillGaussianCopula`
+- `fillGaussianCopulaFrom`
+- `fillGaussianCopulaChecked`
+- `fillGaussianCopulaCheckedFrom`
 - `Multinomial`
 - `Multinomial.init`
 - `Multinomial.trialsValue`
