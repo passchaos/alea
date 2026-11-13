@@ -11959,6 +11959,30 @@ fn kentConditionalPhiFrom(source: anytype, comptime T: type, a: T) T {
     return phi;
 }
 
+/// Draw `(cos φ, sin φ)` from the conditional Kent density
+/// ∝ exp(a·cos(2φ)). Small `a` uses a uniform circle proposal with the
+/// Exp(1) race; larger `a` uses the von Mises circle point with half-angle
+/// identities, so no `acos`/`cos`/`sin` calls are needed.
+fn kentConditionalCosSinFrom(source: anytype, comptime T: type, a: T) [2]T {
+    if (a < 1.5) {
+        while (true) {
+            const circle = unitCircleFrom(source, T);
+            // Exp(1) race: E ≥ a·(1 − cos 2φ) = 2a·(1 − cos²φ).
+            const e = standardExponentialFrom(source, T);
+            if (e >= 2 * a * (1 - circle[0] * circle[0])) return circle;
+        }
+    }
+    // θ ~ von Mises(0, a) as a unit circle point; φ = θ/2 + π·flip.
+    const point = vonMises2dPointFrom(source, T, 1, 0, a);
+    const cos_half = @sqrt(@max(0, (1 + point[0]) * 0.5));
+    const sin_half = @sqrt(@max(0, (1 - point[0]) * 0.5));
+    const sin_phi = if (point[1] >= 0) sin_half else -sin_half;
+    if (Rng.floatOpenFrom(source, T) < 0.5) {
+        return .{ -cos_half, -sin_phi };
+    }
+    return .{ cos_half, sin_phi };
+}
+
 /// Scalar Kent marginal draw: Wood proposal plus I₀-weighted acceptance.
 inline fn kentSampleWFrom(source: anytype, comptime T: type, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) T {
     const one: T = 1;
@@ -12008,10 +12032,10 @@ fn kentPointFrom(
     const w = kentSampleWFrom(source, T, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
     const s2 = @max(0, one - w * w);
     const a = ovalness * s2;
-    const phi = kentConditionalPhiFrom(source, T, a);
+    const cos_sin = kentConditionalCosSinFrom(source, T, a);
     const s = @sqrt(s2);
-    const cos_phi = @cos(phi);
-    const sin_phi = @sin(phi);
+    const cos_phi = cos_sin[0];
+    const sin_phi = cos_sin[1];
     var x: [3]T = undefined;
     inline for (0..3) |i| x[i] = w * mean_dir[i] + s * (cos_phi * major_axis[i] + sin_phi * minor_axis[i]);
     return x;
