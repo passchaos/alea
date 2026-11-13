@@ -6884,5 +6884,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1351-binomial-log-factorial-table.md`, and
 `compare/results/s4-m1352-student-t-integer-cdf.md`, and
 `compare/results/s4-m1353-validate-all-refresh.md`, and
-`compare/results/s4-m1354-vector-vmf-tail.md`.
+`compare/results/s4-m1354-vector-vmf-tail.md`, and
+`compare/results/s4-m1355-hin-setup-split.md`.
 

@@ -4521,6 +4521,10 @@ pub const Multinomial = struct {
     probabilities: []const f64,
     total_probability: f64,
     constant_category: ?usize,
+    /// Cached HIN constants for the first conditional binomial, whose
+    /// `(trials, p)` pair is fixed across draws.
+    first_hin: ?BinomialHinSetup,
+    first_hin_flip: bool,
 
     pub fn init(trials: u64, probabilities: []const f64) Error!Multinomial {
         if (probabilities.len == 0) return error.EmptyRange;
@@ -4536,11 +4540,23 @@ pub const Multinomial = struct {
             }
         }
         if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidProbability;
+
+        var first_hin: ?BinomialHinSetup = null;
+        var first_hin_flip = false;
+        if (trials > 0 and probabilities[0] > 0) {
+            const p_first = probabilities[0] / total;
+            const q = if (p_first <= 0.5) p_first else 1.0 - p_first;
+            first_hin = binomialHinSetup(trials, q);
+            first_hin_flip = p_first > 0.5;
+        }
+
         return .{
             .trials = trials,
             .probabilities = probabilities,
             .total_probability = total,
             .constant_category = if (positive_count == 1) positive_index else null,
+            .first_hin = first_hin,
+            .first_hin_flip = first_hin_flip,
         };
     }
 
@@ -4681,6 +4697,16 @@ pub const Multinomial = struct {
         return out;
     }
 
+    fn sampleFirstBinomialFrom(self: Multinomial, source: anytype, trials: u64, p: f64) u64 {
+        if (self.first_hin) |setup| {
+            if (setup.trials == trials) {
+                const sampled = binomialHinSampleFrom(source, setup);
+                return if (self.first_hin_flip) trials - sampled else sampled;
+            }
+        }
+        return binomialFrom(source, trials, p);
+    }
+
     pub fn sampleInto(self: Multinomial, rng: Rng, out: []u64) void {
         std.debug.assert(out.len == self.probabilities.len);
         @memset(out, 0);
@@ -4696,11 +4722,14 @@ pub const Multinomial = struct {
 
         var remaining_trials = self.trials;
         var remaining_probability = self.total_probability;
-        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1]) |p, *slot| {
+        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1], 0..) |p, *slot, index| {
             if (remaining_trials == 0) return;
             if (p == 0) continue;
             const normalized = p / remaining_probability;
-            const count = binomialFrom(rng, remaining_trials, normalized);
+            const count = if (index == 0)
+                self.sampleFirstBinomialFrom(rng, remaining_trials, normalized)
+            else
+                binomialFrom(rng, remaining_trials, normalized);
             slot.* = count;
             remaining_trials -= count;
             remaining_probability -= p;
@@ -4793,11 +4822,14 @@ pub const Multinomial = struct {
 
         var remaining_trials = self.trials;
         var remaining_probability = self.total_probability;
-        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1]) |p, *slot| {
+        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1], 0..) |p, *slot, index| {
             if (remaining_trials == 0) return;
             if (p == 0) continue;
             const normalized = p / remaining_probability;
-            const count = binomialFrom(source, remaining_trials, normalized);
+            const count = if (index == 0)
+                self.sampleFirstBinomialFrom(source, remaining_trials, normalized)
+            else
+                binomialFrom(source, remaining_trials, normalized);
             slot.* = count;
             remaining_trials -= count;
             remaining_probability -= p;
@@ -5762,8 +5794,35 @@ inline fn binomialLogFactorial(x: f64) f64 {
     return std.math.lgamma(f64, x + 1.0);
 }
 
-fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
+/// Precomputed HIN small-p binomial rejection constants. The setup depends
+/// only on `(trials, p)`, so repeated callers with fixed parameters can reuse
+/// it across draws.
+const BinomialHinSetup = struct {
+    trials: u64,
+    t: f64,
+    np: f64,
+    d1: f64,
+    d2: f64,
+    s1: f64,
+    s2: f64,
+    c: f64,
+    a1: f64,
+    a12: f64,
+    a123: f64,
+    s: f64,
+    lf: f64,
+    lp1p: f64,
+    q: f64,
+};
+
+/// Build the HIN constants for the rejection path. Returns null when the
+/// caller must use the direct Bernoulli, fair, or waiting-time paths instead.
+fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
+    if (trials <= 64 or !(p > 0) or p >= 0.5) return null;
     const t: f64 = @floatFromInt(trials);
+    const mean = t * p;
+    if (!(mean >= 8)) return null;
+
     const np = @floor(t * p);
     const pa = np / t;
     const one_minus_pa = 1.0 - pa;
@@ -5775,37 +5834,66 @@ fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const d2 = @round(@max(1.0, d2x));
 
     const sqrt_pi_over_2 = 1.2533141373155002512078826424055226;
-    const s1 = @sqrt(np * one_minus_pa) * (1.0 + d1 / (4.0 * np));
-    const s2 = @sqrt(np * one_minus_pa) * (1.0 + d2 / (4.0 * t * one_minus_pa));
+    const sqrt_np_omp = @sqrt(np * one_minus_pa);
     const c = 2.0 * d1 / np;
+    const s1 = sqrt_np_omp * (1.0 + c / 8.0);
+    const s2 = sqrt_np_omp * (1.0 + d2 / (4.0 * t * one_minus_pa));
     const a1 = @exp(c) * s1 * sqrt_pi_over_2;
     const a12 = a1 + s2 * sqrt_pi_over_2;
     const s1s = s1 * s1;
-    const a123 = a12 + (@exp(d1 / (t * one_minus_pa)) *
-        2.0 * s1s / d1 *
-        @exp(-d1 * d1 / (2.0 * s1s)));
+    // The middle envelope term has two exponentials; combine them into one.
+    const a123 = a12 + 2.0 * s1s / d1 * @exp(d1 / (t * one_minus_pa) - d1 * d1 / (2.0 * s1s));
     const s2s = s2 * s2;
     const s = a123 + 2.0 * s2s / d2 * @exp(-d2 * d2 / (2.0 * s2s));
     const lf = binomialLogFactorial(np) + binomialLogFactorial(t - np);
     const lp1p = @log(pa / one_minus_pa);
     const q = -@log(1.0 - (p - pa) / one_minus_pa);
 
+    return .{
+        .trials = trials,
+        .t = t,
+        .np = np,
+        .d1 = d1,
+        .d2 = d2,
+        .s1 = s1,
+        .s2 = s2,
+        .c = c,
+        .a1 = a1,
+        .a12 = a12,
+        .a123 = a123,
+        .s = s,
+        .lf = lf,
+        .lp1p = lp1p,
+        .q = q,
+    };
+}
+
+fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
+    const t = setup.t;
+    const np = setup.np;
+    const d1 = setup.d1;
+    const d2 = setup.d2;
+    const s1 = setup.s1;
+    const s2 = setup.s2;
+    const s1s = s1 * s1;
+    const s2s = s2 * s2;
+
     while (true) {
         var x: f64 = undefined;
         var v: f64 = undefined;
         var reject = false;
 
-        const u = s * Rng.floatFrom(source, f64);
-        if (u <= a1) {
+        const u = setup.s * Rng.floatFrom(source, f64);
+        if (u <= setup.a1) {
             const n = Rng.normalFastFrom(source, f64, 0, 1);
             const y = s1 * @abs(n);
             reject = y >= d1;
             if (!reject) {
                 const e = -@log(1.0 - Rng.floatFrom(source, f64));
                 x = @floor(y);
-                v = -e - n * n / 2.0 + c;
+                v = -e - n * n / 2.0 + setup.c;
             }
-        } else if (u <= a12) {
+        } else if (u <= setup.a12) {
             const n = Rng.normalFastFrom(source, f64, 0, 1);
             const y = s2 * @abs(n);
             reject = y >= d2;
@@ -5814,7 +5902,7 @@ fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
                 x = @floor(-y);
                 v = -e - n * n / 2.0;
             }
-        } else if (u <= a123) {
+        } else if (u <= setup.a123) {
             const e1 = -@log(1.0 - Rng.floatFrom(source, f64));
             const e2 = -@log(1.0 - Rng.floatFrom(source, f64));
             const y = d1 + 2.0 * s1s * e1 / d1;
@@ -5832,13 +5920,18 @@ fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
         if (!reject) {
             const kf = np + x;
             const lfx = binomialLogFactorial(kf) + binomialLogFactorial(t - kf);
-            reject = v > lf - lfx + x * lp1p;
+            reject = v > setup.lf - lfx + x * setup.lp1p;
         }
         if (reject) continue;
 
         const x_int: u64 = @intFromFloat(np + x + (1.0 - std.math.floatEps(f64)) / 2.0);
-        return x_int + binomialWaitingFrom(source, trials - x_int, q);
+        return x_int + binomialWaitingFrom(source, setup.trials - x_int, setup.q);
     }
+}
+
+fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
+    const setup = binomialHinSetup(trials, p).?;
+    return binomialHinSampleFrom(source, setup);
 }
 
 fn UniformMoment(comptime T: type) type {
