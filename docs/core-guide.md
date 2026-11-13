@@ -542,9 +542,13 @@ CDF and quantile helpers complement the samplers:
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
   `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`, `hypergeometricCdf`,
-  `hypergeometricQuantile`; the hypergeometric helpers sum the shorter PMF
-  tail exactly and switch to a normal approximation with continuity
-  correction above `hypergeometricExactSdLimit` (σ = 16384).
+  `hypergeometricQuantile`, `zipfCdf`, `zipfQuantile`, `zetaCdf`,
+  `zetaQuantile`; the hypergeometric helpers sum the shorter PMF tail exactly
+  and switch to a normal approximation with continuity correction above
+  `hypergeometricExactSdLimit` (σ = 16384), while the Zipf/Zeta helpers use a
+  128-term direct prefix plus Euler–Maclaurin harmonic numbers (and
+  `riemannZetaApprox` for infinite support) and cap representable quantiles at
+  2^53.
 - closed-form continuous: `laplaceCdf` / `laplaceQuantile`, `logisticCdf` /
   `logisticQuantile`, `cauchyCdf` / `cauchyQuantile`, `rayleighCdf` /
   `rayleighQuantile`, `weibullCdf` / `weibullQuantile`, `gumbelCdf` /
@@ -563,7 +567,7 @@ delegate to these helpers, including the derived continuous types
 `Pareto`, `PowerFunction`, `Kumaraswamy`, `Arcsine`, and `Triangular`).
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,
   `Beta`, `ChiSquared`, `StudentT`, `FisherF`, `Binomial`, `Geometric`,
-  `NegativeBinomial`, `Hypergeometric`, and `Poisson`.
+  `NegativeBinomial`, `Hypergeometric`, `Zipf`, `Zeta`, and `Poisson`.
 
 Quantiles use deterministic bisection (and a closed form for the geometric
 case), so they are diagnostics/ergonomics paths rather than hot sampling paths.

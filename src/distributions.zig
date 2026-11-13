@@ -991,6 +991,174 @@ pub fn hypergeometricQuantile(q: anytype, population: anytype, successes: anytyp
     return @floatCast(@as(f64, @floatFromInt(lo)));
 }
 
+/// Generalized harmonic number `H(x, s) = Σ_{j=1}^{x} j^{-s}` for
+/// integer-valued `x ≥ 0`. Direct summation for `x ≤ 128`, then
+/// Euler–Maclaurin, which stays accurate for every `s ≥ 0` without requiring
+/// the Riemann zeta function.
+fn generalizedHarmonicNumber(x: f64, s: f64) f64 {
+    if (!(x >= 1)) return 0;
+    if (s > 1000) return 1;
+    const direct_limit: u64 = 128;
+    const x_int: u64 = @intFromFloat(@floor(@min(x, 9007199254740992)));
+    var sum: f64 = 0;
+    const direct_count = @min(x_int, direct_limit);
+    var j: u64 = 1;
+    while (j <= direct_count) : (j += 1) {
+        sum += std.math.pow(f64, @as(f64, @floatFromInt(j)), -s);
+    }
+    if (x_int <= direct_limit) return sum;
+
+    const xf: f64 = @floatFromInt(x_int);
+    const a: f64 = @floatFromInt(direct_limit + 1);
+    if (s == 1) {
+        sum += @log(xf / a);
+    } else {
+        sum += (std.math.pow(f64, xf, 1 - s) - std.math.pow(f64, a, 1 - s)) / (1 - s);
+    }
+    sum += 0.5 * (std.math.pow(f64, a, -s) + std.math.pow(f64, xf, -s));
+
+    // Euler–Maclaurin corrections: -Σ c_r (x^{-s-2r+1} − a^{-s-2r+1}) with
+    // c_r = B_{2r}/(2r)!·(s)_{2r-1}.
+    const coefficients = [_]f64{
+        1.0 / 12.0,
+        -1.0 / 720.0,
+        1.0 / 30240.0,
+        -1.0 / 1209600.0,
+        1.0 / 47900160.0,
+        -691.0 / 1307674368000.0,
+        1.0 / 74724249600.0,
+        -3617.0 / 10670622842880000.0,
+    };
+    var rising = s;
+    var power: usize = 2;
+    for (coefficients) |coefficient| {
+        const exponent = -s - @as(f64, @floatFromInt(power)) + 1;
+        sum -= coefficient * rising * (std.math.pow(f64, xf, exponent) - std.math.pow(f64, a, exponent));
+        rising *= (s + @as(f64, @floatFromInt(power - 1))) * (s + @as(f64, @floatFromInt(power)));
+        power += 2;
+    }
+    return sum;
+}
+
+/// Riemann zeta `ζ(s)` for `s > 1` via Euler–Maclaurin from 129 to infinity.
+fn riemannZetaApprox(s: f64) f64 {
+    if (s > 1000) return 1;
+    const a: f64 = 129;
+    var sum = generalizedHarmonicNumber(128, s);
+    sum += std.math.pow(f64, a, 1 - s) / (s - 1);
+    sum += 0.5 * std.math.pow(f64, a, -s);
+    const coefficients = [_]f64{
+        1.0 / 12.0,
+        -1.0 / 720.0,
+        1.0 / 30240.0,
+        -1.0 / 1209600.0,
+        1.0 / 47900160.0,
+        -691.0 / 1307674368000.0,
+        1.0 / 74724249600.0,
+        -3617.0 / 10670622842880000.0,
+    };
+    var rising = s;
+    var power: usize = 2;
+    for (coefficients) |coefficient| {
+        const exponent = -s - @as(f64, @floatFromInt(power)) + 1;
+        sum += coefficient * rising * std.math.pow(f64, a, exponent);
+        rising *= (s + @as(f64, @floatFromInt(power - 1))) * (s + @as(f64, @floatFromInt(power)));
+        power += 2;
+    }
+    return sum;
+}
+
+/// Validated Zipf/Zeta parameters: finite `s ≥ 0`, `1 ≤ n ≤ 2^53`, and
+/// `n = +∞` only when `s > 1`.
+fn zipfDiagnosticParams(n: f64, exponent: f64) ?struct { n: f64, s: f64 } {
+    if (std.math.isNan(n) or std.math.isNan(exponent)) return null;
+    if (!(exponent >= 0) or std.math.isInf(exponent)) return null;
+    if (!(n >= 1)) return null;
+    if (std.math.isInf(n)) {
+        if (exponent <= 1) return null;
+    } else if (n > 9007199254740992) return null;
+    return .{ .n = n, .s = exponent };
+}
+
+/// Zipf CDF `P(X ≤ k)` for support `1..n` with exponent `s ≥ 0`.
+///
+/// `H(k, s)/H(n, s)` with the generalized harmonic number evaluated by direct
+/// summation plus Euler–Maclaurin, so the cost is O(1) for large `k`/`n`.
+/// `n = +∞` is the Zeta distribution and requires `s > 1`. The 128-term direct
+/// prefix keeps the result accurate to near double precision for all `s ≥ 0`.
+pub fn zipfCdf(k: anytype, n: anytype, exponent: anytype) @TypeOf(k, n, exponent) {
+    const T = @TypeOf(k, n, exponent);
+    comptime requireFloat(T);
+    const k_f: f64 = @floatCast(k);
+    if (std.math.isNan(k_f)) return @floatCast(std.math.nan(f64));
+    const params = zipfDiagnosticParams(@floatCast(n), @floatCast(exponent)) orelse return @floatCast(std.math.nan(f64));
+    if (k_f < 1) return 0;
+    if (std.math.isInf(k_f)) return 1;
+    if (!std.math.isInf(params.n) and k_f >= params.n) return 1;
+    const numerator = generalizedHarmonicNumber(@floor(k_f), params.s);
+    const denominator = if (std.math.isInf(params.n))
+        riemannZetaApprox(params.s)
+    else
+        generalizedHarmonicNumber(params.n, params.s);
+    const ratio = numerator / denominator;
+    return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), ratio)));
+}
+
+/// Smallest integer `k` with `zipfCdf(k, n, exponent) ≥ q`.
+///
+/// Deterministic bisection over the integer support. Infinite support expands
+/// the upper bound until the CDF covers `q`; quantiles beyond 2^53 are returned
+/// as +∞ because integer support values are no longer exactly representable.
+pub fn zipfQuantile(q: anytype, n: anytype, exponent: anytype) @TypeOf(q, n, exponent) {
+    const T = @TypeOf(q, n, exponent);
+    comptime requireFloat(T);
+    const q_f: f64 = @floatCast(q);
+    if (!(q_f >= 0 and q_f <= 1)) return @floatCast(std.math.nan(f64));
+    const params = zipfDiagnosticParams(@floatCast(n), @floatCast(exponent)) orelse return @floatCast(std.math.nan(f64));
+    if (q_f == 0) return 1;
+    if (q_f == 1) return @floatCast(params.n);
+
+    const finite_support = !std.math.isInf(params.n);
+    var lo: u64 = 1;
+    var hi: u64 = if (finite_support) @intFromFloat(params.n) else 1;
+    if (!finite_support) {
+        var expansion: usize = 0;
+        while (zipfCdf(@as(f64, @floatFromInt(hi)), params.n, params.s) < q_f and expansion < 64) : (expansion += 1) {
+            if (hi >= (@as(u64, 1) << 52)) {
+                hi = 9007199254740992;
+                break;
+            }
+            hi *= 2;
+        }
+        if (zipfCdf(@as(f64, @floatFromInt(hi)), params.n, params.s) < q_f) {
+            return @floatCast(std.math.inf(f64));
+        }
+    }
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (zipfCdf(@as(f64, @floatFromInt(mid)), params.n, params.s) < q_f) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast(@as(f64, @floatFromInt(lo)));
+}
+
+/// Zeta CDF `P(X ≤ k)` for exponent `s > 1`.
+pub fn zetaCdf(k: anytype, exponent: anytype) @TypeOf(k, exponent) {
+    const T = @TypeOf(k, exponent);
+    comptime requireFloat(T);
+    return @floatCast(zipfCdf(@as(f64, @floatCast(k)), std.math.inf(f64), @as(f64, @floatCast(exponent))));
+}
+
+/// Smallest integer `k` with `zetaCdf(k, exponent) ≥ q`.
+pub fn zetaQuantile(q: anytype, exponent: anytype) @TypeOf(q, exponent) {
+    const T = @TypeOf(q, exponent);
+    comptime requireFloat(T);
+    return @floatCast(zipfQuantile(@as(f64, @floatCast(q)), std.math.inf(f64), @as(f64, @floatCast(exponent))));
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -28146,6 +28314,14 @@ pub fn VectorZipf(comptime VectorType: type) type {
             return self.sampler.exponentValue();
         }
 
+        pub fn cdf(self: Self, k: f64) f64 {
+            return self.sampler.cdf(k);
+        }
+
+        pub fn quantile(self: Self, q: f64) f64 {
+            return self.sampler.quantile(q);
+        }
+
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.isDegenerate()) return @splat(1);
             var out: VectorType = undefined;
@@ -28191,6 +28367,7 @@ pub fn Zipf(comptime T: type) type {
         const Self = @This();
 
         exponent: T,
+        n: T,
         t: T,
         q: T,
 
@@ -28209,7 +28386,7 @@ pub fn Zipf(comptime T: type) type {
                 1 + @log(n);
 
             if (!(t > 0) or std.math.isNan(t)) return error.InvalidParameter;
-            return .{ .exponent = exponent, .t = t, .q = q };
+            return .{ .exponent = exponent, .n = n, .t = t, .q = q };
         }
 
         pub fn new(n: T, exponent: T) Error!Self {
@@ -28218,8 +28395,7 @@ pub fn Zipf(comptime T: type) type {
 
         pub fn nValue(self: Self) ?T {
             if (std.math.isInf(self.exponent)) return null;
-            if (self.exponent == 1) return @exp(self.t - 1);
-            return std.math.pow(T, self.t * (1 - self.exponent) + self.exponent, self.q);
+            return self.n;
         }
 
         pub fn minValue(_: Self) T {
@@ -28233,6 +28409,16 @@ pub fn Zipf(comptime T: type) type {
 
         pub fn exponentValue(self: Self) T {
             return self.exponent;
+        }
+
+        /// Zipf CDF at `k` with this sampler's support and exponent.
+        pub fn cdf(self: Self, k: f64) f64 {
+            return zipfCdf(k, @as(f64, @floatCast(self.n)), @as(f64, @floatCast(self.exponent)));
+        }
+
+        /// Zipf quantile for probability `q`.
+        pub fn quantile(self: Self, q: f64) f64 {
+            return zipfQuantile(q, @as(f64, @floatCast(self.n)), @as(f64, @floatCast(self.exponent)));
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -28408,6 +28594,14 @@ pub fn VectorZeta(comptime VectorType: type) type {
             return self.sampler.exponentValue();
         }
 
+        pub fn cdf(self: Self, k: f64) f64 {
+            return self.sampler.cdf(k);
+        }
+
+        pub fn quantile(self: Self, q: f64) f64 {
+            return self.sampler.quantile(q);
+        }
+
         pub fn minValue(self: Self) Child {
             return self.sampler.minValue();
         }
@@ -28483,6 +28677,16 @@ pub fn Zeta(comptime T: type) type {
 
         pub fn exponentValue(self: Self) T {
             return self.exponent_minus_one + 1;
+        }
+
+        /// Zeta CDF at `k` with this sampler's exponent.
+        pub fn cdf(self: Self, k: f64) f64 {
+            return zetaCdf(k, @as(f64, @floatCast(self.exponentValue())));
+        }
+
+        /// Zeta quantile for probability `q`.
+        pub fn quantile(self: Self, q: f64) f64 {
+            return zetaQuantile(q, @as(f64, @floatCast(self.exponentValue())));
         }
 
         pub fn minValue(_: Self) T {
@@ -53441,6 +53645,75 @@ test "hypergeometricCdf large-population paths" {
     // N=1e12 with three successes uses the product-form log-PMF:
     // pmf(0) = (1 − 3/N)^n·(1 + O(1/N)) = 0.995³.
     try std.testing.expectApproxEqAbs(@as(f64, 0.985074875), hypergeometricCdf(@as(f64, 0), @as(f64, 1e12), @as(f64, 3), @as(f64, 5e9)), 1e-9);
+}
+
+test "zipfCdf and zipfQuantile match generalized harmonic values" {
+    // Zipf(10, 1): H_10 = 7381/2520.
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 2.9289682539682538), zipfCdf(@as(f64, 1), @as(f64, 10), @as(f64, 1)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.8333333333333333 / 2.9289682539682538), zipfCdf(@as(f64, 3), @as(f64, 10), @as(f64, 1)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), zipfCdf(@as(f64, 10), @as(f64, 10), @as(f64, 1)), 0);
+    try std.testing.expectEqual(@as(f64, 0), zipfCdf(@as(f64, 0), @as(f64, 10), @as(f64, 1)));
+
+    // Euler–Maclaurin path (x > 128) against a direct sum for s = 0.5 and 1.
+    var h500: f64 = 0;
+    var h1000: f64 = 0;
+    var j: u64 = 1;
+    while (j <= 1000) : (j += 1) {
+        const term = std.math.pow(f64, @as(f64, @floatFromInt(j)), -0.5);
+        if (j <= 500) h500 += term;
+        h1000 += term;
+    }
+    try std.testing.expectApproxEqAbs(h500 / h1000, zipfCdf(@as(f64, 500), @as(f64, 1000), @as(f64, 0.5)), 1e-12);
+    var h500_one: f64 = 0;
+    var h1000_one: f64 = 0;
+    j = 1;
+    while (j <= 1000) : (j += 1) {
+        const term = 1 / @as(f64, @floatFromInt(j));
+        if (j <= 500) h500_one += term;
+        h1000_one += term;
+    }
+    try std.testing.expectApproxEqAbs(h500_one / h1000_one, zipfCdf(@as(f64, 500), @as(f64, 1000), @as(f64, 1)), 1e-12);
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |q| {
+        const k = zipfQuantile(q, @as(f64, 10), @as(f64, 1.5));
+        try std.testing.expect(zipfCdf(k, @as(f64, 10), @as(f64, 1.5)) >= q);
+        if (k > 1) {
+            try std.testing.expect(zipfCdf(k - 1, @as(f64, 10), @as(f64, 1.5)) < q);
+        }
+    }
+    try std.testing.expectEqual(@as(f64, 1), zipfQuantile(@as(f64, 0), @as(f64, 10), @as(f64, 1.5)));
+    try std.testing.expectEqual(@as(f64, 10), zipfQuantile(@as(f64, 1), @as(f64, 10), @as(f64, 1.5)));
+
+    try std.testing.expect(std.math.isNan(zipfCdf(@as(f64, 1), @as(f64, 10), @as(f64, -1))));
+    try std.testing.expect(std.math.isNan(zipfCdf(@as(f64, 1), std.math.inf(f64), @as(f64, 1))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.3414), zipfCdf(@as(f32, 1), @as(f32, 10), @as(f32, 1)), 1e-3);
+}
+
+test "zetaCdf and zetaQuantile match Riemann zeta values" {
+    const zeta2: f64 = 1.6449340668482264;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / zeta2), zetaCdf(@as(f64, 1), @as(f64, 2)), 1e-13);
+    try std.testing.expectApproxEqAbs(@as(f64, (1 + 0.25 + 1.0 / 9.0) / zeta2), zetaCdf(@as(f64, 3), @as(f64, 2)), 1e-13);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), zetaCdf(@as(f64, 1e6), @as(f64, 2)), 1e-6);
+    try std.testing.expectEqual(@as(f64, 0), zetaCdf(@as(f64, 0), @as(f64, 2)));
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |q| {
+        const k = zetaQuantile(q, @as(f64, 2));
+        try std.testing.expect(zetaCdf(k, @as(f64, 2)) >= q);
+        if (k > 1) {
+            try std.testing.expect(zetaCdf(k - 1, @as(f64, 2)) < q);
+        }
+    }
+    try std.testing.expectEqual(@as(f64, 1), zetaQuantile(@as(f64, 0), @as(f64, 2)));
+    try std.testing.expectEqual(std.math.inf(f64), zetaQuantile(@as(f64, 1), @as(f64, 2)));
+    try std.testing.expect(std.math.isNan(zetaCdf(@as(f64, 1), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(zetaCdf(@as(f64, 1), @as(f64, 0.5))));
+
+    const zeta_dist = try Zeta(f64).init(2);
+    try std.testing.expectApproxEqAbs(zetaCdf(@as(f64, 5), @as(f64, 2)), zeta_dist.cdf(5), 0);
+    try std.testing.expectApproxEqAbs(zetaQuantile(@as(f64, 0.5), @as(f64, 2)), zeta_dist.quantile(0.5), 0);
+    const zipf_dist = try Zipf(f64).init(10, 1.5);
+    try std.testing.expectApproxEqAbs(zipfCdf(@as(f64, 5), @as(f64, 10), @as(f64, 1.5)), zipf_dist.cdf(5), 0);
+    try std.testing.expectApproxEqAbs(zipfQuantile(@as(f64, 0.5), @as(f64, 10), @as(f64, 1.5)), zipf_dist.quantile(0.5), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {

@@ -192,7 +192,8 @@ The current Linux-first roadmap is intentionally broad:
   `fisherFQuantile`, `poissonCdf` / `poissonQuantile`, `binomialCdf` /
   `binomialQuantile`, `geometricCdf` / `geometricQuantile`,
   `negativeBinomialCdf` / `negativeBinomialQuantile`, `hypergeometricCdf` /
-  `hypergeometricQuantile`, `laplaceCdf` /
+  `hypergeometricQuantile`, `zipfCdf` / `zipfQuantile`, `zetaCdf` /
+  `zetaQuantile`, `laplaceCdf` /
   `laplaceQuantile`, `logisticCdf` / `logisticQuantile`, `cauchyCdf` /
   `cauchyQuantile`, `rayleighCdf` / `rayleighQuantile`, `weibullCdf` /
   `weibullQuantile`, `gumbelCdf` / `gumbelQuantile`, `frechetCdf` /

@@ -505,6 +505,11 @@ fn checkAdvancedMultivariate() !void {
         const hypergeometric_successes: f64 = 24;
         const hypergeometric_draws: f64 = 15;
         try expectFloatBetween("hypergeometric quantile", alea.distributions.hypergeometricCdf(alea.distributions.hypergeometricQuantile(discrete_q, hypergeometric_population, hypergeometric_successes, hypergeometric_draws), hypergeometric_population, hypergeometric_successes, hypergeometric_draws), discrete_q, 1.0);
+        const zipf_n: f64 = 40;
+        const zipf_s: f64 = 1.5;
+        try expectFloatBetween("zipf quantile", alea.distributions.zipfCdf(alea.distributions.zipfQuantile(discrete_q, zipf_n, zipf_s), zipf_n, zipf_s), discrete_q, 1.0);
+        const zeta_s: f64 = 2.5;
+        try expectFloatBetween("zeta quantile", alea.distributions.zetaCdf(alea.distributions.zetaQuantile(discrete_q, zeta_s), zeta_s), discrete_q, 1.0);
     }
 
     // Multivariate marginal diagnostics.
@@ -1823,11 +1828,15 @@ fn checkLongRun(samples: usize) !void {
         const hypergeometric = try alea.distributions.Hypergeometric.init(100, 30, 10);
         const negative_binomial = try alea.distributions.NegativeBinomial.init(3, 0.5);
         const geometric = try alea.distributions.Geometric.init(0.4);
+        const zipf_dist = try alea.distributions.Zipf(f64).init(40, 1.5);
+        const zeta_dist = try alea.distributions.Zeta(f64).init(2.5);
         var binomial_hits = [_]usize{0} ** 3;
         var poisson_hits = [_]usize{0} ** 3;
         var hypergeometric_hits = [_]usize{0} ** 3;
         var negative_binomial_hits = [_]usize{0} ** 3;
         var geometric_hits = [_]usize{0} ** 3;
+        var zipf_hits = [_]usize{0} ** 3;
+        var zeta_hits = [_]usize{0} ** 3;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
             const b = binomial.sample(rng);
@@ -1850,6 +1859,14 @@ fn checkLongRun(samples: usize) !void {
             if (g <= 1) geometric_hits[0] += 1;
             if (g <= 2) geometric_hits[1] += 1;
             if (g <= 4) geometric_hits[2] += 1;
+            const zf = zipf_dist.sample(rng);
+            if (zf <= 2) zipf_hits[0] += 1;
+            if (zf <= 4) zipf_hits[1] += 1;
+            if (zf <= 8) zipf_hits[2] += 1;
+            const zt = zeta_dist.sample(rng);
+            if (zt <= 1) zeta_hits[0] += 1;
+            if (zt <= 3) zeta_hits[1] += 1;
+            if (zt <= 8) zeta_hits[2] += 1;
         }
         try expectEmpiricalCdf("long binomial cdf(4)", binomial_hits[0], samples, binomial.cdf(4));
         try expectEmpiricalCdf("long binomial cdf(6)", binomial_hits[1], samples, binomial.cdf(6));
@@ -1866,13 +1883,21 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long geometric cdf(1)", geometric_hits[0], samples, geometric.cdf(1));
         try expectEmpiricalCdf("long geometric cdf(2)", geometric_hits[1], samples, geometric.cdf(2));
         try expectEmpiricalCdf("long geometric cdf(4)", geometric_hits[2], samples, geometric.cdf(4));
+        try expectEmpiricalCdf("long zipf cdf(2)", zipf_hits[0], samples, zipf_dist.cdf(2));
+        try expectEmpiricalCdf("long zipf cdf(4)", zipf_hits[1], samples, zipf_dist.cdf(4));
+        try expectEmpiricalCdf("long zipf cdf(8)", zipf_hits[2], samples, zipf_dist.cdf(8));
+        try expectEmpiricalCdf("long zeta cdf(1)", zeta_hits[0], samples, zeta_dist.cdf(1));
+        try expectEmpiricalCdf("long zeta cdf(3)", zeta_hits[1], samples, zeta_dist.cdf(3));
+        try expectEmpiricalCdf("long zeta cdf(8)", zeta_hits[2], samples, zeta_dist.cdf(8));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
-        std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6}\n", .{
+        std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6} zipf(2)={d:.6} zeta(1)={d:.6}\n", .{
             @as(f64, @floatFromInt(binomial_hits[0])) * inv_n,
             @as(f64, @floatFromInt(poisson_hits[1])) * inv_n,
             @as(f64, @floatFromInt(hypergeometric_hits[0])) * inv_n,
             @as(f64, @floatFromInt(negative_binomial_hits[1])) * inv_n,
             @as(f64, @floatFromInt(geometric_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(zipf_hits[0])) * inv_n,
+            @as(f64, @floatFromInt(zeta_hits[0])) * inv_n,
         });
     }
 

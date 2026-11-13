@@ -647,7 +647,8 @@ self-forking.
   `binomialCdf`, `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
   `hypergeometricCdf`, `hypergeometricQuantile`,
-  `hypergeometricExactSdLimit`,
+  `hypergeometricExactSdLimit`, `zipfCdf`, `zipfQuantile`, `zetaCdf`,
+  `zetaQuantile`,
   `laplaceCdf`, `laplaceQuantile`, `logisticCdf`, `logisticQuantile`,
   `cauchyCdf`, `cauchyQuantile`, `rayleighCdf`, `rayleighQuantile`,
   `weibullCdf`, `weibullQuantile`, `gumbelCdf`, `gumbelQuantile`,
@@ -3319,6 +3320,8 @@ Reusable samplers:
 - `Zipf(T).minValue`
 - `Zipf(T).maxValue`
 - `Zipf(T).exponentValue`
+- `Zipf(T).cdf`
+- `Zipf(T).quantile`
 - `Zipf(T).sample`
 - `Zipf(T).sampleFrom`
 - `Zipf(T).fill`
@@ -3329,6 +3332,8 @@ Reusable samplers:
 - `VectorZipf(VectorType).minValue`
 - `VectorZipf(VectorType).maxValue`
 - `VectorZipf(VectorType).exponentValue`
+- `VectorZipf(VectorType).cdf`
+- `VectorZipf(VectorType).quantile`
 - `VectorZipf(VectorType).sample`
 - `VectorZipf(VectorType).sampleFrom`
 - `VectorZipf(VectorType).fill`
@@ -3337,6 +3342,8 @@ Reusable samplers:
 - `Zeta(T).init`
 - `Zeta(T).new`
 - `Zeta(T).exponentValue`
+- `Zeta(T).cdf`
+- `Zeta(T).quantile`
 - `Zeta(T).minValue`
 - `Zeta(T).maxValue`
 - `Zeta(T).sample`
@@ -3346,6 +3353,8 @@ Reusable samplers:
 - `VectorZeta(VectorType)`
 - `VectorZeta(VectorType).init`
 - `VectorZeta(VectorType).exponentValue`
+- `VectorZeta(VectorType).cdf`
+- `VectorZeta(VectorType).quantile`
 - `VectorZeta(VectorType).minValue`
 - `VectorZeta(VectorType).maxValue`
 - `VectorZeta(VectorType).sample`
