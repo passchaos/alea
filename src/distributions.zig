@@ -5791,7 +5791,7 @@ const binomial_log_factorial = blk: {
 
 inline fn binomialLogFactorial(x: f64) f64 {
     if (x < binomial_log_factorial_len) return binomial_log_factorial[@intFromFloat(x)];
-    return std.math.lgamma(f64, x + 1.0);
+    return lnOfFactorial(x);
 }
 
 /// Precomputed HIN small-p binomial rejection constants. The setup depends
