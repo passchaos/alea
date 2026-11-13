@@ -34187,6 +34187,14 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 } else {
                     @memset(g, 0);
                 }
+                if (rows == 3 and mean_norm > 0) {
+                    // `h` is unused on the exact single-column path; reuse it
+                    // for the Wood constants.
+                    const wood = vmfWoodConstants(T, mean_norm, 3);
+                    h[0] = wood.b;
+                    h[1] = wood.x0;
+                    h[2] = wood.c;
+                }
             }
 
             return Self{
@@ -34295,7 +34303,23 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
             }
             if (self.rows == 3) {
                 const mean_dir = [3]T{ self.g[0], self.g[1], self.g[2] };
-                const point = vonMisesFisherPointFrom(source, T, 3, &mean_dir, self.mean_norm);
+                if (self.mean_norm > 1e12) {
+                    out[0] = mean_dir[0];
+                    out[1] = mean_dir[1];
+                    out[2] = mean_dir[2];
+                    return;
+                }
+                if (self.mean_norm == 0) {
+                    const point = unitSphereSurfaceFrom(source, T, 3);
+                    out[0] = point[0];
+                    out[1] = point[1];
+                    out[2] = point[2];
+                    return;
+                }
+                // Use the Wood constants precomputed at init; the mean norm is
+                // fixed for a given sampler.
+                const w = vmfSampleWWithConstantsFrom(source, T, self.mean_norm, 3, self.h[0], self.h[1], self.h[2]);
+                const point = vonMisesFisherFromW(source, T, 3, &mean_dir, w);
                 out[0] = point[0];
                 out[1] = point[1];
                 out[2] = point[2];
