@@ -11915,8 +11915,9 @@ fn kentConditionalPhiFrom(source: anytype, comptime T: type, a: T) T {
         const two_pi: T = 2 * @as(T, @floatCast(std.math.pi));
         while (true) {
             const phi = Rng.floatOpenClosedFrom(source, T) * two_pi;
-            const u = Rng.floatOpenFrom(source, T);
-            if (u <= @exp(a * (@cos(2 * phi) - 1))) return phi;
+            // Exp(1) race: E ≥ a·(1 − cos 2φ) replaces exp and a uniform test.
+            const e = standardExponentialFrom(source, T);
+            if (e >= a * (1 - @cos(2 * phi))) return phi;
         }
     }
     const theta = vonMisesFrom(source, T, 0, a);
