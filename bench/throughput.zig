@@ -489,6 +489,7 @@ pub fn main(init: std.process.Init) !void {
     try benchMatrixT(io, stdout, "alea matrix t 2x3", bytes / 64);
     try benchMatrixVonMisesFisher(io, stdout, "alea matrix von mises-fisher 3x2", bytes / 64);
     try benchMatrixFisher(io, stdout, "alea matrix fisher so3", bytes / 64);
+    try benchMatrixFisherO3(io, stdout, "alea matrix fisher o3", bytes / 64);
     try benchMultivariateT(io, stdout, "alea multivariate t 3d", bytes / 64);
     try benchMultivariateLaplace(io, stdout, "alea multivariate laplace 3d", bytes / 64);
     try benchMultivariateSkewNormal(io, stdout, "alea multivariate skew-normal 3d", bytes / 64);
@@ -11805,6 +11806,41 @@ fn benchMatrixFisher(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0x3a27);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const rotation = dist.sample(rng);
+            inline for (0..3) |r| {
+                inline for (0..3) |c| checksum +%= @bitCast(rotation[r][c]);
+            }
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchMatrixFisherO3(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const parameter = [3][3]f64{
+        .{ 1.0, 0.2, -0.3 },
+        .{ 0.1, 0.5, 0.4 },
+        .{ -0.2, 0.3, 0.8 },
+    };
+    const dist = alea.distributions.MatrixFisherO3(f64).init(parameter) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x3a37);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
