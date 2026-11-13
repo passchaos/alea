@@ -1537,6 +1537,8 @@ Reusable samplers:
 - `Multinomial.probabilitiesValue`
 - `Multinomial.probabilityAt`
 - `Multinomial.normalizedProbabilityAt`
+- `Multinomial.marginalCdf`
+- `Multinomial.marginalQuantile`
 - `Multinomial.normalizedProbabilities`
 - `Multinomial.normalizedProbabilitiesInto`
 - `Multinomial.expectedCountAt`
@@ -3215,6 +3217,8 @@ Reusable samplers:
 - `Dirichlet(T).means`
 - `Dirichlet(T).meansInto`
 - `Dirichlet(T).varianceAt`
+- `Dirichlet(T).marginalCdf`
+- `Dirichlet(T).marginalQuantile`
 - `Dirichlet(T).variances`
 - `Dirichlet(T).variancesInto`
 - `Dirichlet(T).covarianceAt`

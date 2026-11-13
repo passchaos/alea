@@ -3125,6 +3125,18 @@ pub const Multinomial = struct {
         return try self.probabilityAt(index) / self.total_probability;
     }
 
+    /// Marginal CDF of category `index`: Binomial(trials, normalized p_i).
+    pub fn marginalCdf(self: Multinomial, index: usize, k: f64) Error!f64 {
+        const p = try self.normalizedProbabilityAt(index);
+        return binomialCdf(k, @as(f64, @floatFromInt(self.trials)), p);
+    }
+
+    /// Marginal quantile of category `index`.
+    pub fn marginalQuantile(self: Multinomial, index: usize, q: f64) Error!f64 {
+        const p = try self.normalizedProbabilityAt(index);
+        return binomialQuantile(q, @as(f64, @floatFromInt(self.trials)), p);
+    }
+
     pub fn normalizedProbabilities(self: Multinomial, allocator: std.mem.Allocator) ![]f64 {
         const out = try allocator.alloc(f64, self.probabilities.len);
         errdefer allocator.free(out);
@@ -27489,6 +27501,28 @@ pub fn Dirichlet(comptime T: type) type {
             return null;
         }
 
+        /// Marginal CDF of component `index`: Beta(α_i, α_0 − α_i).
+        /// A single-infinite-alpha Dirichlet is a vertex point mass.
+        pub fn marginalCdf(self: Self, index: usize, x: T) Error!T {
+            const alpha_i = try self.alphaAt(index);
+            if (self.degenerateIndex()) |degenerate| {
+                if (index == degenerate) return if (x >= 1) 1 else 0;
+                return if (x >= 0) 1 else 0;
+            }
+            const alpha_0 = self.totalAlphaValue();
+            return betaCdf(x, alpha_i, alpha_0 - alpha_i);
+        }
+
+        /// Marginal quantile of component `index`.
+        pub fn marginalQuantile(self: Self, index: usize, p: T) Error!T {
+            const alpha_i = try self.alphaAt(index);
+            if (self.degenerateIndex()) |degenerate| {
+                return if (index == degenerate) 1 else 0;
+            }
+            const alpha_0 = self.totalAlphaValue();
+            return betaQuantile(p, alpha_i, alpha_0 - alpha_i);
+        }
+
         fn usesBetaStickBreaking(self: Self) bool {
             for (self.alpha) |value| {
                 if (!(value <= 0.1)) return false;
@@ -49633,6 +49667,45 @@ test "sampler cdf and quantile methods delegate to the free helpers" {
     const poisson_q: f64 = 0.7;
     try std.testing.expectApproxEqAbs(poissonCdf(poisson_k, poisson_lambda), poisson_dist.cdf(poisson_k), 1e-12);
     try std.testing.expectApproxEqAbs(poissonQuantile(poisson_q, poisson_lambda), poisson_dist.quantile(poisson_q), 1e-12);
+}
+
+test "Dirichlet and Multinomial marginal CDF/quantile methods work" {
+    const alpha = [_]f64{ 2, 3, 5 };
+    const dirichlet = try Dirichlet(f64).init(&alpha);
+    const x: f64 = 0.3;
+    const a0: f64 = 2;
+    const a1: f64 = 8;
+    try std.testing.expectApproxEqAbs(betaCdf(x, a0, a1), try dirichlet.marginalCdf(0, x), 1e-12);
+    const q = try dirichlet.marginalQuantile(0, 0.6);
+    try std.testing.expectApproxEqAbs(0.6, try dirichlet.marginalCdf(0, q), 1e-9);
+    try std.testing.expectError(error.InvalidParameter, dirichlet.marginalCdf(3, 0.5));
+
+    const vertex_alpha = [_]f64{ std.math.inf(f64), 3, 5 };
+    const vertex = try Dirichlet(f64).init(&vertex_alpha);
+    try std.testing.expectEqual(@as(f64, 0), try vertex.marginalCdf(0, 0.5));
+    try std.testing.expectEqual(@as(f64, 1), try vertex.marginalCdf(0, 1));
+    try std.testing.expectEqual(@as(f64, 1), try vertex.marginalCdf(1, 0.5));
+    try std.testing.expectEqual(@as(f64, 1), try vertex.marginalQuantile(0, 0.5));
+    try std.testing.expectEqual(@as(f64, 0), try vertex.marginalQuantile(1, 0.5));
+
+    const probabilities = [_]f64{ 1, 3 };
+    const multinomial = try Multinomial.init(20, &probabilities);
+    const k: f64 = 5;
+    const n: f64 = 20;
+    const p: f64 = 0.25;
+    try std.testing.expectApproxEqAbs(binomialCdf(k, n, p), try multinomial.marginalCdf(0, k), 1e-12);
+    const mk = try multinomial.marginalQuantile(1, 0.7);
+    try std.testing.expect(try multinomial.marginalCdf(1, mk) >= 0.7);
+    if (mk > 0) {
+        try std.testing.expect(try multinomial.marginalCdf(1, mk - 1) < 0.7);
+    }
+    try std.testing.expectError(error.InvalidParameter, multinomial.marginalCdf(2, 5));
+
+    const constant_probabilities = [_]f64{ 0, 1, 0 };
+    const constant = try Multinomial.init(10, &constant_probabilities);
+    try std.testing.expectEqual(@as(f64, 0), try constant.marginalCdf(1, 9));
+    try std.testing.expectEqual(@as(f64, 1), try constant.marginalCdf(1, 10));
+    try std.testing.expectEqual(@as(f64, 1), try constant.marginalCdf(0, 0));
 }
 
 test "StudentTCopula constructor validates parameters" {
