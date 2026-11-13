@@ -6905,5 +6905,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1372-multinomial-batch-hin-cache.md`, and
 `compare/results/s4-m1373-bingham-log-ratio.md`, and
 `compare/results/s4-m1374-validate-all-refresh.md`, and
-`compare/results/s4-m1375-revert-vector-kent-wood-tail.md`.
+`compare/results/s4-m1375-revert-vector-kent-wood-tail.md`, and
+`compare/results/s4-m1376-benchmark-hygiene.md`.
 
