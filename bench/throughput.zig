@@ -11765,13 +11765,16 @@ fn benchBetaBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
 fn benchMatrixVonMisesFisher(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     const parameter = [6]f64{ 0.8, 0.2, -0.1, 0.6, 0.3, -0.4 };
-    var dist = alea.distributions.MatrixVonMisesFisher(f64).initWithOptions(std.heap.smp_allocator, &parameter, 3, 2, 100, 10) catch unreachable;
-    defer dist.deinit();
     var out: [6]f64 = undefined;
     var best: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
+        // The Gibbs sampler is stateful. Create it per trial so every trial
+        // starts from the same burn-in state; otherwise the reported checksum
+        // depends on which trial happened to be fastest.
+        var dist = alea.distributions.MatrixVonMisesFisher(f64).initWithOptions(std.heap.smp_allocator, &parameter, 3, 2, 100, 10) catch unreachable;
+        defer dist.deinit();
         var engine = alea.FastPrng.init(0x3a17);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
