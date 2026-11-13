@@ -6786,14 +6786,14 @@ All four noncentral distributions extend beyond local Rust `rand_distr` 0.6.0,
 which provides no noncentral distributions. All 730 tests pass (28 new tests
 across the batch); `zig build validate` passes all gates.
 
-The next product bar after S4-M1263, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, S4-M1282, S4-M1283, S4-M1284, S4-M1285, S4-M1286, S4-M1287, S4-M1288, S4-M1289, S4-M1290, S4-M1291, S4-M1292, S4-M1293, S4-M1294, S4-M1295, S4-M1296, S4-M1297, S4-M1298, S4-M1299, S4-M1300, S4-M1301, S4-M1302, S4-M1303, S4-M1304, S4-M1305, S4-M1306, S4-M1307, and S4-M1308 covers additional
+The next product bar after S4-M1263, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, S4-M1282, S4-M1283, S4-M1284, S4-M1285, S4-M1286, S4-M1287, S4-M1288, S4-M1289, S4-M1290, S4-M1291, S4-M1292, S4-M1293, S4-M1294, S4-M1295, S4-M1296, S4-M1297, S4-M1298, S4-M1299, S4-M1300, S4-M1301, S4-M1302, S4-M1303, S4-M1304, S4-M1305, S4-M1306, S4-M1307, S4-M1308, and S4-M1309 covers additional
 directional/multivariate distributions (Matrix von Mises-Fisher, Kent), Noncentral/GeneralizedPareto/
 ScaledInvChiSq/Hoyt/ExGaussian/Rice/Nakagami/InverseGamma vector/SIMD sampling,
 SIMD spherical bulk sampling paths, weighted/alias sampling
 advances, string generation expansion, longer statistical validation runs,
 broader platform evidence, or newly discovered core random-workflow gaps.
 
-S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, S4-M1282, S4-M1283, S4-M1284, S4-M1285, S4-M1286, S4-M1287, S4-M1288, S4-M1289, S4-M1290, S4-M1291, S4-M1292, S4-M1293, S4-M1294, S4-M1295, S4-M1296, S4-M1297, S4-M1298, S4-M1299, S4-M1300, S4-M1301, S4-M1302, S4-M1303, S4-M1304, S4-M1305, S4-M1306, S4-M1307, and S4-M1308 are recorded in
+S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, S4-M1272, S4-M1273, S4-M1274, S4-M1275, S4-M1276, S4-M1277, S4-M1278, S4-M1279, S4-M1280, S4-M1281, S4-M1282, S4-M1283, S4-M1284, S4-M1285, S4-M1286, S4-M1287, S4-M1288, S4-M1289, S4-M1290, S4-M1291, S4-M1292, S4-M1293, S4-M1294, S4-M1295, S4-M1296, S4-M1297, S4-M1298, S4-M1299, S4-M1300, S4-M1301, S4-M1302, S4-M1303, S4-M1304, S4-M1305, S4-M1306, S4-M1307, S4-M1308, and S4-M1309 are recorded in
 `compare/results/s4-m1264-vector-simd-advanced-distributions.md`,
 `compare/results/s4-m1265-wishart-inverse-wishart.md`,
 `compare/results/s4-m1266-dynamic-wishart-inverse-wishart.md`,
@@ -6838,5 +6838,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1305-matrix-vmf.md`, and
 `compare/results/s4-m1306-matrix-vmf-integration.md`, and
 `compare/results/s4-m1307-matrix-fisher-so3.md`, and
-`compare/results/s4-m1308-matrix-fisher-integration.md`.
+`compare/results/s4-m1308-matrix-fisher-integration.md`, and
+`compare/results/s4-m1309-vector-vmf.md`.
 

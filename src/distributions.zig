@@ -7690,6 +7690,8 @@ pub fn vonMises(rng: Rng, comptime T: type, mu: T, kappa: T) T {
 }
 
 pub fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
+    if (comptime @typeInfo(T) == .vector) return vonMisesVectorFrom(source, T, mu, kappa);
+
     std.debug.assert(std.math.isFinite(kappa) and kappa >= 0);
 
     const pi: T = @floatCast(std.math.pi);
@@ -7728,6 +7730,60 @@ pub fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
             return mu + delta;
         }
     }
+}
+
+/// Per-lane SIMD Best–Fisher sampler for the circular von Mises distribution.
+/// Lanes retire as they accept, so a mixed batch keeps drawing only the
+/// unresolved lanes.
+fn vonMisesVectorFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
+    const info = @typeInfo(T).vector;
+    const Child = info.child;
+    const L = info.len;
+    const V = @Vector(L, Child);
+    const B = @Vector(L, bool);
+
+    const zero: V = @splat(0);
+    const one: V = @splat(1);
+    const two: V = @splat(2);
+    const half: V = @splat(0.5);
+    const pi: V = @splat(@as(Child, @floatCast(std.math.pi)));
+    std.debug.assert(@reduce(.And, kappa >= zero));
+
+    var result: V = undefined;
+    var pending: B = @splat(true);
+
+    const uniform_mask = kappa == zero;
+    if (@reduce(.Or, uniform_mask)) {
+        const u = Rng.vectorOpenClosedFrom(source, V);
+        const uniform_value = mu + (u * two - one) * pi;
+        result = @select(Child, uniform_mask, uniform_value, result);
+        pending = @select(bool, uniform_mask, @as(B, @splat(false)), pending);
+    }
+    if (!@reduce(.Or, pending)) return result;
+
+    const tau = one + @sqrt(one + two * two * kappa * kappa);
+    const rho = (tau - @sqrt(two * tau)) / (two * kappa);
+    const r = (one + rho * rho) / (two * rho);
+
+    var active = pending;
+    while (@reduce(.Or, active)) {
+        const ua = Rng.vectorOpenFrom(source, V);
+        const z = @cos(pi * ua);
+        const f = (one + r * z) / (r + z);
+        const c = kappa * (r - f);
+        const ub = Rng.vectorOpenFrom(source, V);
+        const fast = (c * (two - c) - ub) > zero;
+        const slow = (@log(c / ub) + one - c) >= zero;
+        const accept = active & (fast | slow);
+        if (@reduce(.Or, accept)) {
+            const uc = Rng.vectorOpenClosedFrom(source, V);
+            const sign = @select(Child, uc >= half, one, -one);
+            const delta = sign * std.math.acos(f);
+            result = @select(Child, accept, mu + delta, result);
+            active = @select(bool, accept, @as(B, @splat(false)), active);
+        }
+    }
+    return result;
 }
 
 pub fn vonMisesChecked(rng: Rng, comptime T: type, mu: T, kappa: T) Error!T {
@@ -8806,6 +8862,169 @@ pub fn fillVonMisesFisherChecked(rng: Rng, comptime T: type, comptime n: usize, 
 /// Checked source-accepting fill variant.
 pub fn fillVonMisesFisherCheckedFrom(source: anytype, comptime T: type, comptime n: usize, dest: [][n]T, mean_dir: [n]T, kappa: T) VonMisesFisherError!void {
     const dist = try VonMisesFisher(T, n).init(mean_dir, kappa);
+    dist.fillFrom(source, dest);
+}
+
+// -----------------------------------------------------------------------------
+// SIMD von Mises-Fisher sampling on S²
+// -----------------------------------------------------------------------------
+
+/// Per-lane SIMD vMF sampler on S² with a shared mean direction and
+/// concentration. Returns `[3]VectorType`, where each lane is one independent
+/// sample. Wood's cosine rejection retires accepted lanes; the tangent angle is
+/// drawn uniformly per lane and the e₁-frame point is Householder-reflected to
+/// the shared mean direction.
+fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) [3]VectorType {
+    const Child = vectorChild(VectorType);
+    const info = vectorInfo(VectorType);
+    const L = info.len;
+    const V = @Vector(L, Child);
+    const B = @Vector(L, bool);
+
+    if (kappa == 0) return vectorUnitSphereFrom(source, VectorType);
+    if (kappa > 1e12) {
+        const x: V = @splat(mean_dir[0]);
+        const y: V = @splat(mean_dir[1]);
+        const z: V = @splat(mean_dir[2]);
+        return .{ x, y, z };
+    }
+
+    const zero: V = @splat(0);
+    const one: V = @splat(1);
+    const two: V = @splat(2);
+    const pi: V = @splat(@as(Child, @floatCast(std.math.pi)));
+    const kappa_v: V = @splat(kappa);
+
+    const consts = vmfWoodConstants(Child, kappa, 3);
+    const b: V = @splat(consts.b);
+    const x0: V = @splat(consts.x0);
+    const c: V = @splat(consts.c);
+
+    var w: V = undefined;
+    var active: B = @splat(true);
+    while (@reduce(.Or, active)) {
+        const z = Rng.vectorOpenClosedFrom(source, V);
+        const u = Rng.vectorOpenFrom(source, V);
+        const wcand = (one - (one + b) * z) / (one - (one - b) * z);
+        const accept = active & (kappa_v * wcand + two * @log(one - x0 * wcand) - c >= @log(u));
+        w = @select(Child, accept, wcand, w);
+        active = @select(bool, accept, @as(B, @splat(false)), active);
+    }
+
+    const angle = Rng.vectorOpenClosedFrom(source, V) * two * pi;
+    const cos_angle = @cos(angle);
+    const sin_angle = @sin(angle);
+    const s = @sqrt(@max(zero, one - w * w));
+    var x = w;
+    var y = s * cos_angle;
+    var z = s * sin_angle;
+
+    const mu0 = mean_dir[0];
+    const tol: Child = if (Child == f32) @floatCast(1e-5) else @floatCast(1e-12);
+    if (@abs(mu0 - 1) < tol) return .{ x, y, z };
+    if (@abs(mu0 + 1) < tol) return .{ -x, y, z };
+
+    var vv: Child = 0;
+    var vx: V = @splat(0);
+    var v_hh: [3]Child = undefined;
+    v_hh[0] = 1 - mu0;
+    vv += v_hh[0] * v_hh[0];
+    vx += @as(V, @splat(v_hh[0])) * x;
+    v_hh[1] = -mean_dir[1];
+    vv += v_hh[1] * v_hh[1];
+    vx += @as(V, @splat(v_hh[1])) * y;
+    v_hh[2] = -mean_dir[2];
+    vv += v_hh[2] * v_hh[2];
+    vx += @as(V, @splat(v_hh[2])) * z;
+    const factor = vx * @as(V, @splat(2 / vv));
+    x -= factor * @as(V, @splat(v_hh[0]));
+    y -= factor * @as(V, @splat(v_hh[1]));
+    z -= factor * @as(V, @splat(v_hh[2]));
+    return .{ x, y, z };
+}
+
+/// SIMD-vectorized von Mises-Fisher sampler on S². One vector holds one
+/// independent sample per lane; the mean direction and concentration are
+/// shared across lanes.
+pub fn VectorVonMisesFisher(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+
+        mean_dir: [3]Child,
+        kappa: Child,
+
+        pub fn init(mean_dir: [3]Child, kappa: Child) VonMisesFisherError!Self {
+            const scalar = try VonMisesFisher(Child, 3).init(mean_dir, kappa);
+            return Self{ .mean_dir = scalar.meanDirection(), .kappa = scalar.concentrationValue() };
+        }
+
+        pub fn new(mean_dir: [3]Child, kappa: Child) Self {
+            return Self.init(mean_dir, kappa) catch |e| {
+                std.debug.panic("VectorVonMisesFisher.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn meanDirection(self: Self) [3]Child {
+            return self.mean_dir;
+        }
+
+        pub fn concentrationValue(self: Self) Child {
+            return self.kappa;
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3]VectorType {
+            return vectorVmfPointFrom(rng, VectorType, self.mean_dir, self.kappa);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3]VectorType {
+            return vectorVmfPointFrom(source, VectorType, self.mean_dir, self.kappa);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+pub fn vectorVonMisesFisher(rng: Rng, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) VonMisesFisherError![3]VectorType {
+    return vectorVonMisesFisherCheckedFrom(rng, VectorType, mean_dir, kappa);
+}
+
+pub fn vectorVonMisesFisherFrom(source: anytype, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) [3]VectorType {
+    const dist = VectorVonMisesFisher(VectorType).new(mean_dir, kappa);
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorVonMisesFisherChecked(rng: Rng, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) VonMisesFisherError![3]VectorType {
+    return vectorVonMisesFisherCheckedFrom(rng, VectorType, mean_dir, kappa);
+}
+
+pub fn vectorVonMisesFisherCheckedFrom(source: anytype, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) VonMisesFisherError![3]VectorType {
+    const dist = try VectorVonMisesFisher(VectorType).init(mean_dir, kappa);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorVonMisesFisher(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) VonMisesFisherError!void {
+    return fillVectorVonMisesFisherCheckedFrom(rng, VectorType, dest, mean_dir, kappa);
+}
+
+pub fn fillVectorVonMisesFisherFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) void {
+    const dist = VectorVonMisesFisher(VectorType).new(mean_dir, kappa);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorVonMisesFisherChecked(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) VonMisesFisherError!void {
+    return fillVectorVonMisesFisherCheckedFrom(rng, VectorType, dest, mean_dir, kappa);
+}
+
+pub fn fillVectorVonMisesFisherCheckedFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) VonMisesFisherError!void {
+    const dist = try VectorVonMisesFisher(VectorType).init(mean_dir, kappa);
     dist.fillFrom(source, dest);
 }
 
@@ -56094,6 +56313,69 @@ test "VonMises large kappa concentrates around mean direction" {
     try std.testing.expectApproxEqAbs(mu, sample_mean, 0.03); // Very tight bound for kappa=50
 }
 
+test "VectorVonMises samples match the circular moments" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x4c01);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const dist = try VectorVonMises(V).new(0, 2);
+    var cos_sum: f64 = 0;
+    var sin_sum: f64 = 0;
+    var count: usize = 0;
+    for (0..10_000) |_| {
+        const samples = dist.sample(rng);
+        inline for (0..4) |lane| {
+            cos_sum += @cos(samples[lane]);
+            sin_sum += @sin(samples[lane]);
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    const rho = besselI1Ratio(@as(f64, 2));
+    try std.testing.expectApproxEqAbs(rho, cos_sum / nf, 0.02);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sin_sum / nf, 0.02);
+}
+
+test "VectorVonMises kappa=0 is uniform and f32x8 works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x4c02);
+    const rng = Rng.init(&engine);
+
+    const V4 = @Vector(4, f64);
+    const dist = try VectorVonMises(V4).new(0, 0);
+    var cos_sum: f64 = 0;
+    var sin_sum: f64 = 0;
+    var count: usize = 0;
+    for (0..5_000) |_| {
+        const samples = dist.sample(rng);
+        inline for (0..4) |lane| {
+            cos_sum += @cos(samples[lane]);
+            sin_sum += @sin(samples[lane]);
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), cos_sum / nf, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sin_sum / nf, 0.03);
+
+    const V8 = @Vector(8, f32);
+    const dist32 = try VectorVonMises(V8).new(0, 2);
+    var engine32 = alea.DefaultPrng.init(0x4c03);
+    var cos_sum32: f32 = 0;
+    var count32: usize = 0;
+    for (0..2_000) |_| {
+        const samples = dist32.sample(Rng.init(&engine32));
+        inline for (0..8) |lane| {
+            cos_sum32 += @cos(samples[lane]);
+            count32 += 1;
+        }
+    }
+    const nf32: f32 = @floatFromInt(count32);
+    const rho32: f32 = @floatCast(besselI1Ratio(@as(f64, 2)));
+    try std.testing.expect(@abs(cos_sum32 / nf32 - rho32) < 0.03);
+}
+
 test "StandardVonMises unit struct has correct parameters" {
     const dist = StandardVonMises{};
     // Mean direction = 0, concentration = 1
@@ -56769,6 +57051,103 @@ test "VonMisesFisher precomputed Wood constants match the free function" {
         const b = vonMisesFisherFrom(&free_engine4, f64, 4, mu4, 3);
         try std.testing.expectEqualSlices(f64, &a, &b);
     }
+}
+
+test "VectorVonMisesFisher samples are unit vectors with the vMF mean" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c01);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const mean = [3]f64{ 0, 0, 1 };
+    const kappa: f64 = 5;
+    const dist = try VectorVonMisesFisher(V).init(mean, kappa);
+    const vmf = try VonMisesFisher(f64, 3).init(mean, kappa);
+    const rho = vmf.meanResultantLength();
+
+    var sum_x: f64 = 0;
+    var sum_y: f64 = 0;
+    var sum_z: f64 = 0;
+    var count: usize = 0;
+    for (0..10_000) |_| {
+        const p = dist.sample(rng);
+        inline for (0..4) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+            sum_x += p[0][lane];
+            sum_y += p[1][lane];
+            sum_z += p[2][lane];
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sum_x / nf, 0.02);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sum_y / nf, 0.02);
+    try std.testing.expectApproxEqAbs(rho, sum_z / nf, 0.02);
+}
+
+test "VectorVonMisesFisher kappa=0 is uniform and f32x8 works" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c02);
+    const rng = Rng.init(&engine);
+
+    const V4 = @Vector(4, f64);
+    const dist = try VectorVonMisesFisher(V4).init(.{ 0, 0, 1 }, 0);
+    var sum_z: f64 = 0;
+    var count: usize = 0;
+    for (0..5_000) |_| {
+        const p = dist.sample(rng);
+        inline for (0..4) |lane| {
+            sum_z += p[2][lane];
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sum_z / nf, 0.03);
+
+    const V8 = @Vector(8, f32);
+    const dist32 = try VectorVonMisesFisher(V8).init(.{ 0, 0, 1 }, 5);
+    var engine32 = alea.DefaultPrng.init(0x5c03);
+    var sum_z32: f32 = 0;
+    var count32: usize = 0;
+    for (0..2_000) |_| {
+        const p = dist32.sample(Rng.init(&engine32));
+        inline for (0..8) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+            sum_z32 += p[2][lane];
+            count32 += 1;
+        }
+    }
+    const nf32: f32 = @floatFromInt(count32);
+    const expected32: f32 = @floatCast(0.80009);
+    try std.testing.expect(@abs(sum_z32 / nf32 - expected32) < 0.03);
+}
+
+test "VectorVonMisesFisher free functions and fill work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c04);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const mean = [3]f64{ 0.6, 0.0, 0.8 };
+    var buf: [8][3]V = undefined;
+    try fillVectorVonMisesFisher(rng, V, &buf, mean, 3);
+    for (buf) |p| {
+        inline for (0..4) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+        }
+    }
+
+    const single = try vectorVonMisesFisherChecked(rng, V, mean, 3);
+    inline for (0..4) |lane| {
+        const norm_sq = single[0][lane] * single[0][lane] + single[1][lane] * single[1][lane] + single[2][lane] * single[2][lane];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+    }
+
+    try std.testing.expectError(error.InvalidParameter, vectorVonMisesFisher(rng, V, mean, -1));
+    try std.testing.expectError(error.InvalidMeanDirection, vectorVonMisesFisher(rng, V, .{ 1, 1, 0 }, 3));
 }
 
 test "Watson constructor validates parameters" {
