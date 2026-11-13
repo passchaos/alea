@@ -11983,23 +11983,26 @@ fn kentConditionalCosSinFrom(source: anytype, comptime T: type, a: T) [2]T {
     return .{ cos_half, sin_phi };
 }
 
+/// Scalar Wood proposal for the Kent marginal, shared by the scalar sampler
+/// and the vector rejection tails.
+inline fn kentWoodScalarFrom(source: anytype, comptime T: type, proposal_lambda: T, wood_b: T, wood_x0: T, wood_c: T) T {
+    if (proposal_lambda == 0) return vmfSampleWFrom(source, T, 0, 3);
+    const one: T = 1;
+    const two: T = 2;
+    while (true) {
+        const z = Rng.floatOpenClosedFrom(source, T);
+        const w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
+        const e = standardExponentialFrom(source, T);
+        if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c + e >= 0) return w;
+    }
+}
+
 /// Scalar Kent marginal draw: Wood proposal plus I₀-weighted acceptance.
 inline fn kentSampleWFrom(source: anytype, comptime T: type, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) T {
     const one: T = 1;
-    const two: T = 2;
     const diff = kappa - proposal_lambda;
     while (true) {
-        var w: T = undefined;
-        if (proposal_lambda == 0) {
-            w = vmfSampleWFrom(source, T, 0, 3);
-        } else {
-            while (true) {
-                const z = Rng.floatOpenClosedFrom(source, T);
-                w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
-                const e = standardExponentialFrom(source, T);
-                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c + e >= 0) break;
-            }
-        }
+        const w = kentWoodScalarFrom(source, T, proposal_lambda, wood_b, wood_x0, wood_c);
         // Exact conditional sampler: accept w against the I₀-weighted marginal.
         const s2 = @max(0, one - w * w);
         const a = ovalness * s2;
@@ -12305,6 +12308,19 @@ fn vectorWoodW(source: anytype, comptime VectorType: type, lambda: vectorChild(V
         const accept = active & (lambda_v * wcand + two * @log(one - x0_v * wcand) - c_v >= @log(u));
         w = @select(Child, accept, wcand, w);
         active = @select(bool, accept, @as(B, @splat(false)), active);
+
+        // Once only a few lanes remain, finish them with the scalar Wood
+        // proposal instead of redrawing full vectors.
+        var active_count: usize = 0;
+        inline for (0..L) |lane| {
+            if (active[lane]) active_count += 1;
+        }
+        if (active_count <= 4) {
+            inline for (0..L) |lane| {
+                if (active[lane]) w[lane] = kentWoodScalarFrom(source, Child, lambda, b, x0, c);
+            }
+            break;
+        }
     }
     return w;
 }
