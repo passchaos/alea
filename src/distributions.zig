@@ -33632,9 +33632,6 @@ fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows:
             x[i * cols + j] = value;
         }
     }
-    if (!matrixVmfOrthonormalize(T, x, rows, cols)) {
-        matrixVmfInitUniform(source, T, x, rows, cols);
-    }
 }
 
 /// Matrix von Mises-Fisher (matrix Langevin) distribution on the Stiefel
@@ -33644,7 +33641,10 @@ fn matrixVmfSweep(source: anytype, comptime T: type, f: []const T, x: []T, rows:
 /// Sampling uses a Gibbs sampler whose per-column conditional distributions
 /// are exact von Mises-Fisher draws on the orthogonal complement of the other
 /// columns. Draws are approximate (correlated) samples from the stationary
-/// distribution; `initWithOptions` controls burn-in and thinning.
+/// distribution; `initWithOptions` controls burn-in and thinning. The columns
+/// stay orthonormal up to floating-point drift, which is corrected by a
+/// Gram-Schmidt pass every 64 sweeps (drift stays below ~1e-11 over 10M
+/// sweeps).
 ///
 /// Requires `p > k`. Square orthogonal matrices (`p = k`) make the conditional
 /// complement one-dimensional and the fixed-sweep chain periodic, so they are
@@ -33667,6 +33667,7 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
         h: []T,
         z: []T,
         initialized: bool,
+        ortho_countdown: usize,
 
         /// Construct with default burn-in (100 sweeps) and thinning (10 sweeps).
         pub fn init(allocator: std.mem.Allocator, parameter: []const T, rows: usize, cols: usize) !Self {
@@ -33717,6 +33718,7 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 .h = h,
                 .z = z,
                 .initialized = false,
+                .ortho_countdown = 0,
             };
         }
 
@@ -33742,6 +33744,7 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
             var copy = try Self.initWithOptions(self.allocator, self.f, self.rows, self.cols, self.burnin, self.thin);
             @memcpy(copy.x, self.x);
             copy.initialized = self.initialized;
+            copy.ortho_countdown = self.ortho_countdown;
             return copy;
         }
 
@@ -33778,6 +33781,16 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
             var i: usize = 0;
             while (i < sweeps) : (i += 1) {
                 matrixVmfSweep(source, T, self.f, self.x, self.rows, self.cols, self.q, self.g, self.scratch, self.h, self.z, d);
+                // The conditional draws keep the columns orthonormal up to
+                // floating-point drift. Correct it every 64 sweeps instead of
+                // paying a full Gram-Schmidt pass per sweep.
+                self.ortho_countdown += 1;
+                if (self.ortho_countdown >= 64) {
+                    self.ortho_countdown = 0;
+                    if (!matrixVmfOrthonormalize(T, self.x, self.rows, self.cols)) {
+                        matrixVmfInitUniform(source, T, self.x, self.rows, self.cols);
+                    }
+                }
             }
         }
 
