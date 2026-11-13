@@ -368,7 +368,9 @@ families.
 Run `zig build run-rank-distributions` for a runnable comparison of finite
 `Zipf`, unbounded `Zeta`, vector rank samplers, and degenerate infinite-exponent
 rank-one behavior.
-- dirichlet and full-covariance multivariate normal
+- dirichlet, full-covariance multivariate normal, and allocator-backed
+  multivariate Student-t (`MultivariateT(T)` / `multi.MultivariateT(T)`) with a
+  shared chi-squared scale and heavier joint tails
 
 Reusable samplers expose `sample(rng)`, and direct-source samplers expose
 `sampleFrom(source)` where comptime-known engine dispatch is useful. They can be

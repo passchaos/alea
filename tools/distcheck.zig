@@ -140,6 +140,35 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("matrix t variance", sum_sq / @as(f64, @floatFromInt(samples)), 1.5, 1.85);
     }
 
+    // Allocator-backed multivariate Student-t moment recovery.
+    {
+        const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;
+        const mean = [_]f64{ 0, 0 };
+        const covariance = [_]f64{ 1, 0.2, 0.2, 1 };
+        var dist = try alea.distributions.MultivariateT(f64).init(allocator, &mean, &covariance, 5);
+        defer dist.deinit();
+        const samples = 20_000;
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var out: [2]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleIntoFrom(&engine, &out);
+            sum += out[0];
+            sum_sq += out[0] * out[0];
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const observed_mean = sum / nf;
+        try expectFloatBetween("multivariate t mean", observed_mean, -0.05, 0.05);
+        try expectFloatBetween("multivariate t variance", sum_sq / nf - observed_mean * observed_mean, 1.5, 1.85);
+        const variance = try dist.varianceAt(0);
+        if (variance) |value| {
+            try expectFloatBetween("multivariate t accessor variance", value, 1.666, 1.667);
+        } else {
+            return error.DistributionCheckFailed;
+        }
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;

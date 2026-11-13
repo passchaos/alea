@@ -166,10 +166,11 @@ The current Linux-first roadmap is intentionally broad:
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial, von Mises, wrapped Cauchy, von Mises-Fisher, Watson, Bingham,
   truncated normal, Gaussian/Student-t copulas, matrix normal,
-  matrix-variate Student-t, Wishart/Inverse-Wishart, and Zig-native
-  full-covariance multivariate normal with reusable dynamic Cholesky
-  factorization plus allocation-free `StaticMultivariateNormal(T, dimension)`
-  fixed-array sampling; `multi.Dirichlet`, `multi.MultivariateNormal`,
+  matrix-variate Student-t, Wishart/Inverse-Wishart, Zig-native full-covariance
+  multivariate normal with reusable dynamic Cholesky factorization plus
+  allocation-free `StaticMultivariateNormal(T, dimension)` fixed-array
+  sampling, and allocator-backed `MultivariateT(T)` with a shared chi-squared
+  scale; `multi.Dirichlet`, `multi.MultivariateNormal`, `multi.MultivariateT`,
   `multi.StaticMultivariateNormal`, `multi.GaussianCopula`,
   `multi.StudentTCopula`, `multi.MatrixNormal`, `multi.StaticMatrixNormal`,
   `multi.MatrixT`, and `multi.StaticMatrixT` provide multivariate namespace
