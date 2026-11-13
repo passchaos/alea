@@ -34158,6 +34158,29 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
             }
         }
 
+        /// Exact single-column draw. Kept out of line so the hot 3×2 path in
+        /// `sampleIntoFrom` stays compact.
+        noinline fn sampleExactK1From(self: *Self, source: anytype, out: []T) void {
+            // The common small dimensions use the comptime-specialized vector
+            // vMF path, which avoids runtime-dimension loops.
+            if (self.rows == 2) {
+                const mean_dir = [2]T{ self.g[0], self.g[1] };
+                const point = vonMisesFisherPointFrom(source, T, 2, &mean_dir, self.mean_norm);
+                out[0] = point[0];
+                out[1] = point[1];
+                return;
+            }
+            if (self.rows == 3) {
+                const mean_dir = [3]T{ self.g[0], self.g[1], self.g[2] };
+                const point = vonMisesFisherPointFrom(source, T, 3, &mean_dir, self.mean_norm);
+                out[0] = point[0];
+                out[1] = point[1];
+                out[2] = point[2];
+                return;
+            }
+            runtimeVonMisesFisherInto(source, T, self.rows, self.g, self.mean_norm, out, self.scratch);
+        }
+
         pub fn sampleIntoFrom(self: *Self, source: anytype, out: []T) !void {
             if (out.len != self.rows * self.cols) return error.InvalidLength;
             if (self.exact_3x2) |*exact| {
@@ -34171,7 +34194,7 @@ pub fn MatrixVonMisesFisher(comptime T: type) type {
                 return;
             }
             if (self.cols == 1) {
-                runtimeVonMisesFisherInto(source, T, self.rows, self.g, self.mean_norm, out, self.scratch);
+                self.sampleExactK1From(source, out);
                 return;
             }
             self.ensureInitialized(source);
