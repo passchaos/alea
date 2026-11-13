@@ -508,6 +508,7 @@ pub const NoncentralFError = Error;
 pub const NoncentralChiError = Error;
 pub const GaussianCopulaError = Error;
 pub const StudentTCopulaError = Error;
+pub const MatrixNormalError = Error;
 
 /// Von Mises-Fisher distribution error set.
 pub const VonMisesFisherError = error{
@@ -594,6 +595,10 @@ pub const multi = struct {
 
     pub fn StudentTCopula(comptime T: type) type {
         return distributions_module.StudentTCopula(T);
+    }
+
+    pub fn MatrixNormal(comptime T: type) type {
+        return distributions_module.MatrixNormal(T);
     }
 };
 
@@ -27950,6 +27955,268 @@ pub fn InverseWishart(comptime T: type) type {
     };
 }
 
+fn integerSquareRoot(value: usize) ?usize {
+    if (value == 0) return null;
+    const root_float = @sqrt(@as(f64, @floatFromInt(value)));
+    var root: usize = @intFromFloat(root_float);
+    while ((root + 1) * (root + 1) <= value) : (root += 1) {}
+    while (root * root > value) : (root -= 1) {}
+    if (root * root != value) return null;
+    return root;
+}
+
+/// Matrix normal distribution MN(M, U, V) over rows×cols matrices.
+///
+/// Density proportional to
+///   exp(-½·tr(V⁻¹ (X−M)ᵀ U⁻¹ (X−M))),
+/// where M is the rows×cols mean, U is the rows×rows row covariance, and V is
+/// the cols×cols column covariance. Sampling uses
+///   X = M + L_U Z L_Vᵀ,
+/// with U = L_U L_Uᵀ, V = L_V L_Vᵀ, and Z filled with iid standard normals.
+/// The transform is performed in place on the output buffer, so `sampleInto`
+/// is allocation-free after construction.
+pub fn MatrixNormal(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        mean: []T,
+        row_cholesky: []T,
+        col_cholesky: []T,
+        rows: usize,
+        cols: usize,
+        allocator: std.mem.Allocator,
+
+        pub fn init(allocator: std.mem.Allocator, mean: []const T, row_covariance: []const T, col_covariance: []const T) !Self {
+            comptime requireFloat(T);
+            if (mean.len == 0) return error.EmptyRange;
+
+            const rows = integerSquareRoot(row_covariance.len) orelse return error.InvalidLength;
+            const cols = integerSquareRoot(col_covariance.len) orelse return error.InvalidLength;
+            if (rows == 0 or cols == 0) return error.InvalidLength;
+            const expected_len = std.math.mul(usize, rows, cols) catch return error.InvalidLength;
+            if (expected_len != mean.len) return error.InvalidLength;
+
+            for (mean) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidParameter;
+            }
+            for (row_covariance) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidCovariance;
+            }
+            for (col_covariance) |value| {
+                if (!std.math.isFinite(value)) return error.InvalidCovariance;
+            }
+
+            const owned_mean = try allocator.dupe(T, mean);
+            errdefer allocator.free(owned_mean);
+            const row_cholesky = try allocator.alloc(T, row_covariance.len);
+            errdefer allocator.free(row_cholesky);
+            const col_cholesky = try allocator.alloc(T, col_covariance.len);
+            errdefer allocator.free(col_cholesky);
+
+            const row_zero = try allocator.alloc(T, rows);
+            defer allocator.free(row_zero);
+            @memset(row_zero, 0);
+            _ = try factorMultivariateCovariance(T, row_zero, row_covariance, row_cholesky);
+
+            const col_zero = try allocator.alloc(T, cols);
+            defer allocator.free(col_zero);
+            @memset(col_zero, 0);
+            _ = try factorMultivariateCovariance(T, col_zero, col_covariance, col_cholesky);
+
+            return .{
+                .mean = owned_mean,
+                .row_cholesky = row_cholesky,
+                .col_cholesky = col_cholesky,
+                .rows = rows,
+                .cols = cols,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn new(allocator: std.mem.Allocator, mean: []const T, row_covariance: []const T, col_covariance: []const T) !Self {
+            return Self.init(allocator, mean, row_covariance, col_covariance);
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.allocator.free(self.mean);
+            self.allocator.free(self.row_cholesky);
+            self.allocator.free(self.col_cholesky);
+            self.* = undefined;
+        }
+
+        pub fn clone(self: Self, allocator: std.mem.Allocator) !Self {
+            const mean = try allocator.dupe(T, self.mean);
+            errdefer allocator.free(mean);
+            const row_cholesky = try allocator.dupe(T, self.row_cholesky);
+            errdefer allocator.free(row_cholesky);
+            const col_cholesky = try allocator.dupe(T, self.col_cholesky);
+            errdefer allocator.free(col_cholesky);
+            return .{
+                .mean = mean,
+                .row_cholesky = row_cholesky,
+                .col_cholesky = col_cholesky,
+                .rows = self.rows,
+                .cols = self.cols,
+                .allocator = allocator,
+            };
+        }
+
+        pub fn rowsValue(self: Self) usize {
+            return self.rows;
+        }
+
+        pub fn colsValue(self: Self) usize {
+            return self.cols;
+        }
+
+        pub fn meanValues(self: Self) []const T {
+            return self.mean;
+        }
+
+        pub fn meanAt(self: Self, row: usize, col: usize) Error!T {
+            if (row >= self.rows or col >= self.cols) return error.InvalidParameter;
+            return self.mean[row * self.cols + col];
+        }
+
+        pub fn expectedValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            return allocator.dupe(T, self.mean);
+        }
+
+        pub fn expectedValueInto(self: Self, out: []T) Error!void {
+            if (out.len != self.mean.len) return error.InvalidLength;
+            @memcpy(out, self.mean);
+        }
+
+        pub fn modeValue(self: Self, allocator: std.mem.Allocator) ![]T {
+            return allocator.dupe(T, self.mean);
+        }
+
+        pub fn modeInto(self: Self, out: []T) Error!void {
+            if (out.len != self.mean.len) return error.InvalidLength;
+            @memcpy(out, self.mean);
+        }
+
+        pub fn rowCovarianceAt(self: Self, row: usize, col: usize) Error!T {
+            if (row >= self.rows or col >= self.rows) return error.InvalidParameter;
+            var sum: T = 0;
+            var k: usize = 0;
+            while (k <= @min(row, col)) : (k += 1) {
+                sum += self.row_cholesky[row * self.rows + k] *
+                    self.row_cholesky[col * self.rows + k];
+            }
+            return sum;
+        }
+
+        pub fn colCovarianceAt(self: Self, row: usize, col: usize) Error!T {
+            if (row >= self.cols or col >= self.cols) return error.InvalidParameter;
+            var sum: T = 0;
+            var k: usize = 0;
+            while (k <= @min(row, col)) : (k += 1) {
+                sum += self.col_cholesky[row * self.cols + k] *
+                    self.col_cholesky[col * self.cols + k];
+            }
+            return sum;
+        }
+
+        pub fn varianceAt(self: Self, row: usize, col: usize) Error!T {
+            const row_variance = try self.rowCovarianceAt(row, row);
+            const col_variance = try self.colCovarianceAt(col, col);
+            return row_variance * col_variance;
+        }
+
+        pub fn sample(self: Self, allocator: std.mem.Allocator, rng: Rng) ![]T {
+            const out = try allocator.alloc(T, self.mean.len);
+            errdefer allocator.free(out);
+            self.sampleInto(rng, out);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, allocator: std.mem.Allocator, source: anytype) ![]T {
+            const out = try allocator.alloc(T, self.mean.len);
+            errdefer allocator.free(out);
+            self.sampleIntoFrom(source, out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len == self.mean.len);
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len == self.mean.len);
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len != self.mean.len) return error.InvalidLength;
+            self.sampleIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len != self.mean.len) return error.InvalidLength;
+            self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len % self.mean.len == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.mean.len) {
+                self.sampleIntoUnchecked(rng, out[offset..][0..self.mean.len]);
+            }
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len % self.mean.len == 0);
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += self.mean.len) {
+                self.sampleIntoUnchecked(source, out[offset..][0..self.mean.len]);
+            }
+        }
+
+        fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            const rows = self.rows;
+            const cols = self.cols;
+
+            for (out) |*value| value.* = standardNormalFrom(source, T);
+
+            // Left-multiply by L_U in place. Process rows bottom-up so the
+            // original Z rows below the current one are still intact.
+            var col: usize = 0;
+            while (col < cols) : (col += 1) {
+                var row: usize = rows;
+                while (row > 0) {
+                    row -= 1;
+                    var value: T = out[row * cols + col];
+                    var k: usize = 0;
+                    while (k < row) : (k += 1) {
+                        value += self.row_cholesky[row * rows + k] * out[k * cols + col];
+                    }
+                    out[row * cols + col] = value;
+                }
+            }
+
+            // Right-multiply by L_Vᵀ in place. Process columns right-to-left so
+            // the original Y columns left of the current one are still intact.
+            var r: usize = 0;
+            while (r < rows) : (r += 1) {
+                var c: usize = cols;
+                while (c > 0) {
+                    c -= 1;
+                    var value: T = out[r * cols + c];
+                    var k: usize = 0;
+                    while (k < c) : (k += 1) {
+                        value += out[r * cols + k] * self.col_cholesky[c * cols + k];
+                    }
+                    out[r * cols + c] = value;
+                }
+            }
+
+            for (out, self.mean) |*value, mean_value| value.* += mean_value;
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -48515,6 +48782,167 @@ test "GaussianCopula and StudentTCopula (dynamic) f32 support" {
         inline for (0..3) |i| try std.testing.expect(out[i] > 0 and out[i] < 1);
         student.sampleInto(rng, &out);
         inline for (0..3) |i| try std.testing.expect(out[i] > 0 and out[i] < 1);
+    }
+}
+
+test "MatrixNormal constructor validates parameters" {
+    const allocator = std.testing.allocator;
+    try std.testing.expectError(error.EmptyRange, MatrixNormal(f64).init(allocator, &[_]f64{}, &[_]f64{1}, &[_]f64{1}));
+    try std.testing.expectError(error.InvalidLength, MatrixNormal(f64).init(allocator, &[_]f64{ 0, 0 }, &[_]f64{ 1, 0, 0 }, &[_]f64{1}));
+    try std.testing.expectError(error.InvalidLength, MatrixNormal(f64).init(allocator, &[_]f64{ 0, 0, 0 }, &[_]f64{ 1, 0, 0, 1 }, &[_]f64{1}));
+    try std.testing.expectError(error.InvalidParameter, MatrixNormal(f64).init(allocator, &[_]f64{ std.math.nan(f64), 0 }, &[_]f64{ 1, 0, 0, 1 }, &[_]f64{1}));
+    try std.testing.expectError(error.InvalidCovariance, MatrixNormal(f64).init(allocator, &[_]f64{ 0, 0 }, &[_]f64{ 1, 0, 0, std.math.inf(f64) }, &[_]f64{1}));
+    try std.testing.expectError(error.InvalidCovariance, MatrixNormal(f64).init(allocator, &[_]f64{ 0, 0 }, &[_]f64{ 1, 2, 2, 1 }, &[_]f64{1}));
+}
+
+test "MatrixNormal identity covariances produce iid standard normals" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xe0);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{0} ** 6; // 2x3
+    const row_covariance = [_]f64{ 1, 0, 0, 1 };
+    const col_covariance = [_]f64{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+    var dist = try MatrixNormal(f64).init(allocator, &mean, &row_covariance, &col_covariance);
+    defer dist.deinit();
+    try std.testing.expectEqual(@as(usize, 2), dist.rowsValue());
+    try std.testing.expectEqual(@as(usize, 3), dist.colsValue());
+
+    const count = 10000;
+    var sums = [_]f64{0} ** 6;
+    var sum_sq = [_]f64{0} ** 6;
+    var cross: f64 = 0;
+    var out: [6]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        for (0..6) |i| {
+            sums[i] += out[i];
+            sum_sq[i] += out[i] * out[i];
+        }
+        cross += out[0] * out[5];
+    }
+    const nf: f64 = @floatFromInt(count);
+    for (0..6) |i| {
+        const mean_i = sums[i] / nf;
+        try std.testing.expectApproxEqAbs(@as(f64, 0), mean_i, 0.03);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), sum_sq[i] / nf - mean_i * mean_i, 0.05);
+    }
+    try std.testing.expect(@abs(cross / nf) < 0.05);
+}
+
+test "MatrixNormal recovers row and column covariance" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xe1);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{0} ** 4; // 2x2
+    const row_covariance = [_]f64{ 1, 0.6, 0.6, 1 };
+    const col_covariance = [_]f64{ 1, 0.4, 0.4, 1 };
+    var dist = try MatrixNormal(f64).init(allocator, &mean, &row_covariance, &col_covariance);
+    defer dist.deinit();
+
+    const count = 20000;
+    var row_cross: f64 = 0;
+    var col_cross: f64 = 0;
+    var out: [4]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        row_cross += out[0] * out[2]; // same column, rows 0 and 1
+        col_cross += out[0] * out[1]; // same row, columns 0 and 1
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6), row_cross / nf, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4), col_cross / nf, 0.03);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.rowCovarianceAt(0, 0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6), try dist.rowCovarianceAt(0, 1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.colCovarianceAt(0, 0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.4), try dist.colCovarianceAt(0, 1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.varianceAt(0, 0), 1e-12);
+}
+
+test "MatrixNormal recovers a non-zero mean" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xe2);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{ 1, 2, 3, 4, 5, 6 }; // 2x3
+    const row_covariance = [_]f64{ 1, 0, 0, 1 };
+    const col_covariance = [_]f64{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+    var dist = try MatrixNormal(f64).init(allocator, &mean, &row_covariance, &col_covariance);
+    defer dist.deinit();
+
+    const count = 10000;
+    var sums = [_]f64{0} ** 6;
+    var out: [6]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        for (0..6) |i| sums[i] += out[i];
+    }
+    const nf: f64 = @floatFromInt(count);
+    for (0..6) |i| {
+        try std.testing.expectApproxEqAbs(mean[i], sums[i] / nf, 0.04);
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 3), try dist.meanAt(0, 2), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, dist.meanAt(2, 0));
+}
+
+test "MatrixNormal clone, caller buffers, and batches work" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xe3);
+    const rng = Rng.init(&engine);
+
+    const mean = [_]f64{ 0.5, -0.5, 1, 2 };
+    const row_covariance = [_]f64{ 1, 0.3, 0.3, 1 };
+    const col_covariance = [_]f64{ 1, 0.2, 0.2, 1 };
+    var dist = try MatrixNormal(f64).init(allocator, &mean, &row_covariance, &col_covariance);
+    defer dist.deinit();
+
+    var clone = try dist.clone(allocator);
+    defer clone.deinit();
+
+    var out: [4]f64 = undefined;
+    try dist.sampleIntoChecked(rng, &out);
+    try std.testing.expectError(error.InvalidLength, dist.sampleIntoChecked(rng, out[0..3]));
+
+    var batch: [8]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+
+    const allocated = try dist.sample(allocator, rng);
+    defer allocator.free(allocated);
+    try std.testing.expectEqual(@as(usize, 4), allocated.len);
+
+    const expected = try dist.expectedValue(allocator);
+    defer allocator.free(expected);
+    try std.testing.expectEqualSlices(f64, &mean, expected);
+    var mode_buf: [4]f64 = undefined;
+    try dist.modeInto(&mode_buf);
+    try std.testing.expectEqualSlices(f64, &mean, &mode_buf);
+    try std.testing.expectError(error.InvalidLength, dist.expectedValueInto(mode_buf[0..3]));
+}
+
+test "MatrixNormal f32 and direct-source parity" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var facade_engine = alea.DefaultPrng.init(0xe4);
+    var direct_engine = alea.DefaultPrng.init(0xe4);
+    const rng = Rng.init(&facade_engine);
+
+    const mean = [_]f32{0} ** 4;
+    const row_covariance = [_]f32{ 1, 0.5, 0.5, 1 };
+    const col_covariance = [_]f32{ 1, 0.2, 0.2, 1 };
+    var dist = try MatrixNormal(f32).init(allocator, &mean, &row_covariance, &col_covariance);
+    defer dist.deinit();
+
+    var facade_buf: [4]f32 = undefined;
+    var direct_buf: [4]f32 = undefined;
+    for (0..16) |_| {
+        dist.sampleInto(rng, &facade_buf);
+        dist.sampleIntoFrom(&direct_engine, &direct_buf);
+        try std.testing.expectEqualSlices(f32, &facade_buf, &direct_buf);
     }
 }
 

@@ -3209,6 +3209,7 @@ Reusable samplers:
 - `Dirichlet(T).sampleManyIntoCheckedFrom`
 - `WishartError`
 - `InverseWishartError`
+- `MatrixNormalError`
 - `Wishart(T)`
 - `Wishart(T).init`
 - `Wishart(T).new`
@@ -3263,6 +3264,31 @@ Reusable samplers:
 - `StaticInverseWishart(T, dimension).expectedValue`
 - `StaticInverseWishart(T, dimension).sample`
 - `StaticInverseWishart(T, dimension).sampleFrom`
+- `MatrixNormal(T)`
+- `multi.MatrixNormal(T)`
+- `MatrixNormal(T).init`
+- `MatrixNormal(T).new`
+- `MatrixNormal(T).deinit`
+- `MatrixNormal(T).clone`
+- `MatrixNormal(T).rowsValue`
+- `MatrixNormal(T).colsValue`
+- `MatrixNormal(T).meanValues`
+- `MatrixNormal(T).meanAt`
+- `MatrixNormal(T).expectedValue`
+- `MatrixNormal(T).expectedValueInto`
+- `MatrixNormal(T).modeValue`
+- `MatrixNormal(T).modeInto`
+- `MatrixNormal(T).rowCovarianceAt`
+- `MatrixNormal(T).colCovarianceAt`
+- `MatrixNormal(T).varianceAt`
+- `MatrixNormal(T).sample`
+- `MatrixNormal(T).sampleFrom`
+- `MatrixNormal(T).sampleInto`
+- `MatrixNormal(T).sampleIntoFrom`
+- `MatrixNormal(T).sampleIntoChecked`
+- `MatrixNormal(T).sampleIntoCheckedFrom`
+- `MatrixNormal(T).sampleManyInto`
+- `MatrixNormal(T).sampleManyIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`
