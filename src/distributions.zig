@@ -8503,6 +8503,18 @@ fn vmfWoodConstants(comptime T: type, kappa: T, dim: usize) struct { b: T, x0: T
 /// marginal distribution on the cosine of the polar angle from the mean
 /// direction μ (taken as e_1).  Uses Ulrich-Wood rejection sampling.
 /// Works for n ≥ 3.
+fn vmfSampleWWithConstantsFrom(source: anytype, comptime T: type, kappa: T, dim: usize, b: T, x0: T, c: T) T {
+    const d_minus_1: T = @floatFromInt(dim - 1);
+    while (true) {
+        const z = Rng.floatOpenClosedFrom(source, T);
+        const u = Rng.floatOpenFrom(source, T);
+        const w = (1 - (1 + b) * z) / (1 - (1 - b) * z);
+        if (kappa * w + d_minus_1 * @log(1 - x0 * w) - c >= @log(u)) {
+            return w;
+        }
+    }
+}
+
 fn vmfSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T {
     if (kappa == 0) {
         // Uniform on sphere S^{n-1}: w = 2B - 1 where B ~ Beta((d-2)/2, (d-2)/2).
@@ -8512,19 +8524,7 @@ fn vmfSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T {
     }
 
     const consts = vmfWoodConstants(T, kappa, dim);
-    const b = consts.b;
-    const x0 = consts.x0;
-    const c = consts.c;
-    const d_minus_1: T = @floatFromInt(dim - 1);
-
-    while (true) {
-        const z = Rng.floatOpenClosedFrom(source, T);
-        const u = Rng.floatOpenFrom(source, T);
-        const w = (1 - (1 + b) * z) / (1 - (1 - b) * z);
-        if (kappa * w + d_minus_1 * @log(1 - x0 * w) - c >= @log(u)) {
-            return w;
-        }
-    }
+    return vmfSampleWWithConstantsFrom(source, T, kappa, dim, consts.b, consts.x0, consts.c);
 }
 
 /// Sample a point on S^{n-1} ~ vMF(mean_dir, kappa) using Wood's algorithm.
@@ -8555,8 +8555,14 @@ fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize,
 
     // Step 1: Sample w = cos(theta) from marginal distribution (works for n >= 3).
     const w = vmfSampleWFrom(source, T, kappa, n);
+    return vonMisesFisherFromW(source, T, n, mean_dir, w);
+}
 
-    // Step 2: Sample uniform point v on S^{n-2} (equator of the tangent subspace).
+/// Finish a vMF sample given the cosine `w` of the polar angle from the mean:
+/// draw a uniform tangent direction on S^{n-2}, assemble the point in the
+/// e₁-centered frame, and rotate it to the mean-direction frame.
+fn vonMisesFisherFromW(source: anytype, comptime T: type, comptime n: usize, mean_dir: *const [n]T, w: T) [n]T {
+    // Sample uniform point v on S^{n-2} (equator of the tangent subspace).
     var v: [n]T = undefined;
     if (n == 3) {
         // Uniform on circle S^1 (tangent direction is 2D).
@@ -8571,14 +8577,23 @@ fn vonMisesFisherPointFrom(source: anytype, comptime T: type, comptime n: usize,
         inline for (1..n) |i| v[i] = v_sub[i - 1];
     }
 
-    // Step 3: Assemble x = (w, sqrt(1-w^2) * v) in the e_1-centered frame.
+    // Assemble x = (w, sqrt(1-w^2) * v) in the e_1-centered frame.
     const sqrt_1mw2 = @sqrt(@max(0, 1 - w * w));
     var x: [n]T = undefined;
     x[0] = w;
     inline for (1..n) |i| x[i] = sqrt_1mw2 * v[i];
 
-    // Step 4: Householder reflection: rotate from e_1 frame to mean_dir frame.
+    // Householder reflection: rotate from e_1 frame to mean_dir frame.
     return householderReflectFromE1(T, n, x, mean_dir);
+}
+
+/// vMF sample for n ≥ 3 using Wood constants precomputed at construction time.
+fn vonMisesFisherPointWithWoodFrom(source: anytype, comptime T: type, comptime n: usize, mean_dir: *const [n]T, kappa: T, wood_b: T, wood_x0: T, wood_c: T) [n]T {
+    if (comptime n < 3) @compileError("precomputed Wood constants require n >= 3");
+    if (kappa == 0) return unitSphereSurfaceFrom(source, T, n);
+    if (kappa > 1e12) return mean_dir.*;
+    const w = vmfSampleWWithConstantsFrom(source, T, kappa, n, wood_b, wood_x0, wood_c);
+    return vonMisesFisherFromW(source, T, n, mean_dir, w);
 }
 
 /// Apply the Householder reflection that maps e_1 to the unit vector mu
@@ -8626,6 +8641,21 @@ pub fn VonMisesFisher(comptime T: type, comptime n: usize) type {
 
         mean_dir: [n]T,
         kappa: T,
+        wood_b: T,
+        wood_x0: T,
+        wood_c: T,
+
+        fn woodConstants(kappa: T) [3]T {
+            if (comptime n < 3) return .{ 0, 0, 0 };
+            if (kappa <= 0 or kappa > 1e12) return .{ 0, 0, 0 };
+            const wc = vmfWoodConstants(T, kappa, n);
+            return .{ wc.b, wc.x0, wc.c };
+        }
+
+        fn samplePoint(self: Self, source: anytype) [n]T {
+            if (comptime n == 2) return vonMisesFisherPointFrom(source, T, n, &self.mean_dir, self.kappa);
+            return vonMisesFisherPointWithWoodFrom(source, T, n, &self.mean_dir, self.kappa, self.wood_b, self.wood_x0, self.wood_c);
+        }
 
         /// Construct a vMF distribution with given mean direction and concentration.
         /// Validates kappa ≥ 0 and finite, and that mean_dir is within 1e-6 of unit length.
@@ -8641,7 +8671,8 @@ pub fn VonMisesFisher(comptime T: type, comptime n: usize) type {
             }
             if (@abs(norm_sq - 1) > 1e-6) return error.InvalidMeanDirection;
 
-            return Self{ .mean_dir = mean_dir, .kappa = kappa };
+            const wood = Self.woodConstants(kappa);
+            return Self{ .mean_dir = mean_dir, .kappa = kappa, .wood_b = wood[0], .wood_x0 = wood[1], .wood_c = wood[2] };
         }
 
         /// Debug-only constructor: panics on invalid parameters.
@@ -8656,7 +8687,8 @@ pub fn VonMisesFisher(comptime T: type, comptime n: usize) type {
         pub fn initNormalized(mean_dir: [n]T, kappa: T) VonMisesFisherError!Self {
             comptime requireFloat(T);
             if (!std.math.isFinite(kappa) or kappa < 0) return error.InvalidParameter;
-            return Self{ .mean_dir = mean_dir, .kappa = kappa };
+            const wood = Self.woodConstants(kappa);
+            return Self{ .mean_dir = mean_dir, .kappa = kappa, .wood_b = wood[0], .wood_x0 = wood[1], .wood_c = wood[2] };
         }
 
         pub fn meanDirection(self: Self) [n]T {
@@ -8702,19 +8734,19 @@ pub fn VonMisesFisher(comptime T: type, comptime n: usize) type {
         }
 
         pub fn sample(self: Self, rng: Rng) [n]T {
-            return vonMisesFisherPointFrom(rng, T, n, &self.mean_dir, self.kappa);
+            return self.samplePoint(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) [n]T {
-            return vonMisesFisherPointFrom(source, T, n, &self.mean_dir, self.kappa);
+            return self.samplePoint(source);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: [][n]T) void {
-            fillVonMisesFisherPointsFrom(rng, T, n, dest, &self.mean_dir, self.kappa);
+            for (dest) |*item| item.* = self.samplePoint(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: [][n]T) void {
-            fillVonMisesFisherPointsFrom(source, T, n, dest, &self.mean_dir, self.kappa);
+            for (dest) |*item| item.* = self.samplePoint(source);
         }
     };
 }
@@ -55856,6 +55888,32 @@ test "VonMisesFisher f32 sampling works" {
         const p = dist.sample(rng);
         const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
         try std.testing.expect(@abs(norm_sq - 1) < 1e-4);
+    }
+}
+
+test "VonMisesFisher precomputed Wood constants match the free function" {
+    const alea = @import("root.zig");
+
+    const mu3 = [3]f64{ 0.6, 0.0, 0.8 };
+    var type_engine3 = alea.DefaultPrng.init(0x1357);
+    var free_engine3 = alea.DefaultPrng.init(0x1357);
+    const type_rng3 = Rng.init(&type_engine3);
+    const dist3 = try VonMisesFisher(f64, 3).init(mu3, 5);
+    for (0..32) |_| {
+        const a = dist3.sample(type_rng3);
+        const b = vonMisesFisherFrom(&free_engine3, f64, 3, mu3, 5);
+        try std.testing.expectEqualSlices(f64, &a, &b);
+    }
+
+    const mu4 = [4]f64{ 0.5, 0.5, 0.5, 0.5 };
+    var type_engine4 = alea.DefaultPrng.init(0x2469);
+    var free_engine4 = alea.DefaultPrng.init(0x2469);
+    const type_rng4 = Rng.init(&type_engine4);
+    const dist4 = try VonMisesFisher(f64, 4).init(mu4, 3);
+    for (0..32) |_| {
+        const a = dist4.sample(type_rng4);
+        const b = vonMisesFisherFrom(&free_engine4, f64, 4, mu4, 3);
+        try std.testing.expectEqualSlices(f64, &a, &b);
     }
 }
 
