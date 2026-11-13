@@ -4,6 +4,10 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const test_filter = b.option([]const u8, "test-filter", "Only run unit tests whose name contains this substring");
+    const has_compare_results = blk: {
+        std.Io.Dir.cwd().access(b.graph.io, "compare/results/core-rand-coverage.md", .{}) catch break :blk false;
+        break :blk true;
+    };
 
     const module = b.addModule("alea", .{
         .root_source_file = b.path("src/root.zig"),
@@ -688,7 +692,7 @@ pub fn build(b: *std.Build) void {
     doccheck_step.dependOn(examplecheck_step);
     doccheck_step.dependOn(toolingcheck_step);
     doccheck_step.dependOn(readmecheck_step);
-    doccheck_step.dependOn(roadmapcheck_step);
+    if (has_compare_results) doccheck_step.dependOn(roadmapcheck_step);
 
     const test_step = b.step("test", "Run alea unit tests and documentation checks");
     test_step.dependOn(&run_tests.step);

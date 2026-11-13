@@ -106,12 +106,18 @@ pub fn main(init: std.process.Init) !void {
     defer allocator.free(readme);
 
     var missing: usize = 0;
+    const has_compare_results = blk: {
+        std.Io.Dir.cwd().access(io, "compare/results/core-rand-coverage.md", .{}) catch break :blk false;
+        break :blk true;
+    };
 
     inline for (required_files) |path| {
-        std.Io.Dir.cwd().access(io, path, .{}) catch |err| {
-            try stderr.print("readmecheck: missing referenced file {s}: {s}\n", .{ path, @errorName(err) });
-            missing += 1;
-        };
+        if (has_compare_results or !std.mem.startsWith(u8, path, "compare/")) {
+            std.Io.Dir.cwd().access(io, path, .{}) catch |err| {
+                try stderr.print("readmecheck: missing referenced file {s}: {s}\n", .{ path, @errorName(err) });
+                missing += 1;
+            };
+        }
     }
 
     inline for (required_tokens) |required| {

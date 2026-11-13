@@ -37,3 +37,11 @@ jobs:
       - name: Run native validation
         if: runner.os == 'Linux'
         run: zig build validate
+
+      - name: Cross-target compile checks
+        if: runner.os == 'Linux'
+        run: zig build crosscheck
+
+      - name: WASI runtime checks
+        if: runner.os == 'Linux'
+        run: zig build test-wasi
