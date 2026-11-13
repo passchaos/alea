@@ -600,6 +600,10 @@ pub const multi = struct {
     pub fn MatrixNormal(comptime T: type) type {
         return distributions_module.MatrixNormal(T);
     }
+
+    pub fn StaticMatrixNormal(comptime T: type, comptime rows: usize, comptime cols: usize) type {
+        return distributions_module.StaticMatrixNormal(T, rows, cols);
+    }
 };
 
 pub const BernoulliError = error{
@@ -28217,6 +28221,172 @@ pub fn MatrixNormal(comptime T: type) type {
     };
 }
 
+/// Comptime-dimension matrix normal distribution MN(M, U, V) over rows×cols
+/// matrices. Stores the mean and both Cholesky factors inline; requires no
+/// allocator and no deinit. Sampling uses the same in-place
+/// `X = M + L_U Z L_Vᵀ` transform as `MatrixNormal(T)`.
+pub fn StaticMatrixNormal(comptime T: type, comptime rows: usize, comptime cols: usize) type {
+    if (rows == 0 or cols == 0) @compileError("StaticMatrixNormal dimensions must be greater than zero");
+    comptime requireFloat(T);
+
+    return struct {
+        const Self = @This();
+        pub const Matrix = [rows][cols]T;
+        pub const RowCovariance = [rows][rows]T;
+        pub const ColCovariance = [cols][cols]T;
+
+        mean: Matrix,
+        row_cholesky: RowCovariance,
+        col_cholesky: ColCovariance,
+
+        pub fn init(mean: Matrix, row_covariance: RowCovariance, col_covariance: ColCovariance) MatrixNormalError!Self {
+            inline for (0..rows) |row| {
+                inline for (0..cols) |col| {
+                    if (!std.math.isFinite(mean[row][col])) return error.InvalidParameter;
+                }
+            }
+
+            const row_cov_flat: *const [rows * rows]T = @ptrCast(&row_covariance);
+            const col_cov_flat: *const [cols * cols]T = @ptrCast(&col_covariance);
+
+            var row_cholesky: RowCovariance = undefined;
+            var col_cholesky: ColCovariance = undefined;
+            const row_chol_flat: *[rows * rows]T = @ptrCast(&row_cholesky);
+            const col_chol_flat: *[cols * cols]T = @ptrCast(&col_cholesky);
+
+            const zero_row = [_]T{0} ** rows;
+            const zero_col = [_]T{0} ** cols;
+            _ = try factorMultivariateCovariance(T, &zero_row, row_cov_flat, row_chol_flat);
+            _ = try factorMultivariateCovariance(T, &zero_col, col_cov_flat, col_chol_flat);
+
+            return .{
+                .mean = mean,
+                .row_cholesky = row_cholesky,
+                .col_cholesky = col_cholesky,
+            };
+        }
+
+        pub fn new(mean: Matrix, row_covariance: RowCovariance, col_covariance: ColCovariance) Self {
+            return Self.init(mean, row_covariance, col_covariance) catch |err| {
+                std.debug.panic("StaticMatrixNormal.new: invalid parameters: {}", .{err});
+            };
+        }
+
+        pub fn rowsValue(_: Self) usize {
+            return rows;
+        }
+
+        pub fn colsValue(_: Self) usize {
+            return cols;
+        }
+
+        pub fn meanValue(self: Self) Matrix {
+            return self.mean;
+        }
+
+        pub fn meanAt(self: Self, row: usize, col: usize) MatrixNormalError!T {
+            if (row >= rows or col >= cols) return error.InvalidParameter;
+            return self.mean[row][col];
+        }
+
+        pub fn expectedValue(self: Self) Matrix {
+            return self.mean;
+        }
+
+        pub fn modeValue(self: Self) Matrix {
+            return self.mean;
+        }
+
+        pub fn rowCovarianceAt(self: Self, row: usize, col: usize) MatrixNormalError!T {
+            if (row >= rows or col >= rows) return error.InvalidParameter;
+            var sum: T = 0;
+            var k: usize = 0;
+            while (k <= @min(row, col)) : (k += 1) {
+                sum += self.row_cholesky[row][k] * self.row_cholesky[col][k];
+            }
+            return sum;
+        }
+
+        pub fn colCovarianceAt(self: Self, row: usize, col: usize) MatrixNormalError!T {
+            if (row >= cols or col >= cols) return error.InvalidParameter;
+            var sum: T = 0;
+            var k: usize = 0;
+            while (k <= @min(row, col)) : (k += 1) {
+                sum += self.col_cholesky[row][k] * self.col_cholesky[col][k];
+            }
+            return sum;
+        }
+
+        pub fn varianceAt(self: Self, row: usize, col: usize) MatrixNormalError!T {
+            const row_variance = try self.rowCovarianceAt(row, row);
+            const col_variance = try self.colCovarianceAt(col, col);
+            return row_variance * col_variance;
+        }
+
+        pub fn sample(self: Self, rng: Rng) Matrix {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) Matrix {
+            var out: Matrix = undefined;
+            self.sampleIntoFrom(source, &out);
+            return out;
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: *Matrix) void {
+            self.sampleIntoFrom(rng, out);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: *Matrix) void {
+            inline for (0..rows) |row| {
+                inline for (0..cols) |col| out[row][col] = standardNormalFrom(source, T);
+            }
+
+            // Left-multiply by L_U in place, processing rows bottom-up.
+            var col: usize = 0;
+            while (col < cols) : (col += 1) {
+                var row: usize = rows;
+                while (row > 0) {
+                    row -= 1;
+                    var value: T = out[row][col];
+                    var k: usize = 0;
+                    while (k < row) : (k += 1) {
+                        value += self.row_cholesky[row][k] * out[k][col];
+                    }
+                    out[row][col] = value;
+                }
+            }
+
+            // Right-multiply by L_Vᵀ in place, processing columns right-to-left.
+            var row: usize = 0;
+            while (row < rows) : (row += 1) {
+                var c: usize = cols;
+                while (c > 0) {
+                    c -= 1;
+                    var value: T = out[row][c];
+                    var k: usize = 0;
+                    while (k < c) : (k += 1) {
+                        value += out[row][k] * self.col_cholesky[c][k];
+                    }
+                    out[row][c] = value;
+                }
+            }
+
+            inline for (0..rows) |r| {
+                inline for (0..cols) |c| out[r][c] += self.mean[r][c];
+            }
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []Matrix) void {
+            for (out) |*item| self.sampleIntoFrom(rng, item);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []Matrix) void {
+            for (out) |*item| self.sampleIntoFrom(source, item);
+        }
+    };
+}
+
 pub fn aliasTable(comptime T: type) type {
     return AliasTable(T);
 }
@@ -48943,6 +49113,119 @@ test "MatrixNormal f32 and direct-source parity" {
         dist.sampleInto(rng, &facade_buf);
         dist.sampleIntoFrom(&direct_engine, &direct_buf);
         try std.testing.expectEqualSlices(f32, &facade_buf, &direct_buf);
+    }
+}
+
+test "StaticMatrixNormal constructor validates parameters" {
+    const valid_row = [2][2]f64{ .{ 1, 0 }, .{ 0, 1 } };
+    const valid_col = [3][3]f64{
+        .{ 1, 0, 0 },
+        .{ 0, 1, 0 },
+        .{ 0, 0, 1 },
+    };
+    try std.testing.expectError(error.InvalidParameter, StaticMatrixNormal(f64, 2, 3).init(.{
+        .{ std.math.nan(f64), 0, 0 },
+        .{ 0, 0, 0 },
+    }, valid_row, valid_col));
+    try std.testing.expectError(error.InvalidCovariance, StaticMatrixNormal(f64, 2, 3).init(.{
+        .{ 0, 0, 0 },
+        .{ 0, 0, 0 },
+    }, .{ .{ 1, 2 }, .{ 2, 1 } }, valid_col));
+}
+
+test "StaticMatrixNormal matches the dynamic matrix normal" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var static_engine = alea.DefaultPrng.init(0xe6);
+    var dynamic_engine = alea.DefaultPrng.init(0xe6);
+    const static_rng = Rng.init(&static_engine);
+    const dynamic_rng = Rng.init(&dynamic_engine);
+
+    const mean = [2][3]f64{
+        .{ 0.5, -0.5, 1 },
+        .{ 2, 3, -1 },
+    };
+    const row_covariance = [2][2]f64{ .{ 1, 0.3 }, .{ 0.3, 1 } };
+    const col_covariance = [3][3]f64{
+        .{ 1, 0.2, 0.1 },
+        .{ 0.2, 1, 0.15 },
+        .{ 0.1, 0.15, 1 },
+    };
+    const static_dist = try StaticMatrixNormal(f64, 2, 3).init(mean, row_covariance, col_covariance);
+
+    const dynamic_mean = [_]f64{ 0.5, -0.5, 1, 2, 3, -1 };
+    const dynamic_row = [_]f64{ 1, 0.3, 0.3, 1 };
+    const dynamic_col = [_]f64{ 1, 0.2, 0.1, 0.2, 1, 0.15, 0.1, 0.15, 1 };
+    var dynamic_dist = try MatrixNormal(f64).init(allocator, &dynamic_mean, &dynamic_row, &dynamic_col);
+    defer dynamic_dist.deinit();
+
+    var dynamic_buf: [6]f64 = undefined;
+    for (0..32) |_| {
+        const static_sample = static_dist.sample(static_rng);
+        dynamic_dist.sampleInto(dynamic_rng, &dynamic_buf);
+        inline for (0..2) |r| {
+            inline for (0..3) |c| {
+                try std.testing.expectEqual(static_sample[r][c], dynamic_buf[r * 3 + c]);
+            }
+        }
+    }
+}
+
+test "StaticMatrixNormal sampling, caller buffers, and batches work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xe7);
+    const rng = Rng.init(&engine);
+
+    const mean = [2][2]f64{ .{ 0, 0 }, .{ 0, 0 } };
+    const identity = [2][2]f64{ .{ 1, 0 }, .{ 0, 1 } };
+    const dist = try StaticMatrixNormal(f64, 2, 2).init(mean, identity, identity);
+    try std.testing.expectEqual(@as(usize, 2), dist.rowsValue());
+    try std.testing.expectEqual(@as(usize, 2), dist.colsValue());
+    const stored_mean = dist.meanValue();
+    try std.testing.expectEqualSlices(f64, &mean[0], &stored_mean[0]);
+    const expected = dist.expectedValue();
+    try std.testing.expectEqualSlices(f64, &mean[0], &expected[0]);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.rowCovarianceAt(0, 0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.colCovarianceAt(1, 1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.varianceAt(0, 0), 1e-12);
+    try std.testing.expectError(error.InvalidParameter, dist.meanAt(2, 0));
+    try std.testing.expectError(error.InvalidParameter, dist.rowCovarianceAt(0, 2));
+
+    var out: [2][2]f64 = undefined;
+    dist.sampleInto(rng, &out);
+    for (0..2) |r| {
+        for (0..2) |c| try std.testing.expect(std.math.isFinite(out[r][c]));
+    }
+
+    var batch: [3][2][2]f64 = undefined;
+    dist.sampleManyInto(rng, &batch);
+    for (batch) |sample| {
+        for (0..2) |r| {
+            for (0..2) |c| try std.testing.expect(std.math.isFinite(sample[r][c]));
+        }
+    }
+
+    const count = 5000;
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    for (0..count) |_| {
+        const sample = dist.sample(rng);
+        sum += sample[0][0];
+        sum_sq += sample[0][0] * sample[0][0];
+    }
+    const nf: f64 = @floatFromInt(count);
+    const sample_mean = sum / nf;
+    try std.testing.expectApproxEqAbs(@as(f64, 0), sample_mean, 0.04);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), sum_sq / nf - sample_mean * sample_mean, 0.06);
+
+    const f32_dist = try StaticMatrixNormal(f32, 2, 2).init(
+        .{ .{ 0, 0 }, .{ 0, 0 } },
+        .{ .{ 1, 0 }, .{ 0, 1 } },
+        .{ .{ 1, 0 }, .{ 0, 1 } },
+    );
+    const f32_sample = f32_dist.sample(rng);
+    for (0..2) |r| {
+        for (0..2) |c| try std.testing.expect(std.math.isFinite(f32_sample[r][c]));
     }
 }
 

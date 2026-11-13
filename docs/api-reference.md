@@ -3289,6 +3289,28 @@ Reusable samplers:
 - `MatrixNormal(T).sampleIntoCheckedFrom`
 - `MatrixNormal(T).sampleManyInto`
 - `MatrixNormal(T).sampleManyIntoFrom`
+- `StaticMatrixNormal(T, rows, cols)`
+- `multi.StaticMatrixNormal(T, rows, cols)`
+- `StaticMatrixNormal(T, rows, cols).Matrix`
+- `StaticMatrixNormal(T, rows, cols).RowCovariance`
+- `StaticMatrixNormal(T, rows, cols).ColCovariance`
+- `StaticMatrixNormal(T, rows, cols).init`
+- `StaticMatrixNormal(T, rows, cols).new`
+- `StaticMatrixNormal(T, rows, cols).rowsValue`
+- `StaticMatrixNormal(T, rows, cols).colsValue`
+- `StaticMatrixNormal(T, rows, cols).meanValue`
+- `StaticMatrixNormal(T, rows, cols).meanAt`
+- `StaticMatrixNormal(T, rows, cols).expectedValue`
+- `StaticMatrixNormal(T, rows, cols).modeValue`
+- `StaticMatrixNormal(T, rows, cols).rowCovarianceAt`
+- `StaticMatrixNormal(T, rows, cols).colCovarianceAt`
+- `StaticMatrixNormal(T, rows, cols).varianceAt`
+- `StaticMatrixNormal(T, rows, cols).sample`
+- `StaticMatrixNormal(T, rows, cols).sampleFrom`
+- `StaticMatrixNormal(T, rows, cols).sampleInto`
+- `StaticMatrixNormal(T, rows, cols).sampleIntoFrom`
+- `StaticMatrixNormal(T, rows, cols).sampleManyInto`
+- `StaticMatrixNormal(T, rows, cols).sampleManyIntoFrom`
 - `AliasTable(Weight)`
 - `WeightedTree(Weight)`
 - `WeightedIntTree(Weight)`
