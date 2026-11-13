@@ -845,6 +845,152 @@ pub fn poissonQuantile(q: anytype, lambda: anytype) @TypeOf(q, lambda) {
     return @floatFromInt(lo);
 }
 
+/// Standard-deviation cutoff for exact hypergeometric tail summation in
+/// `hypergeometricCdf`. Above this threshold the normal approximation with
+/// continuity correction is used instead.
+pub const hypergeometricExactSdLimit: f64 = 16384;
+
+/// Validated, floored hypergeometric diagnostics parameters and support bounds.
+fn hypergeometricDiagnosticSupport(population: f64, successes: f64, draws: f64) ?struct { N: f64, K: f64, n: f64, lo: f64, hi: f64 } {
+    if (!std.math.isFinite(population) or !std.math.isFinite(successes) or !std.math.isFinite(draws)) return null;
+    if (population < 0 or successes < 0 or draws < 0) return null;
+    const N = @floor(population);
+    const K = @floor(successes);
+    const n = @floor(draws);
+    if (K > N or n > N) return null;
+    // Integer populations above 2^53 are not exactly representable in f64.
+    if (N > 9007199254740992) return null;
+    const failures = N - K;
+    return .{
+        .N = N,
+        .K = K,
+        .n = n,
+        .lo = if (n > failures) n - failures else 0,
+        .hi = @min(K, n),
+    };
+}
+
+/// `log C(a, b)` via log-gamma differences.
+fn logChoose(a: f64, b: f64) f64 {
+    return std.math.lgamma(f64, a + 1) - std.math.lgamma(f64, b + 1) - std.math.lgamma(f64, a - b + 1);
+}
+
+/// `log(x·(x−1)·…·(x−m+1))`, used by the large-population product form.
+fn logFalling(x: f64, m: f64) f64 {
+    var sum: f64 = 0;
+    var i: f64 = 0;
+    while (i < m) : (i += 1) sum += @log(x - i);
+    return sum;
+}
+
+/// Log-PMF of `Hypergeometric(N, K, n)` at integer `j`.
+///
+/// For populations above 1e9, log-gamma differences lose cancellation, so
+/// when one category is small the PMF is evaluated as a short product:
+/// `pmf(j) = C(K,j)·(n)_j·(N−n)_{K−j}/(N)_K` (or the mirrored form with `n`),
+/// where `(x)_m` is the falling factorial.
+fn hypergeometricLogPmf(N: f64, K: f64, n: f64, j: f64) f64 {
+    if (N > 1e9 and @min(K, n) <= 20000) {
+        if (K <= n) {
+            return logChoose(K, j) + logFalling(n, j) +
+                logFalling(N - n, K - j) - logFalling(N, K);
+        }
+        return logChoose(n, j) + logFalling(K, j) +
+            logFalling(N - K, n - j) - logFalling(N, n);
+    }
+    return logChoose(K, j) + logChoose(N - K, n - j) - logChoose(N, n);
+}
+
+/// Hypergeometric CDF `P(X ≤ k)` for `X ~ Hypergeometric(population,
+/// successes, draws)`.
+///
+/// The exact path sums the shorter PMF tail with the ratio recurrence
+/// `P(j−1)/P(j) = j·(N−K−n+j) / ((K−j+1)·(n−j+1))` (and its upward mirror),
+/// starting at `k` or `k+1` and stopping once the geometric bound on the
+/// remaining tail drops below double-precision resolution. The cost is
+/// `O(σ·√ln(1/ε))` rather than `O(support width)`. When
+/// `σ > hypergeometricExactSdLimit` the normal approximation with continuity
+/// correction is used; its error is `O(1/σ)` near the mode and grows in the
+/// far tails. Populations above 2^53 are not exactly representable as
+/// integers and return NaN.
+pub fn hypergeometricCdf(k: anytype, population: anytype, successes: anytype, draws: anytype) @TypeOf(k, population, successes, draws) {
+    const T = @TypeOf(k, population, successes, draws);
+    comptime requireFloat(T);
+    const k_f: f64 = @floatCast(k);
+    if (std.math.isNan(k_f)) return @floatCast(std.math.nan(f64));
+    const params = hypergeometricDiagnosticSupport(@floatCast(population), @floatCast(successes), @floatCast(draws)) orelse return @floatCast(std.math.nan(f64));
+    if (k_f < params.lo) return 0;
+    if (k_f >= params.hi) return 1;
+
+    const N = params.N;
+    const K = params.K;
+    const n = params.n;
+    const mean = n * K / N;
+    const p = K / N;
+    const variance = n * p * (1 - p) * (N - n) / (N - 1);
+    const sd = @sqrt(variance);
+    const kf = @floor(k_f);
+    if (sd > hypergeometricExactSdLimit) {
+        return @floatCast(normCdf((kf + 0.5 - mean) / sd));
+    }
+
+    const eps = 64 * std.math.floatEps(f64);
+    if (kf < mean) {
+        // Lower tail: start at kf and walk down to the support minimum.
+        var term = @exp(hypergeometricLogPmf(N, K, n, kf));
+        var sum = term;
+        var j = kf;
+        while (j > params.lo) {
+            const ratio = (j * (N - K - n + j)) / ((K - j + 1) * (n - j + 1));
+            term *= ratio;
+            sum += term;
+            j -= 1;
+            if (term * ratio <= sum * eps * (1 - ratio)) break;
+        }
+        return @floatCast(sum);
+    }
+
+    // Upper tail: start at kf+1 and walk up, then complement.
+    var term = @exp(hypergeometricLogPmf(N, K, n, kf + 1));
+    var sum = term;
+    var j = kf + 1;
+    while (j < params.hi) {
+        const ratio = ((K - j) * (n - j)) / ((j + 1) * (N - K - n + j + 1));
+        term *= ratio;
+        sum += term;
+        j += 1;
+        if (term * ratio <= sum * eps * (1 - ratio)) break;
+    }
+    return @floatCast(1 - sum);
+}
+
+/// Smallest integer `k` with `hypergeometricCdf(k, population, successes,
+/// draws) ≥ q`.
+///
+/// Deterministic bisection over the integer support; in the large-σ regime it
+/// returns the quantile of the same normal approximation used by
+/// `hypergeometricCdf`, so the two helpers stay consistent.
+pub fn hypergeometricQuantile(q: anytype, population: anytype, successes: anytype, draws: anytype) @TypeOf(q, population, successes, draws) {
+    const T = @TypeOf(q, population, successes, draws);
+    comptime requireFloat(T);
+    const q_f: f64 = @floatCast(q);
+    if (!(q_f >= 0 and q_f <= 1)) return @floatCast(std.math.nan(f64));
+    const params = hypergeometricDiagnosticSupport(@floatCast(population), @floatCast(successes), @floatCast(draws)) orelse return @floatCast(std.math.nan(f64));
+    if (q_f == 0) return @floatCast(params.lo);
+
+    var lo: u64 = @intFromFloat(params.lo);
+    var hi: u64 = @intFromFloat(params.hi);
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (hypergeometricCdf(@as(f64, @floatFromInt(mid)), params.N, params.K, params.n) < q_f) {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast(@as(f64, @floatFromInt(lo)));
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -4021,6 +4167,16 @@ pub const Hypergeometric = struct {
 
     pub fn maxValue(self: Hypergeometric) u64 {
         return @min(self.successes, self.draws);
+    }
+
+    /// Hypergeometric CDF at `k` with this sampler's parameters.
+    pub fn cdf(self: Hypergeometric, k: f64) f64 {
+        return hypergeometricCdf(k, @as(f64, @floatFromInt(self.population)), @as(f64, @floatFromInt(self.successes)), @as(f64, @floatFromInt(self.draws)));
+    }
+
+    /// Hypergeometric quantile for probability `q`.
+    pub fn quantile(self: Hypergeometric, q: f64) f64 {
+        return hypergeometricQuantile(q, @as(f64, @floatFromInt(self.population)), @as(f64, @floatFromInt(self.successes)), @as(f64, @floatFromInt(self.draws)));
     }
 
     pub fn sample(self: *const Hypergeometric, rng: Rng) u64 {
@@ -53170,6 +53326,81 @@ test "negativeBinomialCdf and negativeBinomialQuantile match known values" {
             try std.testing.expect(negativeBinomialCdf(k - 1, @as(f64, 3), @as(f64, 0.5)) < q);
         }
     }
+}
+
+/// Independent small-population hypergeometric CDF reference for tests.
+fn hypergeometricTestReferenceCdf(k: f64, population: f64, successes: f64, draws: f64) f64 {
+    const failures = population - successes;
+    const lo = @max(@as(f64, 0), draws - failures);
+    const hi = @min(successes, draws);
+    var sum: f64 = 0;
+    var j = lo;
+    while (j <= @min(k, hi)) : (j += 1) {
+        sum += hypergeometricTestReferenceBinomial(successes, j) *
+            hypergeometricTestReferenceBinomial(population - successes, draws - j) /
+            hypergeometricTestReferenceBinomial(population, draws);
+    }
+    return sum;
+}
+
+fn hypergeometricTestReferenceBinomial(n: f64, k: f64) f64 {
+    const kk: u64 = @intFromFloat(k);
+    var result: f64 = 1;
+    var i: u64 = 0;
+    while (i < kk) : (i += 1) {
+        result = result * (n - @as(f64, @floatFromInt(i))) / @as(f64, @floatFromInt(i + 1));
+    }
+    return result;
+}
+
+test "hypergeometricCdf and hypergeometricQuantile match known values" {
+    // N=10, K=6, n=4 has pmf {1, 24, 90, 80, 15}/210.
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 210.0), hypergeometricCdf(@as(f64, 0), @as(f64, 10), @as(f64, 6), @as(f64, 4)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 25.0 / 210.0), hypergeometricCdf(@as(f64, 1), @as(f64, 10), @as(f64, 6), @as(f64, 4)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 115.0 / 210.0), hypergeometricCdf(@as(f64, 2), @as(f64, 10), @as(f64, 6), @as(f64, 4)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 195.0 / 210.0), hypergeometricCdf(@as(f64, 3), @as(f64, 10), @as(f64, 6), @as(f64, 4)), 1e-14);
+    try std.testing.expectEqual(@as(f64, 1), hypergeometricCdf(@as(f64, 4), @as(f64, 10), @as(f64, 6), @as(f64, 4)));
+    try std.testing.expectEqual(@as(f64, 0), hypergeometricCdf(@as(f64, -1), @as(f64, 10), @as(f64, 6), @as(f64, 4)));
+
+    // N=10, K=6, n=8 forces X ≥ 4 with pmf {15, 24, 6}/45.
+    try std.testing.expectEqual(@as(f64, 0), hypergeometricCdf(@as(f64, 3), @as(f64, 10), @as(f64, 6), @as(f64, 8)));
+    try std.testing.expectApproxEqAbs(@as(f64, 15.0 / 45.0), hypergeometricCdf(@as(f64, 4), @as(f64, 10), @as(f64, 6), @as(f64, 8)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 39.0 / 45.0), hypergeometricCdf(@as(f64, 5), @as(f64, 10), @as(f64, 6), @as(f64, 8)), 1e-14);
+
+    // Successes and draws are interchangeable.
+    try std.testing.expectApproxEqAbs(hypergeometricCdf(@as(f64, 2), @as(f64, 10), @as(f64, 6), @as(f64, 4)), hypergeometricCdf(@as(f64, 2), @as(f64, 10), @as(f64, 4), @as(f64, 6)), 1e-14);
+
+    // Direct PMF summation reference below and above the mean.
+    try std.testing.expectApproxEqAbs(hypergeometricTestReferenceCdf(12, 100, 40, 30), hypergeometricCdf(@as(f64, 12), @as(f64, 100), @as(f64, 40), @as(f64, 30)), 1e-11);
+    try std.testing.expectApproxEqAbs(hypergeometricTestReferenceCdf(16, 100, 40, 30), hypergeometricCdf(@as(f64, 16), @as(f64, 100), @as(f64, 40), @as(f64, 30)), 1e-11);
+
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |q| {
+        const k = hypergeometricQuantile(q, @as(f64, 10), @as(f64, 6), @as(f64, 4));
+        try std.testing.expect(hypergeometricCdf(k, @as(f64, 10), @as(f64, 6), @as(f64, 4)) >= q);
+        if (k > 0) {
+            try std.testing.expect(hypergeometricCdf(k - 1, @as(f64, 10), @as(f64, 6), @as(f64, 4)) < q);
+        }
+    }
+    try std.testing.expectEqual(@as(f64, 0), hypergeometricQuantile(@as(f64, 0), @as(f64, 10), @as(f64, 6), @as(f64, 4)));
+    try std.testing.expectEqual(@as(f64, 4), hypergeometricQuantile(@as(f64, 1), @as(f64, 10), @as(f64, 6), @as(f64, 4)));
+
+    try std.testing.expect(std.math.isNan(hypergeometricCdf(@as(f64, 1), @as(f64, 10), @as(f64, 11), @as(f64, 4))));
+    try std.testing.expect(std.math.isNan(hypergeometricCdf(@as(f64, 1), @as(f64, 10), @as(f64, 6), @as(f64, -1))));
+    try std.testing.expect(std.math.isNan(hypergeometricQuantile(@as(f64, 1.5), @as(f64, 10), @as(f64, 6), @as(f64, 4))));
+    try std.testing.expectApproxEqAbs(@as(f32, 115.0 / 210.0), hypergeometricCdf(@as(f32, 2), @as(f32, 10), @as(f32, 6), @as(f32, 4)), 1e-6);
+}
+
+test "hypergeometricCdf large-population paths" {
+    // Balanced N=1e10 has σ = 25000, so the normal fallback is used.
+    const population: f64 = 1e10;
+    const successes: f64 = 5e9;
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), hypergeometricCdf(2.5e9, population, successes, successes), 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8413447460685429), hypergeometricCdf(2.5e9 + 25000, population, successes, successes), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5e9), hypergeometricQuantile(@as(f64, 0.5), population, successes, successes), 1);
+
+    // N=1e12 with three successes uses the product-form log-PMF:
+    // pmf(0) = (1 − 3/N)^n·(1 + O(1/N)) = 0.995³.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.985074875), hypergeometricCdf(@as(f64, 0), @as(f64, 1e12), @as(f64, 3), @as(f64, 5e9)), 1e-9);
 }
 
 test "poissonQuantile returns the smallest covering count" {

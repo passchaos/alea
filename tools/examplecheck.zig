@@ -42,7 +42,7 @@ const examples = [_]Example{
         .path = "examples/distribution_diagnostics.zig",
         .step = "zig build run-distribution-diagnostics",
         .aggregate_token = "examples_step.dependOn(&run_distribution_diagnostics_example.step)",
-        .source_tokens = &.{ "laplace.cdf", "laplace.quantile", "weibull.cdf", "triangular.cdf", "kumaraswamy.cdf", "frechetCdf", "paretoQuantile" },
+        .source_tokens = &.{ "laplace.cdf", "laplace.quantile", "weibull.cdf", "triangular.cdf", "kumaraswamy.cdf", "hypergeometric.cdf", "hypergeometric.quantile", "frechetCdf", "paretoQuantile" },
     },
     .{ .path = "examples/vector_profiles.zig", .step = "zig build run-vector-profiles", .aggregate_token = "examples_step.dependOn(&run_vector_profiles_example.step)" },
     .{ .path = "examples/native_f32_profiles.zig", .step = "zig build run-native-f32-profiles", .aggregate_token = "examples_step.dependOn(&run_native_f32_profiles_example.step)" },

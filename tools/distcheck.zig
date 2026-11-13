@@ -501,6 +501,10 @@ fn checkAdvancedMultivariate() !void {
         const negative_binomial_s: f64 = 3;
         const negative_binomial_p: f64 = 0.5;
         try expectFloatBetween("negative binomial quantile", alea.distributions.negativeBinomialCdf(alea.distributions.negativeBinomialQuantile(discrete_q, negative_binomial_s, negative_binomial_p), negative_binomial_s, negative_binomial_p), discrete_q, 1.0);
+        const hypergeometric_population: f64 = 60;
+        const hypergeometric_successes: f64 = 24;
+        const hypergeometric_draws: f64 = 15;
+        try expectFloatBetween("hypergeometric quantile", alea.distributions.hypergeometricCdf(alea.distributions.hypergeometricQuantile(discrete_q, hypergeometric_population, hypergeometric_successes, hypergeometric_draws), hypergeometric_population, hypergeometric_successes, hypergeometric_draws), discrete_q, 1.0);
     }
 
     // Multivariate marginal diagnostics.
@@ -672,6 +676,19 @@ fn checkDiscrete() !void {
             return alea.distributions.hypergeometric(r, 10_000, 1_000, 2_000);
         }
     }.sample, 198.5, 201.5);
+
+    // Hypergeometric CDF agrees with empirical frequencies.
+    {
+        const dist = try alea.distributions.Hypergeometric.init(100, 30, 10);
+        const samples = 20_000;
+        var count: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            if (dist.sample(rng) <= 2) count += 1;
+        }
+        const empirical = @as(f64, @floatFromInt(count)) / @as(f64, @floatFromInt(samples));
+        try expectFloatBetween("hypergeometric cdf", dist.cdf(2), empirical - 0.02, empirical + 0.02);
+    }
 }
 
 fn expectDiscreteMean(comptime label: []const u8, rng: alea.Rng, samples: usize, sampleFn: *const fn (alea.Rng) u64, min: f64, max: f64) !void {

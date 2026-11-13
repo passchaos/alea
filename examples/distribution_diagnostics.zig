@@ -66,6 +66,9 @@ pub fn main(init: std.process.Init) !void {
     const kumaraswamy = try alea.distributions.Kumaraswamy(f64).init(2, 3);
     try stdout.print("Kumaraswamy(2,3): cdf(0.5)={d:.6}, quantile(0.5)={d:.6}\n", .{ kumaraswamy.cdf(0.5), kumaraswamy.quantile(0.5) });
 
+    const hypergeometric = try alea.distributions.Hypergeometric.init(100, 30, 10);
+    try stdout.print("Hypergeometric(N=100,K=30,n=10): cdf(2)={d:.6}, quantile(0.9)={d:.1}\n", .{ hypergeometric.cdf(2), hypergeometric.quantile(0.9) });
+
     const cdf_x: f64 = 1;
     const cdf_p: f64 = 0.5;
     const cdf_zero: f64 = 0;

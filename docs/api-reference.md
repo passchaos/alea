@@ -646,6 +646,8 @@ self-forking.
   `chiSquaredCdf`, `chiSquaredQuantile`, `poissonCdf`, `poissonQuantile`,
   `binomialCdf`, `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`,
+  `hypergeometricCdf`, `hypergeometricQuantile`,
+  `hypergeometricExactSdLimit`,
   `laplaceCdf`, `laplaceQuantile`, `logisticCdf`, `logisticQuantile`,
   `cauchyCdf`, `cauchyQuantile`, `rayleighCdf`, `rayleighQuantile`,
   `weibullCdf`, `weibullQuantile`, `gumbelCdf`, `gumbelQuantile`,
@@ -1725,6 +1727,8 @@ Reusable samplers:
 - `Hypergeometric.varianceValue`
 - `Hypergeometric.minValue`
 - `Hypergeometric.maxValue`
+- `Hypergeometric.cdf`
+- `Hypergeometric.quantile`
 - `Hypergeometric.sample`
 - `Hypergeometric.sampleFrom`
 - `Hypergeometric.fill`
