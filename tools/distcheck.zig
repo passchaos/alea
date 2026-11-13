@@ -1814,6 +1814,68 @@ fn checkLongRun(samples: usize) !void {
         }
     }
 
+    // Discrete sampler CDF consistency at fixed thresholds.
+    {
+        var engine = alea.FastPrng.init(0x10d6);
+        const rng = alea.Rng.init(&engine);
+        const binomial = try alea.distributions.Binomial.init(20, 0.3);
+        const poisson = try alea.distributions.Poisson.init(5);
+        const hypergeometric = try alea.distributions.Hypergeometric.init(100, 30, 10);
+        const negative_binomial = try alea.distributions.NegativeBinomial.init(3, 0.5);
+        const geometric = try alea.distributions.Geometric.init(0.4);
+        var binomial_hits = [_]usize{0} ** 3;
+        var poisson_hits = [_]usize{0} ** 3;
+        var hypergeometric_hits = [_]usize{0} ** 3;
+        var negative_binomial_hits = [_]usize{0} ** 3;
+        var geometric_hits = [_]usize{0} ** 3;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const b = binomial.sample(rng);
+            if (b <= 4) binomial_hits[0] += 1;
+            if (b <= 6) binomial_hits[1] += 1;
+            if (b <= 8) binomial_hits[2] += 1;
+            const p = poisson.sample(rng);
+            if (p <= 3) poisson_hits[0] += 1;
+            if (p <= 5) poisson_hits[1] += 1;
+            if (p <= 8) poisson_hits[2] += 1;
+            const h = hypergeometric.sample(rng);
+            if (h <= 2) hypergeometric_hits[0] += 1;
+            if (h <= 3) hypergeometric_hits[1] += 1;
+            if (h <= 5) hypergeometric_hits[2] += 1;
+            const nb = negative_binomial.sample(rng);
+            if (nb <= 1) negative_binomial_hits[0] += 1;
+            if (nb <= 3) negative_binomial_hits[1] += 1;
+            if (nb <= 6) negative_binomial_hits[2] += 1;
+            const g = geometric.sample(rng);
+            if (g <= 1) geometric_hits[0] += 1;
+            if (g <= 2) geometric_hits[1] += 1;
+            if (g <= 4) geometric_hits[2] += 1;
+        }
+        try expectEmpiricalCdf("long binomial cdf(4)", binomial_hits[0], samples, binomial.cdf(4));
+        try expectEmpiricalCdf("long binomial cdf(6)", binomial_hits[1], samples, binomial.cdf(6));
+        try expectEmpiricalCdf("long binomial cdf(8)", binomial_hits[2], samples, binomial.cdf(8));
+        try expectEmpiricalCdf("long poisson cdf(3)", poisson_hits[0], samples, poisson.cdf(3));
+        try expectEmpiricalCdf("long poisson cdf(5)", poisson_hits[1], samples, poisson.cdf(5));
+        try expectEmpiricalCdf("long poisson cdf(8)", poisson_hits[2], samples, poisson.cdf(8));
+        try expectEmpiricalCdf("long hypergeometric cdf(2)", hypergeometric_hits[0], samples, hypergeometric.cdf(2));
+        try expectEmpiricalCdf("long hypergeometric cdf(3)", hypergeometric_hits[1], samples, hypergeometric.cdf(3));
+        try expectEmpiricalCdf("long hypergeometric cdf(5)", hypergeometric_hits[2], samples, hypergeometric.cdf(5));
+        try expectEmpiricalCdf("long negative binomial cdf(1)", negative_binomial_hits[0], samples, negative_binomial.cdf(1));
+        try expectEmpiricalCdf("long negative binomial cdf(3)", negative_binomial_hits[1], samples, negative_binomial.cdf(3));
+        try expectEmpiricalCdf("long negative binomial cdf(6)", negative_binomial_hits[2], samples, negative_binomial.cdf(6));
+        try expectEmpiricalCdf("long geometric cdf(1)", geometric_hits[0], samples, geometric.cdf(1));
+        try expectEmpiricalCdf("long geometric cdf(2)", geometric_hits[1], samples, geometric.cdf(2));
+        try expectEmpiricalCdf("long geometric cdf(4)", geometric_hits[2], samples, geometric.cdf(4));
+        const inv_n = 1 / @as(f64, @floatFromInt(samples));
+        std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6}\n", .{
+            @as(f64, @floatFromInt(binomial_hits[0])) * inv_n,
+            @as(f64, @floatFromInt(poisson_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(hypergeometric_hits[0])) * inv_n,
+            @as(f64, @floatFromInt(negative_binomial_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(geometric_hits[1])) * inv_n,
+        });
+    }
+
     // Tail probabilities.
     {
         var engine = alea.FastPrng.init(0x10cb);
@@ -1928,6 +1990,11 @@ fn expectFloatBetween(comptime label: []const u8, value: f64, min: f64, max: f64
     }
 }
 
+fn expectEmpiricalCdf(comptime label: []const u8, hits: usize, samples: usize, expected: f64) !void {
+    const empirical = @as(f64, @floatFromInt(hits)) / @as(f64, @floatFromInt(samples));
+    try expectFloatBetween(label, empirical, expected - 0.002, expected + 0.002);
+}
+
 fn floatInClosedRange(value: f64, min: f64, max: f64) bool {
     return value >= min and value <= max;
 }
@@ -1939,4 +2006,11 @@ test "float closed-range predicate accepts finite inclusive boundaries" {
     try std.testing.expect(!floatInClosedRange(-0.01, 0.0, 1.0));
     try std.testing.expect(!floatInClosedRange(1.01, 0.0, 1.0));
     try std.testing.expect(!floatInClosedRange(std.math.nan(f64), 0.0, 1.0));
+}
+
+test "empirical cdf helper accepts boundary rates and rejects drift" {
+    try expectEmpiricalCdf("exact", 500, 1000, 0.5);
+    try expectEmpiricalCdf("upper boundary", 502, 1000, 0.5);
+    try expectEmpiricalCdf("lower boundary", 498, 1000, 0.5);
+    try std.testing.expectError(error.DistributionCheckFailed, expectEmpiricalCdf("outside", 503, 1000, 0.5));
 }

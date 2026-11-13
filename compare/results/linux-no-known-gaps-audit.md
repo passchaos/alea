@@ -6862,5 +6862,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1329-matrix-fisher-o3-example-longrun.md`, and
 `compare/results/s4-m1330-hypergeometric-cdf-quantile.md`, and
 `compare/results/s4-m1331-exp-race-directional-rejection.md`, and
-`compare/results/s4-m1332-longrun-directional-and-vonmises-fixes.md`.
+`compare/results/s4-m1332-longrun-directional-and-vonmises-fixes.md`, and
+`compare/results/s4-m1333-longrun-discrete-cdf.md`.
 
