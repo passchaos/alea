@@ -533,6 +533,9 @@ fn checkAdvancedMultivariate() !void {
         const rice_nu: f64 = 1;
         const rice_sigma: f64 = 1;
         try expectFloatBetween("rice quantile", alea.distributions.riceCdf(alea.distributions.riceQuantile(p, rice_nu, rice_sigma), rice_nu, rice_sigma), p - 1e-5, p + 1e-5);
+        const hoyt_q: f64 = 0.5;
+        const hoyt_omega: f64 = 1;
+        try expectFloatBetween("hoyt quantile", alea.distributions.hoytCdf(alea.distributions.hoytQuantile(p, hoyt_q, hoyt_omega), hoyt_q, hoyt_omega), p - 1e-5, p + 1e-5);
         const discrete_q: f64 = 0.7;
         const poisson_lambda: f64 = 5;
         try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);
@@ -1968,6 +1971,7 @@ fn checkLongRun(samples: usize) !void {
         const skew_normal = try alea.distributions.SkewNormal(f64).init(0, 1, 1);
         const pert = try alea.distributions.Pert(f64).init(0, 0.5, 1, 4);
         const rice_dist = try alea.distributions.Rice(f64).init(1, 0.5);
+        const hoyt_dist = try alea.distributions.Hoyt(f64).init(0.5, 1);
         var beta_hits = [_]usize{0} ** 3;
         var gamma_hits = [_]usize{0} ** 3;
         var student_hits = [_]usize{0} ** 3;
@@ -1981,6 +1985,7 @@ fn checkLongRun(samples: usize) !void {
         var skew_normal_hits = [_]usize{0} ** 3;
         var pert_hits = [_]usize{0} ** 3;
         var rice_hits = [_]usize{0} ** 3;
+        var hoyt_hits = [_]usize{0} ** 3;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
             const b = beta.sample(rng);
@@ -2035,6 +2040,10 @@ fn checkLongRun(samples: usize) !void {
             if (ri <= 0.5) rice_hits[0] += 1;
             if (ri <= 1) rice_hits[1] += 1;
             if (ri <= 2) rice_hits[2] += 1;
+            const ho = hoyt_dist.sample(rng);
+            if (ho <= 0.5) hoyt_hits[0] += 1;
+            if (ho <= 1) hoyt_hits[1] += 1;
+            if (ho <= 2) hoyt_hits[2] += 1;
         }
         const beta_x = [_]f64{ 0.1, 0.3, 0.6 };
         const gamma_x = [_]f64{ 1, 3, 5 };
@@ -2049,6 +2058,7 @@ fn checkLongRun(samples: usize) !void {
         const skew_normal_x = [_]f64{ -0.5, 0, 0.5 };
         const pert_x = [_]f64{ 0.25, 0.5, 0.75 };
         const rice_x = [_]f64{ 0.5, 1, 2 };
+        const hoyt_x = [_]f64{ 0.5, 1, 2 };
         try expectEmpiricalCdf("long beta cdf(0.1)", beta_hits[0], samples, beta.cdf(beta_x[0]));
         try expectEmpiricalCdf("long beta cdf(0.3)", beta_hits[1], samples, beta.cdf(beta_x[1]));
         try expectEmpiricalCdf("long beta cdf(0.6)", beta_hits[2], samples, beta.cdf(beta_x[2]));
@@ -2088,8 +2098,11 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long rice cdf(0.5)", rice_hits[0], samples, rice_dist.cdf(rice_x[0]));
         try expectEmpiricalCdf("long rice cdf(1)", rice_hits[1], samples, rice_dist.cdf(rice_x[1]));
         try expectEmpiricalCdf("long rice cdf(2)", rice_hits[2], samples, rice_dist.cdf(rice_x[2]));
+        try expectEmpiricalCdf("long hoyt cdf(0.5)", hoyt_hits[0], samples, hoyt_dist.cdf(hoyt_x[0]));
+        try expectEmpiricalCdf("long hoyt cdf(1)", hoyt_hits[1], samples, hoyt_dist.cdf(hoyt_x[1]));
+        try expectEmpiricalCdf("long hoyt cdf(2)", hoyt_hits[2], samples, hoyt_dist.cdf(hoyt_x[2]));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
-        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6} log-logistic(1.5)={d:.6} nakagami(2)={d:.6} ex-gaussian(2)={d:.6} inverse-gaussian(1)={d:.6} skew-normal(0)={d:.6} pert(0.5)={d:.6} rice(1)={d:.6}\n", .{
+        std.debug.print("long continuous cdf: beta(0.3)={d:.6} gamma(3)={d:.6} student-t(0)={d:.6} fisher-f(1)={d:.6} exponential(0.5)={d:.6} log-normal(1)={d:.6} log-logistic(1.5)={d:.6} nakagami(2)={d:.6} ex-gaussian(2)={d:.6} inverse-gaussian(1)={d:.6} skew-normal(0)={d:.6} pert(0.5)={d:.6} rice(1)={d:.6} hoyt(1)={d:.6}\n", .{
             @as(f64, @floatFromInt(beta_hits[1])) * inv_n,
             @as(f64, @floatFromInt(gamma_hits[1])) * inv_n,
             @as(f64, @floatFromInt(student_hits[1])) * inv_n,
@@ -2103,6 +2116,7 @@ fn checkLongRun(samples: usize) !void {
             @as(f64, @floatFromInt(skew_normal_hits[1])) * inv_n,
             @as(f64, @floatFromInt(pert_hits[1])) * inv_n,
             @as(f64, @floatFromInt(rice_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(hoyt_hits[1])) * inv_n,
         });
     }
 

@@ -1816,6 +1816,79 @@ pub fn riceQuantile(p: anytype, nu: anytype, sigma: anytype) @TypeOf(p, nu, sigm
     return @floatCast((lo + hi) / 2);
 }
 
+/// Hoyt (Nakagami-q) CDF via the exact series
+/// `2q/(1+q²) · Σ c_n P(2n+1, a·x²)` with `r = (1−q²)/(1+q²)`,
+/// `a = (1+q²)²/(4q²Ω)` and `c_n = (2n)!/(n!)²·(r²/4)^n`.
+///
+/// The series converges geometrically in `r²`; `q ≥ 0.01` keeps the term
+/// count bounded (the cap is one million terms). `q = 1` is Rayleigh and
+/// `Ω = 0` is the point mass at 0.
+pub fn hoytCdf(x: anytype, q_param: anytype, omega: anytype) @TypeOf(x, q_param, omega) {
+    const T = @TypeOf(x, q_param, omega);
+    comptime requireFloat(T);
+    if (!(q_param >= 0.01 and q_param <= 1) or !std.math.isFinite(q_param)) return std.math.nan(T);
+    if (!(omega >= 0) or !std.math.isFinite(omega)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    const x_f: f64 = @floatCast(x);
+    const q_f: f64 = @floatCast(q_param);
+    const omega_f: f64 = @floatCast(omega);
+    if (omega_f == 0) return if (x_f < 0) 0 else 1;
+    if (x_f <= 0) return 0;
+    if (x_f == std.math.inf(f64)) return 1;
+    if (q_f == 1) return @floatCast(1 - @exp(-x_f * x_f / omega_f));
+
+    const q2 = q_f * q_f;
+    const r = (1 - q2) / (1 + q2);
+    const r2 = r * r;
+    const a = (1 + q2) * (1 + q2) / (4 * q2 * omega_f);
+    const ay = a * x_f * x_f;
+    const prefactor = 2 * q_f / (1 + q2);
+    const eps = 64 * std.math.floatEps(f64);
+    const min_n = 0.5 * ay + 10;
+    var c: f64 = 1;
+    var sum = gammaIncompleteP(@as(f64, 1), ay);
+    var n: usize = 1;
+    while (n <= 1_000_000) : (n += 1) {
+        const nf: f64 = @floatFromInt(n);
+        c *= r2 * (2 * nf - 1) / (2 * nf);
+        const term = c * gammaIncompleteP(2 * nf + 1, ay);
+        sum += term;
+        if (nf > min_n and term <= sum * eps) break;
+    }
+    return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), prefactor * sum)));
+}
+
+/// Hoyt quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn hoytQuantile(p: anytype, q_param: anytype, omega: anytype) @TypeOf(p, q_param, omega) {
+    const T = @TypeOf(p, q_param, omega);
+    comptime requireFloat(T);
+    if (!(q_param >= 0.01 and q_param <= 1) or !std.math.isFinite(q_param)) return std.math.nan(T);
+    if (!(omega >= 0) or !std.math.isFinite(omega)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    const q_f: f64 = @floatCast(q_param);
+    const omega_f: f64 = @floatCast(omega);
+    if (omega_f == 0) return 0;
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    var lo: f64 = 0;
+    var hi: f64 = @sqrt(omega_f);
+    var expansion: usize = 0;
+    while (hoytCdf(@as(f64, hi), q_f, omega_f) < p and expansion < 1024) : (expansion += 1) {
+        if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
+        hi *= 2;
+    }
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (hoytCdf(@as(f64, mid), q_f, omega_f) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
     const T = @TypeOf(x, location, scale);
@@ -14243,6 +14316,16 @@ pub fn Hoyt(comptime T: type) type {
         }
         pub fn maxValue(self: Self) ?T {
             return if (self.omega == 0) @as(T, 0) else null;
+        }
+
+        /// Hoyt CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return hoytCdf(x, self.q, self.omega);
+        }
+
+        /// Hoyt quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return hoytQuantile(p, self.q, self.omega);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -54777,6 +54860,31 @@ test "Rice CDF and quantile helpers match Marcum Q values" {
     const rice_dist = try Rice(f64).init(1, 1);
     try std.testing.expectApproxEqAbs(riceCdf(@as(f64, 1), @as(f64, 1), @as(f64, 1)), rice_dist.cdf(1), 0);
     try std.testing.expectApproxEqAbs(riceQuantile(@as(f64, 0.5), @as(f64, 1), @as(f64, 1)), rice_dist.quantile(0.5), 0);
+}
+
+test "Hoyt CDF and quantile helpers match the Nakagami-q law" {
+    // q = 1 is Rayleigh(Omega=1).
+    try std.testing.expectApproxEqAbs(@as(f64, 1 - @exp(@as(f64, -1))), hoytCdf(@as(f64, 1), @as(f64, 1), @as(f64, 1)), 1e-14);
+    // q = 0.5, Omega = 1 references from numerical integration of the pdf.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.2597654075107518), hoytCdf(@as(f64, 0.5), @as(f64, 0.5), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.662974936275854), hoytCdf(@as(f64, 1), @as(f64, 0.5), @as(f64, 1)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9698434695195775), hoytCdf(@as(f64, 2), @as(f64, 0.5), @as(f64, 1)), 1e-6);
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const q = hoytQuantile(p, @as(f64, 0.5), @as(f64, 1));
+        try std.testing.expectApproxEqAbs(p, hoytCdf(q, @as(f64, 0.5), @as(f64, 1)), 1e-5);
+    }
+    // Omega = 0 is the point mass at 0.
+    try std.testing.expectEqual(@as(f64, 1), hoytCdf(@as(f64, 0), @as(f64, 0.5), @as(f64, 0)));
+    try std.testing.expectEqual(@as(f64, 0), hoytQuantile(@as(f64, 0.5), @as(f64, 0.5), @as(f64, 0)));
+
+    try std.testing.expect(std.math.isNan(hoytCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(hoytCdf(@as(f64, 1), @as(f64, 1.5), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(hoytCdf(@as(f64, 1), @as(f64, 0.5), @as(f64, -1))));
+    try std.testing.expectApproxEqAbs(@as(f32, 0.63212055), hoytCdf(@as(f32, 1), @as(f32, 1), @as(f32, 1)), 1e-6);
+
+    const hoyt_dist = try Hoyt(f64).init(0.5, 1);
+    try std.testing.expectApproxEqAbs(hoytCdf(@as(f64, 1), @as(f64, 0.5), @as(f64, 1)), hoyt_dist.cdf(1), 0);
+    try std.testing.expectApproxEqAbs(hoytQuantile(@as(f64, 0.5), @as(f64, 0.5), @as(f64, 1)), hoyt_dist.quantile(0.5), 0);
 }
 
 test "poissonQuantile returns the smallest covering count" {
