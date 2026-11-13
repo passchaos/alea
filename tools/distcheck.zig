@@ -377,6 +377,43 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("vector watson mean cosine squared", sum_z2 / nf, expected - 0.03, expected + 0.03);
     }
 
+    // SIMD Bingham f64x4 axial moment recovery.
+    {
+        const V = @Vector(4, f64);
+        const matrix = [3][3]f64{
+            .{ 0, 0, 0 },
+            .{ 0, -3, 0 },
+            .{ 0, 0, -3 },
+        };
+        const dist = try alea.distributions.VectorBingham(V).init(matrix);
+        const steps: usize = 20_000;
+        var num: f64 = 0;
+        var den: f64 = 0;
+        var i: usize = 0;
+        while (i < steps) : (i += 1) {
+            const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+            const weight = @exp(3 * w * w);
+            num += w * w * weight;
+            den += weight;
+        }
+        const expected = num / den;
+        const samples = 10_000;
+        var sum_x0_sq: f64 = 0;
+        var count: usize = 0;
+        i = 0;
+        while (i < samples) : (i += 1) {
+            const p = dist.sampleFrom(&engine);
+            inline for (0..4) |lane| {
+                const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+                if (@abs(norm_sq - 1) > 1e-9) return error.DistributionCheckFailed;
+                sum_x0_sq += p[0][lane] * p[0][lane];
+                count += 1;
+            }
+        }
+        const nf: f64 = @floatFromInt(count);
+        try expectFloatBetween("vector bingham mean x0^2", sum_x0_sq / nf, expected - 0.03, expected + 0.03);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;
