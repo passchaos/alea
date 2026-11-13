@@ -76,7 +76,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 
 | Area | Reason |
 | --- | --- |
-| Non-uniform distributions and reusable distribution samplers | Algorithms may be improved for statistical quality, endpoint semantics, or speed, as happened with Poisson, binomial, and floating-point inclusive uniform samplers. |
+| Non-uniform distributions and reusable distribution samplers | Algorithms may be improved for statistical quality, endpoint semantics, or speed, as happened with Poisson, binomial, and floating-point inclusive uniform samplers. The S4-M1349..M1377 batch changed these versioned streams: exact 3×2 and single-column matrix vMF sampling, direct unit-circle tangent assembly for Watson/vMF, Zipf log-space acceptance, Weibull/Frechet/Pareto exp/log transforms, HIN binomial ziggurat exponentials plus Stirling/table log-factorials, Bingham `@log` acceptance and precomputed proposal scales, vectorized Student-t copula CDF, and the multinomial batch HIN cache. Each change is recorded in its `compare/results/s4-m13xx-*.md` evidence file. |
 | Native f32 standard distribution profiles | `StandardNormalNativeF32` / `VectorStandardNormalNativeF32` / `NormalNativeF32` / `VectorNormalNativeF32` and `StandardExponentialNativeF32` / `VectorStandardExponentialNativeF32` / `ExponentialNativeF32` / `VectorExponentialNativeF32` intentionally use f32-native ziggurat candidates and therefore do not match the default f64-backed f32 output mapping. They are explicit opt-in throughput profiles with checked snapshot evidence. |
 | Table-quantile vector distribution profiles | `VectorStandardNormalTableF32` / `VectorNormalTableF32`, `VectorStandardNormalTableF64` / `VectorNormalTableF64`, `VectorStandardExponentialTableF32` / `VectorExponentialTableF32`, and `VectorStandardExponentialTableF64` / `VectorExponentialTableF64` intentionally use midpoint quantile-table lookup for vector lanes. They are vector-only, discrete/truncated throughput opt-ins with checked snapshot evidence and do not match default ziggurat or native-f32 output mappings. |
 | Approx-log f32 vector exponential profile | `VectorStandardExponentialApproxLogF32` / `VectorExponentialApproxLogF32` intentionally use midpoint open-uniform lanes plus a bit-level atanh-polynomial approximation for `-log(U)`. They are vector-only f32 throughput opt-ins with checked snapshot evidence and do not match default ziggurat or native-f32 exponential output mappings. |
@@ -86,6 +86,20 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | `seq.sampleIndices` returning `[]usize` | `usize` width and compact conversion policy can vary by target. |
 | `seq.sampleWeightedIndices` and weighted no-replacement helpers | Heap ordering ties and floating-point keys are deterministic for a target, but algorithm changes may alter output. |
 | `AliasTable` construction | O(1) sampling contract is stable; exact table layout may change with algorithm improvements. |
+
+## Versioned Distribution Change Evidence
+
+| Area | Evidence |
+| --- | --- |
+| Exact 3×2 matrix vMF through SO(3) | `compare/results/s4-m1361-exact-3x2-matrix-vmf.md` |
+| Exact single-column matrix vMF (comptime vMF path and precomputed Wood constants) | `compare/results/s4-m1362-exact-k1-matrix-vmf.md`, `compare/results/s4-m1369-k1-comptime-vmf.md`, `compare/results/s4-m1377-k1-wood-constants.md` |
+| Direct circle tangent assembly for Watson/vMF | `compare/results/s4-m1363-direct-circle-direction.md` |
+| Kent conditional cos/sin and small-`a` exponential race | `compare/results/s4-m1364-kent-small-a-race.md`, `compare/results/s4-m1368-kent-cos-sin-conditional.md` |
+| Zipf log-space acceptance | `compare/results/s4-m1356-zipf-log-acceptance.md` |
+| Inverse-power exp/log transforms | `compare/results/s4-m1357-inverse-power-exp-log.md` |
+| HIN binomial log-factorial table, Stirling fallback, ziggurat exponentials, and batch cache | `compare/results/s4-m1351-binomial-log-factorial-table.md`, `compare/results/s4-m1358-hin-stirling-log-factorial.md`, `compare/results/s4-m1365-hin-ziggurat-exponentials.md`, `compare/results/s4-m1372-multinomial-batch-hin-cache.md` |
+| Bingham proposal scales and `@log` acceptance | `compare/results/s4-m1360-bingham-precomputed-scales.md`, `compare/results/s4-m1373-bingham-log-ratio.md` |
+| Student-t recurrence table and vectorized copula CDF | `compare/results/s4-m1367-student-t-recurrence-table.md`, `compare/results/s4-m1371-vectorized-copula-cdf.md` |
 
 ## Not Stable
 
