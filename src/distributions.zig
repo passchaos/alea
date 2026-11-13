@@ -9945,6 +9945,160 @@ pub fn fillBinghamCheckedFrom(source: anytype, comptime T: type, comptime n: usi
 }
 
 // -----------------------------------------------------------------------------
+// SIMD Bingham sampling on S²
+// -----------------------------------------------------------------------------
+
+/// Per-lane SIMD Bingham sampler on S² with a shared matrix. The ACG
+/// proposal and envelope are computed once by the scalar Bingham sampler;
+/// each lane draws its own Gaussian proposal, acceptance is evaluated per
+/// lane, and accepted lanes retire.
+fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *const Bingham(vectorChild(VectorType), 3)) [3]VectorType {
+    const Child = vectorChild(VectorType);
+    const info = vectorInfo(VectorType);
+    const L = info.len;
+    const V = @Vector(L, Child);
+    const B = @Vector(L, bool);
+
+    if (sampler.uniform) return vectorUnitSphereFrom(source, VectorType);
+    if (sampler.point_mass) {
+        const u = Rng.vectorOpenFrom(source, V);
+        const positive = u < @as(V, @splat(0.5));
+        return .{
+            @select(Child, positive, @as(V, @splat(sampler.mode_axis[0])), @as(V, @splat(-sampler.mode_axis[0]))),
+            @select(Child, positive, @as(V, @splat(sampler.mode_axis[1])), @as(V, @splat(-sampler.mode_axis[1]))),
+            @select(Child, positive, @as(V, @splat(sampler.mode_axis[2])), @as(V, @splat(-sampler.mode_axis[2]))),
+        };
+    }
+
+    const zero: V = @splat(0);
+    const one: V = @splat(1);
+    const half_n: V = @splat(1.5);
+    const two_over_nu: V = @splat(2 / sampler.nu);
+    const log_envelope: V = @splat(sampler.log_envelope);
+
+    var result: [3]V = undefined;
+    var active: B = @splat(true);
+    while (@reduce(.Or, active)) {
+        var y: [3]V = undefined;
+        var norm_sq: V = @splat(0);
+        inline for (0..3) |i| {
+            const scale: V = @splat(1 / @sqrt(sampler.precision[i]));
+            y[i] = Rng.vectorNormalFrom(source, V, 0, 1) * scale;
+            norm_sq += y[i] * y[i];
+        }
+        const inv_norm = @as(V, @splat(1)) / @sqrt(@max(norm_sq, @as(V, @splat(1e-30))));
+        var t: V = @splat(0);
+        inline for (0..3) |i| {
+            y[i] *= inv_norm;
+            t += @as(V, @splat(sampler.b[i])) * y[i] * y[i];
+        }
+        t = @max(zero, t);
+        const log_ratio = -t + half_n * @log(one + two_over_nu * t);
+        const u = Rng.vectorOpenFrom(source, V);
+        const accept = active & (norm_sq > zero) & (@log(u) <= log_ratio - log_envelope);
+        if (@reduce(.Or, accept)) {
+            inline for (0..3) |i| {
+                var value: V = @splat(0);
+                inline for (0..3) |j| value += @as(V, @splat(sampler.eigenvectors[i][j])) * y[j];
+                result[i] = @select(Child, accept, value, result[i]);
+            }
+            active = @select(bool, accept, @as(B, @splat(false)), active);
+        }
+    }
+    return result;
+}
+
+/// SIMD-vectorized Bingham sampler on S². One vector holds one independent
+/// sample per lane; the quadratic-form matrix is shared across lanes.
+pub fn VectorBingham(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+
+        sampler: Bingham(Child, 3),
+
+        pub fn init(matrix: [3][3]Child) BinghamError!Self {
+            return Self{ .sampler = try Bingham(Child, 3).init(matrix) };
+        }
+
+        pub fn new(matrix: [3][3]Child) Self {
+            return Self.init(matrix) catch |e| {
+                std.debug.panic("VectorBingham.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn matrixValue(self: Self) [3][3]Child {
+            return self.sampler.matrixValue();
+        }
+
+        pub fn eigenvaluesValue(self: Self) [3]Child {
+            return self.sampler.eigenvaluesValue();
+        }
+
+        pub fn spectralGapValue(self: Self) Child {
+            return self.sampler.spectralGapValue();
+        }
+
+        pub fn modeAxis(self: Self) [3]Child {
+            return self.sampler.modeAxis();
+        }
+
+        pub fn sample(self: Self, rng: Rng) [3]VectorType {
+            return vectorBinghamPointFrom(rng, VectorType, &self.sampler);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) [3]VectorType {
+            return vectorBinghamPointFrom(source, VectorType, &self.sampler);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: [][3]VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+pub fn vectorBingham(rng: Rng, comptime VectorType: type, matrix: [3][3]vectorChild(VectorType)) BinghamError![3]VectorType {
+    return vectorBinghamCheckedFrom(rng, VectorType, matrix);
+}
+
+pub fn vectorBinghamFrom(source: anytype, comptime VectorType: type, matrix: [3][3]vectorChild(VectorType)) [3]VectorType {
+    const dist = VectorBingham(VectorType).new(matrix);
+    return dist.sampleFrom(source);
+}
+
+pub fn vectorBinghamChecked(rng: Rng, comptime VectorType: type, matrix: [3][3]vectorChild(VectorType)) BinghamError![3]VectorType {
+    return vectorBinghamCheckedFrom(rng, VectorType, matrix);
+}
+
+pub fn vectorBinghamCheckedFrom(source: anytype, comptime VectorType: type, matrix: [3][3]vectorChild(VectorType)) BinghamError![3]VectorType {
+    const dist = try VectorBingham(VectorType).init(matrix);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorBingham(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, matrix: [3][3]vectorChild(VectorType)) BinghamError!void {
+    return fillVectorBinghamCheckedFrom(rng, VectorType, dest, matrix);
+}
+
+pub fn fillVectorBinghamFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, matrix: [3][3]vectorChild(VectorType)) void {
+    const dist = VectorBingham(VectorType).new(matrix);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorBinghamChecked(rng: Rng, comptime VectorType: type, dest: [][3]VectorType, matrix: [3][3]vectorChild(VectorType)) BinghamError!void {
+    return fillVectorBinghamCheckedFrom(rng, VectorType, dest, matrix);
+}
+
+pub fn fillVectorBinghamCheckedFrom(source: anytype, comptime VectorType: type, dest: [][3]VectorType, matrix: [3][3]vectorChild(VectorType)) BinghamError!void {
+    const dist = try VectorBingham(VectorType).init(matrix);
+    dist.fillFrom(source, dest);
+}
+
+// -----------------------------------------------------------------------------
 // Kent (Fisher-Bingham F5) distribution on S²
 // -----------------------------------------------------------------------------
 
@@ -10094,6 +10248,29 @@ fn kentMarginalMaxLog(comptime T: type, kappa: T, ovalness: T, lambda: T) T {
     return @max(best, refined) + margin;
 }
 
+/// Draw φ from the conditional Kent density ∝ exp(a·cos(2φ)) on one full
+/// circle. For small `a` a uniform proposal with acceptance
+/// `exp(a(cos(2φ) − 1))` is cheaper than Best–Fisher constants; for larger `a`
+/// the von Mises sampler is used.
+fn kentConditionalPhiFrom(source: anytype, comptime T: type, a: T) T {
+    if (a < 1.5) {
+        const two_pi: T = 2 * @as(T, @floatCast(std.math.pi));
+        while (true) {
+            const phi = Rng.floatOpenClosedFrom(source, T) * two_pi;
+            const u = Rng.floatOpenFrom(source, T);
+            if (u <= @exp(a * (@cos(2 * phi) - 1))) return phi;
+        }
+    }
+    const theta = vonMisesFrom(source, T, 0, a);
+    var phi = theta / 2;
+    // e^{a·cos(2φ)} has period π; replicate the sampled half-period to the
+    // full circle so the tangent direction is not biased toward γ₂.
+    if (Rng.floatOpenFrom(source, T) < 0.5) {
+        phi += @as(T, @floatCast(std.math.pi));
+    }
+    return phi;
+}
+
 fn kentPointFrom(
     source: anytype,
     comptime T: type,
@@ -10137,13 +10314,7 @@ fn kentPointFrom(
         const log_ratio = diff * w + logBesselI0(a) - marginal_max_log;
         const u = Rng.floatOpenFrom(source, T);
         if (@log(u) <= log_ratio) {
-            const theta = vonMisesFrom(source, T, 0, a);
-            var phi = theta / two;
-            // e^{a·cos(2φ)} has period π; replicate the sampled half-period to
-            // the full circle so the tangent direction is not biased toward γ₂.
-            if (Rng.floatOpenFrom(source, T) < 0.5) {
-                phi += @as(T, @floatCast(std.math.pi));
-            }
+            const phi = kentConditionalPhiFrom(source, T, a);
             const s = @sqrt(s2);
             const cos_phi = @cos(phi);
             const sin_phi = @sin(phi);
@@ -57950,6 +58121,82 @@ test "Bingham f32 sampling works" {
         const norm_sq = p[0] * p[0] + p[1] * p[1] + p[2] * p[2];
         try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
     }
+}
+
+test "VectorBingham matches the scalar axial moment" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7e01);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const matrix = [3][3]f64{
+        .{ 0, 0, 0 },
+        .{ 0, -3, 0 },
+        .{ 0, 0, -3 },
+    };
+    const dist = try VectorBingham(V).init(matrix);
+
+    const steps: usize = 20_000;
+    var num: f64 = 0;
+    var den: f64 = 0;
+    for (0..steps) |i| {
+        const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+        const weight = @exp(3 * w * w);
+        num += w * w * weight;
+        den += weight;
+    }
+    const expected = num / den;
+
+    var sum_x0_sq: f64 = 0;
+    var sum_x1_sq: f64 = 0;
+    var count: usize = 0;
+    for (0..10_000) |_| {
+        const p = dist.sample(rng);
+        inline for (0..4) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-10);
+            sum_x0_sq += p[0][lane] * p[0][lane];
+            sum_x1_sq += p[1][lane] * p[1][lane];
+            count += 1;
+        }
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(expected, sum_x0_sq / nf, 0.01);
+    try std.testing.expectApproxEqAbs((1 - expected) / 2, sum_x1_sq / nf, 0.01);
+}
+
+test "VectorBingham f32x8 and free functions work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7e02);
+    const rng = Rng.init(&engine);
+
+    const V8 = @Vector(8, f32);
+    const matrix = [3][3]f32{
+        .{ 0, 0, 0 },
+        .{ 0, -2, 0 },
+        .{ 0, 0, -2 },
+    };
+    var buf: [4][3]V8 = undefined;
+    try fillVectorBingham(rng, V8, &buf, matrix);
+    for (buf) |p| {
+        inline for (0..8) |lane| {
+            const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+            try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+        }
+    }
+
+    const single = try vectorBinghamChecked(rng, V8, matrix);
+    inline for (0..8) |lane| {
+        const norm_sq = single[0][lane] * single[0][lane] + single[1][lane] * single[1][lane] + single[2][lane] * single[2][lane];
+        try std.testing.expect(@abs(norm_sq - 1) < 1e-3);
+    }
+
+    const bad = [3][3]f32{
+        .{ 0, 0, 0 },
+        .{ 0, std.math.nan(f32), 0 },
+        .{ 0, 0, 0 },
+    };
+    try std.testing.expectError(error.InvalidParameter, vectorBingham(rng, V8, bad));
 }
 
 test "Kent constructor validates parameters and builds an orthonormal frame" {
