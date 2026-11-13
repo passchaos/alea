@@ -1485,6 +1485,83 @@ fn checkLongRun(samples: usize) !void {
         try expectFloatBetween("long vmf mean resultant", sum / nf, expected - 0.002, expected + 0.002);
     }
 
+    // Exact SO(3) matrix Fisher isotropic trace moment.
+    {
+        var engine = alea.FastPrng.init(0x10ce);
+        const rng = alea.Rng.init(&engine);
+        const d: f64 = 2;
+        const dist = try alea.distributions.MatrixFisher(f64).init(.{
+            .{ d, 0, 0 },
+            .{ 0, d, 0 },
+            .{ 0, 0, d },
+        });
+        const steps: usize = 20_000;
+        var num: f64 = 0;
+        var den: f64 = 0;
+        var i: usize = 0;
+        while (i < steps) : (i += 1) {
+            const w = -1 + 2 * (@as(f64, @floatFromInt(i)) + 0.5) / @as(f64, @floatFromInt(steps));
+            const weight = @exp(4 * d * w * w) * @sqrt(1 - w * w);
+            num += (4 * w * w - 1) * weight;
+            den += weight;
+        }
+        const expected = num / den;
+        var sum: f64 = 0;
+        i = 0;
+        while (i < samples) : (i += 1) {
+            const rotation = dist.sample(rng);
+            sum += rotation[0][0] + rotation[1][1] + rotation[2][2];
+        }
+        try expectFloatBetween("long matrix fisher trace", sum / nf, expected - 0.004, expected + 0.004);
+    }
+
+    // SIMD von Mises-Fisher lane moment.
+    {
+        var engine = alea.FastPrng.init(0x10cf);
+        const rng = alea.Rng.init(&engine);
+        const V = @Vector(4, f64);
+        const kappa: f64 = 5;
+        const dist = try alea.distributions.VectorVonMisesFisher(V).init(.{ 0, 0, 1 }, kappa);
+        const vmf = try alea.distributions.VonMisesFisher(f64, 3).init(.{ 0, 0, 1 }, kappa);
+        const expected = vmf.meanResultantLength();
+        const vector_count = samples / 4;
+        var sum_z: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| sum_z += point[2][lane];
+        }
+        const lane_nf: f64 = @floatFromInt(vector_count * 4);
+        try expectFloatBetween("long vector vmf mean", sum_z / lane_nf, expected - 0.003, expected + 0.003);
+    }
+
+    // Gibbs matrix Langevin marginal moments.
+    {
+        var engine = alea.FastPrng.init(0x10d0);
+        const rng = alea.Rng.init(&engine);
+        const kappa: f64 = 5;
+        const parameter = [6]f64{ 0, 0, 0, 0, kappa, 0 };
+        var dist = try alea.distributions.MatrixVonMisesFisher(f64).initWithOptions(allocator, &parameter, 3, 2, 100, 10);
+        defer dist.deinit();
+        const vmf = try alea.distributions.VonMisesFisher(f64, 3).init(.{ 0, 0, 1 }, kappa);
+        const expected = vmf.meanResultantLength();
+        const count = @min(samples, 100_000);
+        var sum_z: f64 = 0;
+        var sum_col1 = [_]f64{0} ** 3;
+        var out: [6]f64 = undefined;
+        var i: usize = 0;
+        while (i < count) : (i += 1) {
+            try dist.sampleInto(rng, &out);
+            sum_z += out[4];
+            inline for (0..3) |k| sum_col1[k] += out[k * 2 + 1];
+        }
+        const count_nf: f64 = @floatFromInt(count);
+        try expectFloatBetween("long matrix vmf first-column mean", sum_z / count_nf, expected - 0.02, expected + 0.02);
+        inline for (0..3) |k| {
+            try expectFloatBetween("long matrix vmf second-column mean", sum_col1[k] / count_nf, -0.02, 0.02);
+        }
+    }
+
     // Tail probabilities.
     {
         var engine = alea.FastPrng.init(0x10cb);
