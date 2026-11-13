@@ -474,6 +474,12 @@ pub fn main(init: std.process.Init) !void {
     try benchZeta(io, stdout, "alea zeta", bytes / 128);
     try benchZetaDirect(io, stdout, "alea zeta direct", bytes / 128);
     try benchZetaFillDirect(io, stdout, "alea Zeta.fillFrom direct", bytes / 128);
+    try stdout.print("\nadvanced multivariate throughput\n", .{});
+    try benchBingham(io, stdout, "alea bingham 3d", bytes / 64);
+    try benchGaussianCopula(io, stdout, "alea gaussian copula 3d", bytes / 64);
+    try benchStudentTCopula(io, stdout, "alea student-t copula 3d", bytes / 64);
+    try benchMatrixNormal(io, stdout, "alea matrix normal 2x3", bytes / 64);
+    try benchMatrixT(io, stdout, "alea matrix t 2x3", bytes / 64);
     try stdout.flush();
 }
 
@@ -11293,6 +11299,185 @@ fn benchZetaFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchBingham(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const matrix = [3][3]f64{
+        .{ 0, 0, 0 },
+        .{ 0, -5, 0 },
+        .{ 0, 0, -5 },
+    };
+    const dist = alea.distributions.Bingham(f64, 3).init(matrix) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xb1a6);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..3) |k| checksum +%= @bitCast(point[k]);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchGaussianCopula(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const correlation = [3][3]f64{
+        .{ 1, 0.4, 0.2 },
+        .{ 0.4, 1, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+    const dist = alea.distributions.StaticGaussianCopula(f64, 3).init(correlation) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xc0f1);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const u = dist.sample(rng);
+            inline for (0..3) |k| checksum +%= @bitCast(u[k]);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchStudentTCopula(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const correlation = [3][3]f64{
+        .{ 1, 0.4, 0.2 },
+        .{ 0.4, 1, 0.1 },
+        .{ 0.2, 0.1, 1 },
+    };
+    const dist = alea.distributions.StaticStudentTCopula(f64, 3).init(correlation, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xc0f2);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const u = dist.sample(rng);
+            inline for (0..3) |k| checksum +%= @bitCast(u[k]);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchMatrixNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const mean = [2][3]f64{
+        .{ 0.5, -0.5, 1 },
+        .{ 2, 3, -1 },
+    };
+    const row_covariance = [2][2]f64{ .{ 1, 0.3 }, .{ 0.3, 1 } };
+    const col_covariance = [3][3]f64{
+        .{ 1, 0.2, 0.1 },
+        .{ 0.2, 1, 0.15 },
+        .{ 0.1, 0.15, 1 },
+    };
+    const dist = alea.distributions.StaticMatrixNormal(f64, 2, 3).init(mean, row_covariance, col_covariance) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x3a71);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const sample = dist.sample(rng);
+            inline for (0..2) |r| {
+                inline for (0..3) |c| checksum +%= @bitCast(sample[r][c]);
+            }
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchMatrixT(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const mean = [2][3]f64{
+        .{ 0.5, -0.5, 1 },
+        .{ 2, 3, -1 },
+    };
+    const row_covariance = [2][2]f64{ .{ 1, 0.3 }, .{ 0.3, 1 } };
+    const col_covariance = [3][3]f64{
+        .{ 1, 0.2, 0.1 },
+        .{ 0.2, 1, 0.15 },
+        .{ 0.1, 0.15, 1 },
+    };
+    const dist = alea.distributions.StaticMatrixT(f64, 2, 3).init(mean, row_covariance, col_covariance, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x3a72);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const sample = dist.sample(rng);
+            inline for (0..2) |r| {
+                inline for (0..3) |c| checksum +%= @bitCast(sample[r][c]);
+            }
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
 }
 
 test "parseOptions accepts default, byte-count, filter-only, and count-plus-filter" {
