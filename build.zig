@@ -815,6 +815,7 @@ pub fn build(b: *std.Build) void {
     practrand_self_test_step.dependOn(&run_practrand_self_test.step);
 
     const run_distcheck = addToolRun(b, target, optimize, module, "alea-distcheck", "tools/distcheck.zig");
+    if (b.args) |args| run_distcheck.addArgs(args);
 
     const distcheck_tests = b.addTest(.{
         .name = "alea-distcheck-tests",

@@ -3,6 +3,23 @@ const alea = @import("alea");
 const builtin = @import("builtin");
 
 pub fn main(init: std.process.Init) !void {
+    var long_samples: usize = 0;
+    if (builtin.target.os.tag != .wasi) {
+        var arena = std.heap.ArenaAllocator.init(init.gpa);
+        defer arena.deinit();
+        const args = try init.minimal.args.toSlice(arena.allocator());
+        var i: usize = 1;
+        while (i < args.len) : (i += 1) {
+            if (std.mem.eql(u8, args[i], "--long")) {
+                long_samples = if (i + 1 < args.len)
+                    (std.fmt.parseInt(usize, args[i + 1], 10) catch 1_000_000)
+                else
+                    1_000_000;
+                i += 1;
+            }
+        }
+    }
+
     if (builtin.target.os.tag == .wasi) {
         try runChecks();
         std.debug.print("distcheck ok\n", .{});
@@ -15,7 +32,12 @@ pub fn main(init: std.process.Init) !void {
     const stdout = &stdout_file.interface;
 
     try runChecks();
-    try stdout.print("distcheck ok\n", .{});
+    if (long_samples > 0) {
+        try checkLongRun(long_samples);
+        try stdout.print("distlongcheck ok ({d} samples)\n", .{long_samples});
+    } else {
+        try stdout.print("distcheck ok\n", .{});
+    }
     try stdout.flush();
 }
 
@@ -1150,6 +1172,237 @@ fn expectVectorMoments(comptime VectorType: type, comptime label: []const u8, sa
     const variance = sum_squares / count - mean * mean;
     try expectFloatBetween(label, mean, min_mean, max_mean);
     try expectFloatBetween(label, variance, min_variance, max_variance);
+}
+
+/// Longer seeded moment-recovery run for the core and recently added
+/// multivariate/directional families. Invoked with `--long [samples]`.
+fn checkLongRun(samples: usize) !void {
+    const allocator = std.heap.smp_allocator;
+    const nf: f64 = @floatFromInt(samples);
+
+    {
+        var engine = alea.FastPrng.init(0x10c1);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x = alea.distributions.standardNormal(rng, f64);
+            sum += x;
+            sum_sq += x * x;
+        }
+        const mean = sum / nf;
+        try expectFloatBetween("long normal mean", mean, -0.005, 0.005);
+        try expectFloatBetween("long normal variance", sum_sq / nf - mean * mean, 0.99, 1.01);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c2);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x = alea.distributions.standardExponential(rng, f64);
+            sum += x;
+            sum_sq += x * x;
+        }
+        const mean = sum / nf;
+        try expectFloatBetween("long exponential mean", mean, 0.99, 1.01);
+        try expectFloatBetween("long exponential variance", sum_sq / nf - mean * mean, 0.98, 1.02);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c3);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x: f64 = @floatFromInt(alea.distributions.poisson(rng, 4));
+            sum += x;
+            sum_sq += x * x;
+        }
+        const mean = sum / nf;
+        try expectFloatBetween("long poisson mean", mean, 3.98, 4.02);
+        try expectFloatBetween("long poisson variance", sum_sq / nf - mean * mean, 3.96, 4.04);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c4);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x = alea.distributions.gamma(rng, f64, 2.5, 1.5);
+            sum += x;
+            sum_sq += x * x;
+        }
+        const mean = sum / nf;
+        try expectFloatBetween("long gamma mean", mean, 3.73, 3.77);
+        try expectFloatBetween("long gamma variance", sum_sq / nf - mean * mean, 5.56, 5.69);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c5);
+        const rng = alea.Rng.init(&engine);
+        const mean = [_]f64{ 0, 0 };
+        const covariance = [_]f64{ 1, 0.3, 0.3, 1 };
+        var dist = try alea.distributions.MultivariateNormal(f64).init(allocator, &mean, &covariance);
+        defer dist.deinit();
+        var sums = [_]f64{0} ** 2;
+        var sums_sq = [_]f64{0} ** 2;
+        var cross: f64 = 0;
+        var out: [2]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleInto(rng, &out);
+            sums[0] += out[0];
+            sums[1] += out[1];
+            sums_sq[0] += out[0] * out[0];
+            sums_sq[1] += out[1] * out[1];
+            cross += out[0] * out[1];
+        }
+        const m0 = sums[0] / nf;
+        const m1 = sums[1] / nf;
+        try expectFloatBetween("long mvn mean0", m0, -0.005, 0.005);
+        try expectFloatBetween("long mvn mean1", m1, -0.005, 0.005);
+        try expectFloatBetween("long mvn var0", sums_sq[0] / nf - m0 * m0, 0.99, 1.01);
+        try expectFloatBetween("long mvn var1", sums_sq[1] / nf - m1 * m1, 0.99, 1.01);
+        try expectFloatBetween("long mvn cov01", cross / nf - m0 * m1, 0.29, 0.31);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c6);
+        const rng = alea.Rng.init(&engine);
+        const mean = [_]f64{ 0, 0 };
+        const covariance = [_]f64{ 1, 0.3, 0.3, 1 };
+        var dist = try alea.distributions.MultivariateT(f64).init(allocator, &mean, &covariance, 5);
+        defer dist.deinit();
+        var sums = [_]f64{0} ** 2;
+        var sums_sq = [_]f64{0} ** 2;
+        var cross: f64 = 0;
+        var out: [2]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleInto(rng, &out);
+            sums[0] += out[0];
+            sums[1] += out[1];
+            sums_sq[0] += out[0] * out[0];
+            sums_sq[1] += out[1] * out[1];
+            cross += out[0] * out[1];
+        }
+        const m0 = sums[0] / nf;
+        const m1 = sums[1] / nf;
+        try expectFloatBetween("long mvt mean0", m0, -0.01, 0.01);
+        try expectFloatBetween("long mvt mean1", m1, -0.01, 0.01);
+        try expectFloatBetween("long mvt var0", sums_sq[0] / nf - m0 * m0, 1.63, 1.70);
+        try expectFloatBetween("long mvt var1", sums_sq[1] / nf - m1 * m1, 1.63, 1.70);
+        try expectFloatBetween("long mvt cov01", cross / nf - m0 * m1, 0.48, 0.52);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c7);
+        const rng = alea.Rng.init(&engine);
+        const location = [_]f64{ 0, 0 };
+        const scale = [_]f64{ 1, 0.5, 0.5, 2 };
+        const shape = [_]f64{ 2, -1 };
+        var dist = try alea.distributions.MultivariateSkewNormal(f64).init(allocator, &location, &scale, &shape);
+        defer dist.deinit();
+        const inv_sqrt5: f64 = 1.0 / @sqrt(5.0);
+        const delta0: f64 = 1.5 * inv_sqrt5;
+        const delta1: f64 = -inv_sqrt5;
+        const normal_factor: f64 = @sqrt(2.0 / std.math.pi);
+        const cov_factor: f64 = 2.0 / std.math.pi;
+        const expected_mean0 = normal_factor * delta0;
+        const expected_mean1 = normal_factor * delta1;
+        const expected_var0 = 1 - cov_factor * delta0 * delta0;
+        const expected_var1 = 2 - cov_factor * delta1 * delta1;
+        const expected_cov01 = 0.5 - cov_factor * delta0 * delta1;
+        var sums = [_]f64{0} ** 2;
+        var sums_sq = [_]f64{0} ** 2;
+        var cross: f64 = 0;
+        var out: [2]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleInto(rng, &out);
+            sums[0] += out[0];
+            sums[1] += out[1];
+            sums_sq[0] += out[0] * out[0];
+            sums_sq[1] += out[1] * out[1];
+            cross += out[0] * out[1];
+        }
+        const m0 = sums[0] / nf;
+        const m1 = sums[1] / nf;
+        try expectFloatBetween("long mvskewn mean0", m0, expected_mean0 - 0.004, expected_mean0 + 0.004);
+        try expectFloatBetween("long mvskewn mean1", m1, expected_mean1 - 0.004, expected_mean1 + 0.004);
+        try expectFloatBetween("long mvskewn var0", sums_sq[0] / nf - m0 * m0, expected_var0 - 0.01, expected_var0 + 0.01);
+        try expectFloatBetween("long mvskewn var1", sums_sq[1] / nf - m1 * m1, expected_var1 - 0.01, expected_var1 + 0.01);
+        try expectFloatBetween("long mvskewn cov01", cross / nf - m0 * m1, expected_cov01 - 0.01, expected_cov01 + 0.01);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c8);
+        const rng = alea.Rng.init(&engine);
+        const dist = try alea.distributions.Kent(f64).init(.{ 0, 0, 1 }, .{ 1, 0, 0 }, 5, 1.5);
+        const rho = dist.meanResultantLength();
+        var sum_z: f64 = 0;
+        var sums_sq = [_]f64{0} ** 3;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const point = dist.sample(rng);
+            sum_z += point[2];
+            inline for (0..3) |k| sums_sq[k] += point[k] * point[k];
+        }
+        try expectFloatBetween("long kent mean resultant", sum_z / nf, rho - 0.003, rho + 0.003);
+        try expectFloatBetween("long kent var0", sums_sq[0] / nf, dist.varianceAt(0) - 0.005, dist.varianceAt(0) + 0.005);
+        try expectFloatBetween("long kent var1", sums_sq[1] / nf, dist.varianceAt(1) - 0.005, dist.varianceAt(1) + 0.005);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10c9);
+        const rng = alea.Rng.init(&engine);
+        const matrix = [3][3]f64{
+            .{ 0, 0, 0 },
+            .{ 0, -3, 0 },
+            .{ 0, 0, -3 },
+        };
+        const dist = try alea.distributions.Bingham(f64, 3).init(matrix);
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const point = dist.sample(rng);
+            sum_sq += point[0] * point[0];
+        }
+        const steps: usize = 20_000;
+        var num: f64 = 0;
+        var den: f64 = 0;
+        var j: usize = 0;
+        while (j < steps) : (j += 1) {
+            const w = -1 + 2 * (@as(f64, @floatFromInt(j)) + 0.5) / @as(f64, @floatFromInt(steps));
+            const weight = @exp(3 * w * w);
+            num += w * w * weight;
+            den += weight;
+        }
+        const expected = num / den;
+        try expectFloatBetween("long bingham mean x0^2", sum_sq / nf, expected - 0.003, expected + 0.003);
+    }
+
+    {
+        var engine = alea.FastPrng.init(0x10ca);
+        const rng = alea.Rng.init(&engine);
+        const mean = [3]f64{ 0, 0, 1 };
+        const dist = try alea.distributions.VonMisesFisher(f64, 3).init(mean, 5);
+        const expected = dist.meanResultantLength();
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const point = dist.sample(rng);
+            sum += point[2];
+        }
+        try expectFloatBetween("long vmf mean resultant", sum / nf, expected - 0.002, expected + 0.002);
+    }
 }
 
 fn expectStandardNormalCdfGates(comptime VectorType: type, comptime label: []const u8, samples: []const VectorType) !void {
