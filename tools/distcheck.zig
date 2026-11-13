@@ -223,6 +223,34 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("multivariate skew-normal accessor variance", try dist.varianceAt(0), expected_var0 - 1e-9, expected_var0 + 1e-9);
     }
 
+    // Kent (Fisher-Bingham F5) directional moment recovery.
+    {
+        const mean = [3]f64{ 0, 0, 1 };
+        const major = [3]f64{ 1, 0, 0 };
+        const dist = try alea.distributions.Kent(f64).init(mean, major, 5, 1.5);
+        const rho = dist.meanResultantLength();
+        const samples = 40_000;
+        var sum_z: f64 = 0;
+        var sums_sq = [_]f64{0} ** 3;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const point = dist.sampleFrom(&engine);
+            const norm_sq = point[0] * point[0] + point[1] * point[1] + point[2] * point[2];
+            if (@abs(norm_sq - 1) > 1e-9) return error.DistributionCheckFailed;
+            sum_z += point[2];
+            inline for (0..3) |k| sums_sq[k] += point[k] * point[k];
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const observed_z = sum_z / nf;
+        try expectFloatBetween("kent mean resultant", observed_z, rho - 0.03, rho + 0.03);
+        try expectFloatBetween("kent major-axis variance", sums_sq[0] / nf, dist.varianceAt(0) - 0.03, dist.varianceAt(0) + 0.03);
+        try expectFloatBetween("kent minor-axis variance", sums_sq[1] / nf, dist.varianceAt(1) - 0.03, dist.varianceAt(1) + 0.03);
+        if (!(dist.varianceAt(0) > dist.varianceAt(1))) return error.DistributionCheckFailed;
+        const trace_expected = dist.varianceValue();
+        const trace_observed = dist.varianceAt(0) + dist.varianceAt(1) + dist.varianceAt(2);
+        try expectFloatBetween("kent trace identity", trace_observed, trace_expected - 1e-9, trace_expected + 1e-9);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;

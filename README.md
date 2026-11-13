@@ -165,6 +165,7 @@ The current Linux-first roadmap is intentionally broad:
   inverse Gaussian,
   normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial, von Mises, wrapped Cauchy, von Mises-Fisher, Watson, Bingham,
+  Kent,
   truncated normal, Gaussian/Student-t copulas, matrix normal,
   matrix-variate Student-t, Wishart/Inverse-Wishart, Zig-native full-covariance
   multivariate normal with reusable dynamic Cholesky factorization plus

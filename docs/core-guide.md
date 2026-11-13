@@ -474,6 +474,10 @@ Directional distributions on the circle and sphere:
   deterministic symmetric Jacobi eigendecomposition, adaptive angular central
   Gaussian rejection sampling, isotropic-uniform and `±mode` point-mass fast
   paths.
+- `Kent(T)` — Fisher-Bingham F5 distribution on S² with concentration `κ ≥ 0`
+  and ovalness `0 ≤ β < κ/2`; exact rejection sampling from a mean-matched
+  Von Mises-Fisher proposal, `β = 0` vMF reduction, and deterministic-quadrature
+  mean/covariance diagnostics including γ₂/γ₃ anisotropy.
 
 Copulas on the unit hypercube:
 
