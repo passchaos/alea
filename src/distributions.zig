@@ -4767,7 +4767,7 @@ pub const Multinomial = struct {
     fn sampleFirstBinomialFrom(self: Multinomial, source: anytype, trials: u64, p: f64) u64 {
         if (self.first_hin) |setup| {
             if (setup.trials == trials) {
-                const sampled = binomialHinSampleFrom(source, setup);
+                const sampled = binomialHinDrawFrom(source, trials, setup);
                 return if (self.first_hin_flip) trials - sampled else sampled;
             }
         }
@@ -5891,6 +5891,14 @@ const binomial_log_factorial = blk: {
     break :blk table;
 };
 
+/// Table-only log-factorial. The caller guarantees `x` is below
+/// `binomial_log_factorial_len`, so the HIN hot loop carries no out-of-line
+/// call and keeps its live values in registers.
+inline fn binomialLogFactorialSmall(x: f64) f64 {
+    return binomial_log_factorial[@intFromFloat(x)];
+}
+
+/// General log-factorial with the Stirling fallback for large arguments.
 inline fn binomialLogFactorial(x: f64) f64 {
     if (x < binomial_log_factorial_len) return binomial_log_factorial[@intFromFloat(x)];
     return lnOfFactorial(x);
@@ -5970,7 +5978,7 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
     };
 }
 
-fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
+fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: BinomialHinSetup) u64 {
     const t = setup.t;
     const np = setup.np;
     const d1 = setup.d1;
@@ -6021,7 +6029,10 @@ fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
         reject = reject or x < -np or x > t - np;
         if (!reject) {
             const kf = np + x;
-            const lfx = binomialLogFactorial(kf) + binomialLogFactorial(t - kf);
+            const lfx = if (small)
+                binomialLogFactorialSmall(kf) + binomialLogFactorialSmall(t - kf)
+            else
+                binomialLogFactorial(kf) + binomialLogFactorial(t - kf);
             reject = v > setup.lf - lfx + x * setup.lp1p;
         }
         if (reject) continue;
@@ -6031,9 +6042,16 @@ fn binomialHinSampleFrom(source: anytype, setup: BinomialHinSetup) u64 {
     }
 }
 
+inline fn binomialHinDrawFrom(source: anytype, trials: u64, setup: BinomialHinSetup) u64 {
+    // All log-factorial arguments are bounded by `trials`, so the table-only
+    // loop applies exactly when `trials` is inside the table range.
+    if (trials < binomial_log_factorial_len) return binomialHinSampleFrom(true, source, setup);
+    return binomialHinSampleFrom(false, source, setup);
+}
+
 fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const setup = binomialHinSetup(trials, p).?;
-    return binomialHinSampleFrom(source, setup);
+    return binomialHinDrawFrom(source, trials, setup);
 }
 
 const HinCacheEntry = struct {
@@ -6058,12 +6076,12 @@ fn sampleCachedSecondBinomialFrom(
     var i: usize = 0;
     while (i < cache_len.*) : (i += 1) {
         if (cache[i].n == trials) {
-            const sampled = binomialHinSampleFrom(source, cache[i].setup);
+            const sampled = binomialHinDrawFrom(source, trials, cache[i].setup);
             return if (cache[i].flip) trials - sampled else sampled;
         }
     }
     if (binomialHinSetup(trials, q)) |setup| {
-        const sampled = binomialHinSampleFrom(source, setup);
+        const sampled = binomialHinDrawFrom(source, trials, setup);
         cache[cache_next.*] = .{ .n = trials, .setup = setup, .flip = flip };
         if (cache_len.* < 16) cache_len.* += 1;
         cache_next.* = (cache_next.* + 1) % 16;
