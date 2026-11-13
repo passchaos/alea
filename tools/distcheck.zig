@@ -330,6 +330,30 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("matrix fisher trace", sum / nf, expected - 0.03, expected + 0.03);
     }
 
+    // SIMD von Mises-Fisher f64x4 moment recovery.
+    {
+        const V = @Vector(4, f64);
+        const kappa: f64 = 5;
+        const dist = try alea.distributions.VectorVonMisesFisher(V).init(.{ 0, 0, 1 }, kappa);
+        const vmf = try alea.distributions.VonMisesFisher(f64, 3).init(.{ 0, 0, 1 }, kappa);
+        const expected = vmf.meanResultantLength();
+        const samples = 10_000;
+        var sum_z: f64 = 0;
+        var count: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const p = dist.sampleFrom(&engine);
+            inline for (0..4) |lane| {
+                const norm_sq = p[0][lane] * p[0][lane] + p[1][lane] * p[1][lane] + p[2][lane] * p[2][lane];
+                if (@abs(norm_sq - 1) > 1e-9) return error.DistributionCheckFailed;
+                sum_z += p[2][lane];
+                count += 1;
+            }
+        }
+        const nf: f64 = @floatFromInt(count);
+        try expectFloatBetween("vector vmf mean resultant", sum_z / nf, expected - 0.03, expected + 0.03);
+    }
+
     // Continuous and discrete CDF/quantile round-trips.
     {
         const p: f64 = 0.3;
