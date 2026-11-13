@@ -9638,15 +9638,43 @@ fn kentProposalLambda(comptime T: type, rho: T) T {
     return (lo + hi) / 2;
 }
 
-/// Supremum of `(κ−λ)w + β(1−w²)` over w ∈ [-1, 1]. The joint target/proposal
-/// ratio is bounded by `exp` of this value, attained at `cos(2φ) = 1`.
-fn kentMaxExponent(comptime T: type, kappa: T, ovalness: T, lambda: T) T {
-    const diff = kappa - lambda;
-    if (ovalness == 0) return @max(diff, -diff);
-    const w_star = diff / (2 * ovalness);
-    if (w_star >= 1) return diff;
-    if (w_star <= -1) return -diff;
-    return ovalness + diff * diff / (4 * ovalness);
+fn kentMarginalLog(comptime T: type, kappa: T, ovalness: T, lambda: T, w: T) T {
+    const a = ovalness * (1 - w * w);
+    return (kappa - lambda) * w + logBesselI0(a);
+}
+
+/// Supremum of `log(e^{(κ−λ)w}·I₀(β(1−w²)))` over w ∈ [-1, 1]. A coarse grid
+/// brackets the global maximum; golden-section refinement then converges to it
+/// even when a large β makes the peak much narrower than the grid spacing.
+fn kentMarginalMaxLog(comptime T: type, kappa: T, ovalness: T, lambda: T) T {
+    const steps: usize = 256;
+    const step: T = 2 / @as(T, @floatFromInt(steps));
+    var best_w: T = -1;
+    var best: T = kentMarginalLog(T, kappa, ovalness, lambda, -1);
+    var i: usize = 1;
+    while (i <= steps) : (i += 1) {
+        const w = -1 + step * @as(T, @floatFromInt(i));
+        const value = kentMarginalLog(T, kappa, ovalness, lambda, w);
+        if (value > best) {
+            best = value;
+            best_w = w;
+        }
+    }
+    var lo = @max(-1, best_w - step);
+    var hi = @min(1, best_w + step);
+    const inv3: T = 1.0 / 3.0;
+    for (0..80) |_| {
+        const m1 = lo + (hi - lo) * inv3;
+        const m2 = hi - (hi - lo) * inv3;
+        if (kentMarginalLog(T, kappa, ovalness, lambda, m1) < kentMarginalLog(T, kappa, ovalness, lambda, m2)) {
+            lo = m1;
+        } else {
+            hi = m2;
+        }
+    }
+    const refined = kentMarginalLog(T, kappa, ovalness, lambda, (lo + hi) / 2);
+    const margin: T = if (T == f32) @as(T, 1e-5) else @as(T, 1e-9);
+    return @max(best, refined) + margin;
 }
 
 fn kentPointFrom(
@@ -9658,36 +9686,60 @@ fn kentPointFrom(
     kappa: T,
     ovalness: T,
     proposal_lambda: T,
-    max_exponent: T,
+    marginal_max_log: T,
+    wood_b: T,
+    wood_x0: T,
+    wood_c: T,
 ) [3]T {
     if (kappa == 0) return unitSphereSurfaceFrom(source, T, 3);
     if (kappa > 1e12) return mean_dir.*;
     if (ovalness == 0) return vonMisesFisherPointFrom(source, T, 3, mean_dir, kappa);
 
     const one: T = 1;
+    const two: T = 2;
     const diff = kappa - proposal_lambda;
     while (true) {
-        const x = vonMisesFisherPointFrom(source, T, 3, mean_dir, proposal_lambda);
-        var w: T = 0;
-        var t2: T = 0;
-        var t3: T = 0;
-        inline for (0..3) |i| {
-            w += x[i] * mean_dir[i];
-            t2 += x[i] * major_axis[i];
-            t3 += x[i] * minor_axis[i];
+        // Sample the proposal vMF cosine directly in the Kent frame instead of
+        // constructing a full 3D point and projecting it. Wood's constants are
+        // precomputed at construction time.
+        var w: T = undefined;
+        if (proposal_lambda == 0) {
+            w = vmfSampleWFrom(source, T, 0, 3);
+        } else {
+            while (true) {
+                const z = Rng.floatOpenClosedFrom(source, T);
+                const u = Rng.floatOpenFrom(source, T);
+                w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
+                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c >= @log(u)) break;
+            }
         }
+        // Exact conditional sampler: accept w against the I₀-weighted marginal,
+        // then draw φ from the conditional von Mises density.
         const s2 = @max(0, one - w * w);
-        const tangent_sq = t2 * t2 + t3 * t3;
-        const cos2phi = if (tangent_sq > 0) (t2 * t2 - t3 * t3) / tangent_sq else one;
-        const accept_log = diff * w + ovalness * s2 * cos2phi - max_exponent;
+        const a = ovalness * s2;
+        const log_ratio = diff * w + logBesselI0(a) - marginal_max_log;
         const u = Rng.floatOpenFrom(source, T);
-        if (@log(u) <= accept_log) return x;
+        if (@log(u) <= log_ratio) {
+            const theta = vonMisesFrom(source, T, 0, a);
+            var phi = theta / two;
+            // e^{a·cos(2φ)} has period π; replicate the sampled half-period to
+            // the full circle so the tangent direction is not biased toward γ₂.
+            if (Rng.floatOpenFrom(source, T) < 0.5) {
+                phi += @as(T, @floatCast(std.math.pi));
+            }
+            const s = @sqrt(s2);
+            const cos_phi = @cos(phi);
+            const sin_phi = @sin(phi);
+            var x: [3]T = undefined;
+            inline for (0..3) |i| x[i] = w * mean_dir[i] + s * (cos_phi * major_axis[i] + sin_phi * minor_axis[i]);
+            return x;
+        }
     }
 }
 
-fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: *const [3]T, major_axis: *const [3]T, minor_axis: *const [3]T, kappa: T, ovalness: T, proposal_lambda: T, max_exponent: T) void {
+fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: *const [3]T, major_axis: *const [3]T, minor_axis: *const [3]T, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) void {
     for (dest) |*item| {
-        item.* = kentPointFrom(source, T, mean_dir, major_axis, minor_axis, kappa, ovalness, proposal_lambda, max_exponent);
+        item.* = kentPointFrom(source, T, mean_dir, major_axis, minor_axis, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
     }
 }
 
@@ -9712,7 +9764,10 @@ pub fn Kent(comptime T: type) type {
         kappa: T,
         ovalness: T,
         proposal_lambda: T,
-        max_exponent: T,
+        marginal_max_log: T,
+        wood_b: T,
+        wood_x0: T,
+        wood_c: T,
 
         /// Construct a Kent distribution from a mean direction, a major axis
         /// (projected onto the tangent plane and normalized), concentration,
@@ -9759,7 +9814,16 @@ pub fn Kent(comptime T: type) type {
 
             const rho = kentMoments(T, kappa, ovalness)[0];
             const lambda = kentProposalLambda(T, rho);
-            const max_exponent = kentMaxExponent(T, kappa, ovalness, lambda);
+            const marginal_max_log = kentMarginalMaxLog(T, kappa, ovalness, lambda);
+            var wood_b: T = 0;
+            var wood_x0: T = 0;
+            var wood_c: T = 0;
+            if (lambda > 0) {
+                const wc = vmfWoodConstants(T, lambda, 3);
+                wood_b = wc.b;
+                wood_x0 = wc.x0;
+                wood_c = wc.c;
+            }
 
             return Self{
                 .mean_dir = mean_dir,
@@ -9768,7 +9832,10 @@ pub fn Kent(comptime T: type) type {
                 .kappa = kappa,
                 .ovalness = ovalness,
                 .proposal_lambda = lambda,
-                .max_exponent = max_exponent,
+                .marginal_max_log = marginal_max_log,
+                .wood_b = wood_b,
+                .wood_x0 = wood_x0,
+                .wood_c = wood_c,
             };
         }
 
@@ -9842,19 +9909,19 @@ pub fn Kent(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) [3]T {
-            return kentPointFrom(rng, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+            return kentPointFrom(rng, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) [3]T {
-            return kentPointFrom(source, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+            return kentPointFrom(source, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: [][3]T) void {
-            fillKentPointsFrom(rng, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+            fillKentPointsFrom(rng, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: [][3]T) void {
-            fillKentPointsFrom(source, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.max_exponent);
+            fillKentPointsFrom(source, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
         }
     };
 }
