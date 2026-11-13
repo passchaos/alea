@@ -471,9 +471,11 @@ Directional distributions on the circle and sphere:
   `VectorBingham(T)` / `VectorKent(T)` — per-lane SIMD samplers: one
   independent circular von Mises, S² vMF, S² axial Watson, S² Bingham, or S²
   Kent sample per vector lane, with lane retirement in the
-  Best–Fisher/Wood/Beta/ACG rejection loops. The S² samplers return
-  `[3]VectorType` and share the mean direction/axis, quadratic-form matrix, or
-  Kent frame across lanes.
+  Best–Fisher/Wood/Beta/ACG rejection loops. When only a couple of lanes
+  remain, the Watson and Bingham samplers finish them with the scalar sampler
+  instead of redrawing full vectors. The S² samplers return `[3]VectorType`
+  and share the mean direction/axis, quadratic-form matrix, or Kent frame
+  across lanes.
 - `Watson(T, n)` — axial vMF counterpart with bipolar (`κ > 0`), girdle
   (`κ < 0`), and uniform (`κ = 0`) regimes plus Kummer-function moment
   diagnostics.

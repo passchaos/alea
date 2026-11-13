@@ -9437,6 +9437,19 @@ fn vectorWatsonPointFrom(source: anytype, comptime VectorType: type, mean_axis: 
         const accept = active & (log_u <= kappa_v * (wcand * wcand - shift));
         w = @select(Child, accept, wcand, w);
         active = @select(bool, accept, @as(B, @splat(false)), active);
+
+        // Once only a couple of lanes remain, finish them with the scalar
+        // sampler instead of redrawing full vectors.
+        var active_count: usize = 0;
+        inline for (0..L) |lane| {
+            if (active[lane]) active_count += 1;
+        }
+        if (active_count <= 2) {
+            inline for (0..L) |lane| {
+                if (active[lane]) w[lane] = watsonSampleWFrom(source, Child, kappa, 3);
+            }
+            break;
+        }
     }
 
     const two_pi: V = @splat(2 * @as(Child, @floatCast(std.math.pi)));
@@ -10003,6 +10016,24 @@ fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *
                 result[i] = @select(Child, accept, value, result[i]);
             }
             active = @select(bool, accept, @as(B, @splat(false)), active);
+        }
+
+        // Finish the last couple of lanes with the scalar sampler rather than
+        // redrawing full vectors.
+        var active_count: usize = 0;
+        inline for (0..L) |lane| {
+            if (active[lane]) active_count += 1;
+        }
+        if (active_count <= 2) {
+            inline for (0..L) |lane| {
+                if (active[lane]) {
+                    const point = sampler.sampleFrom(source);
+                    result[0][lane] = point[0];
+                    result[1][lane] = point[1];
+                    result[2][lane] = point[2];
+                }
+            }
+            break;
         }
     }
     return result;
