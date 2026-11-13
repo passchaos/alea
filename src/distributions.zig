@@ -19329,6 +19329,128 @@ pub fn betaBinomialQuantile(q: f64, trials: u64, alpha: f64, beta_param: f64) f6
     return @floatFromInt(lo);
 }
 
+pub fn vectorBetaBinomial(rng: Rng, comptime VectorType: type, trials: u64, alpha: f64, beta_param: f64) VectorType {
+    const sampler = VectorBetaBinomial(VectorType).init(trials, alpha, beta_param) catch unreachable;
+    return sampler.sample(rng);
+}
+
+pub fn vectorBetaBinomialFrom(source: anytype, comptime VectorType: type, trials: u64, alpha: f64, beta_param: f64) VectorType {
+    const sampler = VectorBetaBinomial(VectorType).init(trials, alpha, beta_param) catch unreachable;
+    return sampler.sampleFrom(source);
+}
+
+pub fn vectorBetaBinomialChecked(rng: Rng, comptime VectorType: type, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!VectorType {
+    const sampler = try VectorBetaBinomial(VectorType).init(trials, alpha, beta_param);
+    return sampler.sample(rng);
+}
+
+pub fn vectorBetaBinomialCheckedFrom(source: anytype, comptime VectorType: type, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!VectorType {
+    const sampler = try VectorBetaBinomial(VectorType).init(trials, alpha, beta_param);
+    return sampler.sampleFrom(source);
+}
+
+pub fn fillVectorBetaBinomial(rng: Rng, comptime VectorType: type, dest: []VectorType, trials: u64, alpha: f64, beta_param: f64) void {
+    const sampler = VectorBetaBinomial(VectorType).init(trials, alpha, beta_param) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+pub fn fillVectorBetaBinomialFrom(source: anytype, comptime VectorType: type, dest: []VectorType, trials: u64, alpha: f64, beta_param: f64) void {
+    const sampler = VectorBetaBinomial(VectorType).init(trials, alpha, beta_param) catch unreachable;
+    sampler.fillFrom(source, dest);
+}
+
+pub fn fillVectorBetaBinomialChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorBetaBinomial(VectorType).init(trials, alpha, beta_param);
+    sampler.fill(rng, dest);
+}
+
+pub fn fillVectorBetaBinomialCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!void {
+    if (dest.len == 0) return;
+    const sampler = try VectorBetaBinomial(VectorType).init(trials, alpha, beta_param);
+    sampler.fillFrom(source, dest);
+}
+
+/// Reusable lane-wise beta-binomial sampler over u64 vector lanes.
+pub fn VectorBetaBinomial(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    comptime if (Child != u64) @compileError("VectorBetaBinomial requires u64 vector lanes");
+
+    return struct {
+        const Self = @This();
+
+        sampler: BetaBinomial,
+
+        pub fn init(trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!Self {
+            return .{ .sampler = try BetaBinomial.init(trials, alpha, beta_param) };
+        }
+
+        pub fn new(trials: u64, alpha: f64, beta_param: f64) BetaBinomialError!Self {
+            return Self.init(trials, alpha, beta_param);
+        }
+
+        pub fn trialsValue(self: Self) u64 {
+            return self.sampler.trialsValue();
+        }
+
+        pub fn alphaValue(self: Self) f64 {
+            return self.sampler.alphaValue();
+        }
+
+        pub fn betaValue(self: Self) f64 {
+            return self.sampler.betaValue();
+        }
+
+        pub fn expectedValue(self: Self) f64 {
+            return self.sampler.expectedValue();
+        }
+
+        pub fn varianceValue(self: Self) f64 {
+            return self.sampler.varianceValue();
+        }
+
+        pub fn minValue(self: Self) u64 {
+            return self.sampler.minValue();
+        }
+
+        pub fn maxValue(self: Self) u64 {
+            return self.sampler.maxValue();
+        }
+
+        pub fn pmf(self: Self, k: f64) f64 {
+            return self.sampler.pmf(k);
+        }
+
+        pub fn cdf(self: Self, k: f64) f64 {
+            return self.sampler.cdf(k);
+        }
+
+        pub fn quantile(self: Self, q: f64) f64 {
+            return self.sampler.quantile(q);
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
+            return out;
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
 pub fn FisherF(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -50410,6 +50532,41 @@ test "BetaBinomial quantile and sampler methods work" {
     try std.testing.expectEqual(@as(f64, 20), dist.quantile(1));
     try std.testing.expectApproxEqAbs(dist.pmf(3), betaBinomialPmf(3, 20, 2, 3), 1e-12);
     try std.testing.expectApproxEqAbs(dist.cdf(3), betaBinomialCdf(3, 20, 2, 3), 1e-12);
+}
+
+test "VectorBetaBinomial samples, accessors, and lane parity work" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xbb03);
+    const rng = Rng.init(&engine);
+
+    const Vec = @Vector(4, u64);
+    const dist = try VectorBetaBinomial(Vec).init(20, 2, 3);
+    try std.testing.expectApproxEqAbs(@as(f64, 8), dist.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 20), dist.varianceValue(), 1e-12);
+    try std.testing.expectEqual(@as(u64, 0), dist.minValue());
+    try std.testing.expectEqual(@as(u64, 20), dist.maxValue());
+    try std.testing.expectApproxEqAbs(dist.pmf(3), betaBinomialPmf(3, 20, 2, 3), 1e-12);
+
+    const sample = dist.sample(rng);
+    inline for (0..4) |lane| try std.testing.expect(sample[lane] <= 20);
+
+    var batch: [2]Vec = undefined;
+    dist.fill(rng, &batch);
+    for (batch) |vec| {
+        inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 20);
+    }
+
+    try std.testing.expectError(error.InvalidParameter, VectorBetaBinomial(Vec).init(20, 0, 3));
+
+    // Lane-by-lane parity with the scalar sampler.
+    const vec_dist = try VectorBetaBinomial(Vec).init(12, 2, 3);
+    const scalar_dist = try BetaBinomial.init(12, 2, 3);
+    var vec_engine = alea.DefaultPrng.init(0xbb04);
+    var scalar_engine = alea.DefaultPrng.init(0xbb04);
+    const vec_sample = vec_dist.sampleFrom(&vec_engine);
+    inline for (0..4) |lane| {
+        try std.testing.expectEqual(scalar_dist.sampleFrom(&scalar_engine), vec_sample[lane]);
+    }
 }
 
 test "StudentTCopula constructor validates parameters" {
