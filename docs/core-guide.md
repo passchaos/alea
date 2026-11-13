@@ -537,6 +537,11 @@ CDF and quantile helpers complement the samplers:
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
   `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`.
+- closed-form continuous: `laplaceCdf` / `laplaceQuantile`, `logisticCdf` /
+  `logisticQuantile`, `cauchyCdf` / `cauchyQuantile`, `rayleighCdf` /
+  `rayleighQuantile`, `weibullCdf` / `weibullQuantile`, `gumbelCdf` /
+  `gumbelQuantile`; degenerate zero scales are point masses at the
+  location (or zero for Rayleigh/Weibull).
 - multivariate marginals: `Dirichlet(T).marginalCdf` /
   `marginalQuantile` and `Multinomial.marginalCdf` / `marginalQuantile`.
 - reusable samplers expose `cdf(x)` / `quantile(p)` for `Normal`, `Gamma`,

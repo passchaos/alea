@@ -190,7 +190,10 @@ The current Linux-first roadmap is intentionally broad:
   `chiSquaredQuantile`, `studentTCdf` / `studentTQuantile`, `fisherFCdf` /
   `fisherFQuantile`, `poissonCdf` / `poissonQuantile`, `binomialCdf` /
   `binomialQuantile`, `geometricCdf` / `geometricQuantile`,
-  `negativeBinomialCdf` / `negativeBinomialQuantile`,
+  `negativeBinomialCdf` / `negativeBinomialQuantile`, `laplaceCdf` /
+  `laplaceQuantile`, `logisticCdf` / `logisticQuantile`, `cauchyCdf` /
+  `cauchyQuantile`, `rayleighCdf` / `rayleighQuantile`, `weibullCdf` /
+  `weibullQuantile`, `gumbelCdf` / `gumbelQuantile`,
   `Dirichlet(T).marginalCdf` / `marginalQuantile`, and
   `Multinomial.marginalCdf` / `marginalQuantile`, plus sampler-level
   `cdf(x)` / `quantile(p)` methods on the core continuous and discrete

@@ -845,6 +845,150 @@ pub fn poissonQuantile(q: anytype, lambda: anytype) @TypeOf(q, lambda) {
     return @floatFromInt(lo);
 }
 
+/// Laplace(location, scale) CDF.
+pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
+    const T = @TypeOf(x, location, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < location) 0 else 1;
+    if (x <= location) return 0.5 * @exp((x - location) / scale);
+    return 1 - 0.5 * @exp(-(x - location) / scale);
+}
+
+/// Inverse Laplace(location, scale) CDF. p=0 → −∞, p=1 → +∞.
+pub fn laplaceQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, location, scale) {
+    const T = @TypeOf(p, location, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return location;
+    if (p < 0.5) return location + scale * @log(2 * p);
+    return location - scale * @log(2 * (1 - p));
+}
+
+/// Logistic(location, scale) CDF.
+pub fn logisticCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
+    const T = @TypeOf(x, location, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < location) 0 else 1;
+    const z = (x - location) / scale;
+    if (z >= 0) {
+        const e = @exp(-z);
+        return 1 / (1 + e);
+    }
+    const e = @exp(z);
+    return e / (1 + e);
+}
+
+/// Inverse Logistic(location, scale) CDF. p=0 → −∞, p=1 → +∞.
+pub fn logisticQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, location, scale) {
+    const T = @TypeOf(p, location, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return location;
+    return location + scale * @log(p / (1 - p));
+}
+
+/// Cauchy(median, scale) CDF.
+pub fn cauchyCdf(x: anytype, median: anytype, scale: anytype) @TypeOf(x, median, scale) {
+    const T = @TypeOf(x, median, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(median) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < median) 0 else 1;
+    const pi: T = @floatCast(std.math.pi);
+    return 0.5 + std.math.atan((x - median) / scale) / pi;
+}
+
+/// Inverse Cauchy(median, scale) CDF. p=0 → −∞, p=1 → +∞.
+pub fn cauchyQuantile(p: anytype, median: anytype, scale: anytype) @TypeOf(p, median, scale) {
+    const T = @TypeOf(p, median, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(median) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return median;
+    const pi: T = @floatCast(std.math.pi);
+    return median + scale * @tan(pi * (p - 0.5));
+}
+
+/// Rayleigh(scale) CDF.
+pub fn rayleighCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
+    const T = @TypeOf(x, scale);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < 0) 0 else 1;
+    if (x <= 0) return 0;
+    return 1 - @exp(-(x * x) / (2 * scale * scale));
+}
+
+/// Inverse Rayleigh(scale) CDF. p=0 → 0, p=1 → +∞.
+pub fn rayleighQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
+    const T = @TypeOf(p, scale);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or scale == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    return scale * @sqrt(-2 * @log(1 - p));
+}
+
+/// Weibull(scale, shape) CDF.
+pub fn weibullCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, shape) {
+    const T = @TypeOf(x, scale, shape);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (scale == 0) return 1;
+    return 1 - @exp(-std.math.pow(T, x / scale, shape));
+}
+
+/// Inverse Weibull(scale, shape) CDF. p=0 → 0, p=1 → +∞.
+pub fn weibullQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, scale, shape) {
+    const T = @TypeOf(p, scale, shape);
+    comptime requireFloat(T);
+    if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(shape > 0) or !std.math.isFinite(shape)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0 or scale == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    return scale * std.math.pow(T, -@log(1 - p), 1 / shape);
+}
+
+/// Gumbel(location, scale) CDF.
+pub fn gumbelCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
+    const T = @TypeOf(x, location, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (scale == 0) return if (x < location) 0 else 1;
+    return @exp(-@exp(-(x - location) / scale));
+}
+
+/// Inverse Gumbel(location, scale) CDF. p=0 → −∞, p=1 → +∞.
+pub fn gumbelQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, location, scale) {
+    const T = @TypeOf(p, location, scale);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    if (scale == 0) return location;
+    return location - scale * @log(-@log(p));
+}
+
 const common = @import("distributions/common.zig");
 
 pub const Error = common.Error;
@@ -9444,7 +9588,7 @@ fn vectorWatsonPointFrom(source: anytype, comptime VectorType: type, mean_axis: 
         inline for (0..L) |lane| {
             if (active[lane]) active_count += 1;
         }
-        if (active_count <= 2) {
+        if (active_count <= 3) {
             inline for (0..L) |lane| {
                 if (active[lane]) w[lane] = watsonSampleWFrom(source, Child, kappa, 3);
             }
@@ -10024,7 +10168,7 @@ fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *
         inline for (0..L) |lane| {
             if (active[lane]) active_count += 1;
         }
-        if (active_count <= 2) {
+        if (active_count <= 3) {
             inline for (0..L) |lane| {
                 if (active[lane]) {
                     const point = sampler.sampleFrom(source);
@@ -52605,6 +52749,102 @@ test "poissonQuantile returns the smallest covering count" {
             try std.testing.expect(poissonCdf(k - 1, @as(f64, 5)) < q);
         }
     }
+}
+
+test "closed-form continuous CDF and quantile round-trips" {
+    const z: f64 = 0;
+    const o: f64 = 1;
+    const m1: f64 = -1;
+
+    // Laplace(0, 1).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), laplaceCdf(z, z, o), 1e-12);
+    try std.testing.expectApproxEqAbs(1 - 0.5 * @exp(@as(f64, -1)), laplaceCdf(o, z, o), 1e-12);
+    try std.testing.expectApproxEqAbs(0.5 * @exp(@as(f64, -1)), laplaceCdf(m1, z, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, laplaceCdf(laplaceQuantile(p, z, o), z, o), 1e-12);
+    }
+
+    // Logistic(0, 1).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), logisticCdf(z, z, o), 1e-12);
+    try std.testing.expectApproxEqAbs(1 / (1 + @exp(@as(f64, -1))), logisticCdf(o, z, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, logisticCdf(logisticQuantile(p, z, o), z, o), 1e-12);
+    }
+
+    // Cauchy(0, 1).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), cauchyCdf(z, z, o), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), cauchyCdf(o, z, o), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), cauchyCdf(m1, z, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, cauchyCdf(cauchyQuantile(p, z, o), z, o), 1e-12);
+    }
+
+    // Rayleigh(1).
+    try std.testing.expectApproxEqAbs(1 - @exp(@as(f64, -0.5)), rayleighCdf(o, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, rayleighCdf(rayleighQuantile(p, o), o), 1e-12);
+    }
+
+    // Weibull(1, 2).
+    const two: f64 = 2;
+    try std.testing.expectApproxEqAbs(1 - @exp(@as(f64, -1)), weibullCdf(o, o, two), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, weibullCdf(weibullQuantile(p, o, two), o, two), 1e-12);
+    }
+
+    // Gumbel(0, 1).
+    try std.testing.expectApproxEqAbs(@exp(@as(f64, -1)), gumbelCdf(z, z, o), 1e-12);
+    for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(p, gumbelCdf(gumbelQuantile(p, z, o), z, o), 1e-12);
+    }
+}
+
+test "closed-form continuous CDF edge cases and f32" {
+    const z: f64 = 0;
+    const o: f64 = 1;
+    const m1: f64 = -1;
+    const m01: f64 = -0.1;
+    const two: f64 = 2;
+
+    // Degenerate scale zero is a point mass.
+    try std.testing.expectEqual(@as(f64, 0), laplaceCdf(m01, z, z));
+    try std.testing.expectEqual(@as(f64, 1), laplaceCdf(z, z, z));
+    try std.testing.expectEqual(@as(f64, 0), logisticCdf(m01, z, z));
+    try std.testing.expectEqual(@as(f64, 1), logisticCdf(z, z, z));
+    try std.testing.expectEqual(@as(f64, 0), cauchyCdf(m01, z, z));
+    try std.testing.expectEqual(@as(f64, 1), cauchyCdf(z, z, z));
+    try std.testing.expectEqual(@as(f64, 0), gumbelCdf(m01, z, z));
+    try std.testing.expectEqual(@as(f64, 1), gumbelCdf(z, z, z));
+    try std.testing.expectEqual(@as(f64, 0), rayleighCdf(m1, z));
+    try std.testing.expectEqual(@as(f64, 1), rayleighCdf(o, z));
+    try std.testing.expectEqual(@as(f64, 0), weibullCdf(m1, z, two));
+    try std.testing.expectEqual(@as(f64, 1), weibullCdf(o, z, two));
+
+    // Endpoints and invalid inputs.
+    try std.testing.expect(std.math.isNegativeInf(laplaceQuantile(z, z, o)));
+    try std.testing.expect(std.math.isPositiveInf(laplaceQuantile(o, z, o)));
+    try std.testing.expect(std.math.isNegativeInf(logisticQuantile(z, z, o)));
+    try std.testing.expect(std.math.isPositiveInf(gumbelQuantile(o, z, o)));
+    try std.testing.expectEqual(@as(f64, 0), rayleighQuantile(z, o));
+    try std.testing.expect(std.math.isPositiveInf(rayleighQuantile(o, o)));
+    try std.testing.expect(std.math.isPositiveInf(weibullQuantile(o, o, two)));
+    try std.testing.expect(std.math.isNan(laplaceCdf(z, z, m1)));
+    try std.testing.expect(std.math.isNan(logisticCdf(z, z, std.math.inf(f64))));
+    try std.testing.expect(std.math.isNan(cauchyQuantile(1.5, z, o)));
+    try std.testing.expect(std.math.isNan(rayleighCdf(o, m1)));
+    try std.testing.expect(std.math.isNan(weibullCdf(o, o, z)));
+    try std.testing.expect(std.math.isNan(gumbelQuantile(0.5, z, m1)));
+
+    // f32 support.
+    const zf: f32 = 0;
+    const of: f32 = 1;
+    const twof: f32 = 2;
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), laplaceCdf(zf, zf, of), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), logisticCdf(zf, zf, of), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.75), cauchyCdf(of, zf, of), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 1 - @exp(@as(f32, -0.5))), rayleighCdf(of, of), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 1 - @exp(@as(f32, -1))), weibullCdf(of, of, twof), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, @exp(@as(f32, -1))), gumbelCdf(zf, zf, of), 1e-6);
 }
 
 test "sampler cdf and quantile methods delegate to the free helpers" {
