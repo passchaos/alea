@@ -126,6 +126,11 @@ pub fn build(b: *std.Build) void {
     const matrix_normal_example_step = b.step("run-matrix-normal", "Run the matrix normal alea example");
     matrix_normal_example_step.dependOn(&run_matrix_normal_example.step);
 
+    const run_directional_example = addToolRun(b, target, optimize, module, "alea-directional", "examples/directional.zig");
+
+    const directional_example_step = b.step("run-directional", "Run the directional alea example");
+    directional_example_step.dependOn(&run_directional_example.step);
+
     const examples_step = b.step("examples", "Run all alea examples");
     examples_step.dependOn(&run_example.step);
     examples_step.dependOn(&run_vector_profiles_example.step);
@@ -146,6 +151,7 @@ pub fn build(b: *std.Build) void {
     examples_step.dependOn(&run_rank_distributions_example.step);
     examples_step.dependOn(&run_copulas_example.step);
     examples_step.dependOn(&run_matrix_normal_example.step);
+    examples_step.dependOn(&run_directional_example.step);
 
     const run_bench = addToolRun(b, target, optimize, module, "alea-throughput", "bench/throughput.zig");
 

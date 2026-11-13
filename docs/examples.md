@@ -14,6 +14,7 @@ focused `zig build run-*` step for quick adoption checks.
 | `zig build run-rank-distributions` | `examples/rank_distributions.zig` | Finite Zipf, unbounded Zeta, vector rank samplers, infinite-exponent rank-one degeneracy, and checked invalid parameters. |
 | `zig build run-copulas` | `examples/copulas.zig` | Gaussian and Student-t copulas, static comptime dimensions, allocator-backed runtime dimensions, probit-transformed correlation recovery, tail dependence, caller-owned and batch sampling, and clone support. |
 | `zig build run-matrix-normal` | `examples/matrix_normal.zig` | Dynamic and allocation-free static matrix normal sampling, row/column covariance diagnostics, caller-owned buffers, and batch outputs. |
+| `zig build run-directional` | `examples/directional.zig` | Scalar vMF, Kent, Bingham, exact SO(3) matrix Fisher, Gibbs matrix Langevin, and f64x4 SIMD vMF sampling with moment diagnostics. |
 | `zig build run-distribution-diagnostics` | `examples/distribution_diagnostics.zig` | Constructor/accessor diagnostics: moments, support, mean/CV constructors, z-score conversion, and PERT range-first builders. |
 | `zig build run-vector-profiles` | `examples/vector_profiles.zig` | Exact/default vector normal/exponential versus explicit throughput-first `Table` and `ApproxLog` opt-ins. |
 | `zig build run-native-f32-profiles` | `examples/native_f32_profiles.zig` | Exact/default f64-backed f32 outputs versus f32-native normal/exponential throughput profiles. |

@@ -32,6 +32,12 @@ const examples = [_]Example{
         .aggregate_token = "examples_step.dependOn(&run_matrix_normal_example.step)",
         .source_tokens = &.{ "MatrixNormal(f64)", "StaticMatrixNormal(f64, 2, 2)", "rowCovarianceAt", "colCovarianceAt", "sampleManyIntoFrom" },
     },
+    .{
+        .path = "examples/directional.zig",
+        .step = "zig build run-directional",
+        .aggregate_token = "examples_step.dependOn(&run_directional_example.step)",
+        .source_tokens = &.{ "VonMisesFisher(f64, 3)", "Kent(f64)", "Bingham(f64, 3)", "MatrixFisher(f64)", "MatrixVonMisesFisher(f64)", "VectorVonMisesFisher(V)" },
+    },
     .{ .path = "examples/distribution_diagnostics.zig", .step = "zig build run-distribution-diagnostics", .aggregate_token = "examples_step.dependOn(&run_distribution_diagnostics_example.step)" },
     .{ .path = "examples/vector_profiles.zig", .step = "zig build run-vector-profiles", .aggregate_token = "examples_step.dependOn(&run_vector_profiles_example.step)" },
     .{ .path = "examples/native_f32_profiles.zig", .step = "zig build run-native-f32-profiles", .aggregate_token = "examples_step.dependOn(&run_native_f32_profiles_example.step)" },

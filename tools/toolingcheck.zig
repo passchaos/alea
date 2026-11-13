@@ -514,6 +514,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "run-rank-distributions", .build_token = "b.step(\"run-rank-distributions\"" },
     .{ .name = "run-copulas", .build_token = "b.step(\"run-copulas\"" },
     .{ .name = "run-matrix-normal", .build_token = "b.step(\"run-matrix-normal\"" },
+    .{ .name = "run-directional", .build_token = "b.step(\"run-directional\"" },
     .{ .name = "examples", .build_token = "b.step(\"examples\"" },
     .{ .name = "bench", .build_token = "b.step(\"bench\"" },
     .{ .name = "bench-libc", .build_token = "b.step(\"bench-libc\"" },
