@@ -5695,6 +5695,26 @@ fn binomialWaitingFrom(source: anytype, trials: u64, q: f64) u64 {
     }
 }
 
+/// log(n!) for small integer `n`, used by the HIN binomial acceptance test.
+/// Generated at comptime from log(n!) = log((n-1)!) + log(n); larger
+/// arguments fall back to `std.math.lgamma`.
+const binomial_log_factorial_len = 513;
+const binomial_log_factorial = blk: {
+    @setEvalBranchQuota(10_000);
+    var table: [binomial_log_factorial_len]f64 = undefined;
+    table[0] = 0;
+    var i: usize = 1;
+    while (i < binomial_log_factorial_len) : (i += 1) {
+        table[i] = table[i - 1] + @log(@as(f64, @floatFromInt(i)));
+    }
+    break :blk table;
+};
+
+inline fn binomialLogFactorial(x: f64) f64 {
+    if (x < binomial_log_factorial_len) return binomial_log_factorial[@intFromFloat(x)];
+    return std.math.lgamma(f64, x + 1.0);
+}
+
 fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const t: f64 = @floatFromInt(trials);
     const np = @floor(t * p);
@@ -5719,7 +5739,7 @@ fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
         @exp(-d1 * d1 / (2.0 * s1s)));
     const s2s = s2 * s2;
     const s = a123 + 2.0 * s2s / d2 * @exp(-d2 * d2 / (2.0 * s2s));
-    const lf = std.math.lgamma(f64, np + 1.0) + std.math.lgamma(f64, t - np + 1.0);
+    const lf = binomialLogFactorial(np) + binomialLogFactorial(t - np);
     const lp1p = @log(pa / one_minus_pa);
     const q = -@log(1.0 - (p - pa) / one_minus_pa);
 
@@ -5764,7 +5784,7 @@ fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
         reject = reject or x < -np or x > t - np;
         if (!reject) {
             const kf = np + x;
-            const lfx = std.math.lgamma(f64, kf + 1.0) + std.math.lgamma(f64, t - kf + 1.0);
+            const lfx = binomialLogFactorial(kf) + binomialLogFactorial(t - kf);
             reject = v > lf - lfx + x * lp1p;
         }
         if (reject) continue;
