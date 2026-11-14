@@ -7024,5 +7024,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1492-triangular-kumaraswamy-sampling.md`, and
 `compare/results/s4-m1493-validate-all-refresh.md`, and
 `compare/results/s4-m1494-vonmises-huge-kappa.md`, and
-`compare/results/s4-m1495-rice-inverse-gaussian-huge-scales.md`.
+`compare/results/s4-m1495-rice-inverse-gaussian-huge-scales.md`, and
+`compare/results/s4-m1496-validate-all-refresh.md`.
 
