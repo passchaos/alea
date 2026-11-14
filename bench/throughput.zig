@@ -250,6 +250,8 @@ pub fn main(init: std.process.Init) !void {
     try benchBinomialFraction(io, stdout, "alea binomial 3/8", bytes / 64, 0.375);
     try benchBinomialFraction(io, stdout, "alea binomial 1/16", bytes / 64, 0.0625);
     try benchFillBinomial(io, stdout, "alea fillBinomial", bytes / 64);
+    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial large", bytes / 256, false);
+    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial large scalar direct", bytes / 256, true);
     try benchFillBinomialScalar(io, stdout, "alea fillBinomial scalar direct", bytes / 64);
     try benchBinomialLarge(io, stdout, "alea binomial large", bytes / 256);
     try benchBinomialMean12(io, stdout, "alea binomial mean-12", bytes / 256);
@@ -5372,6 +5374,43 @@ fn benchFillBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             alea.distributions.fillBinomial(rng, out[0..n], 40, 0.25);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillBinomialRuntime(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, direct: bool) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const trials_value = @volatileCast(&runtime_binomial_trials).*;
+    const p_value = @volatileCast(&runtime_binomial_p).*;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xb158);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            if (direct) {
+                alea.distributions.fillBinomialFrom(&engine, out[0..n], trials_value, p_value);
+            } else {
+                alea.distributions.fillBinomial(rng, out[0..n], trials_value, p_value);
+            }
             for (out[0..n]) |value| checksum +%= value;
             remaining -= n;
         }

@@ -4211,6 +4211,7 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
+        if (binomialFillHinFrom(self, rng, dest)) return;
         for (dest) |*item| {
             item.* = binomialDyadicTryFrom(rng, self.trials, self.p) orelse binomialFrom(rng, self.trials, self.p);
         }
@@ -8286,6 +8287,24 @@ pub const CachedBinomial = struct {
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
+
+/// Fill through one HIN setup when the parameters hit the rejection region.
+/// The setup is deterministic, so the per-element stream matches the
+/// `binomialFrom` path exactly while runtime-parameter bulk fills skip
+/// rebuilding it for every element. Kept out of line and at the end of the
+/// production declarations so `Binomial.fill` stays small; inlining it into
+/// the fill shifted `BufferedLogNormal` f32 scalar direct by about 32%.
+fn binomialFillHinFrom(self: Binomial, source: anytype, dest: []u64) bool {
+    if (self.trials <= 64) return false;
+    const flip = self.p > 0.5;
+    const folded = if (flip) 1.0 - self.p else self.p;
+    const setup = binomialHinSetup(self.trials, folded) orelse return false;
+    for (dest) |*item| {
+        const sampled = binomialHinDrawFrom(source, self.trials, &setup);
+        item.* = if (flip) self.trials - sampled else sampled;
+    }
+    return true;
+}
 
 test "native f32x8 vector fills match facade and pass statistical sanity" {
     // True SIMD f32x8 ziggurat (mask-based lane rejection) uses native f32 ziggurat tables
@@ -54387,6 +54406,33 @@ test "cached binomial inversion region has plausible moments" {
         const variance = sum_sq / nf - mean * mean;
         try std.testing.expect(@abs(mean - case.mean) < 0.06);
         try std.testing.expect(@abs(variance - case.variance) < 0.25);
+    }
+}
+
+test "binomial HIN fill matches repeated sampling" {
+    const alea = @import("root.zig");
+
+    var fill_engine = alea.FastPrng.init(0x4b1f);
+    var loop_engine = alea.FastPrng.init(0x4b1f);
+    var values: [16]u64 = undefined;
+    fillBinomial(Rng.init(&fill_engine), &values, 10_000, 0.01);
+    for (values) |value| {
+        try std.testing.expectEqual(binomial(Rng.init(&loop_engine), 10_000, 0.01), value);
+    }
+
+    var direct_fill_engine = alea.FastPrng.init(0x4b20);
+    var direct_loop_engine = alea.FastPrng.init(0x4b20);
+    var direct_values: [16]u64 = undefined;
+    fillBinomialFrom(&direct_fill_engine, &direct_values, 10_000, 0.01);
+    for (direct_values) |value| {
+        try std.testing.expectEqual(binomialFrom(&direct_loop_engine, 10_000, 0.01), value);
+    }
+
+    var flip_fill_engine = alea.FastPrng.init(0x4b21);
+    var flip_loop_engine = alea.FastPrng.init(0x4b21);
+    fillBinomial(Rng.init(&flip_fill_engine), &values, 1_000, 0.9);
+    for (values) |value| {
+        try std.testing.expectEqual(binomial(Rng.init(&flip_loop_engine), 1_000, 0.9), value);
     }
 }
 
