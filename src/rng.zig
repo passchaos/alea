@@ -406,6 +406,168 @@ pub fn rngReader(source: anytype, buffer: []u8) RngReader(@TypeOf(source)) {
     return RngReader(@TypeOf(source)).init(source, buffer);
 }
 
+/// Engine adapter that periodically replaces the inner engine state with
+/// `Engine.seedFromU64(seed)` drawn from a reseeder. Long-running services can
+/// keep a fast engine while bounding how much output a single state produces;
+/// the adapter implements the same `next`/`nextU32`/`fill` surface as a
+/// concrete engine, so it plugs into `Rng.init` and `RngOf`.
+pub fn ReseedingRng(comptime Engine: type) type {
+    comptime {
+        if (!@hasDecl(Engine, "seedFromU64")) {
+            @compileError(@typeName(Engine) ++ " must expose pub fn seedFromU64(u64) to be reseeded");
+        }
+    }
+    return struct {
+        const Self = @This();
+
+        engine: Engine,
+        reseeder: Rng,
+        reseed_threshold: u64,
+        draws_until_reseed: u64,
+        reseed_count: u64,
+
+        pub fn init(engine: Engine, reseeder: Rng, reseed_threshold: u64) Self {
+            std.debug.assert(reseed_threshold > 0);
+            return .{
+                .engine = engine,
+                .reseeder = reseeder,
+                .reseed_threshold = reseed_threshold,
+                .draws_until_reseed = reseed_threshold,
+                .reseed_count = 0,
+            };
+        }
+
+        pub fn next(self: *Self) u64 {
+            if (self.draws_until_reseed == 0) self.reseed();
+            self.draws_until_reseed -= 1;
+            return self.engine.next();
+        }
+
+        pub fn nextU64(self: *Self) u64 {
+            return self.next();
+        }
+
+        pub fn nextU32(self: *Self) u32 {
+            if (@hasDecl(Engine, "nextU32")) {
+                if (self.draws_until_reseed == 0) self.reseed();
+                self.draws_until_reseed -= 1;
+                return self.engine.nextU32();
+            }
+            return @truncate(self.next() >> 32);
+        }
+
+        /// Byte fill in chunks that never cross a reseed boundary, so the
+        /// stream shape stays "`reseed_threshold` engine draws, reseed, ...".
+        pub fn fill(self: *Self, dest: []u8) void {
+            var offset: usize = 0;
+            while (offset < dest.len) {
+                if (self.draws_until_reseed == 0) self.reseed();
+                const words_left: u64 = @intCast((dest.len - offset + 7) / 8);
+                const words = @min(self.draws_until_reseed, words_left);
+                const chunk: usize = @intCast(@min(@as(u64, @intCast(dest.len - offset)), words *| 8));
+                self.engine.fill(dest[offset..][0..chunk]);
+                self.draws_until_reseed -= (chunk / 8) + @intFromBool(chunk % 8 != 0);
+                offset += chunk;
+            }
+        }
+
+        pub fn fillBytes(self: *Self, dest: []u8) void {
+            self.fill(dest);
+        }
+
+        fn reseed(self: *Self) void {
+            self.engine = Engine.seedFromU64(self.reseeder.nextU64());
+            self.draws_until_reseed = self.reseed_threshold;
+            self.reseed_count += 1;
+        }
+
+        /// Number of reseeds performed so far.
+        pub fn reseedCount(self: *const Self) u64 {
+            return self.reseed_count;
+        }
+
+        /// Draws between reseeds.
+        pub fn thresholdValue(self: *const Self) u64 {
+            return self.reseed_threshold;
+        }
+
+        /// Draws left before the next reseed.
+        pub fn remainingDraws(self: *const Self) u64 {
+            return self.draws_until_reseed;
+        }
+
+        /// Mutable access to the wrapped engine state.
+        pub fn enginePtr(self: *Self) *Engine {
+            return &self.engine;
+        }
+    };
+}
+
+test "reseeding rng reseeds on cadence and stays deterministic" {
+    const alea = @import("root.zig");
+
+    const Engine = alea.Xoshiro256PlusPlus;
+    var reseeder_engine_a = alea.SplitMix64.init(0x5eed);
+    var reseeder_engine_b = alea.SplitMix64.init(0x5eed);
+    var first = ReseedingRng(Engine).init(Engine.seedFromU64(1), Rng.init(&reseeder_engine_a), 4);
+    var second = ReseedingRng(Engine).init(Engine.seedFromU64(1), Rng.init(&reseeder_engine_b), 4);
+
+    var i: usize = 0;
+    while (i < 4) : (i += 1) {
+        try std.testing.expectEqual(first.next(), second.next());
+    }
+    try std.testing.expectEqual(@as(u64, 0), first.reseedCount());
+    try std.testing.expectEqual(@as(u64, 0), first.remainingDraws());
+
+    // The fifth draw triggers the first reseed.
+    try std.testing.expectEqual(first.next(), second.next());
+    try std.testing.expectEqual(@as(u64, 1), first.reseedCount());
+    try std.testing.expectEqual(@as(u64, 3), first.remainingDraws());
+    try std.testing.expectEqual(@as(u64, 4), first.thresholdValue());
+
+    // A plain engine with the same initial seed diverges after the reseed.
+    var plain = Engine.seedFromU64(1);
+    var reseeder_engine_c = alea.SplitMix64.init(0x5eed);
+    var reseeded_again = ReseedingRng(Engine).init(Engine.seedFromU64(1), Rng.init(&reseeder_engine_c), 4);
+    var j: usize = 0;
+    while (j < 5) : (j += 1) _ = reseeded_again.next();
+    var differs = false;
+    var k: usize = 0;
+    while (k < 8) : (k += 1) {
+        if (reseeded_again.next() != plain.next()) differs = true;
+    }
+    try std.testing.expect(differs);
+
+    // The adapter works through the type-erased facade.
+    var reseeder_engine_d = alea.SplitMix64.init(0x5eed);
+    var adapter = ReseedingRng(Engine).init(Engine.seedFromU64(7), Rng.init(&reseeder_engine_d), 8);
+    const rng = Rng.init(&adapter);
+    _ = rng.nextU64();
+    var floats: [4]f64 = undefined;
+    rng.fill(f64, &floats);
+    for (floats) |sample_value| try std.testing.expect(sample_value >= 0 and sample_value < 1);
+}
+
+test "reseeding rng byte fill respects the reseed boundary" {
+    const alea = @import("root.zig");
+    var reseeder_engine = alea.SplitMix64.init(0x5eee);
+    const reseeder = Rng.init(&reseeder_engine);
+    const Engine = alea.Alea4x64;
+
+    var adapter = ReseedingRng(Engine).init(Engine.seedFromU64(3), reseeder, 2);
+    var byte_buf: [64]u8 = undefined;
+    adapter.fill(&byte_buf);
+    // 64 bytes at 8 bytes per draw needs 8 draws, so three reseeds follow the
+    // initial two-draw window.
+    try std.testing.expectEqual(@as(u64, 3), adapter.reseedCount());
+    try std.testing.expectEqual(@as(u64, 0), adapter.remainingDraws());
+
+    var u32_buf: [4]u32 = undefined;
+    var u32_adapter = ReseedingRng(Engine).init(Engine.seedFromU64(4), reseeder, 1);
+    for (&u32_buf) |*slot| slot.* = u32_adapter.nextU32();
+    try std.testing.expectEqual(@as(u64, 3), u32_adapter.reseedCount());
+}
+
 pub fn value(self: Rng, comptime T: type) T {
     return valueFrom(self, T);
 }

@@ -64,6 +64,7 @@ pub const rngs = struct {
     pub const ChaCha20Rng = @import("engines/chacha20.zig").ChaCha20Rng;
     pub const Xoshiro128PlusPlus = @import("engines/xoshiro128plusplus.zig");
     pub const Xoshiro256PlusPlus = @import("engines/xoshiro256plusplus.zig");
+    pub const ReseedingRng = Rng.ReseedingRng;
 };
 
 pub const prelude = struct {

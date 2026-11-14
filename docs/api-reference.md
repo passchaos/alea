@@ -23,7 +23,7 @@ command matrix evidence.
 - `rngs` namespace aliases: `rngs.StdRng`, `rngs.SmallRng`, `rngs.SysRng`,
   `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
   `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
-  `rngs.Xoshiro256PlusPlus`
+  `rngs.Xoshiro256PlusPlus`, `rngs.ReseedingRng`
 - `prelude` namespace aliases: `prelude.Rng`, `prelude.RngOf`, `prelude.Seed`,
   `prelude.distributions`, `prelude.seq`, `prelude.ascii`, `prelude.StdRng`,
   `prelude.SmallRng`, `prelude.SysRng`, `prelude.SysError`,
@@ -236,6 +236,12 @@ command matrix evidence.
   `RngOf.fillOpenClosed`, `RngOf.value`, `RngOf.chooseIndex`.
 - `RngReader(Source)`: `RngReader.init`, `RngReader.reader`,
   `RngReader.read`, `RngReader.readAll`, `RngReader.lastError`
+- `ReseedingRng(Engine)`: engine adapter that reseeds the inner engine from a
+  source `Rng` every `reseed_threshold` draws. Members: `ReseedingRng.init`,
+  `ReseedingRng.next`, `ReseedingRng.nextU64`, `ReseedingRng.nextU32`,
+  `ReseedingRng.fill`, `ReseedingRng.fillBytes`, `ReseedingRng.reseedCount`,
+  `ReseedingRng.thresholdValue`, `ReseedingRng.remainingDraws`,
+  `ReseedingRng.enginePtr`; `Engine` must expose `seedFromU64`.
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
   `randomValue`, `randomValueFrom`, `randomValueChecked`,
   `randomValueCheckedFrom`,
