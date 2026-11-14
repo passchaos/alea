@@ -1844,30 +1844,65 @@ fn sourceCanTryFillBytes(comptime Source: type) bool {
     return sourceHasDecl(Source, "tryFillBytes");
 }
 
+/// Expand a byte of eight 0/1 bits into eight bytes, one bool each.
+const expand_bits_8 = blk: {
+    @setEvalBranchQuota(10_000);
+    var table: [256]u64 = undefined;
+    for (0..256) |byte| {
+        var expanded: u64 = 0;
+        for (0..8) |bit| {
+            if ((byte >> @intCast(bit)) & 1 != 0) {
+                expanded |= @as(u64, 1) << @intCast(bit * 8);
+            }
+        }
+        table[byte] = expanded;
+    }
+    break :blk table;
+};
+
+/// Write the low `take` bits of `bits` as bool bytes.
+inline fn storeBoolBits(out_bytes: []u8, bits: u64, take: usize) void {
+    var lane: usize = 0;
+    while (lane + 8 <= take) : (lane += 8) {
+        const byte: u8 = @truncate(bits >> @intCast(lane));
+        out_bytes[lane..][0..8].* = @bitCast(expand_bits_8[byte]);
+    }
+    if (lane < take) {
+        const byte: u8 = @truncate(bits >> @intCast(lane));
+        const expanded: [8]u8 = @bitCast(expand_bits_8[byte]);
+        var k: usize = 0;
+        while (lane + k < take) : (k += 1) out_bytes[lane + k] = expanded[k];
+    }
+}
+
 fn fillBoolsFrom(source: anytype, dest: []bool) void {
+    const out_bytes: []u8 = @ptrCast(dest);
     var i: usize = 0;
     while (i < dest.len) {
-        var bits = nextFrom(source);
-        var lane: usize = 0;
+        const bits = nextFrom(source);
         const take = @min(@as(usize, 64), dest.len - i);
-        while (lane < take) : (lane += 1) {
-            dest[i + lane] = @as(i64, @bitCast(bits)) < 0;
-            bits <<= 1;
-        }
+        // Keep the historical most-significant-bit-first trial order.
+        storeBoolBits(out_bytes[i..], @bitReverse(bits), take);
         i += take;
     }
 }
 
 fn fillChanceQuarterFrom(source: anytype, dest: []bool) void {
+    const out_bytes: []u8 = @ptrCast(dest);
     var i: usize = 0;
     while (i < dest.len) {
-        var bits = nextFrom(source);
-        var lane: usize = 0;
+        const bits = nextFrom(source);
         const take = @min(@as(usize, 32), dest.len - i);
-        while (lane < take) : (lane += 1) {
-            dest[i + lane] = (bits & 0b11) == 0;
-            bits >>= 2;
-        }
+        // Success fields are the 2-bit groups equal to zero; their low bits sit
+        // at even positions. Compact them to the low `take` bits with the
+        // standard even-bit gather, then expand eight at a time.
+        var mask = ~bits & ~(bits >> 1) & 0x5555_5555_5555_5555;
+        mask = (mask | (mask >> 1)) & 0x3333_3333_3333_3333;
+        mask = (mask | (mask >> 2)) & 0x0f0f_0f0f_0f0f_0f0f;
+        mask = (mask | (mask >> 4)) & 0x00ff_00ff_00ff_00ff;
+        mask = (mask | (mask >> 8)) & 0x0000_ffff_0000_ffff;
+        mask = (mask | (mask >> 16)) & 0x0000_0000_ffff_ffff;
+        storeBoolBits(out_bytes[i..], mask, take);
         i += take;
     }
 }
