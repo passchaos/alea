@@ -57542,6 +57542,93 @@ test "Dirichlet and Multinomial marginal CDF/quantile methods work" {
     try std.testing.expectEqual(@as(f64, 1), try constant.marginalCdf(0, 0));
 }
 
+test "Dirichlet sampling matches marginal means and covariances" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x0d17);
+    const rng = Rng.init(&engine);
+
+    // alpha0 = 10: E[X_i] = a_i/10, Var(X_i) = a_i(10-a_i)/1100,
+    // Cov(X_i, X_j) = -a_i a_j / 1100.
+    const alpha = [_]f64{ 2, 3, 5 };
+    const dist = try Dirichlet(f64).init(&alpha);
+    const n = 40_000;
+    var s = [_]f64{ 0, 0, 0 };
+    var sq = [_]f64{ 0, 0, 0 };
+    var c01: f64 = 0;
+    var c02: f64 = 0;
+    var c12: f64 = 0;
+    var out: [3]f64 = undefined;
+    for (0..n) |_| {
+        dist.sampleInto(rng, &out);
+        for (0..3) |k| {
+            s[k] += out[k];
+            sq[k] += out[k] * out[k];
+        }
+        c01 += out[0] * out[1];
+        c02 += out[0] * out[2];
+        c12 += out[1] * out[2];
+    }
+    const nf: f64 = @floatFromInt(n);
+    const m0 = s[0] / nf;
+    const m1 = s[1] / nf;
+    const m2 = s[2] / nf;
+    try std.testing.expectApproxEqAbs(0.2, m0, 0.004);
+    try std.testing.expectApproxEqAbs(0.3, m1, 0.004);
+    try std.testing.expectApproxEqAbs(0.5, m2, 0.004);
+    try std.testing.expectApproxEqAbs(16.0 / 1100.0, sq[0] / nf - m0 * m0, 0.0015);
+    try std.testing.expectApproxEqAbs(21.0 / 1100.0, sq[1] / nf - m1 * m1, 0.0015);
+    try std.testing.expectApproxEqAbs(25.0 / 1100.0, sq[2] / nf - m2 * m2, 0.0015);
+    try std.testing.expectApproxEqAbs(-6.0 / 1100.0, c01 / nf - m0 * m1, 0.001);
+    try std.testing.expectApproxEqAbs(-10.0 / 1100.0, c02 / nf - m0 * m2, 0.001);
+    try std.testing.expectApproxEqAbs(-15.0 / 1100.0, c12 / nf - m1 * m2, 0.0015);
+}
+
+test "Multinomial sampling matches joint means and covariances" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x0d18);
+    const rng = Rng.init(&engine);
+
+    // n = 20, p = {0.2, 0.3, 0.5}: E[X_i] = n p_i,
+    // Var(X_i) = n p_i (1 - p_i), Cov(X_i, X_j) = -n p_i p_j.
+    const probabilities = [_]f64{ 0.2, 0.3, 0.5 };
+    const dist = try Multinomial.init(20, &probabilities);
+    const n = 40_000;
+    var s = [_]f64{ 0, 0, 0 };
+    var sq = [_]f64{ 0, 0, 0 };
+    var c01: f64 = 0;
+    var c02: f64 = 0;
+    var c12: f64 = 0;
+    var out: [3]u64 = undefined;
+    for (0..n) |_| {
+        dist.sampleInto(rng, &out);
+        const x0: f64 = @floatFromInt(out[0]);
+        const x1: f64 = @floatFromInt(out[1]);
+        const x2: f64 = @floatFromInt(out[2]);
+        s[0] += x0;
+        s[1] += x1;
+        s[2] += x2;
+        sq[0] += x0 * x0;
+        sq[1] += x1 * x1;
+        sq[2] += x2 * x2;
+        c01 += x0 * x1;
+        c02 += x0 * x2;
+        c12 += x1 * x2;
+    }
+    const nf: f64 = @floatFromInt(n);
+    const m0 = s[0] / nf;
+    const m1 = s[1] / nf;
+    const m2 = s[2] / nf;
+    try std.testing.expectApproxEqAbs(4.0, m0, 0.08);
+    try std.testing.expectApproxEqAbs(6.0, m1, 0.08);
+    try std.testing.expectApproxEqAbs(10.0, m2, 0.08);
+    try std.testing.expectApproxEqAbs(3.2, sq[0] / nf - m0 * m0, 0.3);
+    try std.testing.expectApproxEqAbs(4.2, sq[1] / nf - m1 * m1, 0.3);
+    try std.testing.expectApproxEqAbs(5.0, sq[2] / nf - m2 * m2, 0.3);
+    try std.testing.expectApproxEqAbs(-1.2, c01 / nf - m0 * m1, 0.3);
+    try std.testing.expectApproxEqAbs(-2.0, c02 / nf - m0 * m2, 0.3);
+    try std.testing.expectApproxEqAbs(-3.0, c12 / nf - m1 * m2, 0.3);
+}
+
 test "BetaPrime constructor, moments, and degeneracies" {
     try std.testing.expectError(error.InvalidParameter, BetaPrime(f64).init(0, 1));
     try std.testing.expectError(error.InvalidParameter, BetaPrime(f64).init(1, 0));
