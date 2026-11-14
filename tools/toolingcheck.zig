@@ -515,6 +515,7 @@ const build_steps = [_]BuildStep{
     .{ .name = "run-copulas", .build_token = "b.step(\"run-copulas\"" },
     .{ .name = "run-matrix-normal", .build_token = "b.step(\"run-matrix-normal\"" },
     .{ .name = "run-directional", .build_token = "b.step(\"run-directional\"" },
+    .{ .name = "run-engine-adapters", .build_token = "b.step(\"run-engine-adapters\"" },
     .{ .name = "examples", .build_token = "b.step(\"examples\"" },
     .{ .name = "bench", .build_token = "b.step(\"bench\"" },
     .{ .name = "bench-libc", .build_token = "b.step(\"bench-libc\"" },

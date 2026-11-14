@@ -39,6 +39,12 @@ const examples = [_]Example{
         .source_tokens = &.{ "VonMisesFisher(f64, 3)", "Kent(f64)", "Bingham(f64, 3)", "MatrixFisher(f64)", "MatrixFisherO3(f64)", "MatrixVonMisesFisher(f64)", "VectorVonMisesFisher(V)", "soWeightValue" },
     },
     .{
+        .path = "examples/engine_adapters.zig",
+        .step = "zig build run-engine-adapters",
+        .aggregate_token = "examples_step.dependOn(&run_engine_adapters_example.step)",
+        .source_tokens = &.{ "ReseedingRng", "ReaderRng", "RngOf" },
+    },
+    .{
         .path = "examples/distribution_diagnostics.zig",
         .step = "zig build run-distribution-diagnostics",
         .aggregate_token = "examples_step.dependOn(&run_distribution_diagnostics_example.step)",

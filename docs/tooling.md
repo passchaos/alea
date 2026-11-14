@@ -100,6 +100,7 @@ example steps are:
 | `zig build run-copulas` | `examples/copulas.zig` |
 | `zig build run-matrix-normal` | `examples/matrix_normal.zig` |
 | `zig build run-directional` | `examples/directional.zig` |
+| `zig build run-engine-adapters` | `examples/engine_adapters.zig` |
 | `zig build run-distribution-diagnostics` | `examples/distribution_diagnostics.zig` |
 | `zig build run-vector-profiles` | `examples/vector_profiles.zig` |
 | `zig build run-native-f32-profiles` | `examples/native_f32_profiles.zig` |
