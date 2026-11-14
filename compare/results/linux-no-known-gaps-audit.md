@@ -7040,5 +7040,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1508-validate-all-refresh.md`, and
 `compare/results/s4-m1509-longrun-wishart-gates.md`, and
 `compare/results/s4-m1510-validate-all-refresh.md`, and
-`compare/results/s4-m1511-dirichlet-multinomial-joint-moments.md`.
+`compare/results/s4-m1511-dirichlet-multinomial-joint-moments.md`, and
+`compare/results/s4-m1512-validate-all-refresh.md`.
 
