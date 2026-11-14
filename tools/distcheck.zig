@@ -242,6 +242,48 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("matrix t variance", sum_sq / @as(f64, @floatFromInt(samples)), 1.5, 1.85);
     }
 
+    // Wishart Bartlett product must include the below-diagonal Gaussian terms.
+    // A truncated L*A product leaves identity-scale draws exactly diagonal and
+    // shrinks the non-diagonal scale covariance.
+    {
+        const identity = [2][2]f64{ .{ 1, 0 }, .{ 0, 1 } };
+        const dist = try alea.distributions.StaticWishart(f64, 2).init(identity, 5);
+        const samples = 20_000;
+        var sum_off_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const sample = dist.sample(rng);
+            sum_off_sq += sample[0][1] * sample[0][1];
+        }
+        try expectFloatBetween("wishart identity off-diagonal", sum_off_sq / @as(f64, @floatFromInt(samples)), 4.5, 5.5);
+    }
+    {
+        const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;
+        const scale = [_]f64{ 2, 0.5, 0.5, 1 };
+        var dist = try alea.distributions.Wishart(f64).init(allocator, &scale, 6);
+        defer dist.deinit();
+        const samples = 20_000;
+        var sum00: f64 = 0;
+        var sum01: f64 = 0;
+        var sum11: f64 = 0;
+        var sum01_sq: f64 = 0;
+        var out: [4]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleInto(rng, &out);
+            sum00 += out[0];
+            sum01 += out[1];
+            sum11 += out[3];
+            sum01_sq += out[1] * out[1];
+        }
+        const nf: f64 = @floatFromInt(samples);
+        try expectFloatBetween("wishart mean00", sum00 / nf, 11.6, 12.4);
+        try expectFloatBetween("wishart mean01", sum01 / nf, 2.85, 3.15);
+        try expectFloatBetween("wishart mean11", sum11 / nf, 5.7, 6.3);
+        const mean01 = sum01 / nf;
+        try expectFloatBetween("wishart off-diagonal variance", sum01_sq / nf - mean01 * mean01, 11.5, 15.5);
+    }
+
     // Allocator-backed multivariate Student-t moment recovery.
     {
         const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;

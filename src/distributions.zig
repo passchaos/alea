@@ -33206,7 +33206,7 @@ pub fn StaticWishart(comptime T: type, comptime dim: usize) type {
                     var sum: T = 0;
                     comptime var k_comptime: usize = 0;
                     inline while (k_comptime < dim) : (k_comptime += 1) {
-                        if (k_comptime <= i and k_comptime <= j) {
+                        if (k_comptime >= j and k_comptime <= i) {
                             sum += self.cholesky[i][k_comptime] * A[k_comptime][j];
                         }
                     }
@@ -33560,8 +33560,8 @@ fn wishartBartlettProductFlatScratch(comptime T: type, dim: usize, L: []const T,
         var j: usize = 0;
         while (j < dim) : (j += 1) {
             var sum: T = 0;
-            var k: usize = 0;
-            while (k <= @min(i, j)) : (k += 1) {
+            var k: usize = j;
+            while (k <= i) : (k += 1) {
                 sum += L[i * dim + k] * A[k * dim + j];
             }
             LA[i * dim + j] = sum;
@@ -65463,6 +65463,16 @@ test "StaticWishart identity scale df=dim=2 produces ChiSquared marginals" {
         // Symmetry
         try std.testing.expectApproxEqAbs(X[0][1], X[1][0], 1e-12);
     }
+
+    // Off-diagonal draws must be live: for identity scale X[0][1] = A00*A10,
+    // so E[X[0][1]^2] = df. A truncated L*A product makes this exactly zero.
+    var sum_off_sq: f64 = 0;
+    const off_count = 20_000;
+    for (0..off_count) |_| {
+        const X = w.sample(rng);
+        sum_off_sq += X[0][1] * X[0][1];
+    }
+    try std.testing.expectApproxEqAbs(2.0, sum_off_sq / @as(f64, @floatFromInt(off_count)), 0.15);
 }
 
 test "StaticWishart non-identity scale produces correct Monte Carlo mean" {
@@ -65499,6 +65509,46 @@ test "StaticWishart non-identity scale produces correct Monte Carlo mean" {
             try std.testing.expectApproxEqAbs(expected, mc, tol);
         }
     }
+}
+
+test "StaticWishart recovers non-diagonal scale covariance" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x7ed3);
+    const rng = Rng.init(&engine);
+
+    // Non-diagonal scale V = [[2, 0.5], [0.5, 1]], nu = 6.
+    const V = [2][2]f64{ .{ 2, 0.5 }, .{ 0.5, 1 } };
+    const w = try StaticWishart(f64, 2).init(V, 6);
+
+    const n = 40_000;
+    var s00: f64 = 0;
+    var s01: f64 = 0;
+    var s11: f64 = 0;
+    var q00: f64 = 0;
+    var q01: f64 = 0;
+    var q11: f64 = 0;
+    var cross_01_11: f64 = 0;
+    for (0..n) |_| {
+        const X = w.sample(rng);
+        s00 += X[0][0];
+        s01 += X[0][1];
+        s11 += X[1][1];
+        q00 += X[0][0] * X[0][0];
+        q01 += X[0][1] * X[0][1];
+        q11 += X[1][1] * X[1][1];
+        cross_01_11 += X[0][1] * X[1][1];
+    }
+    const nf: f64 = @floatFromInt(n);
+    const m00 = s00 / nf;
+    const m01 = s01 / nf;
+    const m11 = s11 / nf;
+    try std.testing.expectApproxEqAbs(12.0, m00, 0.2);
+    try std.testing.expectApproxEqAbs(3.0, m01, 0.12);
+    try std.testing.expectApproxEqAbs(6.0, m11, 0.15);
+    try std.testing.expectApproxEqAbs(48.0, q00 / nf - m00 * m00, 3.0);
+    try std.testing.expectApproxEqAbs(13.5, q01 / nf - m01 * m01, 2.0);
+    try std.testing.expectApproxEqAbs(12.0, q11 / nf - m11 * m11, 1.8);
+    try std.testing.expectApproxEqAbs(6.0, cross_01_11 / nf - m01 * m11, 0.8);
 }
 
 test "StaticWishart invalid parameters" {
@@ -65682,6 +65732,49 @@ test "Wishart (dynamic) 2x2 samples are PD, symmetric, mean matches" {
     try std.testing.expectApproxEqAbs(@as(f64, 0), sum[1] / @as(f64, n), 0.5);
     try std.testing.expectApproxEqAbs(@as(f64, 0), sum[2] / @as(f64, n), 0.5);
     try std.testing.expectApproxEqAbs(df * 1, sum[3] / @as(f64, n), 0.3 * df);
+}
+
+test "Wishart (dynamic) recovers non-diagonal scale covariance" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x9a31);
+    const rng = Rng.init(&engine);
+
+    // Non-diagonal scale V = [[2, 0.5], [0.5, 1]], nu = 6.
+    // E[W] = nu V and Cov(W_ij, W_kl) = nu (s_ik s_jl + s_il s_jk).
+    const V = [_]f64{ 2, 0.5, 0.5, 1 };
+    var w = try Wishart(f64).init(allocator, &V, 6);
+    defer w.deinit();
+
+    const n = 40_000;
+    var s = [_]f64{ 0, 0, 0, 0 };
+    var sq = [_]f64{ 0, 0, 0, 0 };
+    var cross_00_01: f64 = 0;
+    var cross_01_11: f64 = 0;
+    var out: [4]f64 = undefined;
+    for (0..n) |_| {
+        w.sampleInto(rng, &out);
+        for (0..4) |k| {
+            s[k] += out[k];
+            sq[k] += out[k] * out[k];
+        }
+        cross_00_01 += out[0] * out[1];
+        cross_01_11 += out[1] * out[3];
+    }
+    const nf: f64 = @floatFromInt(n);
+    const m00 = s[0] / nf;
+    const m01 = s[1] / nf;
+    const m11 = s[3] / nf;
+    try std.testing.expectApproxEqAbs(12.0, m00, 0.2);
+    try std.testing.expectApproxEqAbs(3.0, m01, 0.12);
+    try std.testing.expectApproxEqAbs(6.0, m11, 0.15);
+    try std.testing.expectApproxEqAbs(48.0, sq[0] / nf - m00 * m00, 3.0);
+    try std.testing.expectApproxEqAbs(13.5, sq[1] / nf - m01 * m01, 2.0);
+    try std.testing.expectApproxEqAbs(12.0, sq[3] / nf - m11 * m11, 1.8);
+    // These two covariances vanish when the L*A product drops the
+    // below-diagonal Gaussian terms (k only up to min(i, j)).
+    try std.testing.expectApproxEqAbs(12.0, cross_00_01 / nf - m00 * m01, 1.0);
+    try std.testing.expectApproxEqAbs(6.0, cross_01_11 / nf - m01 * m11, 0.8);
 }
 
 test "Wishart (dynamic) sampleInto and clone work" {

@@ -546,7 +546,12 @@ Matrix-variate distributions:
   with a shared `χ²(ν)` scale.
 - `StaticWishart(T, dim)` / `Wishart(T)` and
   `StaticInverseWishart(T, dim)` / `InverseWishart(T)` — Wishart and
-  Inverse-Wishart priors on covariance matrices.
+  Inverse-Wishart priors on covariance matrices. Sampling uses the Bartlett
+  decomposition `X = L A Aᵀ Lᵀ` with the full lower-triangular product
+  `(L A)[i][j] = Σ_{j ≤ k ≤ i} L[i][k] A[k][j]`; the previous `k ≤ min(i, j)`
+  truncation dropped the below-diagonal Gaussian terms, so identity-scale
+  draws were exactly diagonal and non-diagonal scales understated the
+  off-diagonal covariance.
 - `multi.MatrixNormal`, `multi.StaticMatrixNormal`, `multi.MatrixT`, and
   `multi.StaticMatrixT` provide namespace discovery.
 
