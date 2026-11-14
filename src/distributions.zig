@@ -5900,7 +5900,11 @@ fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const mean = @as(f64, @floatFromInt(trials)) * p;
     if (mean >= binomial_hin_min_mean) return binomialRejectionSmallPFrom(source, trials, p);
 
-    return binomialWaitingFrom(source, trials, -@log(1.0 - p));
+    // `log1p` keeps the rate accurate when `p` is below the rounding
+    // threshold of `1 - p`; the branch preserves the existing stream for
+    // ordinary probabilities.
+    const q = if (1.0 - p == 1.0) -std.math.log1p(-p) else -@log(1.0 - p);
+    return binomialWaitingFrom(source, trials, q);
 }
 
 /// The HIN rejection envelope is tuned for larger means: for `mean < 16` the
@@ -6041,6 +6045,10 @@ const BinomialHinSetup = struct {
     lf: f64,
     lp1p: f64,
     q: f64,
+    /// Set when `trials - np` is large enough that the direct
+    /// `logfact(t-np) - logfact(t-k)` difference loses precision; the
+    /// acceptance then uses the asymptotic form instead.
+    stable_tail: bool,
 };
 
 /// Build the HIN constants for the rejection path. Returns null when the
@@ -6079,7 +6087,10 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
     const s2s = s2 * s2;
     const s = a123 + 2.0 * s2s / d2 * @exp(-d2 * d2 / (2.0 * s2s));
     const lf = binomialLogFactorial(np) + binomialLogFactorial(t - np);
-    const q = -@log(1.0 - (p - pa) / one_minus_pa);
+    // `log1p` keeps the residual rate accurate when the offset from the
+    // `np / trials` grid is below the rounding threshold of `1 - x`.
+    const residual = (p - pa) / one_minus_pa;
+    const q = if (1.0 - residual == 1.0) -std.math.log1p(-residual) else -@log(1.0 - residual);
 
     return .{
         .trials = trials,
@@ -6097,7 +6108,27 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
         .lf = lf,
         .lp1p = lp1p,
         .q = q,
+        .stable_tail = t - np >= 1.0e12,
     };
+}
+
+/// Acceptance log-ratio for the HIN envelope when `trials - np` is large
+/// enough that the direct log-factorial difference loses precision. The
+/// `logfact(t - np) - logfact(t - k)` bracket uses its asymptotic form; the
+/// `np`-side bracket keeps the table for small modes, the Stirling difference
+/// for moderate ones, and the series for modes above 1e9.
+fn binomialHinStableLogRatio(setup: *const BinomialHinSetup, np: f64, x: f64) f64 {
+    const k = np + x;
+    const first = if (np < 512.0 and k < 512.0)
+        -(binomialLogFactorialSmall(k) - binomialLogFactorialSmall(np))
+    else if (np < 1.0e9)
+        -(binomialLogFactorial(k) - binomialLogFactorial(np))
+    else
+        -(x * @log(np) + x * (x + 1.0) / (2.0 * np) -
+            x * (x + 1.0) * (2.0 * x + 1.0) / (12.0 * np * np));
+    const tail = setup.t - np;
+    const second = x * @log(tail) - x * x / (2.0 * tail);
+    return first + second + x * setup.lp1p;
 }
 
 fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: *const BinomialHinSetup) u64 {
@@ -6150,12 +6181,17 @@ fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: *const Bi
 
         reject = reject or x < -np or x > t - np;
         if (!reject) {
-            const kf = np + x;
-            const lfx = if (small)
-                binomialLogFactorialSmall(kf) + binomialLogFactorialSmall(t - kf)
-            else
-                binomialLogFactorial(kf) + binomialLogFactorial(t - kf);
-            reject = v > setup.lf - lfx + x * setup.lp1p;
+            const log_ratio = if (setup.stable_tail)
+                binomialHinStableLogRatio(setup, np, x)
+            else blk: {
+                const kf = np + x;
+                const lfx = if (small)
+                    binomialLogFactorialSmall(kf) + binomialLogFactorialSmall(t - kf)
+                else
+                    binomialLogFactorial(kf) + binomialLogFactorial(t - kf);
+                break :blk setup.lf - lfx + x * setup.lp1p;
+            };
+            reject = v > log_ratio;
         }
         if (reject) continue;
 
@@ -54303,6 +54339,30 @@ test "binomial waiting-time region has plausible moments" {
         const variance = sum_sq / nf - mean * mean;
         try std.testing.expect(@abs(mean - case.mean) < 0.06);
         try std.testing.expect(@abs(variance - case.variance) < 0.25);
+    }
+}
+
+test "binomial huge-trial tiny-p means stay exact" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x7117);
+    const rng = Rng.init(&engine);
+
+    const draws = 20_000;
+    const Case = struct { trials: u64, p: f64, mean: f64, tolerance: f64 };
+    const cases = [_]Case{
+        .{ .trials = 1_000_000_000_000_000_000, .p = 1e-18, .mean = 1, .tolerance = 0.1 },
+        .{ .trials = 1_000_000_000_000_000_000, .p = 5e-18, .mean = 5, .tolerance = 0.15 },
+        .{ .trials = 1_000_000_000_000_000_000, .p = 1e-17, .mean = 10, .tolerance = 0.2 },
+        .{ .trials = 1_000_000_000_000_000_000, .p = 2e-17, .mean = 20, .tolerance = 0.3 },
+        .{ .trials = 1_000_000_000_000_000_000, .p = 1e-16, .mean = 100, .tolerance = 0.6 },
+        .{ .trials = 10_000_000_000_000_000_000, .p = 5e-18, .mean = 50, .tolerance = 0.5 },
+    };
+    for (cases) |case| {
+        var sum: u64 = 0;
+        var i: usize = 0;
+        while (i < draws) : (i += 1) sum +%= binomial(rng, case.trials, case.p);
+        const mean = @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(draws));
+        try std.testing.expect(@abs(mean - case.mean) < case.tolerance);
     }
 }
 
