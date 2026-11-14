@@ -11803,9 +11803,18 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
                     t += self.b[i] * y[i] * y[i];
                 }
                 t = @max(0, t);
-                const log_ratio = -t + (nf / 2) * @log(1 + self.two_over_nu * t);
+                const x = self.two_over_nu * t;
                 const u = Rng.floatOpenFrom(source, T);
-                if (@log(u) <= log_ratio - self.log_envelope) {
+                const log_u = @log(u);
+                // Padé lower bound log1p(x) >= 2x/(2+x) for x >= 0: most
+                // candidates accept without evaluating the envelope log.
+                const lower = -t + (nf / 2) * (2 * x / (2 + x));
+                var accept = log_u <= lower - self.log_envelope;
+                if (!accept) {
+                    const log_ratio = -t + (nf / 2) * @log(1 + x);
+                    accept = log_u <= log_ratio - self.log_envelope;
+                }
+                if (accept) {
                     var result: [n]T = undefined;
                     inline for (0..n) |i| {
                         var sum: T = 0;
@@ -11920,9 +11929,20 @@ fn vectorBinghamPointFrom(source: anytype, comptime VectorType: type, sampler: *
             t += @as(V, @splat(sampler.b[i])) * y[i] * y[i];
         }
         t = @max(zero, t);
-        const log_ratio = -t + half_n * @log(one + two_over_nu * t);
+        const x = two_over_nu * t;
         const u = Rng.vectorOpenFrom(source, V);
-        const accept = active & (norm_sq > zero) & (@log(u) <= log_ratio - log_envelope);
+        const log_u = @log(u);
+        // Padé lower bound log1p(x) >= 2x/(2+x) for x >= 0: when every
+        // pending lane clears the squeeze, skip the envelope log entirely.
+        const lower = -t + half_n * ((@as(V, @splat(2)) * x) / (@as(V, @splat(2)) + x));
+        const valid = active & (norm_sq > zero);
+        const squeezed = valid & (log_u <= lower - log_envelope);
+        var accept = squeezed;
+        const needs_exact = valid & ~squeezed;
+        if (@reduce(.Or, needs_exact)) {
+            const log_ratio = -t + half_n * @log(one + x);
+            accept = squeezed | (needs_exact & (log_u <= log_ratio - log_envelope));
+        }
         if (@reduce(.Or, accept)) {
             inline for (0..3) |i| {
                 var value: V = @splat(0);
