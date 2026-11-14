@@ -7359,6 +7359,51 @@ pub fn Uniform(comptime T: type) type {
             };
         }
 
+        /// Uniform CDF at real-valued `x`.
+        pub fn cdf(self: Self, x: f64) f64 {
+            switch (@typeInfo(T)) {
+                .int => {
+                    const low = @as(f64, @floatFromInt(self.low));
+                    const high = @as(f64, @floatFromInt(self.high));
+                    const endpoint_count: f64 = if (self.inclusive) 1 else 0;
+                    const count = high - low + endpoint_count;
+                    if (!(count > 0)) return if (x >= low) 1 else 0;
+                    if (x < low) return 0;
+                    const covered = @floor(x) - low + 1;
+                    return std.math.clamp(covered / count, 0, 1);
+                },
+                .float => {
+                    const low: f64 = @floatCast(self.low);
+                    const high: f64 = @floatCast(self.high);
+                    if (!(high > low)) return if (x >= low) 1 else 0;
+                    return std.math.clamp((x - low) / (high - low), 0, 1);
+                },
+                else => @compileError("Uniform supports integer and floating-point types"),
+            }
+        }
+
+        /// Smallest value whose CDF is at least `p` (real-valued result).
+        pub fn quantile(self: Self, p: f64) f64 {
+            switch (@typeInfo(T)) {
+                .int => {
+                    const low = @as(f64, @floatFromInt(self.low));
+                    const high = @as(f64, @floatFromInt(self.high));
+                    const endpoint_count: f64 = if (self.inclusive) 1 else 0;
+                    const count = high - low + endpoint_count;
+                    if (!(count > 0) or !(p > 0)) return low;
+                    if (p >= 1) return high;
+                    const index = @ceil(p * count) - 1;
+                    return low + std.math.clamp(index, 0, count - 1);
+                },
+                .float => {
+                    const low: f64 = @floatCast(self.low);
+                    const high: f64 = @floatCast(self.high);
+                    return low + std.math.clamp(p, 0, 1) * (high - low);
+                },
+                else => @compileError("Uniform supports integer and floating-point types"),
+            }
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             if (self.inclusive) {
                 switch (@typeInfo(T)) {
@@ -11383,6 +11428,29 @@ pub fn TruncatedNormal(comptime T: type) type {
             return self.lower == -std.math.inf(T) and self.upper == std.math.inf(T);
         }
 
+        /// Truncated-normal CDF at `x`: `(Φ(z) − Φ(α)) / Z` on the window.
+        pub fn cdf(self: Self, x: T) T {
+            if (self.stddev == 0) return if (x < self.mean) 0 else 1;
+            if (x <= self.lower) return 0;
+            if (x >= self.upper) return 1;
+            const z = (x - self.mean) / self.stddev;
+            const cdf_z = normCdf(z);
+            return std.math.clamp((cdf_z - self.cdf_alpha) / self.Z, 0, 1);
+        }
+
+        /// Truncated-normal quantile: `μ + σ·Φ⁻¹(Φ(α) + p·Z)`.
+        pub fn quantile(self: Self, p: T) T {
+            if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+            if (self.stddev == 0) return self.mean;
+            if (p == 0) return self.lower;
+            if (p == 1) return self.upper;
+            const target = self.cdf_alpha + p * self.Z;
+            if (!(target > 0)) return self.lower;
+            if (!(target < 1)) return self.upper;
+            const x = self.mean + self.stddev * probit(target);
+            return std.math.clamp(x, self.lower, self.upper);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.mean;
             // Fast path: no truncation, use standard ziggurat normal.
@@ -11460,6 +11528,30 @@ pub fn truncatedNormalChecked(rng: Rng, comptime T: type, mean: T, stddev: T, lo
 pub fn truncatedNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T, lower: T, upper: T) Error!T {
     const dist = try TruncatedNormal(T).init(mean, stddev, lower, upper);
     return dist.sampleFrom(source);
+}
+
+/// Truncated-normal CDF.
+pub fn truncatedNormalCdf(x: anytype, mean: anytype, stddev: anytype, lower: anytype, upper: anytype) resolvedFloatType(@TypeOf(x, mean, stddev, lower, upper)) {
+    return truncatedNormalCdfImpl(resolvedFloatType(@TypeOf(x, mean, stddev, lower, upper)), x, mean, stddev, lower, upper);
+}
+fn truncatedNormalCdfImpl(comptime PeerType: type, x: PeerType, mean: PeerType, stddev: PeerType, lower: PeerType, upper: PeerType) PeerType {
+    const T = @TypeOf(x, mean, stddev, lower, upper);
+    comptime requireFloat(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    const dist = TruncatedNormal(T).init(mean, stddev, lower, upper) catch return std.math.nan(T);
+    return dist.cdf(x);
+}
+
+/// Truncated-normal quantile.
+pub fn truncatedNormalQuantile(p: anytype, mean: anytype, stddev: anytype, lower: anytype, upper: anytype) resolvedFloatType(@TypeOf(p, mean, stddev, lower, upper)) {
+    return truncatedNormalQuantileImpl(resolvedFloatType(@TypeOf(p, mean, stddev, lower, upper)), p, mean, stddev, lower, upper);
+}
+fn truncatedNormalQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerType, stddev: PeerType, lower: PeerType, upper: PeerType) PeerType {
+    const T = @TypeOf(p, mean, stddev, lower, upper);
+    comptime requireFloat(T);
+    if (std.math.isNan(p)) return std.math.nan(T);
+    const dist = TruncatedNormal(T).init(mean, stddev, lower, upper) catch return std.math.nan(T);
+    return dist.quantile(p);
 }
 
 pub fn fillTruncatedNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T, lower: T, upper: T) Error!void {
@@ -63628,6 +63720,77 @@ test "TruncatedNormal degenerate point mass returns constant" {
     for (buf) |v| {
         try std.testing.expectEqual(@as(f64, 2.5), v);
     }
+}
+
+test "TruncatedNormal CDF and quantile match the truncated-normal formulas" {
+    // Unbounded truncation reduces to the ordinary normal.
+    const unbounded = try TruncatedNormal(f64).init(1, 2, -std.math.inf(f64), std.math.inf(f64));
+    inline for ([_]f64{ -2, 0, 1, 3 }) |x| {
+        try std.testing.expectApproxEqAbs(normCdf((x - 1) / 2), unbounded.cdf(x), 1e-12);
+    }
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqAbs(1 + 2 * probit(p), unbounded.quantile(p), 1e-10);
+    }
+    // One-sided [0, ∞) with μ=0, σ=1: F(x) = 2Φ(x) − 1.
+    const half = try TruncatedNormal(f64).init(0, 1, 0, std.math.inf(f64));
+    try std.testing.expectApproxEqAbs(2 * normCdf(1) - 1, half.cdf(1), 1e-12);
+    try std.testing.expectApproxEqAbs(0, half.cdf(0), 0);
+    try std.testing.expectApproxEqAbs(probit(0.75), half.quantile(0.5), 1e-10);
+    // Symmetric window [-1, 1] with μ=0, σ=1.
+    const symmetric = try TruncatedNormal(f64).init(0, 1, -1, 1);
+    try std.testing.expectApproxEqAbs(0.5, symmetric.cdf(0), 1e-12);
+    try std.testing.expectApproxEqAbs(0, symmetric.quantile(0.5), 1e-10);
+    inline for ([_]f64{ 0.01, 0.3, 0.7, 0.99 }) |p| {
+        try std.testing.expectApproxEqAbs(p, symmetric.cdf(symmetric.quantile(p)), 1e-7);
+    }
+    try std.testing.expectEqual(@as(f64, -1), symmetric.quantile(0));
+    try std.testing.expectEqual(@as(f64, 1), symmetric.quantile(1));
+    try std.testing.expect(std.math.isNan(symmetric.quantile(1.5)));
+    // Degenerate point mass.
+    const point = try TruncatedNormal(f64).init(2.5, 0, 0, 5);
+    try std.testing.expectEqual(@as(f64, 0), point.cdf(2.49));
+    try std.testing.expectEqual(@as(f64, 1), point.cdf(2.5));
+    try std.testing.expectEqual(@as(f64, 2.5), point.quantile(0.3));
+    // Free functions mirror the methods, including invalid-parameter NaN.
+    try std.testing.expectApproxEqAbs(symmetric.cdf(0.5), truncatedNormalCdf(@as(f64, 0.5), @as(f64, 0), @as(f64, 1), @as(f64, -1), @as(f64, 1)), 1e-12);
+    try std.testing.expectApproxEqAbs(symmetric.quantile(0.7), truncatedNormalQuantile(@as(f64, 0.7), @as(f64, 0), @as(f64, 1), @as(f64, -1), @as(f64, 1)), 1e-12);
+    try std.testing.expect(std.math.isNan(truncatedNormalCdf(@as(f64, 0), @as(f64, 0), @as(f64, -1), @as(f64, -2), @as(f64, 2))));
+    // f32 support.
+    const f32_dist = try TruncatedNormal(f32).init(0, 1, -1, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(0), 1e-6);
+}
+
+test "Uniform CDF and quantile match the uniform grid" {
+    // Continuous [0, 1).
+    const unit = try Uniform(f64).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), unit.cdf(0.25), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3), unit.quantile(0.3), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), unit.cdf(-1));
+    try std.testing.expectEqual(@as(f64, 1), unit.cdf(2));
+    // Continuous inclusive [2, 4].
+    const inclusive_float = try Uniform(f64).initInclusive(2, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), inclusive_float.cdf(3), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5), inclusive_float.quantile(0.25), 1e-12);
+    // Integer half-open [0, 10).
+    const ints = try Uniform(u32).init(0, 10);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.1), ints.cdf(0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), ints.cdf(4), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), ints.cdf(9), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), ints.cdf(10), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), ints.quantile(0.05));
+    try std.testing.expectEqual(@as(f64, 4), ints.quantile(0.5));
+    try std.testing.expectEqual(@as(f64, 9), ints.quantile(0.95));
+    try std.testing.expectEqual(@as(f64, 10), ints.quantile(1));
+    // Integer inclusive [1, 6].
+    const inclusive_ints = try Uniform(u32).initInclusive(1, 6);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0 / 6.0), inclusive_ints.cdf(1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), inclusive_ints.cdf(6), 1e-12);
+    try std.testing.expectEqual(@as(f64, 1), inclusive_ints.quantile(0.1));
+    try std.testing.expectEqual(@as(f64, 3), inclusive_ints.quantile(0.5));
+    try std.testing.expectEqual(@as(f64, 6), inclusive_ints.quantile(1));
+    // f32 support.
+    const f32_unit = try Uniform(f32).init(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), f32_unit.cdf(0.25), 1e-6);
 }
 
 test "TruncatedNormal samples stay within bounds" {

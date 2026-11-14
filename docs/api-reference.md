@@ -725,9 +725,11 @@ self-forking.
   `TruncatedNormal(T).medianValue`, `TruncatedNormal(T).modeValue`,
   `TruncatedNormal(T).minValue`, `TruncatedNormal(T).maxValue`,
   `TruncatedNormal(T).isDegenerate`, `TruncatedNormal(T).isUnbounded`,
+  `TruncatedNormal(T).cdf`, `TruncatedNormal(T).quantile`,
   `TruncatedNormal(T).sample`, `TruncatedNormal(T).sampleFrom`,
   `TruncatedNormal(T).fill`, `TruncatedNormal(T).fillFrom`,
   `truncatedNormal`, `truncatedNormalFrom`, `truncatedNormalChecked`, `truncatedNormalCheckedFrom`,
+  `truncatedNormalCdf`, `truncatedNormalQuantile`,
   `fillTruncatedNormal`, `fillTruncatedNormalFrom`, `fillTruncatedNormalChecked`, `fillTruncatedNormalCheckedFrom`,
   `vectorTruncatedNormal`, `vectorTruncatedNormalFrom`, `vectorTruncatedNormalChecked`, `vectorTruncatedNormalCheckedFrom`,
   `fillVectorTruncatedNormal`, `fillVectorTruncatedNormalFrom`, `fillVectorTruncatedNormalChecked`, `fillVectorTruncatedNormalCheckedFrom`,
@@ -1818,6 +1820,8 @@ Reusable samplers:
 - `Uniform(T).isInclusive`
 - `Uniform(T).expectedValue`
 - `Uniform(T).varianceValue`
+- `Uniform(T).cdf`
+- `Uniform(T).quantile`
 - `Uniform(T).sample`
 - `Uniform(T).sampleFrom`
 - `Uniform(T).fill`

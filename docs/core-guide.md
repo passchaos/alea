@@ -257,7 +257,9 @@ non-finite floating-point endpoints or widths. Rust `Uniform::try_from(range)`
 workflows map to Zig-native `tryFromRange` / `tryFromRangeInclusive` aliases on
 scalar and vector `Uniform` samplers. `UniformInt(T)`, `UniformFloat(T)`, and
 `UniformUsize` are discovery aliases over `Uniform(T)` for callers comparing
-against local Rust uniform backend names. `UniformDuration` provides the same reusable
+against local Rust uniform backend names. `Uniform(T).cdf` / `.quantile`
+handle both continuous and integer grids (half-open and inclusive), returning
+real-valued probabilities and quantile positions. `UniformDuration` provides the same reusable
 half-open/inclusive sampler shape for `std.Io.Duration`, matching local Rust
 `UniformDuration` discovery while delegating to Alea's duration range helpers.
 The distribution namespace also exposes
@@ -601,9 +603,12 @@ runtime float type, and explicit f32 arguments keep f32.
   `1e4`, the series runs up to 1000 iterations (enough for `a = 9999` near
   the mean, where the previous 300-iteration cap left a `1.4e-3` error).
 - normal-derived: `exponentialCdf` / `exponentialQuantile`, `logNormalCdf` /
-  `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`; log-normal uses
+  `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`, and
+  `truncatedNormalCdf` / `truncatedNormalQuantile`; log-normal uses
   `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
-  masses. These inherit the `normCdf`/`probit` approximation accuracy
+  masses. Truncated-normal uses `(Φ(z) − Φ(α))/Z` and
+  `μ + σ·Φ⁻¹(Φ(α) + p·Z)` with the precomputed window constants, and keeps
+  the `σ = 0` point mass. These inherit the `normCdf`/`probit` approximation accuracy
   (~1e-7). `normCdf` uses the complement form for negative `x`, so the lower
   tail resolves to subnormal values (`Φ(−38) ≈ 3e-316`) instead of flushing
   to zero below `Φ(−8.5)`; beyond `|x| = 6` it switches to the Mills-ratio
