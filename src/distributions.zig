@@ -56304,6 +56304,35 @@ test "binomial waiting-time region has plausible moments" {
     }
 }
 
+test "binomial method streams have stable snapshots" {
+    // Pin one eight-draw snapshot per dispatch region so future changes to a
+    // region's stream are deliberate and recorded in the reproducibility
+    // matrix. Each case reseeds `ScalarPrng` independently.
+    const alea = @import("root.zig");
+    const Case = struct { trials: u64, p: f64, seed: u64, expected: [8]u64 };
+    const cases = [_]Case{
+        // `trials <= 64`: per-trial threshold loop.
+        .{ .trials = 20, .p = 0.2, .seed = 0xb1_5000, .expected = .{ 7, 1, 7, 5, 4, 1, 1, 2 } },
+        // `mean < 16`, `trials > 64`: one-uniform inverse-CDF walk.
+        .{ .trials = 1000, .p = 0.012, .seed = 0xb1_5001, .expected = .{ 14, 11, 14, 11, 17, 16, 4, 11 } },
+        // `mean >= 16`: HIN rejection.
+        .{ .trials = 10_000, .p = 0.01, .seed = 0xb1_5002, .expected = .{ 92, 101, 101, 103, 115, 88, 108, 114 } },
+        // `p = 0.5`, `trials <= 4096`: word-popcount fair path.
+        .{ .trials = 1000, .p = 0.5, .seed = 0xb1_5003, .expected = .{ 517, 491, 498, 516, 521, 475, 501, 482 } },
+        // `p = 0.5`, `trials > 4096`: huge fair HIN dispatch.
+        .{ .trials = 1_000_000, .p = 0.5, .seed = 0xb1_5004, .expected = .{ 500436, 499433, 499459, 499342, 499884, 500041, 499150, 499817 } },
+        // Huge trials with tiny `p`: stable-tail HIN log ratio.
+        .{ .trials = 1_000_000_000_000_000_000, .p = 2e-17, .seed = 0xb1_5005, .expected = .{ 14, 21, 13, 22, 25, 17, 17, 24 } },
+    };
+    for (cases) |case| {
+        var engine = alea.ScalarPrng.init(case.seed);
+        const rng = Rng.init(&engine);
+        for (case.expected) |expected| {
+            try std.testing.expectEqual(expected, binomial(rng, case.trials, case.p));
+        }
+    }
+}
+
 test "binomial small-mean walk matches the cached inversion stream" {
     // Both paths now use the same one-uniform PMF walk, so a shared seed must
     // produce identical draws in the `mean < 16` region.
