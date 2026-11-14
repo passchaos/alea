@@ -20,6 +20,8 @@ var runtime_binomial_trials: u64 = 10_000;
 var runtime_binomial_p: f64 = 0.01;
 var runtime_binomial_mean12_trials: u64 = 1_000;
 var runtime_binomial_mean12_p: f64 = 0.012;
+var runtime_negative_binomial_successes: u64 = 5;
+var runtime_negative_binomial_p: f64 = 0.4;
 
 fn parseOptions(args: []const []const u8) Options {
     var options: Options = .{};
@@ -261,6 +263,7 @@ pub fn main(init: std.process.Init) !void {
     try benchBinomialRuntime(io, stdout, "alea binomial runtime cached mean-12", bytes / 256, true, &runtime_binomial_mean12_trials, &runtime_binomial_mean12_p);
     try benchBinomialApprox(io, stdout, "alea binomial poisson approx", bytes / 256);
     try benchNegativeBinomial(io, stdout, "alea negative-binomial", bytes / 128);
+    try benchNegativeBinomialRuntime(io, stdout, "alea negative-binomial runtime", bytes / 128);
     try benchFillNegativeBinomial(io, stdout, "alea fillNegativeBinomial", bytes / 128);
     try benchFillNegativeBinomialScalar(io, stdout, "alea fillNegativeBinomial scalar direct", bytes / 128);
     try benchHypergeometric(io, stdout, "alea hypergeometric", bytes / 128);
@@ -5606,6 +5609,34 @@ fn benchNegativeBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0x5e6b);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum +%= dist.sample(rng);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchNegativeBinomialRuntime(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const successes_value = @volatileCast(&runtime_negative_binomial_successes).*;
+    const p_value = @volatileCast(&runtime_negative_binomial_p).*;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    const dist = alea.distributions.NegativeBinomial.init(successes_value, p_value) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5e6c);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;

@@ -6985,5 +6985,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1452-validate-all-refresh.md`, and
 `compare/results/s4-m1453-negative-binomial-fill-rate.md`, and
 `compare/results/s4-m1454-validate-all-refresh.md`, and
-`compare/results/s4-m1455-billion-sample-refresh.md`.
+`compare/results/s4-m1455-billion-sample-refresh.md`, and
+`compare/results/s4-m1456-negative-binomial-q-cache-probe.md`.
 
