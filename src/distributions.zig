@@ -33459,6 +33459,14 @@ pub fn StaticWishart(comptime T: type, comptime dim: usize) type {
             return self.sampleFrom(rng);
         }
 
+        pub fn sampleInto(self: Self, rng: Rng, out: *Matrix) void {
+            out.* = self.sampleFrom(rng);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: *Matrix) void {
+            out.* = self.sampleFrom(source);
+        }
+
         pub fn sampleFrom(self: Self, source: anytype) Matrix {
             // Bartlett decomposition: construct lower-triangular A.
             var A: Matrix = undefined;
@@ -33672,6 +33680,14 @@ pub fn StaticInverseWishart(comptime T: type, comptime dim: usize) type {
 
         pub fn sample(self: Self, rng: Rng) Matrix {
             return self.sampleFrom(rng);
+        }
+
+        pub fn sampleInto(self: Self, rng: Rng, out: *Matrix) void {
+            out.* = self.sampleFrom(rng);
+        }
+
+        pub fn sampleIntoFrom(self: Self, source: anytype, out: *Matrix) void {
+            out.* = self.sampleFrom(source);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) Matrix {
@@ -66418,6 +66434,33 @@ test "Wishart batch sampling matches repeated draws and validates lengths" {
             }
         }
         try std.testing.expectEqual(iw_single_engine.next(), iw_batch_engine.next());
+
+        // Caller-matrix sampleIntoFrom matches sampleFrom from the same seed.
+        var into_engine = alea.DefaultPrng.init(0x9a38);
+        var from_engine = alea.DefaultPrng.init(0x9a38);
+        var into_out: [2][2]f64 = undefined;
+        sw.sampleIntoFrom(&into_engine, &into_out);
+        const from_out = sw.sampleFrom(&from_engine);
+        for (0..2) |row| {
+            for (0..2) |col| try std.testing.expectEqual(from_out[row][col], into_out[row][col]);
+        }
+        try std.testing.expectEqual(from_engine.next(), into_engine.next());
+
+        var iw_into_engine = alea.DefaultPrng.init(0x9a39);
+        var iw_from_engine = alea.DefaultPrng.init(0x9a39);
+        siw.sampleIntoFrom(&iw_into_engine, &into_out);
+        const iw_from_out = siw.sampleFrom(&iw_from_engine);
+        for (0..2) |row| {
+            for (0..2) |col| try std.testing.expectEqual(iw_from_out[row][col], into_out[row][col]);
+        }
+        try std.testing.expectEqual(iw_from_engine.next(), iw_into_engine.next());
+
+        // Rng-based sampleInto fills the caller matrix.
+        var rng_engine = alea.DefaultPrng.init(0x9a3a);
+        sw.sampleInto(Rng.init(&rng_engine), &into_out);
+        try std.testing.expect(into_out[0][0] > 0 and into_out[1][1] > 0);
+        siw.sampleInto(Rng.init(&rng_engine), &into_out);
+        try std.testing.expect(into_out[0][0] > 0 and into_out[1][1] > 0);
     }
 
     // f32 dynamic batch support.

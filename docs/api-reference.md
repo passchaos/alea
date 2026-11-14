@@ -3617,6 +3617,8 @@ Reusable samplers:
 - `StaticWishart(T, dimension).modeValue`
 - `StaticWishart(T, dimension).sample`
 - `StaticWishart(T, dimension).sampleFrom`
+- `StaticWishart(T, dimension).sampleInto`
+- `StaticWishart(T, dimension).sampleIntoFrom`
 - `StaticWishart(T, dimension).sampleManyInto`
 - `StaticWishart(T, dimension).sampleManyIntoFrom`
 - `StaticInverseWishart(T, dimension)`
@@ -3629,6 +3631,8 @@ Reusable samplers:
 - `StaticInverseWishart(T, dimension).expectedValue`
 - `StaticInverseWishart(T, dimension).sample`
 - `StaticInverseWishart(T, dimension).sampleFrom`
+- `StaticInverseWishart(T, dimension).sampleInto`
+- `StaticInverseWishart(T, dimension).sampleIntoFrom`
 - `StaticInverseWishart(T, dimension).sampleManyInto`
 - `StaticInverseWishart(T, dimension).sampleManyIntoFrom`
 - `MatrixNormal(T)`

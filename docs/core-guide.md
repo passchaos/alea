@@ -551,10 +551,11 @@ Matrix-variate distributions:
   `(L A)[i][j] = Σ_{j ≤ k ≤ i} L[i][k] A[k][j]`; the previous `k ≤ min(i, j)`
   truncation dropped the below-diagonal Gaussian terms, so identity-scale
   draws were exactly diagonal and non-diagonal scales understated the
-  off-diagonal covariance. `sampleManyInto` / `sampleManyIntoFrom` fill
-  consecutive draws into one flat buffer (dynamic) or `[]Matrix` (static),
-  and the dynamic checked variants reject lengths that are not a multiple of
-  `dim·dim`.
+  off-diagonal covariance. The static samplers expose
+  `sampleInto`/`sampleIntoFrom` for one caller `Matrix`, and
+  `sampleManyInto`/`sampleManyIntoFrom` fill consecutive draws into one flat
+  buffer (dynamic) or `[]Matrix` (static); the dynamic checked variants reject
+  lengths that are not a multiple of `dim·dim`.
 - `multi.MatrixNormal`, `multi.StaticMatrixNormal`, `multi.MatrixT`,
   `multi.StaticMatrixT`, `multi.Wishart`, `multi.InverseWishart`,
   `multi.StaticWishart`, and `multi.StaticInverseWishart` provide namespace
