@@ -61,6 +61,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillTypedBool(io, stdout, "alea fill bool facade", bytes / 8);
     try benchFillChance(io, stdout, "alea fillChance p=0.25", bytes / 8);
     try benchFillChanceHalf(io, stdout, "alea fillChance p=0.5", bytes / 8);
+    try benchFillChanceParam(io, stdout, "alea fillChance p=3/8", bytes / 8, 0.375);
+    try benchFillChanceParam(io, stdout, "alea fillChance p=1/16", bytes / 8, 0.0625);
     try benchFillRatioQuarter(io, stdout, "alea fillRatio 1/4", bytes / 8);
     try benchFillRatioThreeEighths(io, stdout, "alea fillRatio 3/8", bytes / 8);
     try benchFillRatioHalf(io, stdout, "alea fillRatio 1/2", bytes / 8);
@@ -658,6 +660,37 @@ fn benchFillChance(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: 
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             rng.fillChance(out[0..n], 0.25);
+            for (out[0..n]) |value| checksum += @intFromBool(value);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillChanceParam(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, p: f64) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]bool = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xc4a9);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            rng.fillChance(out[0..n], p);
             for (out[0..n]) |value| checksum += @intFromBool(value);
             remaining -= n;
         }

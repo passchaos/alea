@@ -935,9 +935,39 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
         fillChanceQuarterFrom(source, dest);
         return;
     }
+    if (p == 0.375) {
+        fillChanceThreeEighthsFrom(source, dest);
+        return;
+    }
+    if (p == 0.0625) {
+        fillChanceSixteenthFrom(source, dest);
+        return;
+    }
 
     const threshold = probabilityThreshold(p);
     for (dest) |*item| item.* = nextFrom(source) < threshold;
+}
+
+test "fillChance dyadic kernels match their probabilities" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x3a8c);
+    const rng = Rng.init(&engine);
+    var buf: [100_000]bool = undefined;
+    const cases = [_]struct { p: f64, expected: f64 }{
+        .{ .p = 0.25, .expected = 0.25 },
+        .{ .p = 0.375, .expected = 0.375 },
+        .{ .p = 0.5, .expected = 0.5 },
+        .{ .p = 0.0625, .expected = 0.0625 },
+    };
+    for (cases) |case| {
+        rng.fillChance(&buf, case.p);
+        var trues: usize = 0;
+        for (buf) |v| {
+            if (v) trues += 1;
+        }
+        const frac = @as(f64, @floatFromInt(trues)) / @as(f64, @floatFromInt(buf.len));
+        try std.testing.expect(@abs(frac - case.expected) < 0.005);
+    }
 }
 
 pub fn fillChanceChecked(self: Rng, dest: []bool, p: f64) Error!void {
@@ -1903,6 +1933,69 @@ fn fillChanceQuarterFrom(source: anytype, dest: []bool) void {
         mask = (mask | (mask >> 8)) & 0x0000_ffff_0000_ffff;
         mask = (mask | (mask >> 16)) & 0x0000_0000_ffff_ffff;
         storeBoolBits(out_bytes[i..], mask, take);
+        i += take;
+    }
+}
+
+/// Expand a byte holding two 4-bit fields into two bool bytes: the low field
+/// first. Used by the p = 1/16 fill, where a field succeeds only when zero.
+const expand_zero_nibbles = blk: {
+    var table: [256]u16 = undefined;
+    for (0..256) |byte| {
+        const low: u16 = if ((byte & 0x0f) == 0) 1 else 0;
+        const high: u16 = if ((byte >> 4) == 0) 1 else 0;
+        table[byte] = low | (high << 8);
+    }
+    break :blk table;
+};
+
+/// Expand 9 bits holding three 3-bit fields into three bool bytes (low field
+/// first) for the p = 3/8 fill, where a field succeeds when below three.
+const expand_three_fields = blk: {
+    @setEvalBranchQuota(10_000);
+    var table: [512][3]u8 = undefined;
+    for (0..512) |table_index| {
+        for (0..3) |field| {
+            table[table_index][field] = if (((table_index >> @intCast(3 * field)) & 0x7) < 3) 1 else 0;
+        }
+    }
+    break :blk table;
+};
+
+fn fillChanceSixteenthFrom(source: anytype, dest: []bool) void {
+    const out_bytes: []u8 = @ptrCast(dest);
+    var i: usize = 0;
+    while (i < dest.len) {
+        const bits = nextFrom(source);
+        const take = @min(@as(usize, 16), dest.len - i);
+        var field: usize = 0;
+        while (field + 2 <= take) : (field += 2) {
+            const byte: u8 = @truncate(bits >> @intCast(8 * (field / 2)));
+            out_bytes[i + field ..][0..2].* = @bitCast(expand_zero_nibbles[byte]);
+        }
+        if (field < take) {
+            const byte: u8 = @truncate(bits >> @intCast(8 * (field / 2)));
+            out_bytes[i + field] = @truncate(expand_zero_nibbles[byte]);
+        }
+        i += take;
+    }
+}
+
+fn fillChanceThreeEighthsFrom(source: anytype, dest: []bool) void {
+    const out_bytes: []u8 = @ptrCast(dest);
+    var i: usize = 0;
+    while (i < dest.len) {
+        const bits = nextFrom(source);
+        const take = @min(@as(usize, 21), dest.len - i);
+        var field: usize = 0;
+        while (field + 3 <= take) : (field += 3) {
+            const field_value: u9 = @truncate(bits >> @intCast(3 * field));
+            out_bytes[i + field ..][0..3].* = expand_three_fields[field_value];
+        }
+        while (field < take) : (field += 1) {
+            const field_value: u3 = @truncate(bits >> @intCast(3 * field));
+            out_bytes[i + field] = @intFromBool(field_value < 3);
+        }
         i += take;
     }
 }
