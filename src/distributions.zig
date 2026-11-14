@@ -4764,8 +4764,9 @@ pub const Multinomial = struct {
         return out;
     }
 
-    fn sampleFirstBinomialFrom(self: Multinomial, source: anytype, trials: u64, p: f64) u64 {
-        if (self.first_hin) |setup| {
+    fn sampleFirstBinomialFrom(self: *const Multinomial, source: anytype, trials: u64, p: f64) u64 {
+        if (self.first_hin != null) {
+            const setup = &self.first_hin.?;
             if (setup.trials == trials) {
                 const sampled = binomialHinDrawFrom(source, trials, setup);
                 return if (self.first_hin_flip) trials - sampled else sampled;
@@ -5982,7 +5983,7 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
     };
 }
 
-fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: BinomialHinSetup) u64 {
+fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: *const BinomialHinSetup) u64 {
     const t = setup.t;
     const np = setup.np;
     const d1 = setup.d1;
@@ -6050,7 +6051,7 @@ fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: BinomialH
     }
 }
 
-inline fn binomialHinDrawFrom(source: anytype, trials: u64, setup: BinomialHinSetup) u64 {
+inline fn binomialHinDrawFrom(source: anytype, trials: u64, setup: *const BinomialHinSetup) u64 {
     // All log-factorial arguments are bounded by `trials`, so the table-only
     // loop applies exactly when `trials` is inside the table range.
     if (trials < binomial_log_factorial_len) return binomialHinSampleFrom(true, source, setup);
@@ -6059,7 +6060,7 @@ inline fn binomialHinDrawFrom(source: anytype, trials: u64, setup: BinomialHinSe
 
 fn binomialRejectionSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const setup = binomialHinSetup(trials, p).?;
-    return binomialHinDrawFrom(source, trials, setup);
+    return binomialHinDrawFrom(source, trials, &setup);
 }
 
 const HinCacheEntry = struct {
@@ -6084,12 +6085,12 @@ fn sampleCachedSecondBinomialFrom(
     var i: usize = 0;
     while (i < cache_len.*) : (i += 1) {
         if (cache[i].n == trials) {
-            const sampled = binomialHinDrawFrom(source, trials, cache[i].setup);
+            const sampled = binomialHinDrawFrom(source, trials, &cache[i].setup);
             return if (cache[i].flip) trials - sampled else sampled;
         }
     }
     if (binomialHinSetup(trials, q)) |setup| {
-        const sampled = binomialHinDrawFrom(source, trials, setup);
+        const sampled = binomialHinDrawFrom(source, trials, &setup);
         cache[cache_next.*] = .{ .n = trials, .setup = setup, .flip = flip };
         if (cache_len.* < 16) cache_len.* += 1;
         cache_next.* = (cache_next.* + 1) % 16;
@@ -11652,7 +11653,13 @@ pub fn Bingham(comptime T: type, comptime n: usize) type {
             return self.sampleFrom(rng);
         }
 
-        pub fn sampleFrom(self: Self, source: anytype) [n]T {
+        pub inline fn sampleFrom(self: Self, source: anytype) [n]T {
+            return self.sampleFromPtr(source);
+        }
+
+        /// Pointer-receiver body for callers that already hold the sampler,
+        /// avoiding a copy of the precomputed state per draw.
+        fn sampleFromPtr(self: *const Self, source: anytype) [n]T {
             if (self.uniform) return unitSphereSurfaceFrom(source, T, n);
 
             if (self.point_mass) {
@@ -34743,7 +34750,7 @@ pub fn MatrixFisherO3(comptime T: type) type {
             // Select the sampler once so both branches share one inlined
             // Bingham body instead of duplicating it.
             const sampler: *const Bingham(T, 4) = if (is_so) &self.sampler_so else &self.sampler_ref;
-            const q = sampler.sampleFrom(source);
+            const q = sampler.sampleFromPtr(source);
             const r = matrixFisherQuaternionToRotation(T, q);
             if (is_so) return r;
             return .{
