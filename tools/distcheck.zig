@@ -55,6 +55,30 @@ fn runChecks() !void {
     try checkConstructorErgonomics();
     try checkAdvancedMultivariate();
     try checkBetaFamilies();
+    try checkCauchyQuantiles();
+}
+
+/// The Cauchy law has no finite mean, so gate its median and quartiles: for
+/// the standard Cauchy, P(X <= 0) = 1/2, P(X <= -1) = 1/4, and P(X <= 1) = 3/4.
+fn checkCauchyQuantiles() !void {
+    var engine = alea.FastPrng.init(0xca0c);
+    const rng = alea.Rng.init(&engine);
+
+    const samples: usize = 100_000;
+    var le_zero: usize = 0;
+    var le_minus_one: usize = 0;
+    var le_one: usize = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const x = alea.distributions.cauchy(rng, f64, 0, 1);
+        if (x <= 0) le_zero += 1;
+        if (x <= -1) le_minus_one += 1;
+        if (x <= 1) le_one += 1;
+    }
+    const nf: f64 = @floatFromInt(samples);
+    try expectFloatBetween("cauchy median", @as(f64, @floatFromInt(le_zero)) / nf, 0.494, 0.506);
+    try expectFloatBetween("cauchy q1", @as(f64, @floatFromInt(le_minus_one)) / nf, 0.244, 0.256);
+    try expectFloatBetween("cauchy q3", @as(f64, @floatFromInt(le_one)) / nf, 0.744, 0.756);
 }
 
 fn checkAdvancedMultivariate() !void {

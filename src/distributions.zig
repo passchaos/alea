@@ -5893,10 +5893,11 @@ inline fn dyadicBinomialFields(p: f64) ?DyadicBinomialFields {
     const mantissa: u64 = (bits & 0x000f_ffff_ffff_ffff) | (@as(u64, 1) << 52);
     const trailing: i32 = @intCast(@ctz(mantissa));
     const m: i32 = 52 - exponent - trailing;
-    if (m < 2 or m > 3) return null;
+    if (m < 2 or m > 4) return null;
     const k: u64 = mantissa >> @intCast(trailing);
     if (m == 2 and (k == 1 or k == 3)) return .{ .m = 2, .k = k };
-    if (m == 3 and k == 1) return .{ .m = 3, .k = 1 };
+    if (m == 3 and (k == 1 or k == 3)) return .{ .m = 3, .k = k };
+    if (m == 4 and k == 1) return .{ .m = 4, .k = 1 };
     return null;
 }
 
@@ -5915,8 +5916,13 @@ fn binomialDyadicFrom(source: anytype, trials: u64, m: u32, k: u64) u64 {
                 ~bits & ~(bits >> 1) & 0x5555_5555_5555_5555
             else
                 ~(bits & (bits >> 1)) & 0x5555_5555_5555_5555)
+        else if (m == 3)
+            (if (k == 1)
+                ~(bits | (bits >> 1) | (bits >> 2)) & 0x1249_2492_4924_9249
+            else
+                ~((bits >> 2) | (bits & (bits >> 1))) & 0x1249_2492_4924_9249)
         else
-            ~(bits | (bits >> 1) | (bits >> 2)) & 0x1249_2492_4924_9249;
+            ~(bits | (bits >> 1) | (bits >> 2) | (bits >> 3)) & 0x1111_1111_1111_1111;
         if (take < per_word) {
             mask &= (@as(u64, 1) << @intCast(take * m)) - 1;
         }
@@ -53994,6 +54000,35 @@ test "distribution namespace sample iterators mirror rng facade iterators" {
     var mapped_iter = sampleIterFrom(&mapped_namespace_engine, bool, map(u8, bool, die, Even{}));
     const mapped_value = mapped_iter.next().?;
     try std.testing.expect(mapped_value == true or mapped_value == false);
+}
+
+test "binomial dyadic fractions match moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0xd1a3);
+    const rng = Rng.init(&engine);
+
+    const trials: u64 = 40;
+    const samples = 100_000;
+    const Case = struct { p: f64, mean: f64, variance: f64 };
+    const cases = [_]Case{
+        .{ .p = 0.375, .mean = 15.0, .variance = 9.375 },
+        .{ .p = 0.0625, .mean = 2.5, .variance = 2.34375 },
+    };
+    for (cases) |case| {
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const value: f64 = @floatFromInt(binomial(rng, trials, case.p));
+            sum += value;
+            sum_sq += value * value;
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const mean = sum / nf;
+        const variance = sum_sq / nf - mean * mean;
+        try std.testing.expect(@abs(mean - case.mean) < 0.05);
+        try std.testing.expect(@abs(variance - case.variance) < 0.2);
+    }
 }
 
 test "binomial sampler has plausible moments" {
