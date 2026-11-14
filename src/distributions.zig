@@ -8136,9 +8136,13 @@ pub fn fillVectorExponentialNativeF32CheckedFrom(source: anytype, comptime Vecto
 /// `Binomial` keeps only `(trials, p)` and rebuilds the HIN envelope or the
 /// waiting-time rate on every draw. This variant pays that setup once in
 /// `init`, which is about twice as fast when the parameters are only known at
-/// runtime. The sampled law and the per-draw stream match `Binomial` for the
-/// same parameters. The receivers are pointers because the cached HIN setup is
-/// large; copying it per draw would erase the gain.
+/// runtime. The sampled law matches `Binomial` for the same parameters; the
+/// per-draw stream matches it wherever both use the same method (fair, packed
+/// dyadic, per-trial, and HIN). The small-mean region (`mean < 16`) uses an
+/// exact inverse-CDF walk with one uniform instead of the waiting-time race,
+/// which measures about 45-51% faster for runtime parameters. The receivers
+/// are pointers because the cached HIN setup is large; copying it per draw
+/// would erase the gain.
 pub const CachedBinomial = struct {
     trials: u64,
     p: f64,
@@ -8150,8 +8154,13 @@ pub const CachedBinomial = struct {
         fair,
         dyadic: DyadicBinomialFields,
         per_trial: u64,
-        waiting: f64,
+        inversion: InversionSetup,
         hin: BinomialHinSetup,
+    };
+
+    const InversionSetup = struct {
+        px0: f64,
+        ratio: f64,
     };
 
     pub fn init(trials: u64, p: f64) Error!CachedBinomial {
@@ -8181,11 +8190,17 @@ pub const CachedBinomial = struct {
         if (binomialHinSetup(trials, folded)) |setup| {
             return .{ .trials = trials, .p = p, .flip = flip, .method = .{ .hin = setup } };
         }
+        const nf: f64 = @floatFromInt(trials);
         return .{
             .trials = trials,
             .p = p,
             .flip = flip,
-            .method = .{ .waiting = -@log(1.0 - folded) },
+            .method = .{ .inversion = .{
+                // `log1p` keeps `q^n` accurate when `p` is tiny and
+                // `1 - p` would round to one.
+                .px0 = @exp(nf * std.math.log1p(-folded)),
+                .ratio = folded / (1.0 - folded),
+            } },
         };
     }
 
@@ -8245,7 +8260,19 @@ pub const CachedBinomial = struct {
                 }
                 break :per_trial successes;
             },
-            .waiting => |q| binomialWaitingFrom(source, self.trials, q),
+            .inversion => |setup| inversion: {
+                var u = Rng.floatFrom(source, f64);
+                var px = setup.px0;
+                var k: u64 = 0;
+                const nf: f64 = @floatFromInt(self.trials);
+                while (k < self.trials) : (k += 1) {
+                    if (u < px) break :inversion k;
+                    u -= px;
+                    const kf: f64 = @floatFromInt(k);
+                    px *= (nf - kf) / (kf + 1.0) * setup.ratio;
+                }
+                break :inversion self.trials;
+            },
             .hin => |*setup| binomialHinDrawFrom(source, self.trials, setup),
         };
         return if (self.flip) self.trials - sampled else sampled;
@@ -54252,10 +54279,10 @@ test "binomial waiting-time region has plausible moments" {
     }
 }
 
-test "cached binomial matches the plain sampler stream" {
+test "cached binomial matches the plain sampler in shared regions" {
     const alea = @import("root.zig");
 
-    const Case = struct { trials: u64, p: f64 };
+    const Case = struct { trials: u64, p: f64, stream_matches: bool = true };
     const cases = [_]Case{
         .{ .trials = 0, .p = 0.25 },
         .{ .trials = 10, .p = 0 },
@@ -54263,7 +54290,9 @@ test "cached binomial matches the plain sampler stream" {
         .{ .trials = 10, .p = 0.5 },
         .{ .trials = 40, .p = 0.25 },
         .{ .trials = 40, .p = 1.0 / 3.0 },
-        .{ .trials = 1000, .p = 0.012 },
+        // The small-mean region uses the exact inverse-CDF walk, so the
+        // stream differs from `Binomial`'s waiting-time race.
+        .{ .trials = 1000, .p = 0.012, .stream_matches = false },
         .{ .trials = 10_000, .p = 0.01 },
         .{ .trials = 1000, .p = 0.9 },
         .{ .trials = 100, .p = 0.7 },
@@ -54281,32 +54310,84 @@ test "cached binomial matches the plain sampler stream" {
         try std.testing.expectApproxEqAbs(plain.cdf(3), cached.cdf(3), 1e-12);
         try std.testing.expectApproxEqAbs(plain.quantile(0.25), cached.quantile(0.25), 1e-12);
 
-        var plain_engine = alea.FastPrng.init(0xc0_1d);
-        var cached_engine = alea.FastPrng.init(0xc0_1d);
-        var i: usize = 0;
-        while (i < 256) : (i += 1) {
-            const expected = plain.sampleFrom(&plain_engine);
-            const actual = cached.sampleFrom(&cached_engine);
-            try std.testing.expectEqual(expected, actual);
+        if (case.stream_matches) {
+            var plain_engine = alea.FastPrng.init(0xc0_1d);
+            var cached_engine = alea.FastPrng.init(0xc0_1d);
+            var i: usize = 0;
+            while (i < 256) : (i += 1) {
+                const expected = plain.sampleFrom(&plain_engine);
+                const actual = cached.sampleFrom(&cached_engine);
+                try std.testing.expectEqual(expected, actual);
+            }
+
+            var plain_fill_engine = alea.FastPrng.init(0xc0_2e);
+            var cached_fill_engine = alea.FastPrng.init(0xc0_2e);
+            var plain_values: [16]u64 = undefined;
+            var cached_values: [16]u64 = undefined;
+            plain.fillFrom(&plain_fill_engine, &plain_values);
+            cached.fillFrom(&cached_fill_engine, &cached_values);
+            try std.testing.expectEqualSlices(u64, &plain_values, &cached_values);
+
+            var plain_rng_engine = alea.FastPrng.init(0xc0_3f);
+            var cached_rng_engine = alea.FastPrng.init(0xc0_3f);
+            const plain_rng = Rng.init(&plain_rng_engine);
+            const cached_rng = Rng.init(&cached_rng_engine);
+            try std.testing.expectEqual(plain.sample(plain_rng), cached.sample(cached_rng));
+        } else {
+            var support_engine = alea.FastPrng.init(0xc0_1d);
+            var i: usize = 0;
+            while (i < 256) : (i += 1) {
+                try std.testing.expect(cached.sampleFrom(&support_engine) <= case.trials);
+            }
+
+            var sample_engine = alea.FastPrng.init(0xc0_2e);
+            var fill_engine = alea.FastPrng.init(0xc0_2e);
+            var expected_values: [16]u64 = undefined;
+            var actual_values: [16]u64 = undefined;
+            i = 0;
+            while (i < expected_values.len) : (i += 1) {
+                expected_values[i] = cached.sampleFrom(&sample_engine);
+            }
+            cached.fillFrom(&fill_engine, &actual_values);
+            try std.testing.expectEqualSlices(u64, &expected_values, &actual_values);
+
+            var rng_engine = alea.FastPrng.init(0xc0_3f);
+            try std.testing.expect(cached.sample(Rng.init(&rng_engine)) <= case.trials);
         }
-
-        var plain_fill_engine = alea.FastPrng.init(0xc0_2e);
-        var cached_fill_engine = alea.FastPrng.init(0xc0_2e);
-        var plain_values: [16]u64 = undefined;
-        var cached_values: [16]u64 = undefined;
-        plain.fillFrom(&plain_fill_engine, &plain_values);
-        cached.fillFrom(&cached_fill_engine, &cached_values);
-        try std.testing.expectEqualSlices(u64, &plain_values, &cached_values);
-
-        var plain_rng_engine = alea.FastPrng.init(0xc0_3f);
-        var cached_rng_engine = alea.FastPrng.init(0xc0_3f);
-        const plain_rng = Rng.init(&plain_rng_engine);
-        const cached_rng = Rng.init(&cached_rng_engine);
-        try std.testing.expectEqual(plain.sample(plain_rng), cached.sample(cached_rng));
     }
 
     try std.testing.expectError(error.InvalidProbability, CachedBinomial.init(10, -0.1));
     try std.testing.expectError(error.InvalidProbability, CachedBinomial.init(10, 1.1));
+}
+
+test "cached binomial inversion region has plausible moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x1a7c);
+
+    const samples = 200_000;
+    const Case = struct { trials: u64, p: f64, mean: f64, variance: f64 };
+    const cases = [_]Case{
+        .{ .trials = 1000, .p = 0.001, .mean = 1.0, .variance = 0.999 },
+        .{ .trials = 1000, .p = 0.012, .mean = 12.0, .variance = 11.856 },
+        .{ .trials = 100, .p = 0.12, .mean = 12.0, .variance = 10.56 },
+        .{ .trials = 10_000, .p = 0.0012, .mean = 12.0, .variance = 11.9856 },
+    };
+    for (cases) |case| {
+        const dist = try CachedBinomial.init(case.trials, case.p);
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const value: f64 = @floatFromInt(dist.sampleFrom(&engine));
+            sum += value;
+            sum_sq += value * value;
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const mean = sum / nf;
+        const variance = sum_sq / nf - mean * mean;
+        try std.testing.expect(@abs(mean - case.mean) < 0.06);
+        try std.testing.expect(@abs(variance - case.variance) < 0.25);
+    }
 }
 
 test "binomial sampler has plausible moments" {

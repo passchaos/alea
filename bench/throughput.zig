@@ -18,6 +18,8 @@ var bench_filter: ?[]const u8 = null;
 // the workflow the cached sampler exists to speed up.
 var runtime_binomial_trials: u64 = 10_000;
 var runtime_binomial_p: f64 = 0.01;
+var runtime_binomial_mean12_trials: u64 = 1_000;
+var runtime_binomial_mean12_p: f64 = 0.012;
 
 fn parseOptions(args: []const []const u8) Options {
     var options: Options = .{};
@@ -251,8 +253,10 @@ pub fn main(init: std.process.Init) !void {
     try benchFillBinomialScalar(io, stdout, "alea fillBinomial scalar direct", bytes / 64);
     try benchBinomialLarge(io, stdout, "alea binomial large", bytes / 256);
     try benchBinomialMean12(io, stdout, "alea binomial mean-12", bytes / 256);
-    try benchBinomialRuntime(io, stdout, "alea binomial runtime sampler", bytes / 256, false);
-    try benchBinomialRuntime(io, stdout, "alea binomial runtime cached", bytes / 256, true);
+    try benchBinomialRuntime(io, stdout, "alea binomial runtime sampler", bytes / 256, false, &runtime_binomial_trials, &runtime_binomial_p);
+    try benchBinomialRuntime(io, stdout, "alea binomial runtime cached", bytes / 256, true, &runtime_binomial_trials, &runtime_binomial_p);
+    try benchBinomialRuntime(io, stdout, "alea binomial runtime sampler mean-12", bytes / 256, false, &runtime_binomial_mean12_trials, &runtime_binomial_mean12_p);
+    try benchBinomialRuntime(io, stdout, "alea binomial runtime cached mean-12", bytes / 256, true, &runtime_binomial_mean12_trials, &runtime_binomial_mean12_p);
     try benchBinomialApprox(io, stdout, "alea binomial poisson approx", bytes / 256);
     try benchNegativeBinomial(io, stdout, "alea negative-binomial", bytes / 128);
     try benchFillNegativeBinomial(io, stdout, "alea fillNegativeBinomial", bytes / 128);
@@ -5489,10 +5493,18 @@ fn benchBinomialMean12(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn benchBinomialRuntime(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, cached: bool) !void {
+fn benchBinomialRuntime(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    cached: bool,
+    trials_ptr: *u64,
+    p_ptr: *f64,
+) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
-    const trials_value = @volatileCast(&runtime_binomial_trials).*;
-    const p_value = @volatileCast(&runtime_binomial_p).*;
+    const trials_value = @volatileCast(trials_ptr).*;
+    const p_value = @volatileCast(p_ptr).*;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var trial: usize = 0;
