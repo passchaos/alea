@@ -947,8 +947,16 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
         fillChanceSixteenthFrom(source, dest);
         return;
     }
-    // Other dyadic probabilities (1/8, 3/16, 5/8, 7/8, ...) pack several
-    // trials per engine word instead of drawing one word per element.
+    // Remaining k/16 probabilities use the nibble expansion; the dedicated
+    // kernels above are faster and stay first.
+    inline for ([_]u4{ 2, 3, 5, 7, 9, 11, 13, 15 }) |numerator| {
+        if (p == @as(f64, numerator) / 16.0) {
+            fillChanceNibblesFrom(source, dest, numerator);
+            return;
+        }
+    }
+    // Other dyadic probabilities (5/32, 5/8, 7/8, ...) pack several trials
+    // per engine word instead of drawing one word per element.
     if (chanceDyadicRatio(p)) |dyadic| {
         fillRatioPowerOfTwoFrom(source, dest, dyadic.numerator, dyadic.denominator);
         return;
@@ -970,8 +978,12 @@ test "fillChance dyadic kernels match their probabilities" {
         .{ .p = 0.0625, .expected = 0.0625 },
         .{ .p = 0.75, .expected = 0.75 },
         .{ .p = 0.125, .expected = 0.125 },
-        .{ .p = 0.875, .expected = 0.875 },
+        .{ .p = 0.1875, .expected = 0.1875 },
         .{ .p = 0.3125, .expected = 0.3125 },
+        .{ .p = 0.4375, .expected = 0.4375 },
+        .{ .p = 0.625, .expected = 0.625 },
+        .{ .p = 0.875, .expected = 0.875 },
+        .{ .p = 0.9375, .expected = 0.9375 },
     };
     for (cases) |case| {
         rng.fillChance(&buf, case.p);
@@ -2000,6 +2012,39 @@ const expand_three_fields = blk: {
     }
     break :blk table;
 };
+
+/// Nibble expansion for any `k/16` probability: the low 4-bit field of the
+/// byte is written first, and a field succeeds when it is below `limit`.
+fn ExpandNibblesBelow(comptime limit: u4) [256]u16 {
+    var table: [256]u16 = undefined;
+    for (0..256) |byte| {
+        const low: u16 = if ((byte & 0x0f) < limit) 1 else 0;
+        const high: u16 = if ((byte >> 4) < limit) 1 else 0;
+        table[byte] = low | (high << 8);
+    }
+    return table;
+}
+
+/// Fill `k/16` probabilities from 4-bit fields, two bool bytes per lookup.
+fn fillChanceNibblesFrom(source: anytype, dest: []bool, comptime limit: u4) void {
+    const table = comptime ExpandNibblesBelow(limit);
+    const out_bytes: []u8 = @ptrCast(dest);
+    var i: usize = 0;
+    while (i < dest.len) {
+        const bits = nextFrom(source);
+        const take = @min(@as(usize, 16), dest.len - i);
+        var field: usize = 0;
+        while (field + 2 <= take) : (field += 2) {
+            const byte: u8 = @truncate(bits >> @intCast(8 * (field / 2)));
+            out_bytes[i + field ..][0..2].* = @bitCast(table[byte]);
+        }
+        if (field < take) {
+            const byte: u8 = @truncate(bits >> @intCast(8 * (field / 2)));
+            out_bytes[i + field] = @truncate(table[byte]);
+        }
+        i += take;
+    }
+}
 
 fn fillChanceSixteenthFrom(source: anytype, dest: []bool) void {
     const out_bytes: []u8 = @ptrCast(dest);
