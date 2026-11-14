@@ -612,7 +612,12 @@ CDF and quantile helpers complement the samplers:
   `((b−a)² + (c−b)² + (a−c)²)/36` difference form, `PERT` normalizes the
   mode fractions before scaling and uses `range/√(α+β+1)`, and
   `Kumaraswamy` uses the stable log-factorial delta for its beta-function
-  moments (clamping rounding-noise negative variances to zero).
+  moments (clamping rounding-noise negative variances to zero). Closed-form
+  CDFs use the same ratio-first ordering: `rayleighCdf` evaluates
+  `−expm1(−(x/scale)²/2)`, the PERT diagnostic parameters normalize
+  `(mode−min)/range` before scaling, `nakagamiCdf` passes
+  `(x/Ω)·x·m` to the incomplete gamma, and the Hoyt `q = 1` branch uses
+  `(x/√Ω)²`.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,

@@ -1729,7 +1729,9 @@ pub fn nakagamiCdf(x: anytype, m_param: anytype, omega: anytype) @TypeOf(x, m_pa
     if (omega == 0) return if (x < 0) 0 else 1;
     if (x <= 0) return 0;
     if (x == std.math.inf(T)) return 1;
-    return gammaIncompleteP(m_param, m_param * x * x / omega);
+    // `(x/Ω)·x·m` keeps the incomplete-gamma argument finite for extreme
+    // shape/scale pairs where `m·x²` would overflow.
+    return gammaIncompleteP(m_param, (x / omega) * x * m_param);
 }
 
 /// Nakagami-m quantile. `p = 0 → 0`, `p = 1 → +∞`.
@@ -1990,8 +1992,9 @@ fn pertDiagnosticParams(min: f64, mode: f64, max: f64, shape: f64) ?struct { alp
     if (range == 0) return .{ .alpha = 0, .beta = 0 };
     if (shape == std.math.inf(f64)) return .{ .alpha = std.math.inf(f64), .beta = std.math.inf(f64) };
     return .{
-        .alpha = 1 + shape * (mode - min) / range,
-        .beta = 1 + shape * (max - mode) / range,
+        // Normalize before scaling so huge `shape·(mode−min)` cannot overflow.
+        .alpha = 1 + shape * ((mode - min) / range),
+        .beta = 1 + shape * ((max - mode) / range),
     };
 }
 
@@ -2149,7 +2152,11 @@ pub fn hoytCdf(x: anytype, q_param: anytype, omega: anytype) @TypeOf(x, q_param,
     if (omega_f == 0) return if (x_f < 0) 0 else 1;
     if (x_f <= 0) return 0;
     if (x_f == std.math.inf(f64)) return 1;
-    if (q_f == 1) return @floatCast(1 - @exp(-x_f * x_f / omega_f));
+    if (q_f == 1) {
+        // Rayleigh limit: `(x/√Ω)²` avoids the overflowing `x²` product.
+        const ratio = x_f / @sqrt(omega_f);
+        return @floatCast(-std.math.expm1(-ratio * ratio));
+    }
 
     const q2 = q_f * q_f;
     const r = (1 - q2) / (1 + q2);
@@ -2287,7 +2294,10 @@ pub fn rayleighCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
     if (std.math.isNan(x)) return std.math.nan(T);
     if (scale == 0) return if (x < 0) 0 else 1;
     if (x <= 0) return 0;
-    return 1 - @exp(-(x * x) / (2 * scale * scale));
+    // `(x/scale)²` avoids the overflowing `x²`/`scale²` ratio at huge scales;
+    // `-expm1` keeps small-x accuracy.
+    const ratio = x / scale;
+    return -std.math.expm1(-0.5 * ratio * ratio);
 }
 
 /// Inverse Rayleigh(scale) CDF. p=0 → 0, p=1 → +∞.
@@ -56199,6 +56209,27 @@ test "scale-family moments survive extreme parameters" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), kumaraswamy_dist.expectedValue(), 1e-12);
     try std.testing.expect(kumaraswamy_dist.varianceValue() >= 0);
     try std.testing.expect(kumaraswamy_dist.varianceValue() < 1e-10);
+}
+
+test "extreme-scale closed-form CDFs stay finite" {
+    // Rayleigh: (x/scale)² avoids the overflowing x²/scale² ratio.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3934693402873666), rayleighCdf(@as(f64, 1e300), @as(f64, 1e300)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 5e-19), rayleighCdf(@as(f64, 1e-9), @as(f64, 1)), 1e-24);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), rayleighCdf(rayleighQuantile(@as(f64, 0.9), @as(f64, 1e300)), @as(f64, 1e300)), 1e-12);
+
+    // PERT: normalized mode fractions and range scaling.
+    try std.testing.expectEqual(@as(f64, 1), pertCdf(@as(f64, 1e300), @as(f64, 0), @as(f64, 1e300), @as(f64, 1e300), @as(f64, 1e300)));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), pertCdf(@as(f64, 5e299), @as(f64, 0), @as(f64, 5e299), @as(f64, 1e300), @as(f64, 1e300)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), pertQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 1e300), @as(f64, 1e300), @as(f64, 1e300)), 1e290);
+    const pert_q = pertQuantile(@as(f64, 0.9), @as(f64, 0), @as(f64, 5e299), @as(f64, 1e300), @as(f64, 4));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9), pertCdf(pert_q, @as(f64, 0), @as(f64, 5e299), @as(f64, 1e300), @as(f64, 4)), 1e-6);
+
+    // Nakagami: (x/Ω)·x·m keeps the incomplete-gamma argument finite.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), nakagamiCdf(@as(f64, 1e150), @as(f64, 1e300), @as(f64, 1e300)), 1e-4);
+    try std.testing.expectEqual(@as(f64, 1), nakagamiCdf(@as(f64, 1e300), @as(f64, 1e300), @as(f64, 1e300)));
+
+    // Hoyt q=1 (Rayleigh limit) at huge scale.
+    try std.testing.expectEqual(@as(f64, 1), hoytCdf(@as(f64, 1e300), @as(f64, 1), @as(f64, 1e300)));
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
