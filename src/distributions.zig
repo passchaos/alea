@@ -3984,10 +3984,15 @@ pub const Bernoulli = struct {
             @memset(dest, true);
             return;
         }
-        const packed_probabilities = [_]f64{ 0.5, 0.25, 0.75, 0.375, 0.0625, 0.125 };
-        inline for (packed_probabilities) |chance| {
-            if (self.p_int == Rng.probabilityThreshold(chance)) {
-                Rng.fillChanceFrom(source, dest, chance);
+        // A dyadic `p = k / 2^m` (m <= 6) stores the threshold `k << (64 - m)`,
+        // so a shift-and-compare recovers the probability for every ratio that
+        // `Rng.fillChance` packs.
+        inline for (1..7) |m| {
+            const shift = 64 - m;
+            const numerator = self.p_int >> shift;
+            if (numerator != 0 and self.p_int == numerator << shift) {
+                const denominator = @as(f64, @floatFromInt(@as(u64, 1) << @intCast(m)));
+                Rng.fillChanceFrom(source, dest, @as(f64, @floatFromInt(numerator)) / denominator);
                 return;
             }
         }

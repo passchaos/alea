@@ -132,6 +132,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillBernoulli(io, stdout, "alea fillBernoulli p=0.25", bytes / 8, 0.25);
     try benchFillBernoulli(io, stdout, "alea fillBernoulli p=3/4", bytes / 8, 0.75);
     try benchFillBernoulli(io, stdout, "alea fillBernoulli p=1/8", bytes / 8, 0.125);
+    try benchFillBernoulli(io, stdout, "alea fillBernoulli p=5/16", bytes / 8, 0.3125);
     try benchAliasTable(io, stdout, "alea alias table", bytes / 256);
     try benchAliasTableDirect(io, stdout, "alea alias table direct", bytes / 256);
     try benchAliasTableScalar(io, stdout, "alea alias table scalar direct", bytes / 256);
