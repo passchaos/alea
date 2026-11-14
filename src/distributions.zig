@@ -16668,6 +16668,14 @@ fn noncentralChiParametersValid(comptime T: type, k: T, lambda: T) bool {
     return k >= 0 and std.math.isFinite(k) and lambda >= 0 and std.math.isFinite(lambda);
 }
 
+/// `Γ(z + 1/2)/Γ(z)` with the large-`z` asymptotic
+/// `√z·(1 − 1/(8z) + 1/(128z²))`; the direct `lgamma` difference cancels for
+/// huge shapes.
+fn gammaShiftHalfRatio(comptime T: type, z: T) T {
+    if (z > 1.0e7) return @sqrt(z) * (1 - 1 / (8 * z) + 1 / (128 * z * z));
+    return @exp(std.math.lgamma(T, z + 0.5) - std.math.lgamma(T, z));
+}
+
 fn noncentralChiExpectedValue(comptime T: type, k: T, lambda: T) T {
     if (k == 0) {
         // k=0: X = |N(√λ, 1)| (folded normal with mean √λ, variance 1).
@@ -16682,8 +16690,13 @@ fn noncentralChiExpectedValue(comptime T: type, k: T, lambda: T) T {
     // At λ=0 this reduces to the central chi mean √2 · Γ((k+1)/2)/Γ(k/2),
     // matching Chi.expectedValue.
     const half = k / 2;
-    const lgamma_ratio = std.math.lgamma(T, (k + 1) / 2) - std.math.lgamma(T, half);
-    const gamma_ratio = @exp(lgamma_ratio);
+    const total = k + lambda;
+    if (total > 1.0e12) {
+        // χ' concentrates at √(k+λ); the O(1/(k+λ)^{3/2}) correction is far
+        // below f64 resolution here, and `e^{-λ/2}·₁F₁` would underflow.
+        return @sqrt(total);
+    }
+    const gamma_ratio = gammaShiftHalfRatio(T, half);
     const half_lambda = lambda / 2;
     const m_val = kummerM(@as(T, 0.5), half, half_lambda, 80);
     return @sqrt(@as(T, 2)) * gamma_ratio * @exp(-half_lambda) * m_val;
@@ -16735,8 +16748,13 @@ pub fn NoncentralChi(comptime T: type) type {
 
         pub fn varianceValue(self: Self) T {
             if (self.isDegenerate()) return 0;
+            const total = self.k + self.lambda;
+            if (total > 1.0e12) {
+                // Delta-method limit: Var[√χ'²] = 2(k+2λ)/(4(k+λ)).
+                return (self.k + 2 * self.lambda) / (2 * total);
+            }
             // Var[X] = E[X²] - (E[X])²; E[X²] = k + λ (same as χ'² mean).
-            const ex2 = self.k + self.lambda;
+            const ex2 = total;
             const ex = self.expectedValue();
             return ex2 - ex * ex;
         }
@@ -21882,12 +21900,12 @@ pub fn Chi(comptime T: type) type {
         pub fn expectedValue(self: Self) T {
             if (chiPoint(T, self.dofValue())) |point| return point;
             const dof = self.dofValue();
-            const half = dof / 2;
-            return @exp(@log(@as(T, 2)) / 2 + std.math.lgamma(T, (dof + 1) / 2) - std.math.lgamma(T, half));
+            return @sqrt(@as(T, 2)) * gammaShiftHalfRatio(T, dof / 2);
         }
 
         pub fn varianceValue(self: Self) T {
             if (chiPoint(T, self.dofValue()) != null) return 0;
+            if (self.dofValue() > 1.0e12) return 0.5;
             const mean = self.expectedValue();
             return self.dofValue() - mean * mean;
         }
@@ -56538,6 +56556,19 @@ test "rice and inverse-gaussian sampling survives huge scales" {
     try std.testing.expect(std.math.isFinite(inverseGaussianFrom(&engine, f64, 1e300, 1e300)));
     try std.testing.expect(std.math.isFinite(inverseGaussianFrom(&engine, f64, 1e300, 1)));
     try std.testing.expect(std.math.isFinite(inverseGaussianFrom(&engine, f64, 1, 1e300)));
+}
+
+test "chi and noncentral-chi moments survive huge parameters" {
+    const chi_dist = try Chi(f64).init(1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e150), chi_dist.expectedValue(), 1e145);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), chi_dist.varianceValue(), 1e-12);
+
+    const central_limit = try NoncentralChi(f64).init(1e300, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e150), central_limit.expectedValue(), 1e145);
+
+    const noncentral = try NoncentralChi(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, @sqrt(2e300)), noncentral.expectedValue(), 1e145);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.75), noncentral.varianceValue(), 1e-12);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
