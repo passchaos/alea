@@ -34202,7 +34202,8 @@ pub fn MatrixNormal(comptime T: type) type {
                 var row: usize = rows;
                 while (row > 0) {
                     row -= 1;
-                    var value: T = out[row * cols + col];
+                    // Include the Cholesky diagonal: X = L·Z, not (L−diag L)·Z.
+                    var value: T = out[row * cols + col] * self.row_cholesky[row * rows + row];
                     var k: usize = 0;
                     while (k < row) : (k += 1) {
                         value += self.row_cholesky[row * rows + k] * out[k * cols + col];
@@ -34218,7 +34219,7 @@ pub fn MatrixNormal(comptime T: type) type {
                 var c: usize = cols;
                 while (c > 0) {
                     c -= 1;
-                    var value: T = out[r * cols + c];
+                    var value: T = out[r * cols + c] * self.col_cholesky[c * cols + c];
                     var k: usize = 0;
                     while (k < c) : (k += 1) {
                         value += out[r * cols + k] * self.col_cholesky[c * cols + k];
@@ -34359,7 +34360,7 @@ pub fn StaticMatrixNormal(comptime T: type, comptime rows: usize, comptime cols:
                 var row: usize = rows;
                 while (row > 0) {
                     row -= 1;
-                    var value: T = out[row][col];
+                    var value: T = out[row][col] * self.row_cholesky[row][row];
                     var k: usize = 0;
                     while (k < row) : (k += 1) {
                         value += self.row_cholesky[row][k] * out[k][col];
@@ -34374,7 +34375,7 @@ pub fn StaticMatrixNormal(comptime T: type, comptime rows: usize, comptime cols:
                 var c: usize = cols;
                 while (c > 0) {
                     c -= 1;
-                    var value: T = out[row][c];
+                    var value: T = out[row][c] * self.col_cholesky[c][c];
                     var k: usize = 0;
                     while (k < c) : (k += 1) {
                         value += out[row][k] * self.col_cholesky[c][k];
@@ -58626,6 +58627,47 @@ test "MatrixNormal recovers row and column covariance" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.colCovarianceAt(0, 0), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 0.4), try dist.colCovarianceAt(0, 1), 1e-12);
     try std.testing.expectApproxEqAbs(@as(f64, 1), try dist.varianceAt(0, 0), 1e-12);
+}
+
+test "MatrixNormal recovers non-unit covariance scales" {
+    const allocator = std.testing.allocator;
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xe2);
+    const rng = Rng.init(&engine);
+
+    // 2x1 with row variances 4 and 9: the transform must include the
+    // Cholesky diagonal (previously the sampled variances were both 1).
+    const mean = [_]f64{ 0, 0 };
+    const row_covariance = [_]f64{ 4, 0, 0, 9 };
+    const col_covariance = [_]f64{1};
+    var dist = try MatrixNormal(f64).init(allocator, &mean, &row_covariance, &col_covariance);
+    defer dist.deinit();
+
+    const count = 20_000;
+    var var0: f64 = 0;
+    var var1: f64 = 0;
+    var out: [2]f64 = undefined;
+    for (0..count) |_| {
+        dist.sampleInto(rng, &out);
+        var0 += out[0] * out[0];
+        var1 += out[1] * out[1];
+    }
+    const nf: f64 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), var0 / nf, 0.15);
+    try std.testing.expectApproxEqAbs(@as(f64, 9), var1 / nf, 0.25);
+
+    const S = StaticMatrixNormal(f64, 2, 1);
+    var static_dist = try S.init(.{ .{0}, .{0} }, .{ .{ 4, 0 }, .{ 0, 9 } }, .{.{1}});
+    var static0: f64 = 0;
+    var static1: f64 = 0;
+    var static_out: [2][1]f64 = undefined;
+    for (0..count) |_| {
+        static_dist.sampleIntoFrom(&engine, &static_out);
+        static0 += static_out[0][0] * static_out[0][0];
+        static1 += static_out[1][0] * static_out[1][0];
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 4), static0 / nf, 0.15);
+    try std.testing.expectApproxEqAbs(@as(f64, 9), static1 / nf, 0.25);
 }
 
 test "MatrixNormal recovers a non-zero mean" {

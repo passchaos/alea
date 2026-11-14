@@ -7031,5 +7031,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1499-validate-all-refresh.md`, and
 `compare/results/s4-m1500-betabinomial-extremes.md`, and
 `compare/results/s4-m1501-chi-huge-moments.md`, and
-`compare/results/s4-m1502-validate-all-refresh.md`.
+`compare/results/s4-m1502-validate-all-refresh.md`, and
+`compare/results/s4-m1503-matrix-normal-cholesky-diagonal.md`.
 

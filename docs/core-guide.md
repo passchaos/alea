@@ -538,7 +538,10 @@ Copulas on the unit hypercube:
 Matrix-variate distributions:
 
 - `MatrixNormal(T)` / `StaticMatrixNormal(T, rows, cols)` — matrix normal
-  `MN(M, U, V)` with in-place `X = M + L_U Z L_Vᵀ` sampling.
+  `MN(M, U, V)` with in-place `X = M + L_U Z L_Vᵀ` sampling; the transform
+  multiplies by the full Cholesky factors including their diagonals, so
+  covariances with non-unit scales recover `U`/`V` (the previous strict-lower
+  product sampled unit variance for every diagonal).
 - `MatrixT(T)` / `StaticMatrixT(T, rows, cols)` — matrix-variate Student-t
   with a shared `χ²(ν)` scale.
 - `StaticWishart(T, dim)` / `Wishart(T)` and
