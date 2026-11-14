@@ -629,6 +629,23 @@ pub fn betaQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, 
         }
         if (hi - lo <= 64 * std.math.floatEps(T)) break;
     }
+    if (lo == 0 and p > 0) {
+        // The quantile is below the linear bisection resolution (~1e-14):
+        // refine the lower tail in log space so tiny-shape quantiles are not
+        // pinned to the resolution floor.
+        var log_lo: T = @log(std.math.floatMin(T));
+        var log_hi: T = @log(hi);
+        var it: usize = 0;
+        while (it < 100) : (it += 1) {
+            const mid = (log_lo + log_hi) / 2;
+            if (betaIncomplete(@exp(mid), alpha, beta_param) < p) {
+                log_lo = mid;
+            } else {
+                log_hi = mid;
+            }
+        }
+        return @exp((log_lo + log_hi) / 2);
+    }
     return (lo + hi) / 2;
 }
 
@@ -812,6 +829,23 @@ pub fn gammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shap
         } else {
             hi = mid;
         }
+    }
+    if (lo == 0 and p > 0) {
+        // The quantile is below the linear bisection resolution
+        // (`hi·2^-100`, about 1e-30): refine the lower tail in log space so
+        // tiny-shape quantiles are not pinned to the resolution floor.
+        var log_lo: T = @log(std.math.floatMin(T));
+        var log_hi: T = @log(hi);
+        var it: usize = 0;
+        while (it < 100) : (it += 1) {
+            const mid = (log_lo + log_hi) / 2;
+            if (gammaCdf(@exp(mid), shape, scale) < p) {
+                log_lo = mid;
+            } else {
+                log_hi = mid;
+            }
+        }
+        return @exp((log_lo + log_hi) / 2);
     }
     return (lo + hi) / 2;
 }
@@ -1776,8 +1810,10 @@ pub fn exGaussianCdf(x: anytype, mu: anytype, sigma: anytype, tau: anytype) @Typ
         return @floatCast(1 - @exp(-(x_f - mu_f) / tau_f));
     }
     const z = (x_f - mu_f) / sigma_f;
-    const w = z - sigma_f / tau_f;
-    const exponent = sigma_f * sigma_f / (2 * tau_f * tau_f) - (x_f - mu_f) / tau_f;
+    const sigma_over_tau = sigma_f / tau_f;
+    const w = z - sigma_over_tau;
+    // `0.5·(σ/τ)²` avoids the overflowing `σ²/(2τ²)` ratio at huge scales.
+    const exponent = 0.5 * sigma_over_tau * sigma_over_tau - (x_f - mu_f) / tau_f;
     var term: f64 = 0;
     if (!std.math.isNan(exponent)) {
         const log_term = exponent + normLogCdf(w);
@@ -1798,7 +1834,9 @@ pub fn exGaussianQuantile(p: anytype, mu: anytype, sigma: anytype, tau: anytype)
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0) return -std.math.inf(T);
     if (p == 1) return std.math.inf(T);
-    const spread = @sqrt(sigma * sigma + tau * tau);
+    // Scale by the larger component so `σ² + τ²` cannot overflow.
+    const spread_scale = @max(sigma, tau);
+    const spread = spread_scale * @sqrt((sigma / spread_scale) * (sigma / spread_scale) + (tau / spread_scale) * (tau / spread_scale));
     var lo: f64 = mu - 40 * spread;
     var hi: f64 = mu + 40 * spread;
     var expansion: usize = 0;
@@ -56230,6 +56268,27 @@ test "extreme-scale closed-form CDFs stay finite" {
 
     // Hoyt q=1 (Rayleigh limit) at huge scale.
     try std.testing.expectEqual(@as(f64, 1), hoytCdf(@as(f64, 1e300), @as(f64, 1), @as(f64, 1e300)));
+}
+
+test "tiny-shape and huge-scale quantiles resolve" {
+    // ExGaussian: 0.5·(σ/τ)² avoids the overflowing σ²/(2τ²) exponent.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.23842169), exGaussianCdf(@as(f64, 0), @as(f64, 0), @as(f64, 1e300), @as(f64, 1e300)), 1e-7);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.05669656), exGaussianCdf(@as(f64, -1e300), @as(f64, 0), @as(f64, 1e300), @as(f64, 1e300)), 1e-7);
+    const exg_q = exGaussianQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 1e300), @as(f64, 1e300));
+    try std.testing.expectApproxEqAbs(@as(f64, 8.757981e299), exg_q, 1e294);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), exGaussianCdf(exg_q, @as(f64, 0), @as(f64, 1e300), @as(f64, 1e300)), 1e-6);
+
+    // Gamma: the log-space lower-tail refinement resolves quantiles below the
+    // linear bisection floor. P(x) ≈ x^a/Γ(1+a) for tiny shapes.
+    const gamma_q = gammaQuantile(@as(f64, 0.5), @as(f64, 1e-3), @as(f64, 1));
+    try std.testing.expectApproxEqAbs(@as(f64, 5.244206e-302), gamma_q, 1e-305);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), gammaCdf(gamma_q, @as(f64, 1e-3), @as(f64, 1)), 1e-12);
+    try std.testing.expect(gammaQuantile(@as(f64, 0.5), @as(f64, 1e-6), @as(f64, 1)) <= std.math.floatMin(f64) * 2);
+
+    // Beta: I_x(a, 1) = x^a, so the tiny-shape median is 0.5^(1/a).
+    const beta_q = betaQuantile(@as(f64, 0.5), @as(f64, 1e-3), @as(f64, 1));
+    try std.testing.expectApproxEqAbs(@as(f64, 9.332636e-302), beta_q, 1e-305);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(beta_q, @as(f64, 1e-3), @as(f64, 1)), 1e-12);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {

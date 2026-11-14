@@ -617,7 +617,11 @@ CDF and quantile helpers complement the samplers:
   `−expm1(−(x/scale)²/2)`, the PERT diagnostic parameters normalize
   `(mode−min)/range` before scaling, `nakagamiCdf` passes
   `(x/Ω)·x·m` to the incomplete gamma, and the Hoyt `q = 1` branch uses
-  `(x/√Ω)²`.
+  `(x/√Ω)²`. The ExGaussian CDF exponent uses `0.5·(σ/τ)²`, and the
+  `gammaQuantile`/`betaQuantile` lower tails refine in log space when the
+  linear bisection leaves `lo = 0`, so tiny-shape quantiles (e.g. shape
+  `1e-3`) resolve below the `~1e-14`/`~1e-30` linear floors instead of being
+  pinned there.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
