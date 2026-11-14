@@ -29756,7 +29756,19 @@ pub fn Zipf(comptime T: type) type {
         fn invCdf(self: Self, p: T) T {
             const pt = p * self.t;
             if (pt <= 1) return pt;
-            if (self.exponent != 1) return std.math.pow(T, pt * (1 - self.exponent) + self.exponent, self.q);
+            if (self.exponent != 1) {
+                const base = pt * (1 - self.exponent) + self.exponent;
+                // Common integer q = 1/(1-s) values: a reciprocal product is
+                // much cheaper than the generic power routine.
+                if (self.q == -1) return 1 / base;
+                if (self.q == -2) return 1 / (base * base);
+                if (self.q == -3) return 1 / (base * base * base);
+                if (self.q == -4) {
+                    const squared = base * base;
+                    return 1 / (squared * squared);
+                }
+                return std.math.pow(T, base, self.q);
+            }
             return @exp(pt - 1);
         }
     };
