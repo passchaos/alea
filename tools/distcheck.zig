@@ -734,6 +734,12 @@ fn checkBinomial() !void {
     try expectCachedBinomialMean(rng, &cached_inversion, 11.8, 12.2);
     const cached_hin = try alea.distributions.CachedBinomial.init(10_000, 0.01);
     try expectCachedBinomialMean(rng, &cached_hin, 98.8, 101.2);
+
+    // Huge-trial paths: tiny-p waiting, fair-to-HIN dispatch, and the stable
+    // HIN setup.
+    try expectBinomialMean(rng, 1_000_000_000_000_000_000, 2e-17, 19.4, 20.6);
+    try expectBinomialMean(rng, 1_000_000_000, 0.5, 4.99e8, 5.01e8);
+    try expectBinomialMean(rng, 1_000_000_000_000_000_000, 0.5, 4.99e17, 5.01e17);
 }
 
 fn expectCachedBinomialMean(rng: alea.Rng, dist: *const alea.distributions.CachedBinomial, min: f64, max: f64) !void {
@@ -783,6 +789,24 @@ fn checkDiscrete() !void {
             return alea.distributions.hypergeometric(r, 10_000, 1_000, 2_000);
         }
     }.sample, 198.5, 201.5);
+
+    // Huge-population paths: H2PE, inverse-transform init, and the
+    // gamma-Poisson negative-binomial mixture.
+    try expectDiscreteMean("negative-binomial huge", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.negativeBinomial(r, 1 << 20, 0.5);
+        }
+    }.sample, 1.038e6, 1.058e6);
+    try expectDiscreteMean("hypergeometric huge", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 1_000_000_000_000_000_000, 100_000_000_000_000_000, 500_000_000_000_000_000);
+        }
+    }.sample, 4.99e16, 5.01e16);
+    try expectDiscreteMean("hypergeometric huge edge", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 1_000_000_000_000_000_000, 5, 500_000_000_000_000_000);
+        }
+    }.sample, 2.4, 2.6);
 
     // Hypergeometric CDF agrees with empirical frequencies.
     {
