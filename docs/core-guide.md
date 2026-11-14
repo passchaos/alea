@@ -631,7 +631,11 @@ CDF and quantile helpers complement the samplers:
   The circular `VonMises` sampler switches to the concentrated `N(μ, 1/κ)`
   limit when the Best–Fisher `r` rounds to 1 or overflows to NaN (κ ≳ 4.5e15),
   avoiding a non-terminating rejection loop; the vMF family already has its
-  `κ > 1e12` point-mass shortcut.
+  `κ > 1e12` point-mass shortcut. `Rice` falls back to `hypot(x, y)` when the
+  squared Gaussian sum overflows, and `InverseGaussian` uses a
+  parameter-only `sqrt(floatMax)/1600` guard whose cold path evaluates
+  `√y·√(4·shape+y)` and `mean·(mean/x)`; the hot scalar/vector kernels stay
+  byte-identical below the guard.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,

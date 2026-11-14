@@ -13524,7 +13524,10 @@ fn ricePointFrom(source: anytype, comptime T: type, nu: T, sigma: T) T {
     if (sigma == 0) return nu; // degenerate point mass
     const x = Rng.normalFastFrom(source, T, nu, sigma);
     const y = Rng.normalFastFrom(source, T, 0, sigma);
-    return @sqrt(x * x + y * y);
+    const inner = x * x + y * y;
+    if (std.math.isFinite(inner)) return @sqrt(inner);
+    // Huge σ overflows the squared sum; hypot keeps the magnitude finite.
+    return std.math.hypot(x, y);
 }
 
 /// Fill a slice with Rice-distributed values.
@@ -29727,11 +29730,52 @@ pub fn inverseGaussianCheckedFrom(source: anytype, comptime T: type, mean: T, sh
     return dist.sampleFrom(source);
 }
 
+/// Michael–Schucany–Haas candidate from one normal sample. The `4·shape·y +
+/// y²` root overflows for huge mean/shape products, so the cold branch uses
+/// `√y·√(4·shape + y)`.
+fn InverseGaussianCandidate(comptime T: type) type {
+    return struct { x: T, threshold: T };
+}
+
+fn inverseGaussianCandidate(comptime T: type, normal_sample: T, mean: T, shape: T) InverseGaussianCandidate(T) {
+    const y = mean * normal_sample * normal_sample;
+    const mean_over_2shape = mean / (2 * shape);
+    const inner = 4 * shape * y + y * y;
+    const root = if (std.math.isFinite(inner)) @sqrt(inner) else @sqrt(y) * @sqrt(4 * shape + y);
+    const x = mean + mean_over_2shape * (y - root);
+    return .{ .x = x, .threshold = mean / (mean + x) };
+}
+
+fn inverseGaussianFinish(comptime T: type, candidate: InverseGaussianCandidate(T), uniform_sample: T, mean: T) T {
+    if (uniform_sample <= candidate.threshold) return candidate.x;
+    // `mean²/x` with the square evaluated after the ratio when it overflows.
+    const mean_squared = mean * mean;
+    if (std.math.isFinite(mean_squared)) return mean_squared / candidate.x;
+    return mean * (mean / candidate.x);
+}
+
+/// Parameter scale below which `4·shape·y + y²` stays finite for every
+/// practical normal draw (`|z| ≤ 40`).
+inline fn inverseGaussianHugeThreshold(comptime T: type) T {
+    return @sqrt(std.math.floatMax(T)) / 1600;
+}
+
+/// Cold overflow path for huge mean/shape: scaled root and overflow-safe
+/// `mean²/x`. Draws the same normal-then-uniform sequence as the hot path.
+noinline fn inverseGaussianHugeFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
+    const z = Rng.normalFastFrom(source, T, 0, 1);
+    const candidate = inverseGaussianCandidate(T, z, mean, shape);
+    return inverseGaussianFinish(T, candidate, Rng.floatFrom(source, T), mean);
+}
+
 pub fn inverseGaussianFrom(source: anytype, comptime T: type, mean: T, shape: T) T {
     comptime requireFloat(T);
     std.debug.assert(inverseGaussianParametersValid(T, mean, shape));
     if (inverseGaussianIsDegenerate(T, mean, shape)) return mean;
 
+    if (mean > inverseGaussianHugeThreshold(T) or shape > inverseGaussianHugeThreshold(T)) {
+        return inverseGaussianHugeFrom(source, T, mean, shape);
+    }
     const z = Rng.normalFastFrom(source, T, 0, 1);
     const y = mean * z * z;
     const mean_over_2shape = mean / (2 * shape);
@@ -29804,6 +29848,9 @@ pub fn fillVectorInverseGaussianCheckedFrom(source: anytype, comptime VectorType
 
 fn inverseGaussianFromNormalVector(comptime VectorType: type, normal_vec: VectorType, uniform_vec: VectorType, mean: vectorChild(VectorType), shape: vectorChild(VectorType)) VectorType {
     const Child = vectorChild(VectorType);
+    if (mean > inverseGaussianHugeThreshold(Child) or shape > inverseGaussianHugeThreshold(Child)) {
+        return inverseGaussianFromNormalVectorHuge(Child, VectorType, normal_vec, uniform_vec, mean, shape);
+    }
     const mean_vec: VectorType = @splat(mean);
     const shape_vec: VectorType = @splat(shape);
     const mean_over_2shape: VectorType = @splat(mean / (2 * shape));
@@ -29959,6 +30006,9 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.degenerateValue();
+            if (self.mean > inverseGaussianHugeThreshold(T) or self.shape > inverseGaussianHugeThreshold(T)) {
+                return inverseGaussianHugeFrom(rng, T, self.mean, self.shape);
+            }
             const z = rng.normal(T, 0, 1);
             const y = self.mean * z * z;
             const x = self.mean + self.mean_over_2shape * (y - @sqrt(4 * self.shape * y + y * y));
@@ -29968,6 +30018,9 @@ pub fn InverseGaussian(comptime T: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.isDegenerate()) return self.degenerateValue();
+            if (self.mean > inverseGaussianHugeThreshold(T) or self.shape > inverseGaussianHugeThreshold(T)) {
+                return inverseGaussianHugeFrom(source, T, self.mean, self.shape);
+            }
             const z = Rng.normalFastFrom(source, T, 0, 1);
             const y = self.mean * z * z;
             const x = self.mean + self.mean_over_2shape * (y - @sqrt(4 * self.shape * y + y * y));
@@ -39522,6 +39575,11 @@ fn absInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void
 
 fn inverseGaussianFromNormals(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
     comptime requireFloat(T);
+    // Parameter-only guard; the vector kernels below stay byte-identical for
+    // normal parameters.
+    if (mean > inverseGaussianHugeThreshold(T) or shape > inverseGaussianHugeThreshold(T)) {
+        return inverseGaussianFromNormalsHuge(source, T, dest, mean, shape);
+    }
     switch (T) {
         f32 => inverseGaussianFromNormalsVector(source, T, @Vector(8, f32), dest, mean, shape),
         f64 => inverseGaussianFromNormalsVector(source, T, @Vector(4, f64), dest, mean, shape),
@@ -39556,12 +39614,30 @@ fn inverseGaussianFromNormalsVector(source: anytype, comptime T: type, comptime 
     }
 }
 
+noinline fn inverseGaussianFromNormalsHuge(source: anytype, comptime T: type, dest: []T, mean: T, shape: T) void {
+    for (dest) |*item| item.* = inverseGaussianFromNormalHuge(source, T, item.*, mean, shape);
+}
+
+noinline fn inverseGaussianFromNormalVectorHuge(comptime Child: type, comptime VectorType: type, normal_vec: VectorType, uniform_vec: VectorType, mean: Child, shape: Child) VectorType {
+    var out: VectorType = undefined;
+    inline for (0..vectorInfo(VectorType).len) |lane| {
+        const candidate = inverseGaussianCandidate(Child, normal_vec[lane], mean, shape);
+        out[lane] = inverseGaussianFinish(Child, candidate, uniform_vec[lane], mean);
+    }
+    return out;
+}
+
 fn inverseGaussianFromNormal(source: anytype, comptime T: type, normal_sample: T, mean: T, shape: T) T {
     const y = mean * normal_sample * normal_sample;
     const mean_over_2shape = mean / (2 * shape);
     const x = mean + mean_over_2shape * (y - @sqrt(4 * shape * y + y * y));
     if (Rng.floatFrom(source, T) <= mean / (mean + x)) return x;
     return mean * mean / x;
+}
+
+noinline fn inverseGaussianFromNormalHuge(source: anytype, comptime T: type, normal_sample: T, mean: T, shape: T) T {
+    const candidate = inverseGaussianCandidate(T, normal_sample, mean, shape);
+    return inverseGaussianFinish(T, candidate, Rng.floatFrom(source, T), mean);
 }
 
 fn cauchyFromOpenUniforms(comptime T: type, dest: []T, median: T, scale: T) void {
@@ -56420,6 +56496,40 @@ test "triangular and kumaraswamy sampling survives extreme parameters" {
     const vector_kumaraswamy = try VectorKumaraswamy(V).init(1e300, 1e300);
     const vk = vector_kumaraswamy.sample(rng);
     inline for (0..4) |lane| try std.testing.expect(vk[lane] > 0.99 and vk[lane] <= 1);
+}
+
+test "rice and inverse-gaussian sampling survives huge scales" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d165);
+    const rng = Rng.init(&engine);
+
+    // Rice: `sqrt(x² + y²)` overflows at 1e300 without the hypot fallback.
+    const rice_dist = try Rice(f64).init(1e300, 1e300);
+    var i: usize = 0;
+    while (i < 64) : (i += 1) {
+        const x = rice_dist.sample(rng);
+        try std.testing.expect(std.math.isFinite(x) and x > 0);
+    }
+    var rice_buf: [16]f64 = undefined;
+    rice_dist.fillFrom(&engine, &rice_buf);
+    for (rice_buf) |x| try std.testing.expect(std.math.isFinite(x) and x > 0);
+    try std.testing.expect(std.math.isFinite(riceFrom(&engine, f64, 1e300, 1e300)));
+
+    // InverseGaussian: `4·shape·y + y²` overflows at 1e300.
+    const inverse_gaussian = try InverseGaussian(f64).init(1e300, 1e300);
+    i = 0;
+    while (i < 64) : (i += 1) {
+        const x = inverse_gaussian.sample(rng);
+        try std.testing.expect(std.math.isFinite(x) and x > 0);
+        const y = inverse_gaussian.sampleFrom(&engine);
+        try std.testing.expect(std.math.isFinite(y) and y > 0);
+    }
+    var inverse_gaussian_buf: [16]f64 = undefined;
+    inverse_gaussian.fillFrom(&engine, &inverse_gaussian_buf);
+    for (inverse_gaussian_buf) |x| try std.testing.expect(std.math.isFinite(x) and x > 0);
+    try std.testing.expect(std.math.isFinite(inverseGaussianFrom(&engine, f64, 1e300, 1e300)));
+    try std.testing.expect(std.math.isFinite(inverseGaussianFrom(&engine, f64, 1e300, 1)));
+    try std.testing.expect(std.math.isFinite(inverseGaussianFrom(&engine, f64, 1, 1e300)));
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
