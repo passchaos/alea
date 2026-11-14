@@ -29933,6 +29933,7 @@ pub fn Zeta(comptime T: type) type {
         const Self = @This();
 
         exponent_minus_one: T,
+        neg_inv_exponent_minus_one: T,
         b: T,
 
         pub fn init(exponent: T) Error!Self {
@@ -29941,6 +29942,7 @@ pub fn Zeta(comptime T: type) type {
             const exponent_minus_one = exponent - 1;
             return .{
                 .exponent_minus_one = exponent_minus_one,
+                .neg_inv_exponent_minus_one = -1 / exponent_minus_one,
                 .b = std.math.pow(T, 2, exponent_minus_one),
             };
         }
@@ -29973,28 +29975,12 @@ pub fn Zeta(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return 1;
-            while (true) {
-                const u = Rng.floatOpenClosedFrom(rng, T);
-                const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
-                if (std.math.isInf(x)) return x;
-
-                const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
-                const v = Rng.floatFrom(rng, T);
-                if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
-            }
+            return self.nextSampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.isDegenerate()) return 1;
-            while (true) {
-                const u = Rng.floatOpenClosedFrom(source, T);
-                const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
-                if (std.math.isInf(x)) return x;
-
-                const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
-                const v = Rng.floatFrom(source, T);
-                if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
-            }
+            return self.nextSampleFrom(source);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
@@ -30002,23 +29988,7 @@ pub fn Zeta(comptime T: type) type {
                 @memset(dest, 1);
                 return;
             }
-            for (dest) |*item| {
-                while (true) {
-                    const u = Rng.floatOpenClosedFrom(rng, T);
-                    const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
-                    if (std.math.isInf(x)) {
-                        item.* = x;
-                        break;
-                    }
-
-                    const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
-                    const v = Rng.floatFrom(rng, T);
-                    if (v * x * (t - 1) * self.b <= t * (self.b - 1)) {
-                        item.* = x;
-                        break;
-                    }
-                }
-            }
+            for (dest) |*item| item.* = self.nextSampleFrom(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -30026,23 +29996,45 @@ pub fn Zeta(comptime T: type) type {
                 @memset(dest, 1);
                 return;
             }
-            for (dest) |*item| {
-                while (true) {
-                    const u = Rng.floatOpenClosedFrom(source, T);
-                    const x = @floor(std.math.pow(T, u, -1 / self.exponent_minus_one));
-                    if (std.math.isInf(x)) {
-                        item.* = x;
-                        break;
-                    }
+            for (dest) |*item| item.* = self.nextSampleFrom(source);
+        }
 
-                    const t = std.math.pow(T, 1 + 1 / x, self.exponent_minus_one);
-                    const v = Rng.floatFrom(source, T);
-                    if (v * x * (t - 1) * self.b <= t * (self.b - 1)) {
-                        item.* = x;
-                        break;
-                    }
-                }
+        /// Rejection-inversion draw shared by every entry point. The inverse
+        /// CDF and the acceptance correction have cheap closed forms for the
+        /// common integer and half-integer `s - 1` values.
+        inline fn nextSampleFrom(self: Self, source: anytype) T {
+            while (true) {
+                const u = Rng.floatOpenClosedFrom(source, T);
+                const x = @floor(self.invCdf(u));
+                if (std.math.isInf(x)) return x;
+
+                const t = self.correction(1 + 1 / x);
+                const v = Rng.floatFrom(source, T);
+                if (v * x * (t - 1) * self.b <= t * (self.b - 1)) return x;
             }
+        }
+
+        inline fn invCdf(self: Self, u: T) T {
+            const e1 = self.exponent_minus_one;
+            if (e1 == 2) return 1 / @sqrt(u);
+            if (e1 == 1) return 1 / u;
+            if (e1 == 0.5) return 1 / (u * u);
+            if (e1 == 3) return 1 / std.math.cbrt(u);
+            if (e1 == 0.25) {
+                const root = @sqrt(u);
+                return 1 / (root * root);
+            }
+            return std.math.pow(T, u, self.neg_inv_exponent_minus_one);
+        }
+
+        inline fn correction(self: Self, base: T) T {
+            const e1 = self.exponent_minus_one;
+            if (e1 == 2) return base * base;
+            if (e1 == 1) return base;
+            if (e1 == 0.5) return @sqrt(base);
+            if (e1 == 3) return base * base * base;
+            if (e1 == 1.5) return base * @sqrt(base);
+            return std.math.pow(T, base, e1);
         }
 
         fn isDegenerate(self: Self) bool {
