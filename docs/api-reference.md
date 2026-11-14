@@ -3579,6 +3579,10 @@ Reusable samplers:
 - `Wishart(T).sampleIntoFrom`
 - `Wishart(T).sampleIntoChecked`
 - `Wishart(T).sampleIntoCheckedFrom`
+- `Wishart(T).sampleManyInto`
+- `Wishart(T).sampleManyIntoFrom`
+- `Wishart(T).sampleManyIntoChecked`
+- `Wishart(T).sampleManyIntoCheckedFrom`
 - `InverseWishart(T)`
 - `InverseWishart(T).init`
 - `InverseWishart(T).new`
@@ -3596,6 +3600,10 @@ Reusable samplers:
 - `InverseWishart(T).sampleIntoFrom`
 - `InverseWishart(T).sampleIntoChecked`
 - `InverseWishart(T).sampleIntoCheckedFrom`
+- `InverseWishart(T).sampleManyInto`
+- `InverseWishart(T).sampleManyIntoFrom`
+- `InverseWishart(T).sampleManyIntoChecked`
+- `InverseWishart(T).sampleManyIntoCheckedFrom`
 - `StaticWishart(T, dimension)`
 - `StaticWishart(T, dimension).init`
 - `StaticWishart(T, dimension).new`
@@ -3606,6 +3614,8 @@ Reusable samplers:
 - `StaticWishart(T, dimension).modeValue`
 - `StaticWishart(T, dimension).sample`
 - `StaticWishart(T, dimension).sampleFrom`
+- `StaticWishart(T, dimension).sampleManyInto`
+- `StaticWishart(T, dimension).sampleManyIntoFrom`
 - `StaticInverseWishart(T, dimension)`
 - `StaticInverseWishart(T, dimension).init`
 - `StaticInverseWishart(T, dimension).new`
@@ -3615,6 +3625,8 @@ Reusable samplers:
 - `StaticInverseWishart(T, dimension).expectedValue`
 - `StaticInverseWishart(T, dimension).sample`
 - `StaticInverseWishart(T, dimension).sampleFrom`
+- `StaticInverseWishart(T, dimension).sampleManyInto`
+- `StaticInverseWishart(T, dimension).sampleManyIntoFrom`
 - `MatrixNormal(T)`
 - `multi.MatrixNormal(T)`
 - `MatrixNormal(T).init`

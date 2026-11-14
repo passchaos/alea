@@ -33495,6 +33495,14 @@ pub fn StaticWishart(comptime T: type, comptime dim: usize) type {
 
             return X;
         }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []Matrix) void {
+            for (out) |*item| item.* = self.sampleFrom(rng);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []Matrix) void {
+            for (out) |*item| item.* = self.sampleFrom(source);
+        }
     };
 }
 
@@ -33655,6 +33663,14 @@ pub fn StaticInverseWishart(comptime T: type, comptime dim: usize) type {
             const X = self.wishart.sampleFrom(source);
             // Invert X by Cholesky to get the covariance matrix draw.
             return choleskyInvertMatrix(T, dim, X);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []Matrix) void {
+            for (out) |*item| item.* = self.sampleFrom(rng);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []Matrix) void {
+            for (out) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -34021,6 +34037,34 @@ pub fn Wishart(comptime T: type) type {
             self.sampleIntoUnchecked(source, out);
         }
 
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len % (self.dim * self.dim) == 0);
+            self.sampleManyIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len % (self.dim * self.dim) == 0);
+            self.sampleManyIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len % (self.dim * self.dim) != 0) return error.InvalidLength;
+            self.sampleManyIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleManyIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len % (self.dim * self.dim) != 0) return error.InvalidLength;
+            self.sampleManyIntoUnchecked(source, out);
+        }
+
+        fn sampleManyIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            const sample_len = self.dim * self.dim;
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += sample_len) {
+                self.sampleIntoUnchecked(source, out[offset..][0..sample_len]);
+            }
+        }
+
         fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
             const dim = self.dim;
             const A = self.scratch_A;
@@ -34221,6 +34265,34 @@ pub fn InverseWishart(comptime T: type) type {
         pub fn sampleIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
             if (out.len != self.dim * self.dim) return error.InvalidLength;
             self.sampleIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyInto(self: Self, rng: Rng, out: []T) void {
+            std.debug.assert(out.len % (self.dim * self.dim) == 0);
+            self.sampleManyIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleManyIntoFrom(self: Self, source: anytype, out: []T) void {
+            std.debug.assert(out.len % (self.dim * self.dim) == 0);
+            self.sampleManyIntoUnchecked(source, out);
+        }
+
+        pub fn sampleManyIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
+            if (out.len % (self.dim * self.dim) != 0) return error.InvalidLength;
+            self.sampleManyIntoUnchecked(rng, out);
+        }
+
+        pub fn sampleManyIntoCheckedFrom(self: Self, source: anytype, out: []T) Error!void {
+            if (out.len % (self.dim * self.dim) != 0) return error.InvalidLength;
+            self.sampleManyIntoUnchecked(source, out);
+        }
+
+        fn sampleManyIntoUnchecked(self: Self, source: anytype, out: []T) void {
+            const sample_len = self.dim * self.dim;
+            var offset: usize = 0;
+            while (offset < out.len) : (offset += sample_len) {
+                self.sampleIntoUnchecked(source, out[offset..][0..sample_len]);
+            }
         }
 
         fn sampleIntoUnchecked(self: Self, source: anytype, out: []T) void {
@@ -66247,6 +66319,102 @@ test "InverseWishart (dynamic) samples are PD and mean matches formula" {
     // Monte Carlo mean
     try std.testing.expectApproxEqAbs(2 / denom, sum[0] / @as(f64, n), 0.3 * (2 / denom) + 0.05);
     try std.testing.expectApproxEqAbs(@as(f64, 0), sum[1] / @as(f64, n), 0.1);
+}
+
+test "Wishart batch sampling matches repeated draws and validates lengths" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+
+    const V = [_]f64{ 2, 0.5, 0.5, 1 };
+    var w = try Wishart(f64).init(allocator, &V, 6);
+    defer w.deinit();
+    var iw = try InverseWishart(f64).init(allocator, &V, 10);
+    defer iw.deinit();
+
+    // Dynamic flat batches must match consecutive single draws from an
+    // identically seeded source and leave the source in the same state.
+    {
+        var batch_engine = alea.DefaultPrng.init(0x9a32);
+        var single_engine = alea.DefaultPrng.init(0x9a32);
+        var batch: [12]f64 = undefined;
+        w.sampleManyIntoFrom(&batch_engine, &batch);
+        var expected: [12]f64 = undefined;
+        for (0..3) |k| w.sampleIntoFrom(&single_engine, expected[k * 4 ..][0..4]);
+        try std.testing.expectEqualSlices(f64, &expected, &batch);
+        try std.testing.expectEqual(single_engine.next(), batch_engine.next());
+    }
+    {
+        var batch_engine = alea.DefaultPrng.init(0x9a33);
+        var single_engine = alea.DefaultPrng.init(0x9a33);
+        var batch: [12]f64 = undefined;
+        iw.sampleManyIntoFrom(&batch_engine, &batch);
+        var expected: [12]f64 = undefined;
+        for (0..3) |k| iw.sampleIntoFrom(&single_engine, expected[k * 4 ..][0..4]);
+        try std.testing.expectEqualSlices(f64, &expected, &batch);
+        try std.testing.expectEqual(single_engine.next(), batch_engine.next());
+    }
+
+    // Checked batches reject non-multiples of dim*dim and accept multiples.
+    var engine = alea.DefaultPrng.init(0x9a34);
+    const rng = Rng.init(&engine);
+    var bad: [5]f64 = undefined;
+    try std.testing.expectError(error.InvalidLength, w.sampleManyIntoChecked(rng, &bad));
+    try std.testing.expectError(error.InvalidLength, iw.sampleManyIntoChecked(rng, &bad));
+    var good: [8]f64 = undefined;
+    try w.sampleManyIntoChecked(rng, &good);
+    try iw.sampleManyIntoChecked(rng, &good);
+
+    // Empty batches do not consume randomness.
+    {
+        var empty_engine = alea.DefaultPrng.init(0x9a35);
+        var control = alea.DefaultPrng.init(0x9a35);
+        var empty: [0]f64 = .{};
+        w.sampleManyIntoFrom(&empty_engine, &empty);
+        iw.sampleManyIntoFrom(&empty_engine, &empty);
+        try std.testing.expectEqual(control.next(), empty_engine.next());
+    }
+
+    // Static batch fills match repeated static draws.
+    {
+        const V2 = [2][2]f64{ .{ 2, 0.5 }, .{ 0.5, 1 } };
+        const sw = try StaticWishart(f64, 2).init(V2, 6);
+        const siw = try StaticInverseWishart(f64, 2).init(V2, 10);
+        var batch_engine = alea.DefaultPrng.init(0x9a36);
+        var single_engine = alea.DefaultPrng.init(0x9a36);
+        var batch: [3][2][2]f64 = undefined;
+        sw.sampleManyIntoFrom(&batch_engine, &batch);
+        for (0..3) |k| {
+            const one = sw.sampleFrom(&single_engine);
+            for (0..2) |row| {
+                for (0..2) |col| try std.testing.expectEqual(one[row][col], batch[k][row][col]);
+            }
+        }
+        try std.testing.expectEqual(single_engine.next(), batch_engine.next());
+
+        var iw_batch_engine = alea.DefaultPrng.init(0x9a37);
+        var iw_single_engine = alea.DefaultPrng.init(0x9a37);
+        var iw_batch: [3][2][2]f64 = undefined;
+        siw.sampleManyIntoFrom(&iw_batch_engine, &iw_batch);
+        for (0..3) |k| {
+            const one = siw.sampleFrom(&iw_single_engine);
+            for (0..2) |row| {
+                for (0..2) |col| try std.testing.expectEqual(one[row][col], iw_batch[k][row][col]);
+            }
+        }
+        try std.testing.expectEqual(iw_single_engine.next(), iw_batch_engine.next());
+    }
+
+    // f32 dynamic batch support.
+    const Vf = [_]f32{ 2, 0.5, 0.5, 1 };
+    var wf = try Wishart(f32).init(allocator, &Vf, 6);
+    defer wf.deinit();
+    var f32_batch: [8]f32 = undefined;
+    wf.sampleManyInto(rng, &f32_batch);
+    for (0..2) |k| {
+        const block = f32_batch[k * 4 ..][0..4];
+        try std.testing.expect(block[0] > 0 and block[3] > 0);
+        try std.testing.expect(block[0] * block[3] - block[1] * block[2] > 0);
+    }
 }
 
 test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
