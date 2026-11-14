@@ -7052,5 +7052,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1520-validate-all-refresh.md`, and
 `compare/results/s4-m1521-heavy-tail-mean-gates.md`, and
 `compare/results/s4-m1522-validate-all-refresh.md`, and
-`compare/results/s4-m1523-beta-cf-iteration-cap.md`.
+`compare/results/s4-m1523-beta-cf-iteration-cap.md`, and
+`compare/results/s4-m1524-validate-all-refresh.md`.
 
