@@ -559,7 +559,16 @@ CDF and quantile helpers complement the samplers:
   exact closed forms for `a = 1` and `b = 1`, switches to a normal
   approximation with the first Edgeworth correction once `a + b ≥ 1e7` (the
   continued fraction overflows there), and keeps the continued fraction
-  elsewhere.
+  elsewhere. The normal fallback computes its mean, variance, and skew from
+  normalized probabilities `a/(a+b)` and `b/(a+b)`, so huge finite shapes
+  (`a = b = 1e300`, where `a·b` and `a + b` overflow) stay finite and an
+  overflowing shape sum degenerates to a point mass at `a/(a+b)`; the `Beta`,
+  `BetaPrime`, `BetaBinomial`, `FisherF`, `InverseGamma`, `InverseGaussian`,
+  and `Dirichlet` moment helpers use the same scaled forms, so their
+  `varianceValue`/`varianceAt` results stay finite where the direct products
+  overflow. The `Beta` sampler's infinite-shape behavior remains the local
+  `rand_distr`-compatible NaN/point-mass contract documented by its stream
+  test.
 - gamma family: `gammaIncompleteP`, `gammaIncompleteQ`, `gammaCdf`,
   `gammaQuantile`, `chiSquaredCdf`, `chiSquaredQuantile`, `chiCdf`,
   `chiQuantile`, `erlangCdf`, `erlangQuantile`, `maxwellCdf`,

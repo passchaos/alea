@@ -443,11 +443,16 @@ pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
 
     const sum = a + b;
     if (sum >= 1.0e7) {
-        const mean = a / sum;
-        const variance = a * b / (sum * sum * (sum + 1));
-        const sd = @sqrt(variance);
-        const z = (x - mean) / sd;
-        const skew = 2 * (b - a) * @sqrt(sum + 1) / ((sum + 2) * @sqrt(a * b));
+        // The direct `a·b / (sum²·(sum+1))` variance and `sqrt(a·b)` skew
+        // overflow for huge finite shapes (a = b = 1e300), and an overflowing
+        // `a + b` degenerates to a point mass at `a / (a + b)`. Work in
+        // normalized probabilities so both extremes stay finite.
+        const p = if (std.math.isFinite(sum)) a / sum else 1 / (1 + b / a);
+        const q = 1 - p;
+        const sd = @sqrt(p * q / (sum + 1));
+        if (!(sd > 0)) return if (x < p) 0 else if (x > p) 1 else 0.5;
+        const z = (x - p) / sd;
+        const skew = 2 * (q - p) * @sqrt(sum + 1) / ((sum + 2) * @sqrt(p * q));
         const corrected = normCdf(z) + skew / 6 * (1 - z * z) * normPdf(z);
         return std.math.clamp(corrected, 0, 1);
     }
@@ -14176,8 +14181,10 @@ pub fn InverseGamma(comptime T: type) type {
         /// Returns +inf for α ≤ 2.
         pub fn varianceValue(self: Self) T {
             if (self.shape <= 2) return std.math.inf(T);
-            const a_minus_1 = self.shape - 1;
-            return (self.scale * self.scale) / (a_minus_1 * a_minus_1 * (self.shape - 2));
+            // `mean²/(α − 2)` with `mean = β/(α − 1)` avoids the overflowing
+            // `β²` numerator for huge scales.
+            const mean = self.scale / (self.shape - 1);
+            return mean * mean / (self.shape - 2);
         }
 
         /// Mode: β/(α+1), defined for all α > 0.
@@ -22463,12 +22470,22 @@ pub fn Beta(comptime T: type) type {
         }
 
         pub fn expectedValue(self: Self) T {
-            return self.alpha / (self.alpha + self.beta_param);
+            const total = self.alpha + self.beta_param;
+            if (std.math.isFinite(total)) return self.alpha / total;
+            if (self.alpha == std.math.inf(T) or self.beta_param == std.math.inf(T)) return std.math.nan(T);
+            // Finite shapes whose sum overflows f64: normalize by the ratio.
+            return 1 / (1 + self.beta_param / self.alpha);
         }
 
         pub fn varianceValue(self: Self) T {
+            if (self.alpha == std.math.inf(T) or self.beta_param == std.math.inf(T)) return std.math.nan(T);
             const total = self.alpha + self.beta_param;
-            return self.alpha * self.beta_param / (total * total * (total + 1));
+            if (std.math.isFinite(total)) {
+                return (self.alpha / total) * (self.beta_param / total) / (total + 1);
+            }
+            // `total` overflows: `p·q/(a+b) = p²·q/a` with `p = a/(a+b)`.
+            const p = 1 / (1 + self.beta_param / self.alpha);
+            return p * p * (1 - p) / self.alpha;
         }
 
         pub fn modeValue(self: Self) ?T {
@@ -22845,9 +22862,9 @@ pub fn BetaPrime(comptime T: type) type {
         /// Variance α(α+β−1)/((β−2)(β−1)²), or null for β ≤ 2.
         pub fn varianceValue(self: Self) ?T {
             if (self.beta_param <= 2) return null;
-            const a = self.alpha;
-            const b = self.beta_param;
-            return a * (a + b - 1) / ((b - 2) * (b - 1) * (b - 1));
+            // `m·(1 + m)/(β − 2)` with `m = α/(β − 1)` keeps huge shapes finite.
+            const mean = self.alpha / (self.beta_param - 1);
+            return mean * (1 + mean) / (self.beta_param - 2);
         }
 
         /// Mode (α−1)/(β+1) for α > 1, otherwise 0.
@@ -23094,7 +23111,9 @@ pub const BetaBinomial = struct {
 
     pub fn expectedValue(self: BetaBinomial) f64 {
         const n = @as(f64, @floatFromInt(self.trials));
-        return n * self.alpha / (self.alpha + self.beta_param);
+        const sum = self.alpha + self.beta_param;
+        const p = if (std.math.isFinite(sum)) self.alpha / sum else 1 / (1 + self.beta_param / self.alpha);
+        return n * p;
     }
 
     pub fn varianceValue(self: BetaBinomial) f64 {
@@ -23102,7 +23121,11 @@ pub const BetaBinomial = struct {
         const a = self.alpha;
         const b = self.beta_param;
         const sum = a + b;
-        return n * a * b * (sum + n) / (sum * sum * (sum + 1));
+        const p = if (std.math.isFinite(sum)) a / sum else 1 / (1 + b / a);
+        // `(sum + n)/(sum + 1) = 1 + (n − 1)/(sum + 1)` stays O(1) even when
+        // the shape sum or `sum + n` overflows.
+        const factor = 1 + (n - 1) / (sum + 1);
+        return n * p * (1 - p) * factor;
     }
 
     pub fn minValue(_: BetaBinomial) u64 {
@@ -23435,9 +23458,11 @@ pub fn FisherF(comptime T: type) type {
         pub fn varianceValue(self: Self) ?T {
             if (self.hasInfiniteDof()) return null;
             if (self.d2 <= 4) return null;
-            const numerator = 2 * self.d2 * self.d2 * (self.d1 + self.d2 - 2);
-            const denominator = self.d1 * (self.d2 - 2) * (self.d2 - 2) * (self.d2 - 4);
-            return numerator / denominator;
+            // `2·m²·(1 + (d2 − 2)/d1)/(d2 − 4)` with `m = d2/(d2 − 2)`
+            // avoids the overflowing `d2²·(d1 + d2)` numerator.
+            const m = self.d2 / (self.d2 - 2);
+            const ratio = 1 / (self.d2 - 4) + (1 / self.d1) * ((self.d2 - 2) / (self.d2 - 4));
+            return 2 * m * m * ratio;
         }
 
         pub fn minValue(_: Self) T {
@@ -29726,7 +29751,9 @@ pub fn InverseGaussian(comptime T: type) type {
         }
 
         pub fn varianceValue(self: Self) T {
-            return self.mean_squared * self.mean / self.shape;
+            // `μ³/λ` evaluated as `(μ/λ)·μ²` so the intermediate stays finite
+            // for huge means.
+            return (self.mean / self.shape) * self.mean * self.mean;
         }
 
         pub fn minValue(self: Self) T {
@@ -32395,7 +32422,10 @@ pub fn Dirichlet(comptime T: type) type {
         pub fn meanAt(self: Self, index: usize) Error!T {
             _ = try self.alphaAt(index);
             if (self.degenerateIndex()) |degenerate| return if (index == degenerate) 1 else 0;
-            return self.alpha[index] / self.totalAlphaValue();
+            const alpha_0 = self.totalAlphaValue();
+            if (std.math.isFinite(alpha_0)) return self.alpha[index] / alpha_0;
+            const scaled = self.overflowScale();
+            return (self.alpha[index] / scaled.scale) / scaled.sum;
         }
 
         pub fn means(self: Self, allocator: std.mem.Allocator) ![]T {
@@ -32413,14 +32443,36 @@ pub fn Dirichlet(comptime T: type) type {
                 return;
             }
             const alpha_0 = self.totalAlphaValue();
-            for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i / alpha_0;
+            if (std.math.isFinite(alpha_0)) {
+                for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i / alpha_0;
+                return;
+            }
+            const scaled = self.overflowScale();
+            for (self.alpha, out) |alpha_i, *slot| slot.* = (alpha_i / scaled.scale) / scaled.sum;
+        }
+
+        /// Rescaled alpha statistics for finite shapes whose sum overflows
+        /// f64: `sum` is `Σ alpha/scale` and stays in `[1, len]`.
+        fn overflowScale(self: Self) struct { scale: T, sum: T } {
+            var scale: T = 0;
+            for (self.alpha) |value| scale = @max(scale, value);
+            var sum: T = 0;
+            if (scale > 0) {
+                for (self.alpha) |value| sum += value / scale;
+            }
+            return .{ .scale = scale, .sum = sum };
         }
 
         pub fn varianceAt(self: Self, index: usize) Error!T {
             const alpha_i = try self.alphaAt(index);
             if (self.isDegenerate()) return 0;
             const alpha_0 = self.totalAlphaValue();
-            return alpha_i * (alpha_0 - alpha_i) / (alpha_0 * alpha_0 * (alpha_0 + 1));
+            if (std.math.isFinite(alpha_0)) {
+                return alpha_i * (alpha_0 - alpha_i) / (alpha_0 * alpha_0 * (alpha_0 + 1));
+            }
+            const scaled = self.overflowScale();
+            const p = (alpha_i / scaled.scale) / scaled.sum;
+            return p * (1 - p) / scaled.scale / scaled.sum;
         }
 
         pub fn variances(self: Self, allocator: std.mem.Allocator) ![]T {
@@ -32437,8 +32489,16 @@ pub fn Dirichlet(comptime T: type) type {
                 return;
             }
             const alpha_0 = self.totalAlphaValue();
-            const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
-            for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i * (alpha_0 - alpha_i) / denominator;
+            if (std.math.isFinite(alpha_0)) {
+                const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
+                for (self.alpha, out) |alpha_i, *slot| slot.* = alpha_i * (alpha_0 - alpha_i) / denominator;
+                return;
+            }
+            const scaled = self.overflowScale();
+            for (self.alpha, out) |alpha_i, *slot| {
+                const p = (alpha_i / scaled.scale) / scaled.sum;
+                slot.* = p * (1 - p) / scaled.scale / scaled.sum;
+            }
         }
 
         pub fn covarianceAt(self: Self, i: usize, j: usize) Error!T {
@@ -32449,7 +32509,13 @@ pub fn Dirichlet(comptime T: type) type {
             _ = alpha_j;
             if (self.isDegenerate()) return 0;
             const alpha_0 = self.totalAlphaValue();
-            return -(self.alpha[i] * self.alpha[j]) / (alpha_0 * alpha_0 * (alpha_0 + 1));
+            if (std.math.isFinite(alpha_0)) {
+                return -(self.alpha[i] * self.alpha[j]) / (alpha_0 * alpha_0 * (alpha_0 + 1));
+            }
+            const scaled = self.overflowScale();
+            const p_i = (self.alpha[i] / scaled.scale) / scaled.sum;
+            const p_j = (self.alpha[j] / scaled.scale) / scaled.sum;
+            return -p_i * p_j / scaled.scale / scaled.sum;
         }
 
         pub fn covariances(self: Self, allocator: std.mem.Allocator) ![]T {
@@ -32468,14 +32534,23 @@ pub fn Dirichlet(comptime T: type) type {
                 return;
             }
             const alpha_0 = self.totalAlphaValue();
-            const denominator = alpha_0 * alpha_0 * (alpha_0 + 1);
+            const overflow = !std.math.isFinite(alpha_0);
+            const scaled = if (overflow) self.overflowScale() else undefined;
+            const denominator = if (overflow) 0 else alpha_0 * alpha_0 * (alpha_0 + 1);
             var row: usize = 0;
             while (row < self.alpha.len) : (row += 1) {
                 var col: usize = 0;
                 while (col < self.alpha.len) : (col += 1) {
                     const alpha_i = self.alpha[row];
                     const alpha_j = self.alpha[col];
-                    out[row * self.alpha.len + col] = if (row == col)
+                    out[row * self.alpha.len + col] = if (overflow) blk: {
+                        const p_i = (alpha_i / scaled.scale) / scaled.sum;
+                        const p_j = (alpha_j / scaled.scale) / scaled.sum;
+                        break :blk if (row == col)
+                            p_i * (1 - p_i) / scaled.scale / scaled.sum
+                        else
+                            -p_i * p_j / scaled.scale / scaled.sum;
+                    } else if (row == col)
                         alpha_i * (alpha_0 - alpha_i) / denominator
                     else
                         -(alpha_i * alpha_j) / denominator;
@@ -55916,6 +55991,58 @@ test "incomplete gamma and beta stay stable for huge parameters" {
     try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), betaIncomplete(@as(f64, 1e-18), @as(f64, 1), @as(f64, 1e18)), 1e-6);
     try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), negativeBinomialCdf(@as(f64, 1e18), @as(f64, 1), @as(f64, 1e-18)), 1e-6);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5595067), negativeBinomialCdf(@as(f64, 1e18), @as(f64, 5), @as(f64, 5e-18)), 1e-4);
+}
+
+test "beta-family moments and CDFs survive overflowing shapes" {
+    // `a·b`, `sum²`, and `a + b` all overflow at 1e300/1e308; these used to
+    // return NaN from the normal fallback.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(@as(f64, 0.5), @as(f64, 1e300), @as(f64, 1e300)), 1e-9);
+    try std.testing.expectEqual(@as(f64, 0), betaIncomplete(@as(f64, 0.4), @as(f64, 1e300), @as(f64, 1e300)));
+    try std.testing.expectEqual(@as(f64, 1), betaIncomplete(@as(f64, 0.6), @as(f64, 1e300), @as(f64, 1e300)));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaQuantile(@as(f64, 0.5), @as(f64, 1e300), @as(f64, 1e300)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), fisherFCdf(@as(f64, 1), @as(f64, 1e300), @as(f64, 1e300)), 1e-6);
+
+    // Shape sums that overflow f64 degenerate to a step at `a/(a+b)`.
+    try std.testing.expectEqual(@as(f64, 0), betaIncomplete(@as(f64, 0.25), @as(f64, 1e308), @as(f64, 9e307)));
+    try std.testing.expectEqual(@as(f64, 1), betaIncomplete(@as(f64, 0.75), @as(f64, 1e308), @as(f64, 9e307)));
+
+    const beta_dist = try Beta(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), beta_dist.expectedValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25e-301), beta_dist.varianceValue(), 1e-305);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), beta_dist.cdf(0.5), 1e-9);
+
+    const beta_binomial = try BetaBinomial.init(10, 1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 5), beta_binomial.expectedValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5), beta_binomial.varianceValue(), 1e-12);
+
+    // Dirichlet alphas whose total overflows keep normalized means and moments.
+    const alphas = [_]f64{ 1e308, 1e308 };
+    const dirichlet = try Dirichlet(f64).init(&alphas);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), try dirichlet.meanAt(0), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25e-309), try dirichlet.varianceAt(0), 1e-313);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.25e-309), try dirichlet.covarianceAt(0, 1), 1e-313);
+    var means: [2]f64 = undefined;
+    try dirichlet.meansInto(&means);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), means[0], 1e-15);
+    var variances: [2]f64 = undefined;
+    try dirichlet.variancesInto(&variances);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25e-309), variances[0], 1e-313);
+    var covariances: [4]f64 = undefined;
+    try dirichlet.covariancesInto(&covariances);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.25e-309), covariances[0], 1e-313);
+    try std.testing.expectApproxEqAbs(@as(f64, -1.25e-309), covariances[1], 1e-313);
+
+    // Derived beta-family moments share the same overflowing products.
+    const beta_prime = try BetaPrime(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 2e-300), beta_prime.varianceValue().?, 1e-304);
+    const fisher_f = try FisherF(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 4e-300), fisher_f.varianceValue().?, 1e-304);
+    const fisher_f_skewed = try FisherF(f64).init(1e-300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 2e300), fisher_f_skewed.varianceValue().?, 1e296);
+    const inverse_gamma = try InverseGamma(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e-300), inverse_gamma.varianceValue(), 1e-304);
+    const inverse_gaussian = try InverseGaussian(f64).init(1e150, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e150), inverse_gaussian.varianceValue(), 1e146);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
