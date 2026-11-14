@@ -252,8 +252,10 @@ pub fn main(init: std.process.Init) !void {
     try benchBinomialFraction(io, stdout, "alea binomial 3/8", bytes / 64, 0.375);
     try benchBinomialFraction(io, stdout, "alea binomial 1/16", bytes / 64, 0.0625);
     try benchFillBinomial(io, stdout, "alea fillBinomial", bytes / 64);
-    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial large", bytes / 256, false);
-    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial large scalar direct", bytes / 256, true);
+    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial large", bytes / 256, false, &runtime_binomial_trials, &runtime_binomial_p);
+    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial large scalar direct", bytes / 256, true, &runtime_binomial_trials, &runtime_binomial_p);
+    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial mean-12", bytes / 256, false, &runtime_binomial_mean12_trials, &runtime_binomial_mean12_p);
+    try benchFillBinomialRuntime(io, stdout, "alea fillBinomial mean-12 scalar direct", bytes / 256, true, &runtime_binomial_mean12_trials, &runtime_binomial_mean12_p);
     try benchFillBinomialScalar(io, stdout, "alea fillBinomial scalar direct", bytes / 64);
     try benchBinomialLarge(io, stdout, "alea binomial large", bytes / 256);
     try benchBinomialMean12(io, stdout, "alea binomial mean-12", bytes / 256);
@@ -5393,10 +5395,18 @@ fn benchFillBinomial(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn benchFillBinomialRuntime(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, direct: bool) !void {
+fn benchFillBinomialRuntime(
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    direct: bool,
+    trials_ptr: *u64,
+    p_ptr: *f64,
+) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
-    const trials_value = @volatileCast(&runtime_binomial_trials).*;
-    const p_value = @volatileCast(&runtime_binomial_p).*;
+    const trials_value = @volatileCast(trials_ptr).*;
+    const p_value = @volatileCast(p_ptr).*;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
     var out: [4096]u64 = undefined;

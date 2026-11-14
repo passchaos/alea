@@ -5388,6 +5388,7 @@ pub const Binomial = struct {
             return;
         }
         if (binomialFillHinFrom(self, rng, dest)) return;
+        if (binomialFillInversionFrom(self, rng, dest)) return;
         for (dest) |*item| {
             item.* = binomialDyadicTryFrom(rng, self.trials, self.p) orelse binomialFrom(rng, self.trials, self.p);
         }
@@ -5403,6 +5404,7 @@ pub const Binomial = struct {
             return;
         }
         if (binomialFillHinFrom(self, source, dest)) return;
+        if (binomialFillInversionFrom(self, source, dest)) return;
         for (dest) |*item| {
             item.* = binomialDyadicTryFrom(source, self.trials, self.p) orelse binomialFrom(source, self.trials, self.p);
         }
@@ -9687,13 +9689,10 @@ pub const CachedBinomial = struct {
 /// the end of the production declarations so the shared `binomialFrom`
 /// layout stays small for beta-binomial/multinomial callers; `CachedBinomial`
 /// precomputes the same `px0`/`ratio` pair.
-fn binomialInversionWalkFrom(source: anytype, trials: u64, p: f64) u64 {
+fn binomialInversionDrawFrom(source: anytype, trials: u64, px0: f64, ratio: f64) u64 {
     const nf: f64 = @floatFromInt(trials);
     var u = Rng.floatFrom(source, f64);
-    // `log1p` keeps `(1 − p)^n` accurate when `p` is tiny and `1 − p` rounds
-    // to one.
-    var px = @exp(nf * std.math.log1p(-p));
-    const ratio = p / (1.0 - p);
+    var px = px0;
     var k: u64 = 0;
     while (k < trials) : (k += 1) {
         if (u < px) return k;
@@ -9702,6 +9701,32 @@ fn binomialInversionWalkFrom(source: anytype, trials: u64, p: f64) u64 {
         px *= (nf - kf) / (kf + 1.0) * ratio;
     }
     return trials;
+}
+
+fn binomialInversionWalkFrom(source: anytype, trials: u64, p: f64) u64 {
+    const nf: f64 = @floatFromInt(trials);
+    // `log1p` keeps `(1 − p)^n` accurate when `p` is tiny and `1 − p` rounds
+    // to one.
+    return binomialInversionDrawFrom(source, trials, @exp(nf * std.math.log1p(-p)), p / (1.0 - p));
+}
+
+/// Fill small-mean (`mean < 16`) draws through one precomputed PMF walk, so
+/// runtime-parameter fills do not recompute `(1 − p)^n` per element. Returns
+/// false outside that region so the caller keeps the generic loop.
+fn binomialFillInversionFrom(self: Binomial, source: anytype, dest: []u64) bool {
+    if (self.trials <= 64) return false;
+    const flip = self.p > 0.5;
+    const folded = if (flip) 1.0 - self.p else self.p;
+    if (!(folded > 0)) return false;
+    const nf: f64 = @floatFromInt(self.trials);
+    if (!(nf * folded < binomial_hin_min_mean)) return false;
+    const px0 = @exp(nf * std.math.log1p(-folded));
+    const ratio = folded / (1.0 - folded);
+    for (dest) |*item| {
+        const sampled = binomialInversionDrawFrom(source, self.trials, px0, ratio);
+        item.* = if (flip) self.trials - sampled else sampled;
+    }
+    return true;
 }
 
 /// Fill through one HIN setup when the parameters hit the rejection region.
