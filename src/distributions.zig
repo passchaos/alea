@@ -32738,7 +32738,7 @@ pub fn Dirichlet(comptime T: type) type {
                 total += value;
             }
 
-            for (out) |*value| value.* /= total;
+            self.normalizeGammaDraws(out, total);
         }
 
         pub fn sampleIntoChecked(self: Self, rng: Rng, out: []T) Error!void {
@@ -32819,7 +32819,29 @@ pub fn Dirichlet(comptime T: type) type {
                 total += value;
             }
 
-            for (out) |*value| value.* /= total;
+            self.normalizeGammaDraws(out, total);
+        }
+
+        /// Normalize gamma draws in place. When the draws sum past `f64` max
+        /// (huge alpha parameters), rescale by the largest draw first so the
+        /// weights stay meaningful instead of collapsing to zero.
+        fn normalizeGammaDraws(_: Self, out: []T, total: T) void {
+            if (std.math.isFinite(total)) {
+                for (out) |*value| value.* /= total;
+                return;
+            }
+            var scale: T = 0;
+            for (out) |value| scale = @max(scale, value);
+            if (!(scale > 0) or !std.math.isFinite(scale)) {
+                for (out) |*value| value.* /= total;
+                return;
+            }
+            var scaled_total: T = 0;
+            for (out) |*value| {
+                value.* /= scale;
+                scaled_total += value.*;
+            }
+            for (out) |*value| value.* /= scaled_total;
         }
 
         fn isDegenerate(self: Self) bool {
@@ -59851,6 +59873,35 @@ test "tiny-shape dirichlet beta stick-breaking avoids gamma-ratio NaN like local
     tiny_three_dirichlet.sampleManyIntoFrom(&engine, &many_tiny);
     try Check.simplex(many_tiny[0..3]);
     try Check.simplex(many_tiny[3..6]);
+}
+
+test "huge-alpha dirichlet sampling normalizes overflowing gamma draws" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d163);
+    const rng = Rng.init(&engine);
+
+    const huge_dirichlet = try Dirichlet(f64).init(&.{ 1e308, 1e308 });
+    var out: [2]f64 = undefined;
+    huge_dirichlet.sampleInto(rng, &out);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), out[0], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), out[1], 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), out[0] + out[1], 1e-12);
+
+    huge_dirichlet.sampleIntoFrom(&engine, &out);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), out[0] + out[1], 1e-12);
+
+    var many: [6]f64 = undefined;
+    huge_dirichlet.sampleManyIntoFrom(&engine, &many);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), many[0] + many[1], 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), many[4] + many[5], 1e-12);
+
+    // A finite total keeps the exact gamma-ratio normalization.
+    const finite_dirichlet = try Dirichlet(f64).init(&.{ 2, 3, 5 });
+    var finite_out: [3]f64 = undefined;
+    finite_dirichlet.sampleIntoFrom(&engine, &finite_out);
+    var total: f64 = 0;
+    for (finite_out) |value| total += value;
+    try std.testing.expectApproxEqAbs(@as(f64, 1), total, 1e-12);
 }
 
 test "multivariate samplers preserve direct stream shape" {

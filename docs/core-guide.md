@@ -621,7 +621,9 @@ CDF and quantile helpers complement the samplers:
   `gammaQuantile`/`betaQuantile` lower tails refine in log space when the
   linear bisection leaves `lo = 0`, so tiny-shape quantiles (e.g. shape
   `1e-3`) resolve below the `~1e-14`/`~1e-30` linear floors instead of being
-  pinned there.
+  pinned there. `Dirichlet` sampling rescales the gamma draws by the largest
+  draw when their total overflows f64, so huge alpha vectors keep meaningful
+  normalized weights; the finite-total path is unchanged.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
