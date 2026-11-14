@@ -975,11 +975,11 @@ fn checkContinuous() !void {
             return alea.distributions.logistic(r, f64, 0, 1);
         }
     }.sample, -0.05, 0.05);
-    try expectContinuousMean("log-logistic", rng, 20_000, struct {
+    try expectContinuousMean("log-logistic", rng, 100_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.logLogistic(r, f64, 2, 3);
         }
-    }.sample, 2.35, 2.45);
+    }.sample, 2.36, 2.46);
     try expectContinuousMean("kumaraswamy", rng, 20_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.kumaraswamy(r, f64, 2, 5);

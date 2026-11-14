@@ -21437,7 +21437,7 @@ pub fn beta(rng: Rng, comptime T: type, alpha: T, beta_param: T) T {
     if (alpha == 1 and beta_param == 1) return rng.float(T);
     if (alpha == 2 and beta_param == 1) return @sqrt(rng.floatOpen(T));
     if (alpha == 1 and beta_param == 2) return 1 - @sqrt(rng.floatOpen(T));
-    if (beta_param == 1) return std.math.pow(T, rng.floatOpen(T), 1 / alpha);
+    if (beta_param == 1) return @exp(-Rng.standardExponentialFastFrom(rng, T) * (1 / alpha));
     if (betaUsesCheng(T, alpha, beta_param)) return betaChengFrom(rng, T, alpha, beta_param);
     const x = gamma(rng, T, alpha, 1);
     const y = gamma(rng, T, beta_param, 1);
@@ -21462,7 +21462,7 @@ pub fn betaFrom(source: anytype, comptime T: type, alpha: T, beta_param: T) T {
     if (alpha == 1 and beta_param == 1) return Rng.floatFrom(source, T);
     if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
     if (alpha == 1 and beta_param == 2) return 1 - @sqrt(Rng.floatOpenFrom(source, T));
-    if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
+    if (beta_param == 1) return @exp(-Rng.standardExponentialFastFrom(source, T) * (1 / alpha));
 
     if (betaUsesCheng(T, alpha, beta_param)) return betaChengFrom(source, T, alpha, beta_param);
     const x = gammaFrom(source, T, alpha, 1);
@@ -21492,9 +21492,7 @@ pub fn fillBeta(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) 
         return;
     }
     if (beta_param == 1) {
-        rng.fillOpen(T, dest);
-        const inverse_alpha = 1 / alpha;
-        for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
+        for (dest) |*item| item.* = betaFrom(rng, T, alpha, beta_param);
         return;
     }
     if (betaUsesCheng(T, alpha, beta_param)) {
@@ -21528,9 +21526,7 @@ pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta
         return;
     }
     if (beta_param == 1) {
-        Rng.fillOpenFrom(source, T, dest);
-        const inverse_alpha = 1 / alpha;
-        for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
+        for (dest) |*item| item.* = betaFrom(source, T, alpha, beta_param);
         return;
     }
     if (betaUsesCheng(T, alpha, beta_param)) {
@@ -23932,10 +23928,11 @@ pub fn laplaceFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
     if (scale == 0) return location;
 
-    const u = Rng.floatOpenFrom(source, T) - @as(T, 0.5);
-    const one: T = 1;
-    const sign: T = if (u < 0) -1 else 1;
-    return location - scale * sign * @log(one - 2 * @abs(u));
+    // The magnitude `-log(1 − 2|U − 1/2|)` is Exp(1) and independent of the
+    // fair sign, so the ziggurat exponential replaces the log.
+    const e = Rng.standardExponentialFastFrom(source, T);
+    const sign: T = if (Rng.booleanFrom(source)) -1 else 1;
+    return location + scale * sign * e;
 }
 
 pub fn fillLaplace(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) void {
@@ -23949,8 +23946,11 @@ pub fn fillLaplaceFrom(source: anytype, comptime T: type, dest: []T, location: T
         @memset(dest, location);
         return;
     }
-    Rng.fillOpenFrom(source, T, dest);
-    laplaceFromOpenUniforms(T, dest, location, scale);
+    for (dest) |*item| {
+        const e = Rng.standardExponentialFastFrom(source, T);
+        const sign: T = if (Rng.booleanFrom(source)) -1 else 1;
+        item.* = location + scale * sign * e;
+    }
 }
 
 pub fn fillLaplaceChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) Error!void {
@@ -24144,10 +24144,7 @@ pub fn Laplace(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.location;
-            const u = rng.floatOpen(T) - @as(T, 0.5);
-            const one: T = 1;
-            const sign: T = if (u < 0) -1 else 1;
-            return self.location - self.scale * sign * @log(one - 2 * @abs(u));
+            return laplaceFrom(rng, T, self.location, self.scale);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -24155,12 +24152,7 @@ pub fn Laplace(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, self.location);
-                return;
-            }
-            rng.fillOpen(T, dest);
-            laplaceFromOpenUniforms(T, dest, self.location, self.scale);
+            fillLaplaceFrom(rng, T, dest, self.location, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -24783,11 +24775,13 @@ pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
     if (beta_param == std.math.inf(T)) return 0;
 
     if (alpha == 2 and beta_param == 1) return @sqrt(Rng.floatOpenFrom(source, T));
-    if (beta_param == 1) return std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / alpha);
-    if (alpha == 1) return 1 - std.math.pow(T, 1 - Rng.floatOpenFrom(source, T), 1 / beta_param);
+    // U^{1/alpha} = exp(-E/alpha) and (1-U)^{1/beta} = exp(-E/beta) with
+    // E = -log(U) ~ Exp(1); the ziggurat exponential replaces the pow/log.
+    if (beta_param == 1) return @exp(-Rng.standardExponentialFastFrom(source, T) * (1 / alpha));
+    if (alpha == 1) return 1 - @exp(-Rng.standardExponentialFastFrom(source, T) * (1 / beta_param));
 
-    const u = Rng.floatOpenFrom(source, T);
-    return std.math.pow(T, 1 - std.math.pow(T, 1 - u, 1 / beta_param), 1 / alpha);
+    const e = Rng.standardExponentialFastFrom(source, T);
+    return @exp(@log(1 - @exp(-e * (1 / beta_param))) * (1 / alpha));
 }
 
 pub fn fillKumaraswamy(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
@@ -24806,24 +24800,23 @@ pub fn fillKumaraswamyFrom(source: anytype, comptime T: type, dest: []T, alpha: 
         return;
     }
     if (alpha == 2 and beta_param == 1) {
-        Rng.fillOpenFrom(source, T, dest);
-        for (dest) |*item| item.* = @sqrt(item.*);
+        for (dest) |*item| item.* = @sqrt(Rng.floatOpenFrom(source, T));
         return;
     }
+    const inverse_alpha = 1 / alpha;
     if (beta_param == 1) {
-        Rng.fillOpenFrom(source, T, dest);
-        const inverse_alpha = 1 / alpha;
-        for (dest) |*item| item.* = std.math.pow(T, item.*, inverse_alpha);
+        for (dest) |*item| item.* = @exp(-Rng.standardExponentialFastFrom(source, T) * inverse_alpha);
         return;
     }
+    const inverse_beta = 1 / beta_param;
     if (alpha == 1) {
-        Rng.fillOpenFrom(source, T, dest);
-        const inverse_beta = 1 / beta_param;
-        for (dest) |*item| item.* = 1 - std.math.pow(T, 1 - item.*, inverse_beta);
+        for (dest) |*item| item.* = 1 - @exp(-Rng.standardExponentialFastFrom(source, T) * inverse_beta);
         return;
     }
-
-    for (dest) |*item| item.* = kumaraswamyFrom(source, T, alpha, beta_param);
+    for (dest) |*item| {
+        const e = Rng.standardExponentialFastFrom(source, T);
+        item.* = @exp(@log(1 - @exp(-e * inverse_beta)) * inverse_alpha);
+    }
 }
 
 fn kumaraswamyParametersValid(comptime T: type, alpha: T, beta_param: T) bool {
@@ -25086,99 +25079,19 @@ pub fn Kumaraswamy(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            switch (self.method) {
-                .point_zero => return 0,
-                .point_one => return 1,
-                .beta_one_sqrt => return @sqrt(rng.floatOpen(T)),
-                .beta_one => return std.math.pow(T, rng.floatOpen(T), self.inverse_alpha),
-                .alpha_one => return 1 - std.math.pow(T, 1 - rng.floatOpen(T), self.inverse_beta),
-                .generic => {},
-            }
-
-            const u = rng.floatOpen(T);
-            return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
+            return kumaraswamyFrom(rng, T, self.alphaValue(), self.betaValue());
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
-            switch (self.method) {
-                .point_zero => return 0,
-                .point_one => return 1,
-                .beta_one_sqrt => return @sqrt(Rng.floatOpenFrom(source, T)),
-                .beta_one => return std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_alpha),
-                .alpha_one => return 1 - std.math.pow(T, 1 - Rng.floatOpenFrom(source, T), self.inverse_beta),
-                .generic => {},
-            }
-
-            const u = Rng.floatOpenFrom(source, T);
-            return std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
+            return kumaraswamyFrom(source, T, self.alphaValue(), self.betaValue());
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            switch (self.method) {
-                .point_zero => {
-                    @memset(dest, 0);
-                    return;
-                },
-                .point_one => {
-                    @memset(dest, 1);
-                    return;
-                },
-                .beta_one_sqrt => {
-                    rng.fillOpen(T, dest);
-                    for (dest) |*item| item.* = @sqrt(item.*);
-                    return;
-                },
-                .beta_one => {
-                    rng.fillOpen(T, dest);
-                    for (dest) |*item| item.* = std.math.pow(T, item.*, self.inverse_alpha);
-                    return;
-                },
-                .alpha_one => {
-                    rng.fillOpen(T, dest);
-                    for (dest) |*item| item.* = 1 - std.math.pow(T, 1 - item.*, self.inverse_beta);
-                    return;
-                },
-                .generic => {},
-            }
-
-            for (dest) |*item| {
-                const u = rng.floatOpen(T);
-                item.* = std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
-            }
+            fillKumaraswamyFrom(rng, T, dest, self.alphaValue(), self.betaValue());
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
-            switch (self.method) {
-                .point_zero => {
-                    @memset(dest, 0);
-                    return;
-                },
-                .point_one => {
-                    @memset(dest, 1);
-                    return;
-                },
-                .beta_one_sqrt => {
-                    Rng.fillOpenFrom(source, T, dest);
-                    for (dest) |*item| item.* = @sqrt(item.*);
-                    return;
-                },
-                .beta_one => {
-                    Rng.fillOpenFrom(source, T, dest);
-                    for (dest) |*item| item.* = std.math.pow(T, item.*, self.inverse_alpha);
-                    return;
-                },
-                .alpha_one => {
-                    Rng.fillOpenFrom(source, T, dest);
-                    for (dest) |*item| item.* = 1 - std.math.pow(T, 1 - item.*, self.inverse_beta);
-                    return;
-                },
-                .generic => {},
-            }
-
-            for (dest) |*item| {
-                const u = Rng.floatOpenFrom(source, T);
-                item.* = std.math.pow(T, 1 - std.math.pow(T, 1 - u, self.inverse_beta), self.inverse_alpha);
-            }
+            fillKumaraswamyFrom(source, T, dest, self.alphaValue(), self.betaValue());
         }
 
         fn isDegenerate(self: Self) bool {
@@ -25224,7 +25137,8 @@ pub fn powerFunctionFrom(source: anytype, comptime T: type, min: T, max: T, shap
 
     if (shape == 1) return Rng.floatRangeFrom(source, T, min, max);
     if (shape == 2) return min + (max - min) * @sqrt(Rng.floatOpenFrom(source, T));
-    return min + (max - min) * std.math.pow(T, Rng.floatOpenFrom(source, T), 1 / shape);
+    // U^{1/shape} = exp(-E/shape) with E = -log(U) ~ Exp(1).
+    return min + (max - min) * @exp(-Rng.standardExponentialFastFrom(source, T) * (1 / shape));
 }
 
 pub fn fillPowerFunction(rng: Rng, comptime T: type, dest: []T, min: T, max: T, shape: T) void {
@@ -25253,8 +25167,7 @@ pub fn fillPowerFunctionFrom(source: anytype, comptime T: type, dest: []T, min: 
         return;
     }
 
-    Rng.fillOpenFrom(source, T, dest);
-    powerFunctionFromOpenUniforms(T, dest, min, max - min, 1 / shape);
+    for (dest) |*item| item.* = powerFunctionFrom(source, T, min, max, shape);
 }
 
 fn powerFunctionParametersValid(comptime T: type, min: T, max: T, shape: T) bool {
@@ -25519,7 +25432,7 @@ pub fn PowerFunction(comptime T: type) type {
                 .point_max => self.maxValue(),
                 .uniform => rng.floatRange(T, self.min, self.min + self.range),
                 .sqrt => self.min + self.range * @sqrt(rng.floatOpen(T)),
-                .generic => self.min + self.range * std.math.pow(T, rng.floatOpen(T), self.inverse_shape),
+                .generic => self.min + self.range * @exp(-Rng.standardExponentialFastFrom(rng, T) * self.inverse_shape),
             };
         }
 
@@ -25529,7 +25442,7 @@ pub fn PowerFunction(comptime T: type) type {
                 .point_max => self.maxValue(),
                 .uniform => Rng.floatRangeFrom(source, T, self.min, self.min + self.range),
                 .sqrt => self.min + self.range * @sqrt(Rng.floatOpenFrom(source, T)),
-                .generic => self.min + self.range * std.math.pow(T, Rng.floatOpenFrom(source, T), self.inverse_shape),
+                .generic => self.min + self.range * @exp(-Rng.standardExponentialFastFrom(source, T) * self.inverse_shape),
             };
         }
 
@@ -25555,8 +25468,7 @@ pub fn PowerFunction(comptime T: type) type {
                 .generic => {},
             }
 
-            rng.fillOpen(T, dest);
-            powerFunctionFromOpenUniforms(T, dest, self.min, self.range, self.inverse_shape);
+            for (dest) |*item| item.* = self.min + self.range * @exp(-Rng.standardExponentialFastFrom(rng, T) * self.inverse_shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -25581,8 +25493,7 @@ pub fn PowerFunction(comptime T: type) type {
                 .generic => {},
             }
 
-            Rng.fillOpenFrom(source, T, dest);
-            powerFunctionFromOpenUniforms(T, dest, self.min, self.range, self.inverse_shape);
+            for (dest) |*item| item.* = self.min + self.range * @exp(-Rng.standardExponentialFastFrom(source, T) * self.inverse_shape);
         }
 
         fn isDegenerate(self: Self) bool {
@@ -25644,8 +25555,7 @@ pub fn fillRayleighFrom(source: anytype, comptime T: type, dest: []T, scale: T) 
         @memset(dest, 0);
         return;
     }
-    Rng.fillOpenFrom(source, T, dest);
-    rayleighFromOpenUniforms(T, dest, scale);
+    for (dest) |*item| item.* = scale * @sqrt(2 * Rng.standardExponentialFastFrom(source, T));
 }
 
 pub fn fillRayleighChecked(rng: Rng, comptime T: type, dest: []T, scale: T) Error!void {
@@ -25830,12 +25740,7 @@ pub fn Rayleigh(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, 0);
-                return;
-            }
-            rng.fillOpen(T, dest);
-            rayleighFromOpenUniforms(T, dest, self.scale);
+            fillRayleighFrom(rng, T, dest, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -26136,14 +26041,7 @@ pub fn fillParetoFrom(source: anytype, comptime T: type, dest: []T, scale: T, sh
         @memset(dest, scale);
         return;
     }
-    if (shape == 1) {
-        Rng.fillOpenFrom(source, T, dest);
-        for (dest) |*item| item.* = scale / item.*;
-        return;
-    }
-
-    Rng.fillOpenFrom(source, T, dest);
-    paretoFromOpenUniforms(T, dest, scale, 1 / shape);
+    for (dest) |*item| item.* = scale * @exp(Rng.standardExponentialFastFrom(source, T) / shape);
 }
 
 fn paretoParametersValid(comptime T: type, scale: T, shape: T) bool {
@@ -26361,17 +26259,7 @@ pub fn Pareto(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, self.degenerateValue());
-                return;
-            }
-            rng.fillOpen(T, dest);
-            if (self.shape == 1) {
-                for (dest) |*item| item.* = self.scale / item.*;
-                return;
-            }
-
-            paretoFromOpenUniforms(T, dest, self.scale, 1 / self.shape);
+            fillParetoFrom(rng, T, dest, self.scale, self.shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -26437,8 +26325,8 @@ pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, s
         return;
     }
 
-    Rng.fillOpenFrom(source, T, dest);
-    weibullFromOpenUniforms(T, dest, scale, 1 / shape);
+    const inverse_shape = 1 / shape;
+    for (dest) |*item| item.* = scale * @exp(inverse_shape * @log(Rng.standardExponentialFastFrom(source, T)));
 }
 
 fn weibullParametersValid(comptime T: type, scale: T, shape: T) bool {
@@ -26666,17 +26554,7 @@ pub fn Weibull(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, self.degenerateValue());
-                return;
-            }
-            if (self.shape == 1) {
-                for (dest) |*item| item.* = self.scale * rng.standardExponential(T);
-                return;
-            }
-
-            rng.fillOpen(T, dest);
-            weibullFromOpenUniforms(T, dest, self.scale, 1 / self.shape);
+            fillWeibullFrom(rng, T, dest, self.scale, self.shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -26736,8 +26614,7 @@ pub fn fillGumbelFrom(source: anytype, comptime T: type, dest: []T, location: T,
         @memset(dest, location);
         return;
     }
-    Rng.fillOpenClosedFrom(source, T, dest);
-    gumbelFromOpenClosedUniforms(T, dest, location, scale);
+    for (dest) |*item| item.* = location - scale * @log(Rng.standardExponentialFastFrom(source, T));
 }
 
 pub fn fillGumbelChecked(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) Error!void {
@@ -26938,12 +26815,7 @@ pub fn Gumbel(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, self.location);
-                return;
-            }
-            rng.fillOpenClosed(T, dest);
-            gumbelFromOpenClosedUniforms(T, dest, self.location, self.scale);
+            fillGumbelFrom(rng, T, dest, self.location, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -27001,13 +26873,8 @@ pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T
         @memset(dest, location + scale);
         return;
     }
-    Rng.fillOpenClosedFrom(source, T, dest);
-    if (shape == 1) {
-        frechetShapeOneFromOpenClosedUniforms(T, dest, location, scale);
-        return;
-    }
-
-    frechetFromOpenClosedUniforms(T, dest, location, scale, -1 / shape);
+    const negative_inverse_shape = -1 / shape;
+    for (dest) |*item| item.* = location + scale * @exp(negative_inverse_shape * @log(Rng.standardExponentialFastFrom(source, T)));
 }
 
 fn frechetParametersValid(comptime T: type, location: T, scale: T, shape: T) bool {
@@ -27247,17 +27114,7 @@ pub fn Frechet(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, self.degenerateValue());
-                return;
-            }
-            rng.fillOpenClosed(T, dest);
-            if (self.shape == 1) {
-                frechetShapeOneFromOpenClosedUniforms(T, dest, self.location, self.scale);
-                return;
-            }
-
-            frechetFromOpenClosedUniforms(T, dest, self.location, self.scale, -1 / self.shape);
+            fillFrechetFrom(rng, T, dest, self.location, self.scale, self.shape);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -44500,11 +44357,11 @@ test "infinite-scale pareto and weibull helpers preserve transform stream shape"
 
     const Reference = struct {
         fn consumeScalar(source: anytype, comptime T: type) void {
-            _ = Rng.floatOpenFrom(source, T);
+            _ = Rng.standardExponentialFastFrom(source, T);
         }
 
         fn consumeFill(source: anytype, comptime T: type, dest: []T) void {
-            Rng.fillOpenFrom(source, T, dest);
+            for (dest) |*item| item.* = Rng.standardExponentialFastFrom(source, T);
         }
 
         fn consumeVector(source: anytype, comptime VectorType: type) void {
