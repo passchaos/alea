@@ -5985,10 +5985,18 @@ inline fn binomialLogFactorialSmall(x: f64) f64 {
     return binomial_log_factorial[@intFromFloat(x)];
 }
 
+/// Direct Stirling log-factorial for arguments at or above the table range.
+/// Both this form and the shifted `lnOfFactorial` truncate the series at the
+/// same `1/(360x³)` term, so the accuracy is unchanged, but this form needs
+/// one `log` instead of two.
+fn lnOfFactorialLarge(v: f64) f64 {
+    return (v + 0.5) * @log(v) - v + 0.91893853320467274178 + 1.0 / (12.0 * v);
+}
+
 /// General log-factorial with the Stirling fallback for large arguments.
 inline fn binomialLogFactorial(x: f64) f64 {
     if (x < binomial_log_factorial_len) return binomial_log_factorial[@intFromFloat(x)];
-    return lnOfFactorial(x);
+    return lnOfFactorialLarge(x);
 }
 
 /// Precomputed HIN small-p binomial rejection constants. The setup depends
