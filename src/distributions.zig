@@ -5938,9 +5938,14 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
     const one_minus_pa = 1.0 - pa;
     const pi_4 = 0.7853981633974483096156608458198757;
 
-    const d1x = @sqrt(np * one_minus_pa * @log(32.0 * np / (81.0 * pi_4 * one_minus_pa)));
+    // The two envelope cut points share one log: with A = log(32·t/(π/4)) and
+    // L = log(pa/(1−pa)), the first argument is A − log(81) + L and the second
+    // is A − L. Both reduce to the original single-log expressions.
+    const lp1p = @log(pa / one_minus_pa);
+    const shared_log = @log(32.0 * t / pi_4);
+    const d1x = @sqrt(np * one_minus_pa * (shared_log - @log(81.0) + lp1p));
     const d1 = @round(@max(1.0, d1x));
-    const d2x = @sqrt(np * one_minus_pa * @log(32.0 * t * one_minus_pa / (pi_4 * pa)));
+    const d2x = @sqrt(np * one_minus_pa * (shared_log - lp1p));
     const d2 = @round(@max(1.0, d2x));
 
     const sqrt_pi_over_2 = 1.2533141373155002512078826424055226;
@@ -5956,7 +5961,6 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
     const s2s = s2 * s2;
     const s = a123 + 2.0 * s2s / d2 * @exp(-d2 * d2 / (2.0 * s2s));
     const lf = binomialLogFactorial(np) + binomialLogFactorial(t - np);
-    const lp1p = @log(pa / one_minus_pa);
     const q = -@log(1.0 - (p - pa) / one_minus_pa);
 
     return .{
@@ -6038,6 +6042,10 @@ fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: BinomialH
         if (reject) continue;
 
         const x_int: u64 = @intFromFloat(np + x + (1.0 - std.math.floatEps(f64)) / 2.0);
+        // `q == 0` means `p` sits exactly on the `np / trials` grid, so the
+        // waiting tail is deterministically zero and its first exponential
+        // draw cannot change the result.
+        if (setup.q == 0) return x_int;
         return x_int + binomialWaitingFrom(source, setup.trials - x_int, setup.q);
     }
 }
