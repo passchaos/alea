@@ -597,8 +597,10 @@ CDF and quantile helpers complement the samplers:
   fold `p > 0.5` onto the lower tail of `1 − p`, use the Poisson limit when
   `n·p² ≤ 1e-6`, use the normal approximation with continuity correction when
   `n·p·(1−p) ≥ 1e7`, and keep the exact incomplete-beta path elsewhere; the
-  quantile bisection indexes `usize`, so `binomialQuantile` returns NaN when
-  `n` exceeds `maxInt(usize)` (relevant on 32-bit targets); the
+  sampler's fair `p = 0.5` path switches to the HIN rejection above 4096
+  trials so huge fair draws stay `O(1)` instead of looping over popcount
+  words; the quantile bisection indexes `usize`, so `binomialQuantile` returns
+  NaN when `n` exceeds `maxInt(usize)` (relevant on 32-bit targets); the
   negative-binomial helper switches to the gamma limit
   `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`, and the sampler switches to the
   exact gamma-Poisson mixture for `r ≥ 2^20` so huge success counts stay

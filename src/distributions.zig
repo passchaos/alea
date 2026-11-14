@@ -4451,7 +4451,11 @@ pub fn binomialFrom(source: anytype, trials: u64, p: f64) u64 {
     std.debug.assert(p >= 0 and p <= 1);
     if (trials == 0 or p == 0) return 0;
     if (p == 1) return trials;
-    if (p == 0.5) return binomialFairFrom(source, trials);
+    if (p == 0.5) {
+        if (trials <= binomial_fair_max_trials) return binomialFairFrom(source, trials);
+        const setup = binomialHinSetupHalf(trials, 0.5).?;
+        return binomialHinDrawFrom(source, trials, &setup);
+    }
 
     const q = if (p <= 0.5) p else 1.0 - p;
     const sampled = binomialSmallPFrom(source, trials, q);
@@ -6029,6 +6033,10 @@ fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
 /// stream for the parameter region.
 const binomial_hin_min_mean = 16.0;
 
+/// Below this trial count the word-popcount fair path beats the HIN rejection
+/// for `p = 0.5`; above it the HIN path avoids a loop linear in `trials`.
+const binomial_fair_max_trials: u64 = 4096;
+
 const DyadicBinomialFields = struct { m: u32, k: u64 };
 
 /// Decompose a dyadic probability `p = k / 2^m` (k odd) into the packed-trial
@@ -6168,7 +6176,18 @@ const BinomialHinSetup = struct {
 /// Build the HIN constants for the rejection path. Returns null when the
 /// caller must use the direct Bernoulli, fair, or waiting-time paths instead.
 fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
-    if (trials <= 64 or !(p > 0) or p >= 0.5) return null;
+    return binomialHinSetupImpl(trials, p, false);
+}
+
+/// HIN setup that also accepts `p = 0.5`; used only for huge fair-binomial
+/// draws where the word-popcount loop would be linear in `trials`.
+fn binomialHinSetupHalf(trials: u64, p: f64) ?BinomialHinSetup {
+    return binomialHinSetupImpl(trials, p, true);
+}
+
+fn binomialHinSetupImpl(trials: u64, p: f64, comptime allow_half: bool) ?BinomialHinSetup {
+    const half_ok = if (allow_half) p <= 0.5 else p < 0.5;
+    if (trials <= 64 or !(p > 0) or !half_ok) return null;
     const t: f64 = @floatFromInt(trials);
     const mean = t * p;
     if (!(mean >= binomial_hin_min_mean)) return null;
@@ -8331,7 +8350,11 @@ pub const CachedBinomial = struct {
             return .{ .trials = trials, .p = p, .flip = false, .method = .{ .constant = trials } };
         }
         if (p == 0.5) {
-            return .{ .trials = trials, .p = p, .flip = false, .method = .fair };
+            if (trials <= binomial_fair_max_trials) {
+                return .{ .trials = trials, .p = p, .flip = false, .method = .fair };
+            }
+            const setup = binomialHinSetupHalf(trials, 0.5).?;
+            return .{ .trials = trials, .p = p, .flip = false, .method = .{ .hin = setup } };
         }
         const flip = p > 0.5;
         const folded = if (flip) 1.0 - p else p;
@@ -8456,7 +8479,10 @@ fn binomialFillHinFrom(self: Binomial, source: anytype, dest: []u64) bool {
     if (self.trials <= 64) return false;
     const flip = self.p > 0.5;
     const folded = if (flip) 1.0 - self.p else self.p;
-    const setup = binomialHinSetup(self.trials, folded) orelse return false;
+    const setup = if (self.p == 0.5) blk: {
+        if (self.trials <= binomial_fair_max_trials) return false;
+        break :blk binomialHinSetupHalf(self.trials, 0.5) orelse return false;
+    } else binomialHinSetup(self.trials, folded) orelse return false;
     for (dest) |*item| {
         const sampled = binomialHinDrawFrom(source, self.trials, &setup);
         item.* = if (flip) self.trials - sampled else sampled;
@@ -54478,6 +54504,30 @@ test "binomial huge-trial tiny-p means stay exact" {
         const mean = @as(f64, @floatFromInt(sum)) / @as(f64, @floatFromInt(draws));
         try std.testing.expect(@abs(mean - case.mean) < case.tolerance);
     }
+}
+
+test "binomial fair path switches to HIN for huge trials" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x5a5a);
+    const rng = Rng.init(&engine);
+
+    const draws = 20_000;
+    var sum: f64 = 0;
+    var i: usize = 0;
+    while (i < draws) : (i += 1) sum += @floatFromInt(binomial(rng, 1_000_000_000, 0.5));
+    try std.testing.expect(@abs(sum / @as(f64, @floatFromInt(draws)) - 5.0e8) < 1.0e4);
+
+    var sum2: f64 = 0;
+    i = 0;
+    while (i < 1_000) : (i += 1) sum2 += @floatFromInt(binomial(rng, 1_000_000_000_000_000_000, 0.5));
+    try std.testing.expect(@abs(sum2 / 1_000.0 - 5.0e17) < 1.0e9);
+
+    const cached = try CachedBinomial.init(1_000_000_000_000_000_000, 0.5);
+    try std.testing.expect(@abs(@as(f64, @floatFromInt(cached.sample(rng))) - 5.0e17) < 5.0e9);
+
+    var buf: [8]u64 = undefined;
+    fillBinomial(rng, &buf, 1_000_000, 0.5);
+    for (buf) |value| try std.testing.expect(value > 490_000 and value < 510_000);
 }
 
 test "cached binomial matches the plain sampler in shared regions" {
