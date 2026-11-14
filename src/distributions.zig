@@ -2821,6 +2821,241 @@ fn noncentralFQuantileImpl(comptime PeerType: type, p: PeerType, d1: PeerType, d
     return @floatCast((lo + hi) / 2);
 }
 
+/// Noncentral t CDF with `dof > 0` degrees of freedom and noncentrality `mu`.
+///
+/// For `mu >= 0`, `t >= 0` the CDF is the positive-term series
+///   F(t) = Φ(−μ) + e^{−μ²/2} Σ_j (μ^j / j!) A_j,
+///   A_j = E[m_j(t√(V/ν))],  m_j(c) = ∫₀^c r^j φ(r) dr,
+/// with `m_j(c) = (j−1)·m_{j−2}(c) − c^{j−1}φ(c)`, `A₀ = ½·I_x(½, ν/2)` and
+/// `x = t²/(t²+ν)`. Every term is nonnegative, so the sum has no cancellation
+/// and is stable for `μ <= 10` (the terms peak near `j ≈ μ²`). The other
+/// quadrants evaluate the exact mixture integral
+///   F(t) = E_V[Φ(t√(V/ν) − μ)],  V ~ χ²_ν,
+/// with adaptive Simpson in the chi scale `s = √(V/ν)`; below one degree of
+/// freedom the substitution `r = s^ν` removes the `s^{ν−1}` endpoint
+/// singularity. Negative `μ` uses the symmetry `F_μ(t) = 1 − F_{−μ}(−t)`;
+/// `dof = ∞` reduces to `Φ(t − μ)` and `μ = 0` delegates to `studentTCdf`.
+pub fn noncentralTCdf(x: anytype, dof: anytype, mu: anytype) resolvedFloatType(@TypeOf(x, dof, mu)) {
+    return noncentralTCdfImpl(resolvedFloatType(@TypeOf(x, dof, mu)), x, dof, mu);
+}
+fn noncentralTCdfImpl(comptime PeerType: type, x: PeerType, dof: PeerType, mu: PeerType) PeerType {
+    const T = @TypeOf(x, dof, mu);
+    comptime requireFloat(T);
+    if (!noncentralTParametersValid(T, dof, mu)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x == std.math.inf(T)) return 1;
+    if (x == -std.math.inf(T)) return 0;
+    return @floatCast(noncentralTCdfF64(@floatCast(x), @floatCast(dof), @floatCast(mu)));
+}
+
+fn noncentralTCdfF64(t: f64, dof: f64, mu: f64) f64 {
+    if (mu == 0) return studentTCdf(t, dof);
+    if (mu < 0) return 1 - noncentralTCdfF64(-t, dof, -mu);
+    if (t == 0) return normCdfScalarF64(-mu);
+    if (dof > 1.0e6) return normCdfScalarF64(t - mu);
+    if (t > 0 and mu <= 10) return noncentralTCdfSeriesF64(t, dof, mu);
+    return noncentralTCdfIntegralF64(t, dof, mu);
+}
+
+/// `Γ(ν/2 + ½) / Γ(ν/2)`, the odd-term gamma ratio of the noncentral-t series.
+/// The lgamma difference cancels above `ν = 2e6`, so the asymptotic
+/// `z^½·(1 − 1/(8z) + 1/(128z²))` takes over.
+fn noncentralTGammaRatioHalfF64(dof: f64) f64 {
+    const z = dof / 2;
+    if (z > 1.0e6) return @sqrt(z) * (1 - 1 / (8 * z) + 1 / (128 * z * z));
+    return @exp(std.math.lgamma(f64, z + 0.5) - std.math.lgamma(f64, z));
+}
+
+fn noncentralTCdfSeriesF64(t: f64, dof: f64, mu: f64) f64 {
+    const nu = dof;
+    const t2 = t * t;
+    var x: f64 = undefined;
+    var log_y: f64 = undefined;
+    if (t2 >= nu) {
+        // `r = ν/t²` keeps both `t²` and `t² + ν` from overflowing.
+        const r = nu / t2;
+        x = 1 / (1 + r);
+        log_y = if (r > 0) @log(r) - std.math.log1p(r) else -std.math.inf(f64);
+    } else {
+        const q = t2 / nu;
+        x = q / (1 + q);
+        log_y = -std.math.log1p(q);
+    }
+
+    const inv_sqrt_2pi_f64: f64 = inv_sqrt_2pi;
+    const a0 = 0.5 * betaIncomplete(x, @as(f64, 0.5), nu / 2);
+    var c_scale: f64 = 0;
+    if (log_y > -745) c_scale = inv_sqrt_2pi_f64 * @exp((nu / 2) * log_y);
+
+    const sqrt_2x = @sqrt(2 * x);
+    // g_j = Γ((ν+j)/2)/Γ(ν/2) · (2x)^{j/2}, advanced two steps at a time.
+    var g_prev2: f64 = 1;
+    var g_prev: f64 = noncentralTGammaRatioHalfF64(nu) * sqrt_2x;
+
+    var weight: f64 = @exp(-0.5 * mu * mu);
+    var sum: f64 = weight * a0;
+    var a_prev2: f64 = a0;
+    var a_prev: f64 = inv_sqrt_2pi_f64 - c_scale;
+    weight *= mu;
+    sum += weight * a_prev;
+
+    const stop_floor = mu * mu + 10 * mu + 20;
+    var j: usize = 2;
+    while (j <= 5000) : (j += 1) {
+        const jf: f64 = @floatFromInt(j);
+        const a_j = (jf - 1) * a_prev2 - c_scale * g_prev;
+        weight *= mu / jf;
+        const term = weight * a_j;
+        sum += term;
+        const g_j = g_prev2 * ((nu + jf - 2) / 2) * (2 * x);
+        g_prev2 = g_prev;
+        g_prev = g_j;
+        a_prev2 = a_prev;
+        a_prev = a_j;
+        if (jf > stop_floor and @abs(term) <= @abs(sum) * 1.0e-17) break;
+        if (weight == 0) break;
+    }
+    return std.math.clamp(normCdfScalarF64(-mu) + sum, 0, 1);
+}
+
+const NoncentralTIntegrand = struct {
+    dof: f64,
+    t: f64,
+    mu: f64,
+    log_c: f64,
+    scale: f64,
+    use_r: bool,
+
+    fn eval(self: NoncentralTIntegrand, v: f64) f64 {
+        var s: f64 = undefined;
+        var log_weight: f64 = undefined;
+        if (self.use_r) {
+            // r = s^ν: the Jacobian cancels the s^{ν−1} endpoint singularity.
+            s = if (v > 0) std.math.pow(f64, v, 1 / self.dof) else 0;
+            log_weight = self.log_c - self.dof * s * s / 2;
+        } else if (v == 0) {
+            // s^{ν−1} vanishes at the origin for ν > 1; ν = 1 is finite.
+            if (self.dof > 1) return 0;
+            s = 0;
+            log_weight = self.log_c;
+        } else {
+            s = v;
+            log_weight = self.log_c + (self.dof - 1) * @log(s) - self.dof * s * s / 2;
+        }
+        if (log_weight < -745) return 0;
+        return @exp(log_weight) * normCdfScalarF64(self.t * s - self.mu) * self.scale;
+    }
+};
+
+fn noncentralTSimpson(a: f64, b: f64, fa: f64, fm: f64, fb: f64) f64 {
+    return (b - a) * (fa + 4 * fm + fb) / 6;
+}
+
+fn noncentralTAdaptiveSimpson(f: NoncentralTIntegrand, a: f64, b: f64, fa: f64, fm: f64, fb: f64, whole: f64, eps: f64, depth: u8) f64 {
+    const m = (a + b) / 2;
+    const lm = (a + m) / 2;
+    const rm = (m + b) / 2;
+    const flm = f.eval(lm);
+    const frm = f.eval(rm);
+    const left = noncentralTSimpson(a, m, fa, flm, fm);
+    const right = noncentralTSimpson(m, b, fm, frm, fb);
+    const delta = left + right - whole;
+    if (depth == 0 or @abs(delta) <= 15 * eps) return left + right + delta / 15;
+    return noncentralTAdaptiveSimpson(f, a, m, fa, flm, fm, left, eps / 2, depth - 1) +
+        noncentralTAdaptiveSimpson(f, m, b, fm, frm, fb, right, eps / 2, depth - 1);
+}
+
+fn noncentralTCdfIntegralF64(t: f64, dof: f64, mu: f64) f64 {
+    const alpha = dof / 2;
+    const use_r = dof < 1;
+    var log_c = @log(2.0) + alpha * @log(dof / 2) - std.math.lgamma(f64, alpha);
+    if (use_r) log_c -= @log(dof);
+    const s_max = 1 + 10 / @sqrt(dof);
+    const upper = if (use_r) std.math.pow(f64, s_max, dof) else s_max;
+
+    // For t < 0 the integrand is bounded by Φ(−μ); scale it out so the
+    // lower-tail probabilities keep relative accuracy.
+    var tail: f64 = 1;
+    if (t < 0 and mu > 0) {
+        tail = normCdfScalarF64(-mu);
+        if (tail == 0) return 0;
+    }
+    const f = NoncentralTIntegrand{
+        .dof = dof,
+        .t = t,
+        .mu = mu,
+        .log_c = log_c,
+        .scale = 1 / tail,
+        .use_r = use_r,
+    };
+
+    const panels: usize = 8;
+    const panel_eps = 1.0e-13 / @as(f64, @floatFromInt(panels));
+    const h = upper / @as(f64, @floatFromInt(panels));
+    var total: f64 = 0;
+    var i: usize = 0;
+    while (i < panels) : (i += 1) {
+        const a = @as(f64, @floatFromInt(i)) * h;
+        const b = a + h;
+        const m = (a + b) / 2;
+        const fa = f.eval(a);
+        const fm = f.eval(m);
+        const fb = f.eval(b);
+        const whole = noncentralTSimpson(a, b, fa, fm, fb);
+        total += noncentralTAdaptiveSimpson(f, a, b, fa, fm, fb, whole, panel_eps, 30);
+    }
+    return std.math.clamp(total * tail, 0, 1);
+}
+
+/// Noncentral t quantile for probability `p`. Deterministic geometric
+/// bracketing around `mu` followed by bisection; `p = 0` returns `−∞`,
+/// `p = 1` returns `+∞`, and invalid parameters return NaN.
+pub fn noncentralTQuantile(p: anytype, dof: anytype, mu: anytype) resolvedFloatType(@TypeOf(p, dof, mu)) {
+    return noncentralTQuantileImpl(resolvedFloatType(@TypeOf(p, dof, mu)), p, dof, mu);
+}
+fn noncentralTQuantileImpl(comptime PeerType: type, p: PeerType, dof: PeerType, mu: PeerType) PeerType {
+    const T = @TypeOf(p, dof, mu);
+    comptime requireFloat(T);
+    if (!noncentralTParametersValid(T, dof, mu)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return -std.math.inf(T);
+    if (p == 1) return std.math.inf(T);
+    const p_f: f64 = @floatCast(p);
+    const dof_f: f64 = @floatCast(dof);
+    const mu_f: f64 = @floatCast(mu);
+    if (dof_f == std.math.inf(f64)) return @floatCast(mu_f + probit(p_f));
+
+    var lo = mu_f - 1;
+    var hi = mu_f + 1;
+    var expansion: usize = 0;
+    while (noncentralTCdfF64(lo, dof_f, mu_f) > p_f and expansion < 2048) : (expansion += 1) {
+        lo = mu_f - 2 * (mu_f - lo);
+        if (!std.math.isFinite(lo)) {
+            lo = -std.math.floatMax(f64);
+            break;
+        }
+    }
+    expansion = 0;
+    while (noncentralTCdfF64(hi, dof_f, mu_f) < p_f and expansion < 2048) : (expansion += 1) {
+        hi = mu_f + 2 * (hi - mu_f);
+        if (!std.math.isFinite(hi)) {
+            hi = std.math.floatMax(f64);
+            break;
+        }
+    }
+    var iteration: usize = 0;
+    while (iteration < 200) : (iteration += 1) {
+        const mid = lo + (hi - lo) / 2;
+        if (mid == lo or mid == hi) break;
+        if (noncentralTCdfF64(mid, dof_f, mu_f) < p_f) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast(lo + (hi - lo) / 2);
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, location, scale)) {
     return laplaceCdfImpl(resolvedFloatType(@TypeOf(x, location, scale)), x, location, scale);
@@ -16966,6 +17201,16 @@ pub fn NoncentralT(comptime T: type) type {
         }
         pub fn maxValue(_: Self) ?T {
             return null;
+        }
+
+        /// Noncentral t CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return noncentralTCdf(x, self.dof, self.mu);
+        }
+
+        /// Noncentral t quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return noncentralTQuantile(p, self.dof, self.mu);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -66192,6 +66437,84 @@ test "NoncentralT f32 support" {
         const x = d.sample(rng);
         try std.testing.expect(std.math.isFinite(x));
     }
+}
+
+test "noncentral t CDF matches central, normal limits, and reference values" {
+    // μ = 0 reduces to the central t CDF.
+    inline for ([_]f64{ -3, -0.5, 0.5, 2, 5 }) |x| {
+        try std.testing.expectApproxEqAbs(studentTCdf(x, @as(f64, 10)), noncentralTCdf(x, @as(f64, 10), @as(f64, 0)), 1e-12);
+    }
+    // t = 0 is exactly Φ(−μ).
+    try std.testing.expectApproxEqAbs(normCdf(@as(f64, -2)), noncentralTCdf(@as(f64, 0), @as(f64, 10), @as(f64, 2)), 1e-12);
+    // Symmetry F_μ(t) = 1 − F_{−μ}(−t).
+    inline for ([_]f64{ 1, 2, 5 }) |t| {
+        try std.testing.expectApproxEqAbs(1 - noncentralTCdf(-t, @as(f64, 10), @as(f64, -1.5)), noncentralTCdf(t, @as(f64, 10), @as(f64, 1.5)), 1e-12);
+    }
+    // Infinite dof is the shifted normal.
+    try std.testing.expectApproxEqAbs(normCdf(@as(f64, 0.5)), noncentralTCdf(@as(f64, 2.5), std.math.inf(f64), @as(f64, 2)), 1e-12);
+    // Reference values from an independent adaptive quadrature of the χ²
+    // mixture: series quadrant (μ ≤ 10, t ≥ 0), integral quadrant (large μ,
+    // t < 0, negative μ), and dof < 1.
+    const cases = [_]struct { t: f64, dof: f64, mu: f64, expected: f64 }{
+        .{ .t = 1, .dof = 10, .mu = 1, .expected = 0.490240051395451 },
+        .{ .t = 2, .dof = 5, .mu = 2, .expected = 0.463706722414585 },
+        .{ .t = 20, .dof = 10, .mu = 20, .expected = 0.442589560198825 },
+        .{ .t = 100, .dof = 10, .mu = 100, .expected = 0.440580856734009 },
+        .{ .t = -1, .dof = 10, .mu = 2, .expected = 0.00181643341042971 },
+        .{ .t = -2, .dof = 10, .mu = 3, .expected = 2.31815928998335e-06 },
+        .{ .t = 1, .dof = 10, .mu = -1, .expected = 0.973198143230522 },
+        .{ .t = 2, .dof = 10, .mu = -2, .expected = 0.999866943917935 },
+        .{ .t = 3, .dof = 1, .mu = 3, .expected = 0.342680817617152 },
+        .{ .t = -3, .dof = 1, .mu = 3, .expected = 0.000100893530759833 },
+        .{ .t = 5, .dof = 0.5, .mu = 3, .expected = 0.41807114666204 },
+        .{ .t = -2, .dof = 0.5, .mu = 3, .expected = 0.000352904805212244 },
+        .{ .t = 0, .dof = 10, .mu = 2, .expected = 0.0227501319481792 },
+        .{ .t = 0.5, .dof = 30, .mu = 5, .expected = 3.48239315132442e-06 },
+        .{ .t = 10, .dof = 3, .mu = 4, .expected = 0.913723806788849 },
+        .{ .t = -10, .dof = 3, .mu = 4, .expected = 2.64812873951094e-09 },
+        .{ .t = 0.5, .dof = 10, .mu = 0.5, .expected = 0.495092007452535 },
+        .{ .t = 2, .dof = 100, .mu = 3, .expected = 0.159839720347319 },
+        .{ .t = 3, .dof = 100, .mu = 0.5, .expected = 0.992634120677539 },
+    };
+    for (cases) |case| {
+        try std.testing.expectApproxEqAbs(case.expected, noncentralTCdf(case.t, case.dof, case.mu), 1e-6);
+    }
+    // Parameter validation.
+    try std.testing.expect(std.math.isNan(noncentralTCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(noncentralTCdf(@as(f64, 1), @as(f64, 5), std.math.inf(f64))));
+    try std.testing.expect(std.math.isNan(noncentralTCdf(std.math.nan(f64), @as(f64, 5), @as(f64, 1))));
+}
+
+test "noncentral t quantile round-trips and matches the sampler" {
+    const dist = try NoncentralT(f64).init(10, 1);
+    inline for ([_]f64{ 1e-6, 0.3, 0.7, 1 - 1e-6 }) |p| {
+        try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-6);
+    }
+    const shifted = try NoncentralT(f64).init(5, -2);
+    inline for ([_]f64{ 0.05, 0.5, 0.95 }) |p| {
+        try std.testing.expectApproxEqAbs(p, shifted.cdf(shifted.quantile(p)), 1e-6);
+    }
+    // Empirical median from the sampler.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1262);
+    const rng = Rng.init(&engine);
+    const median = dist.quantile(0.5);
+    var hits: usize = 0;
+    const n = 50_000;
+    for (0..n) |_| {
+        if (dist.sample(rng) <= median) hits += 1;
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), @as(f64, @floatFromInt(hits)) / @as(f64, @floatFromInt(n)), 0.01);
+    // Quantile edges and validation.
+    try std.testing.expectEqual(-std.math.inf(f64), noncentralTQuantile(@as(f64, 0), @as(f64, 5), @as(f64, 1)));
+    try std.testing.expectEqual(std.math.inf(f64), noncentralTQuantile(@as(f64, 1), @as(f64, 5), @as(f64, 1)));
+    try std.testing.expect(std.math.isNan(noncentralTQuantile(@as(f64, 1.5), @as(f64, 5), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(noncentralTQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 1))));
+    // Infinite dof matches the normal quantile.
+    try std.testing.expectApproxEqAbs(@as(f64, 2) + probit(@as(f64, 0.7)), noncentralTQuantile(@as(f64, 0.7), std.math.inf(f64), @as(f64, 2)), 1e-12);
+    // f32 support.
+    try std.testing.expect(noncentralTCdf(@as(f32, 1), @as(f32, 10), @as(f32, 1)) > 0.1);
+    try std.testing.expect(noncentralTQuantile(@as(f32, 0.3), @as(f32, 10), @as(f32, 1)) > -10);
 }
 
 // NoncentralF tests.

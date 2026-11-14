@@ -670,6 +670,11 @@ fn checkAdvancedMultivariate() !void {
         const ncf_d2: f64 = 10;
         const ncf_lambda: f64 = 4;
         try expectFloatBetween("noncentral f quantile", alea.distributions.noncentralFCdf(alea.distributions.noncentralFQuantile(p, ncf_d1, ncf_d2, ncf_lambda), ncf_d1, ncf_d2, ncf_lambda), p - 1e-6, p + 1e-6);
+        const nct_dof: f64 = 10;
+        const nct_mu: f64 = 1;
+        try expectFloatBetween("noncentral t quantile", alea.distributions.noncentralTCdf(alea.distributions.noncentralTQuantile(p, nct_dof, nct_mu), nct_dof, nct_mu), p - 1e-6, p + 1e-6);
+        const nct_neg_mu: f64 = -2;
+        try expectFloatBetween("noncentral t negative-mu quantile", alea.distributions.noncentralTCdf(alea.distributions.noncentralTQuantile(p, 5, nct_neg_mu), 5, nct_neg_mu), p - 1e-6, p + 1e-6);
         try expectFloatBetween("truncated-normal quantile", alea.distributions.truncatedNormalCdf(alea.distributions.truncatedNormalQuantile(p, 0, 1, -1, 1), 0, 1, -1, 1), p - 1e-7, p + 1e-7);
         const uniform_dist = try alea.distributions.Uniform(f64).init(2, 5);
         try expectFloatBetween("uniform quantile", uniform_dist.cdf(uniform_dist.quantile(p)), p - 1e-12, p + 1e-12);

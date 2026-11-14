@@ -623,8 +623,8 @@ runtime float type, and explicit f32 arguments keep f32.
   `generalizedParetoCdf` / `generalizedParetoQuantile`,
   `scaledInverseChiSquaredCdf` / `scaledInverseChiSquaredQuantile`,
   `noncentralChiSquaredCdf` / `noncentralChiSquaredQuantile`,
-  `noncentralChiCdf` / `noncentralChiQuantile`, and `noncentralFCdf` /
-  `noncentralFQuantile`;
+  `noncentralChiCdf` / `noncentralChiQuantile`, `noncentralFCdf` /
+  `noncentralFQuantile`, and `noncentralTCdf` / `noncentralTQuantile`;
   Beta-prime uses the incomplete beta form, inverse-gamma uses the incomplete
   gamma upper tail, generalized Pareto uses the closed-form
   `1 − (1 + ξ(x−μ)/σ)^(−1/ξ)` with `expm1`/`log1p` tails and bounded support
@@ -632,7 +632,13 @@ runtime float type, and explicit f32 arguments keep f32.
   as `Q(ν/2, ντ²/(2x))`, the noncentral chi-squared and noncentral F helpers
   sum the Poisson(λ/2) mixture around its mode and switch to the Patnaik
   two-moment central approximation above `λ/2 = 1e5` (noncentral chi delegates
-  through `x²`), log-logistic is closed-form (with `scale = 0` and
+  through `x²`), noncentral t uses the positive-term series
+  `Φ(−μ) + e^{−μ²/2}·Σ_j μ^j/j!·A_j` with `A₀ = ½·I_x(½, ν/2)`,
+  `x = t²/(t²+ν)` and `A_j = (j−1)A_{j−2} − c_{j−1}` for `μ ≤ 10, t ≥ 0`,
+  and otherwise the exact χ² mixture `E_V[Φ(t√(V/ν) − μ)]` by adaptive
+  Simpson in `s = √(V/ν)` (the `r = s^ν` substitution removes the
+  `s^{ν−1}` endpoint singularity for `ν < 1`; negative `μ` uses
+  `F_μ(t) = 1 − F_{−μ}(−t)`), log-logistic is closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via
