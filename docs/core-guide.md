@@ -705,7 +705,12 @@ runtime float type, and explicit f32 arguments keep f32.
   `n·p·(1−p) ≥ 1e7`, and keep the exact incomplete-beta path elsewhere; the
   sampler's fair `p = 0.5` path switches to the HIN rejection above 4096
   trials so huge fair draws stay `O(1)` instead of looping over popcount
-  words; the quantile bisection indexes `usize`, so `binomialQuantile` returns
+  words; the HIN left half-normal envelope carries a `c/4` height offset
+  because the nearly flat cells just below the mode (`P(np−1)/P(np) → 1` as
+  `p → 0`) sit above the original envelope, which under-weighted them and
+  biased the small-`p` mean by about `+0.015`; the offset is folded into the
+  left envelope's mass term so the region normalization stays uniform; the
+  quantile bisection indexes `usize`, so `binomialQuantile` returns
   NaN when `n` exceeds `maxInt(usize)` (relevant on 32-bit targets); the
   negative-binomial helper switches to the gamma limit
   `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`, and the sampler switches to the

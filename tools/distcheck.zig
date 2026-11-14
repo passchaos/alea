@@ -852,8 +852,16 @@ fn checkBinomial() !void {
     try expectCachedBinomialMean(rng, &cached_hin, 98.8, 101.2);
 
     // Huge-trial paths: tiny-p waiting, fair-to-HIN dispatch, and the stable
-    // HIN setup.
-    try expectBinomialMean(rng, 1_000_000_000_000_000_000, 2e-17, 19.4, 20.6);
+    // HIN setup. The tiny-p HIN mean is gated at 4e6 draws: the former
+    // +0.015 left-envelope offset sits ~6.7 standard errors outside the gate.
+    {
+        const tiny_trials: u64 = 1_000_000_000_000_000_000;
+        const tiny_p: f64 = 2e-17;
+        const tiny_samples: usize = 4_000_000;
+        var sum: f64 = 0;
+        for (0..tiny_samples) |_| sum += @floatFromInt(alea.distributions.binomial(rng, tiny_trials, tiny_p));
+        try expectFloatBetween("binomial tiny-p mean", sum / @as(f64, @floatFromInt(tiny_samples)), 19.992, 20.008);
+    }
     try expectBinomialMean(rng, 1_000_000_000, 0.5, 4.99e8, 5.01e8);
     try expectBinomialMean(rng, 1_000_000_000_000_000_000, 0.5, 4.99e17, 5.01e17);
 }
@@ -2365,9 +2373,10 @@ fn checkLongRun(samples: usize) !void {
         var sum: f64 = 0;
         var i: usize = 0;
         while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.binomial(rng, 1_000_000_000_000_000_000, 2e-17));
-        // The HIN small-p envelope carries a known ~0.015 absolute mean
-        // offset, so the gate only rejects gross regressions.
-        try expectFloatBetween("long binomial tiny-p", sum / nf, 19.9, 20.1);
+        // The HIN left-envelope slack removed the former +0.015 small-p
+        // mean offset; the 1e9-sample long run resolves a regression far
+        // below this 100k-sample gate.
+        try expectFloatBetween("long binomial tiny-p", sum / nf, 19.95, 20.05);
     }
     {
         var engine = alea.FastPrng.init(0x10db);

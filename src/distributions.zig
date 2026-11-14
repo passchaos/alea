@@ -7284,6 +7284,12 @@ const BinomialHinSetup = struct {
     s1: f64,
     s2: f64,
     c: f64,
+    /// Extra left-side envelope height. The original HIN left envelope
+    /// `e^{−y²/(2s2²)}` is below the target PMF for the nearly flat cells
+    /// just below the mode (e.g. `P(np−1)/P(np) ≈ 1` for small `p`), which
+    /// under-weights them and biases the mean up by about `+0.015` for
+    /// means `16..1000`. `c/4` restores dominance with a wide margin.
+    c2: f64,
     a1: f64,
     a12: f64,
     a123: f64,
@@ -7334,10 +7340,16 @@ fn binomialHinSetupImpl(trials: u64, p: f64, comptime allow_half: bool) ?Binomia
     const sqrt_pi_over_2 = 1.2533141373155002512078826424055226;
     const sqrt_np_omp = @sqrt(np * one_minus_pa);
     const c = 2.0 * d1 / np;
+    // The left half-normal envelope needs a small height offset: without it
+    // the flat cells just below the mode (`P(np−1)/P(np) → 1` as `p → 0`)
+    // sit above the envelope, so the rejection step under-weights them.
+    // The offset is folded into both the envelope and its mass term so the
+    // `p_r·const_r` normalization stays uniform.
+    const c2 = c * 0.25;
     const s1 = sqrt_np_omp * (1.0 + c / 8.0);
     const s2 = sqrt_np_omp * (1.0 + d2 / (4.0 * t * one_minus_pa));
     const a1 = @exp(c) * s1 * sqrt_pi_over_2;
-    const a12 = a1 + s2 * sqrt_pi_over_2;
+    const a12 = a1 + @exp(c2) * s2 * sqrt_pi_over_2;
     const s1s = s1 * s1;
     // The middle envelope term has two exponentials; combine them into one.
     const a123 = a12 + 2.0 * s1s / d1 * @exp(d1 / (t * one_minus_pa) - d1 * d1 / (2.0 * s1s));
@@ -7358,6 +7370,7 @@ fn binomialHinSetupImpl(trials: u64, p: f64, comptime allow_half: bool) ?Binomia
         .s1 = s1,
         .s2 = s2,
         .c = c,
+        .c2 = c2,
         .a1 = a1,
         .a12 = a12,
         .a123 = a123,
@@ -7420,7 +7433,7 @@ fn binomialHinSampleFrom(comptime small: bool, source: anytype, setup: *const Bi
             if (!reject) {
                 const e = standardExponentialFrom(source, f64);
                 x = @floor(-y);
-                v = -e - n * n / 2.0;
+                v = -e - n * n / 2.0 + setup.c2;
             }
         } else if (u <= setup.a123) {
             const e1 = standardExponentialFrom(source, f64);
