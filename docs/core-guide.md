@@ -560,7 +560,11 @@ adoption examples covering static/dynamic copulas and matrix-normal sampling.
 
 ## Distribution Diagnostics
 
-CDF and quantile helpers complement the samplers:
+CDF and quantile helpers complement the samplers. These free helpers accept
+peer-type arguments: a fully literal call such as
+`betaIncomplete(0.5, 2.0, 3.0)` defaults to f64, a mixed call such as
+`betaIncomplete(0.5, runtime_a, runtime_b)` coerces the literals to the
+runtime float type, and explicit f32 arguments keep f32.
 
 - normal: `normCdf`, `probit`.
 - beta: `betaIncomplete`, `betaCdf`, `betaQuantile`; `betaIncomplete` uses the

@@ -171,7 +171,10 @@ const inv_sqrt_2: f64 = 0.7071067811865476; // 1/sqrt(2)
 
 /// Standard normal probability density function φ(x) = exp(-x²/2) / √(2π).
 /// Polymorphic over f32, f64, and SIMD vectors of either.
-pub fn normPdf(x: anytype) @TypeOf(x) {
+pub fn normPdf(x: anytype) resolvedFloatType(@TypeOf(x)) {
+    return normPdfImpl(resolvedFloatType(@TypeOf(x)), x);
+}
+fn normPdfImpl(comptime PeerType: type, x: PeerType) PeerType {
     const T = @TypeOf(x);
     switch (@typeInfo(T)) {
         .float => {
@@ -231,7 +234,10 @@ fn erfAbramowitzStegunF32(x: f32) f32 {
 /// Standard normal cumulative distribution function Φ(x) = ½·(1 + erf(x/√2)).
 /// Polymorphic over f32, f64, and SIMD vectors of either. Returns values in (0,1).
 /// Φ(-∞) = 0, Φ(+∞) = 1, Φ(NaN) = NaN.
-pub fn normCdf(x: anytype) @TypeOf(x) {
+pub fn normCdf(x: anytype) resolvedFloatType(@TypeOf(x)) {
+    return normCdfImpl(resolvedFloatType(@TypeOf(x)), x);
+}
+fn normCdfImpl(comptime PeerType: type, x: PeerType) PeerType {
     const T = @TypeOf(x);
     switch (@typeInfo(T)) {
         .float => {
@@ -361,7 +367,10 @@ fn probitTailF32(q: f32) f32 {
 /// Polymorphic over f32, f64, and SIMD vectors of either.
 /// Input p must be in (0,1); debug builds assert this.
 /// probit(0) → -∞, probit(1) → +∞ in the limit.
-pub fn probit(p: anytype) @TypeOf(p) {
+pub fn probit(p: anytype) resolvedFloatType(@TypeOf(p)) {
+    return probitImpl(resolvedFloatType(@TypeOf(p)), p);
+}
+fn probitImpl(comptime PeerType: type, p: PeerType) PeerType {
     const T = @TypeOf(p);
     switch (@typeInfo(T)) {
         .float => {
@@ -430,7 +439,10 @@ fn betaContinuedFraction(comptime T: type, x: T, a: T, b: T) T {
 /// special cases are exact, and huge `a + b` switches to a normal
 /// approximation with the first Edgeworth correction because the continued
 /// fraction overflows there.
-pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
+pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) resolvedFloatType(@TypeOf(x, a, b)) {
+    return betaIncompleteImpl(resolvedFloatType(@TypeOf(x, a, b)), x, a, b);
+}
+fn betaIncompleteImpl(comptime PeerType: type, x: PeerType, a: PeerType, b: PeerType) PeerType {
     const T = @TypeOf(x, a, b);
     comptime requireFloat(T);
     if (!(a > 0) or !(b > 0) or !std.math.isFinite(a) or !std.math.isFinite(b)) return std.math.nan(T);
@@ -584,7 +596,10 @@ fn studentTCdfVec4(t: @Vector(4, f64), nu: f64) @Vector(4, f64) {
 /// Small integer degrees of freedom use the exact incomplete-beta recurrence;
 /// for ν > 1e6 the distribution is numerically indistinguishable from the
 /// standard normal and `normCdf` is used directly to avoid lgamma cancellation.
-pub fn studentTCdf(t: anytype, nu: anytype) @TypeOf(t, nu) {
+pub fn studentTCdf(t: anytype, nu: anytype) resolvedFloatType(@TypeOf(t, nu)) {
+    return studentTCdfImpl(resolvedFloatType(@TypeOf(t, nu)), t, nu);
+}
+fn studentTCdfImpl(comptime PeerType: type, t: PeerType, nu: PeerType) PeerType {
     const T = @TypeOf(t, nu);
     comptime requireFloat(T);
     if (!(nu > 0) or !std.math.isFinite(nu)) return std.math.nan(T);
@@ -602,14 +617,20 @@ pub fn studentTCdf(t: anytype, nu: anytype) @TypeOf(t, nu) {
 
 /// Beta(α, β) cumulative distribution function: alias for the regularized
 /// incomplete beta `I_x(α, β)`.
-pub fn betaCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, alpha, beta_param) {
+pub fn betaCdf(x: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(x, alpha, beta_param)) {
+    return betaCdfImpl(resolvedFloatType(@TypeOf(x, alpha, beta_param)), x, alpha, beta_param);
+}
+fn betaCdfImpl(comptime PeerType: type, x: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     return betaIncomplete(x, alpha, beta_param);
 }
 
 /// Inverse regularized incomplete beta: returns x such that I_x(α, β) = p.
 /// Deterministic bisection on [0, 1]; p=0 → 0, p=1 → 1, invalid parameters
 /// return NaN.
-pub fn betaQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, alpha, beta_param) {
+pub fn betaQuantile(p: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(p, alpha, beta_param)) {
+    return betaQuantileImpl(resolvedFloatType(@TypeOf(p, alpha, beta_param)), p, alpha, beta_param);
+}
+fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     const T = @TypeOf(p, alpha, beta_param);
     comptime requireFloat(T);
     if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return std.math.nan(T);
@@ -652,7 +673,10 @@ pub fn betaQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, 
 /// Fisher F cumulative distribution function with numerator/denominator
 /// degrees of freedom d1, d2 > 0:
 ///   F(x) = I_{d1·x/(d1·x+d2)}(d1/2, d2/2).
-pub fn fisherFCdf(x: anytype, d1: anytype, d2: anytype) @TypeOf(x, d1, d2) {
+pub fn fisherFCdf(x: anytype, d1: anytype, d2: anytype) resolvedFloatType(@TypeOf(x, d1, d2)) {
+    return fisherFCdfImpl(resolvedFloatType(@TypeOf(x, d1, d2)), x, d1, d2);
+}
+fn fisherFCdfImpl(comptime PeerType: type, x: PeerType, d1: PeerType, d2: PeerType) PeerType {
     const T = @TypeOf(x, d1, d2);
     comptime requireFloat(T);
     if (!(d1 > 0) or !(d2 > 0) or !std.math.isFinite(d1) or !std.math.isFinite(d2)) return std.math.nan(T);
@@ -665,7 +689,10 @@ pub fn fisherFCdf(x: anytype, d1: anytype, d2: anytype) @TypeOf(x, d1, d2) {
 
 /// Inverse Fisher F CDF: returns x such that `fisherFCdf(x, d1, d2) = p`.
 /// p=0 → 0, p=1 → +∞; deterministic doubling plus bisection.
-pub fn fisherFQuantile(p: anytype, d1: anytype, d2: anytype) @TypeOf(p, d1, d2) {
+pub fn fisherFQuantile(p: anytype, d1: anytype, d2: anytype) resolvedFloatType(@TypeOf(p, d1, d2)) {
+    return fisherFQuantileImpl(resolvedFloatType(@TypeOf(p, d1, d2)), p, d1, d2);
+}
+fn fisherFQuantileImpl(comptime PeerType: type, p: PeerType, d1: PeerType, d2: PeerType) PeerType {
     const T = @TypeOf(p, d1, d2);
     comptime requireFloat(T);
     if (!(d1 > 0) or !(d2 > 0) or !std.math.isFinite(d1) or !std.math.isFinite(d2)) return std.math.nan(T);
@@ -696,7 +723,10 @@ pub fn fisherFQuantile(p: anytype, d1: anytype, d2: anytype) @TypeOf(p, d1, d2) 
 /// Inverse Student-t CDF: returns t such that `studentTCdf(t, ν) = p`.
 /// Uses the incomplete-beta representation for p < 0.5 and symmetry for
 /// p > 0.5; ν > 1e6 delegates to `probit`.
-pub fn studentTQuantile(p: anytype, nu: anytype) @TypeOf(p, nu) {
+pub fn studentTQuantile(p: anytype, nu: anytype) resolvedFloatType(@TypeOf(p, nu)) {
+    return studentTQuantileImpl(resolvedFloatType(@TypeOf(p, nu)), p, nu);
+}
+fn studentTQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType) PeerType {
     const T = @TypeOf(p, nu);
     comptime requireFloat(T);
     if (!(nu > 0) or !std.math.isFinite(nu)) return std.math.nan(T);
@@ -768,7 +798,10 @@ inline fn gammaLargeShapeZ(comptime T: type, a: T, x: T) T {
 }
 
 /// Regularized lower incomplete gamma P(a, x) = γ(a, x)/Γ(a).
-pub fn gammaIncompleteP(a: anytype, x: anytype) @TypeOf(a, x) {
+pub fn gammaIncompleteP(a: anytype, x: anytype) resolvedFloatType(@TypeOf(a, x)) {
+    return gammaIncompletePImpl(resolvedFloatType(@TypeOf(a, x)), a, x);
+}
+fn gammaIncompletePImpl(comptime PeerType: type, a: PeerType, x: PeerType) PeerType {
     const T = @TypeOf(a, x);
     comptime requireFloat(T);
     if (!(a > 0) or !std.math.isFinite(a)) return std.math.nan(T);
@@ -781,7 +814,10 @@ pub fn gammaIncompleteP(a: anytype, x: anytype) @TypeOf(a, x) {
 }
 
 /// Regularized upper incomplete gamma Q(a, x) = Γ(a, x)/Γ(a) = 1 − P(a, x).
-pub fn gammaIncompleteQ(a: anytype, x: anytype) @TypeOf(a, x) {
+pub fn gammaIncompleteQ(a: anytype, x: anytype) resolvedFloatType(@TypeOf(a, x)) {
+    return gammaIncompleteQImpl(resolvedFloatType(@TypeOf(a, x)), a, x);
+}
+fn gammaIncompleteQImpl(comptime PeerType: type, a: PeerType, x: PeerType) PeerType {
     const T = @TypeOf(a, x);
     comptime requireFloat(T);
     if (!(a > 0) or !std.math.isFinite(a)) return std.math.nan(T);
@@ -794,7 +830,10 @@ pub fn gammaIncompleteQ(a: anytype, x: anytype) @TypeOf(a, x) {
 }
 
 /// Gamma(shape, scale) cumulative distribution function.
-pub fn gammaCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, scale) {
+pub fn gammaCdf(x: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, shape, scale)) {
+    return gammaCdfImpl(resolvedFloatType(@TypeOf(x, shape, scale)), x, shape, scale);
+}
+fn gammaCdfImpl(comptime PeerType: type, x: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, shape, scale);
     comptime requireFloat(T);
     if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -805,7 +844,10 @@ pub fn gammaCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, sc
 }
 
 /// Inverse Gamma(shape, scale) CDF. p=0 → 0, p=1 → +∞.
-pub fn gammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shape, scale) {
+pub fn gammaQuantile(p: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, shape, scale)) {
+    return gammaQuantileImpl(resolvedFloatType(@TypeOf(p, shape, scale)), p, shape, scale);
+}
+fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, shape, scale);
     comptime requireFloat(T);
     if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -851,7 +893,10 @@ pub fn gammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shap
 }
 
 /// Chi-squared cumulative distribution function.
-pub fn chiSquaredCdf(x: anytype, dof: anytype) @TypeOf(x, dof) {
+pub fn chiSquaredCdf(x: anytype, dof: anytype) resolvedFloatType(@TypeOf(x, dof)) {
+    return chiSquaredCdfImpl(resolvedFloatType(@TypeOf(x, dof)), x, dof);
+}
+fn chiSquaredCdfImpl(comptime PeerType: type, x: PeerType, dof: PeerType) PeerType {
     const T = @TypeOf(x, dof);
     comptime requireFloat(T);
     if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
@@ -862,7 +907,10 @@ pub fn chiSquaredCdf(x: anytype, dof: anytype) @TypeOf(x, dof) {
 }
 
 /// Inverse chi-squared CDF. p=0 → 0, p=1 → +∞.
-pub fn chiSquaredQuantile(p: anytype, dof: anytype) @TypeOf(p, dof) {
+pub fn chiSquaredQuantile(p: anytype, dof: anytype) resolvedFloatType(@TypeOf(p, dof)) {
+    return chiSquaredQuantileImpl(resolvedFloatType(@TypeOf(p, dof)), p, dof);
+}
+fn chiSquaredQuantileImpl(comptime PeerType: type, p: PeerType, dof: PeerType) PeerType {
     const T = @TypeOf(p, dof);
     comptime requireFloat(T);
     if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
@@ -871,7 +919,10 @@ pub fn chiSquaredQuantile(p: anytype, dof: anytype) @TypeOf(p, dof) {
 
 /// Poisson cumulative distribution function for non-negative integer-valued
 /// `k`: P(X ≤ k; λ) = Q(k+1, λ). λ=0 is the point mass at 0.
-pub fn poissonCdf(k: anytype, lambda: anytype) @TypeOf(k, lambda) {
+pub fn poissonCdf(k: anytype, lambda: anytype) resolvedFloatType(@TypeOf(k, lambda)) {
+    return poissonCdfImpl(resolvedFloatType(@TypeOf(k, lambda)), k, lambda);
+}
+fn poissonCdfImpl(comptime PeerType: type, k: PeerType, lambda: PeerType) PeerType {
     const T = @TypeOf(k, lambda);
     comptime requireFloat(T);
     if (std.math.isNan(k) or std.math.isNan(lambda)) return std.math.nan(T);
@@ -888,7 +939,10 @@ pub fn poissonCdf(k: anytype, lambda: anytype) @TypeOf(k, lambda) {
 /// probabilities (`n·p² ≤ 1e-6`) use the Poisson limit with mean `n·p`, and
 /// large variances (`n·p·(1-p) ≥ 1e7`) use the normal approximation with a
 /// continuity correction; both stay within the stated error orders.
-pub fn binomialCdf(k: anytype, n: anytype, p: anytype) @TypeOf(k, n, p) {
+pub fn binomialCdf(k: anytype, n: anytype, p: anytype) resolvedFloatType(@TypeOf(k, n, p)) {
+    return binomialCdfImpl(resolvedFloatType(@TypeOf(k, n, p)), k, n, p);
+}
+fn binomialCdfImpl(comptime PeerType: type, k: PeerType, n: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(k, n, p);
     comptime requireFloat(T);
     if (!(n >= 0) or !std.math.isFinite(n)) return std.math.nan(T);
@@ -911,7 +965,10 @@ pub fn binomialCdf(k: anytype, n: anytype, p: anytype) @TypeOf(k, n, p) {
 }
 
 /// Smallest integer k with `binomialCdf(k, n, p) ≥ q`.
-pub fn binomialQuantile(q: anytype, n: anytype, p: anytype) @TypeOf(q, n, p) {
+pub fn binomialQuantile(q: anytype, n: anytype, p: anytype) resolvedFloatType(@TypeOf(q, n, p)) {
+    return binomialQuantileImpl(resolvedFloatType(@TypeOf(q, n, p)), q, n, p);
+}
+fn binomialQuantileImpl(comptime PeerType: type, q: PeerType, n: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(q, n, p);
     comptime requireFloat(T);
     if (!(n >= 0) or !std.math.isFinite(n)) return std.math.nan(T);
@@ -938,7 +995,10 @@ pub fn binomialQuantile(q: anytype, n: anytype, p: anytype) @TypeOf(q, n, p) {
 
 /// Geometric CDF using alea's one-based trial-count semantics:
 /// P(X ≤ k) = 1 − (1−p)^k for k ≥ 1.
-pub fn geometricCdf(k: anytype, p: anytype) @TypeOf(k, p) {
+pub fn geometricCdf(k: anytype, p: anytype) resolvedFloatType(@TypeOf(k, p)) {
+    return geometricCdfImpl(resolvedFloatType(@TypeOf(k, p)), k, p);
+}
+fn geometricCdfImpl(comptime PeerType: type, k: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(k, p);
     comptime requireFloat(T);
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
@@ -951,7 +1011,10 @@ pub fn geometricCdf(k: anytype, p: anytype) @TypeOf(k, p) {
 }
 
 /// Smallest integer k with `geometricCdf(k, p) ≥ q`.
-pub fn geometricQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
+pub fn geometricQuantile(q: anytype, p: anytype) resolvedFloatType(@TypeOf(q, p)) {
+    return geometricQuantileImpl(resolvedFloatType(@TypeOf(q, p)), q, p);
+}
+fn geometricQuantileImpl(comptime PeerType: type, q: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(q, p);
     comptime requireFloat(T);
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
@@ -967,7 +1030,10 @@ pub fn geometricQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
 
 /// Negative-binomial CDF for the number of failures before `successes`
 /// successes: P(X ≤ k) = I_p(successes, k+1).
-pub fn negativeBinomialCdf(k: anytype, successes: anytype, p: anytype) @TypeOf(k, successes, p) {
+pub fn negativeBinomialCdf(k: anytype, successes: anytype, p: anytype) resolvedFloatType(@TypeOf(k, successes, p)) {
+    return negativeBinomialCdfImpl(resolvedFloatType(@TypeOf(k, successes, p)), k, successes, p);
+}
+fn negativeBinomialCdfImpl(comptime PeerType: type, k: PeerType, successes: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(k, successes, p);
     comptime requireFloat(T);
     if (!(successes > 0) or !std.math.isFinite(successes)) return std.math.nan(T);
@@ -984,7 +1050,10 @@ pub fn negativeBinomialCdf(k: anytype, successes: anytype, p: anytype) @TypeOf(k
 }
 
 /// Smallest integer k with `negativeBinomialCdf(k, successes, p) ≥ q`.
-pub fn negativeBinomialQuantile(q: anytype, successes: anytype, p: anytype) @TypeOf(q, successes, p) {
+pub fn negativeBinomialQuantile(q: anytype, successes: anytype, p: anytype) resolvedFloatType(@TypeOf(q, successes, p)) {
+    return negativeBinomialQuantileImpl(resolvedFloatType(@TypeOf(q, successes, p)), q, successes, p);
+}
+fn negativeBinomialQuantileImpl(comptime PeerType: type, q: PeerType, successes: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(q, successes, p);
     comptime requireFloat(T);
     if (!(successes > 0) or !std.math.isFinite(successes)) return std.math.nan(T);
@@ -1014,7 +1083,10 @@ pub fn negativeBinomialQuantile(q: anytype, successes: anytype, p: anytype) @Typ
 }
 
 /// Smallest integer k with `poissonCdf(k, λ) ≥ q`.
-pub fn poissonQuantile(q: anytype, lambda: anytype) @TypeOf(q, lambda) {
+pub fn poissonQuantile(q: anytype, lambda: anytype) resolvedFloatType(@TypeOf(q, lambda)) {
+    return poissonQuantileImpl(resolvedFloatType(@TypeOf(q, lambda)), q, lambda);
+}
+fn poissonQuantileImpl(comptime PeerType: type, q: PeerType, lambda: PeerType) PeerType {
     const T = @TypeOf(q, lambda);
     comptime requireFloat(T);
     if (!(lambda >= 0) or !std.math.isFinite(lambda)) return std.math.nan(T);
@@ -1210,7 +1282,10 @@ fn hypergeometricLogPmf(N: f64, K: f64, n: f64, j: f64) f64 {
 /// hits are negligible, and the normal approximation otherwise. Populations
 /// above 2^53 are treated as real-valued, so the integer support is resolved
 /// only to the nearest representable f64.
-pub fn hypergeometricCdf(k: anytype, population: anytype, successes: anytype, draws: anytype) @TypeOf(k, population, successes, draws) {
+pub fn hypergeometricCdf(k: anytype, population: anytype, successes: anytype, draws: anytype) resolvedFloatType(@TypeOf(k, population, successes, draws)) {
+    return hypergeometricCdfImpl(resolvedFloatType(@TypeOf(k, population, successes, draws)), k, population, successes, draws);
+}
+fn hypergeometricCdfImpl(comptime PeerType: type, k: PeerType, population: PeerType, successes: PeerType, draws: PeerType) PeerType {
     const T = @TypeOf(k, population, successes, draws);
     comptime requireFloat(T);
     const k_f: f64 = @floatCast(k);
@@ -1278,7 +1353,10 @@ pub fn hypergeometricCdf(k: anytype, population: anytype, successes: anytype, dr
 /// `hypergeometricCdf`; in the huge-population Poisson regime it inverts the
 /// Poisson limit. Populations above 2^53 are treated as real-valued, so the
 /// returned threshold is the nearest representable f64.
-pub fn hypergeometricQuantile(q: anytype, population: anytype, successes: anytype, draws: anytype) @TypeOf(q, population, successes, draws) {
+pub fn hypergeometricQuantile(q: anytype, population: anytype, successes: anytype, draws: anytype) resolvedFloatType(@TypeOf(q, population, successes, draws)) {
+    return hypergeometricQuantileImpl(resolvedFloatType(@TypeOf(q, population, successes, draws)), q, population, successes, draws);
+}
+fn hypergeometricQuantileImpl(comptime PeerType: type, q: PeerType, population: PeerType, successes: PeerType, draws: PeerType) PeerType {
     const T = @TypeOf(q, population, successes, draws);
     comptime requireFloat(T);
     const q_f: f64 = @floatCast(q);
@@ -1434,7 +1512,10 @@ fn zipfDiagnosticParams(n: f64, exponent: f64) ?struct { n: f64, s: f64 } {
 /// summation plus Euler–Maclaurin, so the cost is O(1) for large `k`/`n`.
 /// `n = +∞` is the Zeta distribution and requires `s > 1`. The 128-term direct
 /// prefix keeps the result accurate to near double precision for all `s ≥ 0`.
-pub fn zipfCdf(k: anytype, n: anytype, exponent: anytype) @TypeOf(k, n, exponent) {
+pub fn zipfCdf(k: anytype, n: anytype, exponent: anytype) resolvedFloatType(@TypeOf(k, n, exponent)) {
+    return zipfCdfImpl(resolvedFloatType(@TypeOf(k, n, exponent)), k, n, exponent);
+}
+fn zipfCdfImpl(comptime PeerType: type, k: PeerType, n: PeerType, exponent: PeerType) PeerType {
     const T = @TypeOf(k, n, exponent);
     comptime requireFloat(T);
     const k_f: f64 = @floatCast(k);
@@ -1457,7 +1538,10 @@ pub fn zipfCdf(k: anytype, n: anytype, exponent: anytype) @TypeOf(k, n, exponent
 /// Deterministic bisection over the integer support. Infinite support expands
 /// the upper bound until the CDF covers `q`; quantiles beyond 2^53 are returned
 /// as +∞ because integer support values are no longer exactly representable.
-pub fn zipfQuantile(q: anytype, n: anytype, exponent: anytype) @TypeOf(q, n, exponent) {
+pub fn zipfQuantile(q: anytype, n: anytype, exponent: anytype) resolvedFloatType(@TypeOf(q, n, exponent)) {
+    return zipfQuantileImpl(resolvedFloatType(@TypeOf(q, n, exponent)), q, n, exponent);
+}
+fn zipfQuantileImpl(comptime PeerType: type, q: PeerType, n: PeerType, exponent: PeerType) PeerType {
     const T = @TypeOf(q, n, exponent);
     comptime requireFloat(T);
     const q_f: f64 = @floatCast(q);
@@ -1494,14 +1578,20 @@ pub fn zipfQuantile(q: anytype, n: anytype, exponent: anytype) @TypeOf(q, n, exp
 }
 
 /// Zeta CDF `P(X ≤ k)` for exponent `s > 1`.
-pub fn zetaCdf(k: anytype, exponent: anytype) @TypeOf(k, exponent) {
+pub fn zetaCdf(k: anytype, exponent: anytype) resolvedFloatType(@TypeOf(k, exponent)) {
+    return zetaCdfImpl(resolvedFloatType(@TypeOf(k, exponent)), k, exponent);
+}
+fn zetaCdfImpl(comptime PeerType: type, k: PeerType, exponent: PeerType) PeerType {
     const T = @TypeOf(k, exponent);
     comptime requireFloat(T);
     return @floatCast(zipfCdf(@as(f64, @floatCast(k)), std.math.inf(f64), @as(f64, @floatCast(exponent))));
 }
 
 /// Smallest integer `k` with `zetaCdf(k, exponent) ≥ q`.
-pub fn zetaQuantile(q: anytype, exponent: anytype) @TypeOf(q, exponent) {
+pub fn zetaQuantile(q: anytype, exponent: anytype) resolvedFloatType(@TypeOf(q, exponent)) {
+    return zetaQuantileImpl(resolvedFloatType(@TypeOf(q, exponent)), q, exponent);
+}
+fn zetaQuantileImpl(comptime PeerType: type, q: PeerType, exponent: PeerType) PeerType {
     const T = @TypeOf(q, exponent);
     comptime requireFloat(T);
     return @floatCast(zipfQuantile(@as(f64, @floatCast(q)), std.math.inf(f64), @as(f64, @floatCast(exponent))));
@@ -1509,7 +1599,10 @@ pub fn zetaQuantile(q: anytype, exponent: anytype) @TypeOf(q, exponent) {
 
 /// Bernoulli CDF: `P(X ≤ k) = 0` for `k < 0`, `1 − p` for `0 ≤ k < 1`, and
 /// `1` for `k ≥ 1`.
-pub fn bernoulliCdf(k: anytype, p: anytype) @TypeOf(k, p) {
+pub fn bernoulliCdf(k: anytype, p: anytype) resolvedFloatType(@TypeOf(k, p)) {
+    return bernoulliCdfImpl(resolvedFloatType(@TypeOf(k, p)), k, p);
+}
+fn bernoulliCdfImpl(comptime PeerType: type, k: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(k, p);
     comptime requireFloat(T);
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
@@ -1520,7 +1613,10 @@ pub fn bernoulliCdf(k: anytype, p: anytype) @TypeOf(k, p) {
 }
 
 /// Smallest integer `k` with `bernoulliCdf(k, p) ≥ q` (0 or 1).
-pub fn bernoulliQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
+pub fn bernoulliQuantile(q: anytype, p: anytype) resolvedFloatType(@TypeOf(q, p)) {
+    return bernoulliQuantileImpl(resolvedFloatType(@TypeOf(q, p)), q, p);
+}
+fn bernoulliQuantileImpl(comptime PeerType: type, q: PeerType, p: PeerType) PeerType {
     const T = @TypeOf(q, p);
     comptime requireFloat(T);
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
@@ -1532,7 +1628,10 @@ pub fn bernoulliQuantile(q: anytype, p: anytype) @TypeOf(q, p) {
 
 /// Exponential CDF with rate `λ`: `1 − e^{−λx}` for `x ≥ 0`. Rate 0 is the
 /// improper all-at-infinity limit and rate +∞ is the point mass at 0.
-pub fn exponentialCdf(x: anytype, rate: anytype) @TypeOf(x, rate) {
+pub fn exponentialCdf(x: anytype, rate: anytype) resolvedFloatType(@TypeOf(x, rate)) {
+    return exponentialCdfImpl(resolvedFloatType(@TypeOf(x, rate)), x, rate);
+}
+fn exponentialCdfImpl(comptime PeerType: type, x: PeerType, rate: PeerType) PeerType {
     const T = @TypeOf(x, rate);
     comptime requireFloat(T);
     if (!(rate >= 0) or std.math.isNan(rate)) return std.math.nan(T);
@@ -1545,7 +1644,10 @@ pub fn exponentialCdf(x: anytype, rate: anytype) @TypeOf(x, rate) {
 }
 
 /// Exponential quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn exponentialQuantile(p: anytype, rate: anytype) @TypeOf(p, rate) {
+pub fn exponentialQuantile(p: anytype, rate: anytype) resolvedFloatType(@TypeOf(p, rate)) {
+    return exponentialQuantileImpl(resolvedFloatType(@TypeOf(p, rate)), p, rate);
+}
+fn exponentialQuantileImpl(comptime PeerType: type, p: PeerType, rate: PeerType) PeerType {
     const T = @TypeOf(p, rate);
     comptime requireFloat(T);
     if (!(rate >= 0) or std.math.isNan(rate)) return std.math.nan(T);
@@ -1559,7 +1661,10 @@ pub fn exponentialQuantile(p: anytype, rate: anytype) @TypeOf(p, rate) {
 /// Log-normal CDF with log-space mean and standard deviation. The scale is
 /// `|stddev|`, matching the sampler's reflected-normal semantics; a zero
 /// standard deviation is the point mass at `exp(log_mean)`.
-pub fn logNormalCdf(x: anytype, log_mean: anytype, log_stddev: anytype) @TypeOf(x, log_mean, log_stddev) {
+pub fn logNormalCdf(x: anytype, log_mean: anytype, log_stddev: anytype) resolvedFloatType(@TypeOf(x, log_mean, log_stddev)) {
+    return logNormalCdfImpl(resolvedFloatType(@TypeOf(x, log_mean, log_stddev)), x, log_mean, log_stddev);
+}
+fn logNormalCdfImpl(comptime PeerType: type, x: PeerType, log_mean: PeerType, log_stddev: PeerType) PeerType {
     const T = @TypeOf(x, log_mean, log_stddev);
     comptime requireFloat(T);
     if (!std.math.isFinite(log_mean) or !std.math.isFinite(log_stddev)) return std.math.nan(T);
@@ -1572,7 +1677,10 @@ pub fn logNormalCdf(x: anytype, log_mean: anytype, log_stddev: anytype) @TypeOf(
 }
 
 /// Log-normal quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn logNormalQuantile(p: anytype, log_mean: anytype, log_stddev: anytype) @TypeOf(p, log_mean, log_stddev) {
+pub fn logNormalQuantile(p: anytype, log_mean: anytype, log_stddev: anytype) resolvedFloatType(@TypeOf(p, log_mean, log_stddev)) {
+    return logNormalQuantileImpl(resolvedFloatType(@TypeOf(p, log_mean, log_stddev)), p, log_mean, log_stddev);
+}
+fn logNormalQuantileImpl(comptime PeerType: type, p: PeerType, log_mean: PeerType, log_stddev: PeerType) PeerType {
     const T = @TypeOf(p, log_mean, log_stddev);
     comptime requireFloat(T);
     if (!std.math.isFinite(log_mean) or !std.math.isFinite(log_stddev)) return std.math.nan(T);
@@ -1584,7 +1692,10 @@ pub fn logNormalQuantile(p: anytype, log_mean: anytype, log_stddev: anytype) @Ty
 }
 
 /// Half-normal CDF: `2Φ(x/σ) − 1` for `x > 0`; `σ = 0` is the point mass at 0.
-pub fn halfNormalCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
+pub fn halfNormalCdf(x: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, scale)) {
+    return halfNormalCdfImpl(resolvedFloatType(@TypeOf(x, scale)), x, scale);
+}
+fn halfNormalCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, scale);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1596,7 +1707,10 @@ pub fn halfNormalCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
 }
 
 /// Half-normal quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn halfNormalQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
+pub fn halfNormalQuantile(p: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, scale)) {
+    return halfNormalQuantileImpl(resolvedFloatType(@TypeOf(p, scale)), p, scale);
+}
+fn halfNormalQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, scale);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1608,7 +1722,10 @@ pub fn halfNormalQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
 }
 
 /// Chi CDF: `P(χ_k ≤ x) = P(k/2, x²/2)`.
-pub fn chiCdf(x: anytype, dof: anytype) @TypeOf(x, dof) {
+pub fn chiCdf(x: anytype, dof: anytype) resolvedFloatType(@TypeOf(x, dof)) {
+    return chiCdfImpl(resolvedFloatType(@TypeOf(x, dof)), x, dof);
+}
+fn chiCdfImpl(comptime PeerType: type, x: PeerType, dof: PeerType) PeerType {
     const T = @TypeOf(x, dof);
     comptime requireFloat(T);
     if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
@@ -1619,7 +1736,10 @@ pub fn chiCdf(x: anytype, dof: anytype) @TypeOf(x, dof) {
 }
 
 /// Chi quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn chiQuantile(p: anytype, dof: anytype) @TypeOf(p, dof) {
+pub fn chiQuantile(p: anytype, dof: anytype) resolvedFloatType(@TypeOf(p, dof)) {
+    return chiQuantileImpl(resolvedFloatType(@TypeOf(p, dof)), p, dof);
+}
+fn chiQuantileImpl(comptime PeerType: type, p: PeerType, dof: PeerType) PeerType {
     const T = @TypeOf(p, dof);
     comptime requireFloat(T);
     if (!(dof > 0) or !std.math.isFinite(dof)) return std.math.nan(T);
@@ -1630,7 +1750,10 @@ pub fn chiQuantile(p: anytype, dof: anytype) @TypeOf(p, dof) {
 }
 
 /// Erlang CDF for a positive integer shape; `scale = 0` is the point mass at 0.
-pub fn erlangCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, scale) {
+pub fn erlangCdf(x: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, shape, scale)) {
+    return erlangCdfImpl(resolvedFloatType(@TypeOf(x, shape, scale)), x, shape, scale);
+}
+fn erlangCdfImpl(comptime PeerType: type, x: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, shape, scale);
     comptime requireFloat(T);
     if (!(shape >= 1) or !std.math.isFinite(shape) or shape != @floor(shape)) return std.math.nan(T);
@@ -1641,7 +1764,10 @@ pub fn erlangCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, s
 }
 
 /// Erlang quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn erlangQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shape, scale) {
+pub fn erlangQuantile(p: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, shape, scale)) {
+    return erlangQuantileImpl(resolvedFloatType(@TypeOf(p, shape, scale)), p, shape, scale);
+}
+fn erlangQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, shape, scale);
     comptime requireFloat(T);
     if (!(shape >= 1) or !std.math.isFinite(shape) or shape != @floor(shape)) return std.math.nan(T);
@@ -1654,7 +1780,10 @@ pub fn erlangQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, sha
 }
 
 /// Maxwell CDF: `P(σ·χ₃ ≤ x)`. `σ = 0` is the point mass at 0.
-pub fn maxwellCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
+pub fn maxwellCdf(x: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, scale)) {
+    return maxwellCdfImpl(resolvedFloatType(@TypeOf(x, scale)), x, scale);
+}
+fn maxwellCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, scale);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1667,7 +1796,10 @@ pub fn maxwellCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
 }
 
 /// Maxwell quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn maxwellQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
+pub fn maxwellQuantile(p: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, scale)) {
+    return maxwellQuantileImpl(resolvedFloatType(@TypeOf(p, scale)), p, scale);
+}
+fn maxwellQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, scale);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1679,7 +1811,10 @@ pub fn maxwellQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
 }
 
 /// Beta-prime CDF: `I_{x/(1+x)}(α, β)`.
-pub fn betaPrimeCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, alpha, beta_param) {
+pub fn betaPrimeCdf(x: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(x, alpha, beta_param)) {
+    return betaPrimeCdfImpl(resolvedFloatType(@TypeOf(x, alpha, beta_param)), x, alpha, beta_param);
+}
+fn betaPrimeCdfImpl(comptime PeerType: type, x: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     const T = @TypeOf(x, alpha, beta_param);
     comptime requireFloat(T);
     if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return std.math.nan(T);
@@ -1690,7 +1825,10 @@ pub fn betaPrimeCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, 
 }
 
 /// Beta-prime quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn betaPrimeQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, alpha, beta_param) {
+pub fn betaPrimeQuantile(p: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(p, alpha, beta_param)) {
+    return betaPrimeQuantileImpl(resolvedFloatType(@TypeOf(p, alpha, beta_param)), p, alpha, beta_param);
+}
+fn betaPrimeQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     const T = @TypeOf(p, alpha, beta_param);
     comptime requireFloat(T);
     if (!(alpha > 0) or !(beta_param > 0) or !std.math.isFinite(alpha) or !std.math.isFinite(beta_param)) return std.math.nan(T);
@@ -1703,7 +1841,10 @@ pub fn betaPrimeQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeO
 
 /// Log-logistic CDF: `1/(1 + (x/scale)^{-shape})`. `scale = 0` and
 /// `shape = +∞` are point masses at 0 and `scale` respectively.
-pub fn logLogisticCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, shape) {
+pub fn logLogisticCdf(x: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, scale, shape)) {
+    return logLogisticCdfImpl(resolvedFloatType(@TypeOf(x, scale, shape)), x, scale, shape);
+}
+fn logLogisticCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, scale, shape);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1717,7 +1858,10 @@ pub fn logLogisticCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, sca
 }
 
 /// Log-logistic quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn logLogisticQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, scale, shape) {
+pub fn logLogisticQuantile(p: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, scale, shape)) {
+    return logLogisticQuantileImpl(resolvedFloatType(@TypeOf(p, scale, shape)), p, scale, shape);
+}
+fn logLogisticQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, scale, shape);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1731,7 +1875,10 @@ pub fn logLogisticQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p
 }
 
 /// Inverse-gamma CDF: `Q(α, β/x)` for `x > 0`.
-pub fn inverseGammaCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, shape, scale) {
+pub fn inverseGammaCdf(x: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, shape, scale)) {
+    return inverseGammaCdfImpl(resolvedFloatType(@TypeOf(x, shape, scale)), x, shape, scale);
+}
+fn inverseGammaCdfImpl(comptime PeerType: type, x: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, shape, scale);
     comptime requireFloat(T);
     if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1742,7 +1889,10 @@ pub fn inverseGammaCdf(x: anytype, shape: anytype, scale: anytype) @TypeOf(x, sh
 }
 
 /// Inverse-gamma quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn inverseGammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(p, shape, scale) {
+pub fn inverseGammaQuantile(p: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, shape, scale)) {
+    return inverseGammaQuantileImpl(resolvedFloatType(@TypeOf(p, shape, scale)), p, shape, scale);
+}
+fn inverseGammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, shape, scale);
     comptime requireFloat(T);
     if (!(shape > 0) or !(scale > 0) or !std.math.isFinite(shape) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -1754,7 +1904,10 @@ pub fn inverseGammaQuantile(p: anytype, shape: anytype, scale: anytype) @TypeOf(
 }
 
 /// Nakagami-m CDF: `P(m, m·x²/Ω)`. `Ω = 0` is the point mass at 0.
-pub fn nakagamiCdf(x: anytype, m_param: anytype, omega: anytype) @TypeOf(x, m_param, omega) {
+pub fn nakagamiCdf(x: anytype, m_param: anytype, omega: anytype) resolvedFloatType(@TypeOf(x, m_param, omega)) {
+    return nakagamiCdfImpl(resolvedFloatType(@TypeOf(x, m_param, omega)), x, m_param, omega);
+}
+fn nakagamiCdfImpl(comptime PeerType: type, x: PeerType, m_param: PeerType, omega: PeerType) PeerType {
     const T = @TypeOf(x, m_param, omega);
     comptime requireFloat(T);
     if (!(m_param >= 0.5) or !std.math.isFinite(m_param)) return std.math.nan(T);
@@ -1769,7 +1922,10 @@ pub fn nakagamiCdf(x: anytype, m_param: anytype, omega: anytype) @TypeOf(x, m_pa
 }
 
 /// Nakagami-m quantile. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn nakagamiQuantile(p: anytype, m_param: anytype, omega: anytype) @TypeOf(p, m_param, omega) {
+pub fn nakagamiQuantile(p: anytype, m_param: anytype, omega: anytype) resolvedFloatType(@TypeOf(p, m_param, omega)) {
+    return nakagamiQuantileImpl(resolvedFloatType(@TypeOf(p, m_param, omega)), p, m_param, omega);
+}
+fn nakagamiQuantileImpl(comptime PeerType: type, p: PeerType, m_param: PeerType, omega: PeerType) PeerType {
     const T = @TypeOf(p, m_param, omega);
     comptime requireFloat(T);
     if (!(m_param >= 0.5) or !std.math.isFinite(m_param)) return std.math.nan(T);
@@ -1793,7 +1949,10 @@ fn normLogCdf(x: f64) f64 {
 
 /// ExGaussian CDF: `Φ(z) − exp(σ²/(2τ²) − (x−μ)/τ)·Φ(z − σ/τ)` with
 /// `z = (x − μ)/σ`; `σ = 0` is the shifted exponential.
-pub fn exGaussianCdf(x: anytype, mu: anytype, sigma: anytype, tau: anytype) @TypeOf(x, mu, sigma, tau) {
+pub fn exGaussianCdf(x: anytype, mu: anytype, sigma: anytype, tau: anytype) resolvedFloatType(@TypeOf(x, mu, sigma, tau)) {
+    return exGaussianCdfImpl(resolvedFloatType(@TypeOf(x, mu, sigma, tau)), x, mu, sigma, tau);
+}
+fn exGaussianCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType, tau: PeerType) PeerType {
     const T = @TypeOf(x, mu, sigma, tau);
     comptime requireFloat(T);
     if (!std.math.isFinite(mu)) return std.math.nan(T);
@@ -1825,7 +1984,10 @@ pub fn exGaussianCdf(x: anytype, mu: anytype, sigma: anytype, tau: anytype) @Typ
 
 /// ExGaussian quantile via deterministic bisection. `p = 0 → −∞`,
 /// `p = 1 → +∞`.
-pub fn exGaussianQuantile(p: anytype, mu: anytype, sigma: anytype, tau: anytype) @TypeOf(p, mu, sigma, tau) {
+pub fn exGaussianQuantile(p: anytype, mu: anytype, sigma: anytype, tau: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, tau)) {
+    return exGaussianQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma, tau)), p, mu, sigma, tau);
+}
+fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType, tau: PeerType) PeerType {
     const T = @TypeOf(p, mu, sigma, tau);
     comptime requireFloat(T);
     if (!std.math.isFinite(mu)) return std.math.nan(T);
@@ -1865,7 +2027,10 @@ pub fn exGaussianQuantile(p: anytype, mu: anytype, sigma: anytype, tau: anytype)
 /// `Φ(z₁) + exp(2λ/μ)·Φ(z₂)` with
 /// `z₁ = √(λ/x)(x/μ − 1)` and `z₂ = −√(λ/x)(x/μ + 1)`.
 /// `mean = 0` and `shape = +∞` are point masses at 0 and `mean`.
-pub fn inverseGaussianCdf(x: anytype, mean: anytype, shape: anytype) @TypeOf(x, mean, shape) {
+pub fn inverseGaussianCdf(x: anytype, mean: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, mean, shape)) {
+    return inverseGaussianCdfImpl(resolvedFloatType(@TypeOf(x, mean, shape)), x, mean, shape);
+}
+fn inverseGaussianCdfImpl(comptime PeerType: type, x: PeerType, mean: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, mean, shape);
     comptime requireFloat(T);
     if (!(mean >= 0) or std.math.isNan(mean)) return std.math.nan(T);
@@ -1891,7 +2056,10 @@ pub fn inverseGaussianCdf(x: anytype, mean: anytype, shape: anytype) @TypeOf(x, 
 
 /// Inverse-Gaussian quantile via deterministic bisection. `p = 0 → 0`,
 /// `p = 1 → +∞`.
-pub fn inverseGaussianQuantile(p: anytype, mean: anytype, shape: anytype) @TypeOf(p, mean, shape) {
+pub fn inverseGaussianQuantile(p: anytype, mean: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, mean, shape)) {
+    return inverseGaussianQuantileImpl(resolvedFloatType(@TypeOf(p, mean, shape)), p, mean, shape);
+}
+fn inverseGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, mean, shape);
     comptime requireFloat(T);
     if (!(mean >= 0) or std.math.isNan(mean)) return std.math.nan(T);
@@ -1965,7 +2133,10 @@ fn owenT(h: f64, a: f64) f64 {
 
 /// Skew-normal CDF: `Φ(z) − 2·T(z, α)` with `z = (x − ξ)/ω`.
 /// `scale = 0` is the point mass at the location.
-pub fn skewNormalCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(x, location, scale, shape) {
+pub fn skewNormalCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, location, scale, shape)) {
+    return skewNormalCdfImpl(resolvedFloatType(@TypeOf(x, location, scale, shape)), x, location, scale, shape);
+}
+fn skewNormalCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, location, scale, shape);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !std.math.isFinite(shape)) return std.math.nan(T);
@@ -1985,7 +2156,10 @@ pub fn skewNormalCdf(x: anytype, location: anytype, scale: anytype, shape: anyty
 
 /// Skew-normal quantile via deterministic bisection. `p = 0 → −∞`,
 /// `p = 1 → +∞`.
-pub fn skewNormalQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(p, location, scale, shape) {
+pub fn skewNormalQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, location, scale, shape)) {
+    return skewNormalQuantileImpl(resolvedFloatType(@TypeOf(p, location, scale, shape)), p, location, scale, shape);
+}
+fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, location, scale, shape);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !std.math.isFinite(shape)) return std.math.nan(T);
@@ -2039,7 +2213,10 @@ fn pertDiagnosticParams(min: f64, mode: f64, max: f64, shape: f64) ?struct { alp
 /// PERT CDF via the equivalent scaled Beta distribution. Collapsed ranges are
 /// point masses at `min`; infinite shape returns NaN, matching the sampler's
 /// `rand_distr`-compatible semantics.
-pub fn pertCdf(x: anytype, min: anytype, mode: anytype, max: anytype, shape: anytype) @TypeOf(x, min, mode, max, shape) {
+pub fn pertCdf(x: anytype, min: anytype, mode: anytype, max: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, min, mode, max, shape)) {
+    return pertCdfImpl(resolvedFloatType(@TypeOf(x, min, mode, max, shape)), x, min, mode, max, shape);
+}
+fn pertCdfImpl(comptime PeerType: type, x: PeerType, min: PeerType, mode: PeerType, max: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, min, mode, max, shape);
     comptime requireFloat(T);
     const x_f: f64 = @floatCast(x);
@@ -2056,7 +2233,10 @@ pub fn pertCdf(x: anytype, min: anytype, mode: anytype, max: anytype, shape: any
 
 /// PERT quantile via the equivalent scaled Beta quantile. `p = 0 → min`,
 /// `p = 1 → max`; infinite shape returns NaN.
-pub fn pertQuantile(p: anytype, min: anytype, mode: anytype, max: anytype, shape: anytype) @TypeOf(p, min, mode, max, shape) {
+pub fn pertQuantile(p: anytype, min: anytype, mode: anytype, max: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, min, mode, max, shape)) {
+    return pertQuantileImpl(resolvedFloatType(@TypeOf(p, min, mode, max, shape)), p, min, mode, max, shape);
+}
+fn pertQuantileImpl(comptime PeerType: type, p: PeerType, min: PeerType, mode: PeerType, max: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, min, mode, max, shape);
     comptime requireFloat(T);
     const p_f: f64 = @floatCast(p);
@@ -2117,7 +2297,10 @@ fn riceMeanForCdf(nu: f64, sigma: f64) f64 {
 /// Rice (Rician) CDF: `1 − Q1(ν/σ, x/σ)`. `σ = 0` is the point mass at `ν`.
 /// For `ν/σ > 200` a Gaussian tail approximation with the exact Rice mean and
 /// variance is used instead of the Marcum series.
-pub fn riceCdf(x: anytype, nu: anytype, sigma: anytype) @TypeOf(x, nu, sigma) {
+pub fn riceCdf(x: anytype, nu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(x, nu, sigma)) {
+    return riceCdfImpl(resolvedFloatType(@TypeOf(x, nu, sigma)), x, nu, sigma);
+}
+fn riceCdfImpl(comptime PeerType: type, x: PeerType, nu: PeerType, sigma: PeerType) PeerType {
     const T = @TypeOf(x, nu, sigma);
     comptime requireFloat(T);
     if (!(nu >= 0) or !std.math.isFinite(nu)) return std.math.nan(T);
@@ -2141,7 +2324,10 @@ pub fn riceCdf(x: anytype, nu: anytype, sigma: anytype) @TypeOf(x, nu, sigma) {
 }
 
 /// Rice quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn riceQuantile(p: anytype, nu: anytype, sigma: anytype) @TypeOf(p, nu, sigma) {
+pub fn riceQuantile(p: anytype, nu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(p, nu, sigma)) {
+    return riceQuantileImpl(resolvedFloatType(@TypeOf(p, nu, sigma)), p, nu, sigma);
+}
+fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: PeerType) PeerType {
     const T = @TypeOf(p, nu, sigma);
     comptime requireFloat(T);
     if (!(nu >= 0) or !std.math.isFinite(nu)) return std.math.nan(T);
@@ -2178,7 +2364,10 @@ pub fn riceQuantile(p: anytype, nu: anytype, sigma: anytype) @TypeOf(p, nu, sigm
 /// The series converges geometrically in `r²`; `q ≥ 0.01` keeps the term
 /// count bounded (the cap is one million terms). `q = 1` is Rayleigh and
 /// `Ω = 0` is the point mass at 0.
-pub fn hoytCdf(x: anytype, q_param: anytype, omega: anytype) @TypeOf(x, q_param, omega) {
+pub fn hoytCdf(x: anytype, q_param: anytype, omega: anytype) resolvedFloatType(@TypeOf(x, q_param, omega)) {
+    return hoytCdfImpl(resolvedFloatType(@TypeOf(x, q_param, omega)), x, q_param, omega);
+}
+fn hoytCdfImpl(comptime PeerType: type, x: PeerType, q_param: PeerType, omega: PeerType) PeerType {
     const T = @TypeOf(x, q_param, omega);
     comptime requireFloat(T);
     if (!(q_param >= 0.01 and q_param <= 1) or !std.math.isFinite(q_param)) return std.math.nan(T);
@@ -2218,7 +2407,10 @@ pub fn hoytCdf(x: anytype, q_param: anytype, omega: anytype) @TypeOf(x, q_param,
 }
 
 /// Hoyt quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
-pub fn hoytQuantile(p: anytype, q_param: anytype, omega: anytype) @TypeOf(p, q_param, omega) {
+pub fn hoytQuantile(p: anytype, q_param: anytype, omega: anytype) resolvedFloatType(@TypeOf(p, q_param, omega)) {
+    return hoytQuantileImpl(resolvedFloatType(@TypeOf(p, q_param, omega)), p, q_param, omega);
+}
+fn hoytQuantileImpl(comptime PeerType: type, p: PeerType, q_param: PeerType, omega: PeerType) PeerType {
     const T = @TypeOf(p, q_param, omega);
     comptime requireFloat(T);
     if (!(q_param >= 0.01 and q_param <= 1) or !std.math.isFinite(q_param)) return std.math.nan(T);
@@ -2249,7 +2441,10 @@ pub fn hoytQuantile(p: anytype, q_param: anytype, omega: anytype) @TypeOf(p, q_p
 }
 
 /// Laplace(location, scale) CDF.
-pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
+pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, location, scale)) {
+    return laplaceCdfImpl(resolvedFloatType(@TypeOf(x, location, scale)), x, location, scale);
+}
+fn laplaceCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, location, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2260,7 +2455,10 @@ pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, loca
 }
 
 /// Inverse Laplace(location, scale) CDF. p=0 → −∞, p=1 → +∞.
-pub fn laplaceQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, location, scale) {
+pub fn laplaceQuantile(p: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, location, scale)) {
+    return laplaceQuantileImpl(resolvedFloatType(@TypeOf(p, location, scale)), p, location, scale);
+}
+fn laplaceQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, location, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2273,7 +2471,10 @@ pub fn laplaceQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p,
 }
 
 /// Logistic(location, scale) CDF.
-pub fn logisticCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
+pub fn logisticCdf(x: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, location, scale)) {
+    return logisticCdfImpl(resolvedFloatType(@TypeOf(x, location, scale)), x, location, scale);
+}
+fn logisticCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, location, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2289,7 +2490,10 @@ pub fn logisticCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, loc
 }
 
 /// Inverse Logistic(location, scale) CDF. p=0 → −∞, p=1 → +∞.
-pub fn logisticQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, location, scale) {
+pub fn logisticQuantile(p: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, location, scale)) {
+    return logisticQuantileImpl(resolvedFloatType(@TypeOf(p, location, scale)), p, location, scale);
+}
+fn logisticQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, location, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2301,7 +2505,10 @@ pub fn logisticQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p
 }
 
 /// Cauchy(median, scale) CDF.
-pub fn cauchyCdf(x: anytype, median: anytype, scale: anytype) @TypeOf(x, median, scale) {
+pub fn cauchyCdf(x: anytype, median: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, median, scale)) {
+    return cauchyCdfImpl(resolvedFloatType(@TypeOf(x, median, scale)), x, median, scale);
+}
+fn cauchyCdfImpl(comptime PeerType: type, x: PeerType, median: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, median, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(median) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2312,7 +2519,10 @@ pub fn cauchyCdf(x: anytype, median: anytype, scale: anytype) @TypeOf(x, median,
 }
 
 /// Inverse Cauchy(median, scale) CDF. p=0 → −∞, p=1 → +∞.
-pub fn cauchyQuantile(p: anytype, median: anytype, scale: anytype) @TypeOf(p, median, scale) {
+pub fn cauchyQuantile(p: anytype, median: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, median, scale)) {
+    return cauchyQuantileImpl(resolvedFloatType(@TypeOf(p, median, scale)), p, median, scale);
+}
+fn cauchyQuantileImpl(comptime PeerType: type, p: PeerType, median: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, median, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(median) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2325,7 +2535,10 @@ pub fn cauchyQuantile(p: anytype, median: anytype, scale: anytype) @TypeOf(p, me
 }
 
 /// Rayleigh(scale) CDF.
-pub fn rayleighCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
+pub fn rayleighCdf(x: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, scale)) {
+    return rayleighCdfImpl(resolvedFloatType(@TypeOf(x, scale)), x, scale);
+}
+fn rayleighCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, scale);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2339,7 +2552,10 @@ pub fn rayleighCdf(x: anytype, scale: anytype) @TypeOf(x, scale) {
 }
 
 /// Inverse Rayleigh(scale) CDF. p=0 → 0, p=1 → +∞.
-pub fn rayleighQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
+pub fn rayleighQuantile(p: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, scale)) {
+    return rayleighQuantileImpl(resolvedFloatType(@TypeOf(p, scale)), p, scale);
+}
+fn rayleighQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, scale);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2350,7 +2566,10 @@ pub fn rayleighQuantile(p: anytype, scale: anytype) @TypeOf(p, scale) {
 }
 
 /// Weibull(scale, shape) CDF.
-pub fn weibullCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, shape) {
+pub fn weibullCdf(x: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, scale, shape)) {
+    return weibullCdfImpl(resolvedFloatType(@TypeOf(x, scale, shape)), x, scale, shape);
+}
+fn weibullCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, scale, shape);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2362,7 +2581,10 @@ pub fn weibullCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, 
 }
 
 /// Inverse Weibull(scale, shape) CDF. p=0 → 0, p=1 → +∞.
-pub fn weibullQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, scale, shape) {
+pub fn weibullQuantile(p: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, scale, shape)) {
+    return weibullQuantileImpl(resolvedFloatType(@TypeOf(p, scale, shape)), p, scale, shape);
+}
+fn weibullQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, scale, shape);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2374,7 +2596,10 @@ pub fn weibullQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, sc
 }
 
 /// Gumbel(location, scale) CDF.
-pub fn gumbelCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, location, scale) {
+pub fn gumbelCdf(x: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, location, scale)) {
+    return gumbelCdfImpl(resolvedFloatType(@TypeOf(x, location, scale)), x, location, scale);
+}
+fn gumbelCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(x, location, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2384,7 +2609,10 @@ pub fn gumbelCdf(x: anytype, location: anytype, scale: anytype) @TypeOf(x, locat
 }
 
 /// Inverse Gumbel(location, scale) CDF. p=0 → −∞, p=1 → +∞.
-pub fn gumbelQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, location, scale) {
+pub fn gumbelQuantile(p: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, location, scale)) {
+    return gumbelQuantileImpl(resolvedFloatType(@TypeOf(p, location, scale)), p, location, scale);
+}
+fn gumbelQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, location, scale);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2396,7 +2624,10 @@ pub fn gumbelQuantile(p: anytype, location: anytype, scale: anytype) @TypeOf(p, 
 }
 
 /// Frechet(location, scale, shape) CDF.
-pub fn frechetCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(x, location, scale, shape) {
+pub fn frechetCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, location, scale, shape)) {
+    return frechetCdfImpl(resolvedFloatType(@TypeOf(x, location, scale, shape)), x, location, scale, shape);
+}
+fn frechetCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, location, scale, shape);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2409,7 +2640,10 @@ pub fn frechetCdf(x: anytype, location: anytype, scale: anytype, shape: anytype)
 }
 
 /// Inverse Frechet(location, scale, shape) CDF. p=0 → location, p=1 → +∞.
-pub fn frechetQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) @TypeOf(p, location, scale, shape) {
+pub fn frechetQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, location, scale, shape)) {
+    return frechetQuantileImpl(resolvedFloatType(@TypeOf(p, location, scale, shape)), p, location, scale, shape);
+}
+fn frechetQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, location, scale, shape);
     comptime requireFloat(T);
     if (!std.math.isFinite(location) or !(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2421,7 +2655,10 @@ pub fn frechetQuantile(p: anytype, location: anytype, scale: anytype, shape: any
 }
 
 /// Pareto(scale, shape) CDF.
-pub fn paretoCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, shape) {
+pub fn paretoCdf(x: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, scale, shape)) {
+    return paretoCdfImpl(resolvedFloatType(@TypeOf(x, scale, shape)), x, scale, shape);
+}
+fn paretoCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, scale, shape);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2434,7 +2671,10 @@ pub fn paretoCdf(x: anytype, scale: anytype, shape: anytype) @TypeOf(x, scale, s
 }
 
 /// Inverse Pareto(scale, shape) CDF. p=0 → scale, p=1 → +∞.
-pub fn paretoQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, scale, shape) {
+pub fn paretoQuantile(p: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, scale, shape)) {
+    return paretoQuantileImpl(resolvedFloatType(@TypeOf(p, scale, shape)), p, scale, shape);
+}
+fn paretoQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, scale, shape);
     comptime requireFloat(T);
     if (!(scale >= 0) or !std.math.isFinite(scale)) return std.math.nan(T);
@@ -2446,7 +2686,10 @@ pub fn paretoQuantile(p: anytype, scale: anytype, shape: anytype) @TypeOf(p, sca
 }
 
 /// PowerFunction(min, max, shape) CDF.
-pub fn powerFunctionCdf(x: anytype, min: anytype, max: anytype, shape: anytype) @TypeOf(x, min, max, shape) {
+pub fn powerFunctionCdf(x: anytype, min: anytype, max: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, min, max, shape)) {
+    return powerFunctionCdfImpl(resolvedFloatType(@TypeOf(x, min, max, shape)), x, min, max, shape);
+}
+fn powerFunctionCdfImpl(comptime PeerType: type, x: PeerType, min: PeerType, max: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(x, min, max, shape);
     comptime requireFloat(T);
     if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
@@ -2459,7 +2702,10 @@ pub fn powerFunctionCdf(x: anytype, min: anytype, max: anytype, shape: anytype) 
 }
 
 /// Inverse PowerFunction(min, max, shape) CDF. p=0 → min, p=1 → max.
-pub fn powerFunctionQuantile(p: anytype, min: anytype, max: anytype, shape: anytype) @TypeOf(p, min, max, shape) {
+pub fn powerFunctionQuantile(p: anytype, min: anytype, max: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, min, max, shape)) {
+    return powerFunctionQuantileImpl(resolvedFloatType(@TypeOf(p, min, max, shape)), p, min, max, shape);
+}
+fn powerFunctionQuantileImpl(comptime PeerType: type, p: PeerType, min: PeerType, max: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, min, max, shape);
     comptime requireFloat(T);
     if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
@@ -2471,7 +2717,10 @@ pub fn powerFunctionQuantile(p: anytype, min: anytype, max: anytype, shape: anyt
 }
 
 /// Kumaraswamy(alpha, beta) CDF on [0, 1].
-pub fn kumaraswamyCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x, alpha, beta_param) {
+pub fn kumaraswamyCdf(x: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(x, alpha, beta_param)) {
+    return kumaraswamyCdfImpl(resolvedFloatType(@TypeOf(x, alpha, beta_param)), x, alpha, beta_param);
+}
+fn kumaraswamyCdfImpl(comptime PeerType: type, x: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     const T = @TypeOf(x, alpha, beta_param);
     comptime requireFloat(T);
     if (!(alpha > 0) or !std.math.isFinite(alpha)) return std.math.nan(T);
@@ -2483,7 +2732,10 @@ pub fn kumaraswamyCdf(x: anytype, alpha: anytype, beta_param: anytype) @TypeOf(x
 }
 
 /// Inverse Kumaraswamy(alpha, beta_param) CDF. p=0 → 0, p=1 → 1.
-pub fn kumaraswamyQuantile(p: anytype, alpha: anytype, beta_param: anytype) @TypeOf(p, alpha, beta_param) {
+pub fn kumaraswamyQuantile(p: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(p, alpha, beta_param)) {
+    return kumaraswamyQuantileImpl(resolvedFloatType(@TypeOf(p, alpha, beta_param)), p, alpha, beta_param);
+}
+fn kumaraswamyQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     const T = @TypeOf(p, alpha, beta_param);
     comptime requireFloat(T);
     if (!(alpha > 0) or !std.math.isFinite(alpha)) return std.math.nan(T);
@@ -2495,7 +2747,10 @@ pub fn kumaraswamyQuantile(p: anytype, alpha: anytype, beta_param: anytype) @Typ
 }
 
 /// Arcsine(min, max) CDF.
-pub fn arcsineCdf(x: anytype, min: anytype, max: anytype) @TypeOf(x, min, max) {
+pub fn arcsineCdf(x: anytype, min: anytype, max: anytype) resolvedFloatType(@TypeOf(x, min, max)) {
+    return arcsineCdfImpl(resolvedFloatType(@TypeOf(x, min, max)), x, min, max);
+}
+fn arcsineCdfImpl(comptime PeerType: type, x: PeerType, min: PeerType, max: PeerType) PeerType {
     const T = @TypeOf(x, min, max);
     comptime requireFloat(T);
     if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
@@ -2508,7 +2763,10 @@ pub fn arcsineCdf(x: anytype, min: anytype, max: anytype) @TypeOf(x, min, max) {
 }
 
 /// Inverse Arcsine(min, max) CDF. p=0 → min, p=1 → max.
-pub fn arcsineQuantile(p: anytype, min: anytype, max: anytype) @TypeOf(p, min, max) {
+pub fn arcsineQuantile(p: anytype, min: anytype, max: anytype) resolvedFloatType(@TypeOf(p, min, max)) {
+    return arcsineQuantileImpl(resolvedFloatType(@TypeOf(p, min, max)), p, min, max);
+}
+fn arcsineQuantileImpl(comptime PeerType: type, p: PeerType, min: PeerType, max: PeerType) PeerType {
     const T = @TypeOf(p, min, max);
     comptime requireFloat(T);
     if (!std.math.isFinite(min) or !std.math.isFinite(max) or !(max >= min)) return std.math.nan(T);
@@ -2521,7 +2779,10 @@ pub fn arcsineQuantile(p: anytype, min: anytype, max: anytype) @TypeOf(p, min, m
 }
 
 /// Triangular(min, mode, max) CDF.
-pub fn triangularCdf(x: anytype, min: anytype, mode: anytype, max: anytype) @TypeOf(x, min, mode, max) {
+pub fn triangularCdf(x: anytype, min: anytype, mode: anytype, max: anytype) resolvedFloatType(@TypeOf(x, min, mode, max)) {
+    return triangularCdfImpl(resolvedFloatType(@TypeOf(x, min, mode, max)), x, min, mode, max);
+}
+fn triangularCdfImpl(comptime PeerType: type, x: PeerType, min: PeerType, mode: PeerType, max: PeerType) PeerType {
     const T = @TypeOf(x, min, mode, max);
     comptime requireFloat(T);
     if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return std.math.nan(T);
@@ -2539,7 +2800,10 @@ pub fn triangularCdf(x: anytype, min: anytype, mode: anytype, max: anytype) @Typ
 }
 
 /// Inverse Triangular(min, mode, max) CDF. p=0 → min, p=1 → max.
-pub fn triangularQuantile(p: anytype, min: anytype, mode: anytype, max: anytype) @TypeOf(p, min, mode, max) {
+pub fn triangularQuantile(p: anytype, min: anytype, mode: anytype, max: anytype) resolvedFloatType(@TypeOf(p, min, mode, max)) {
+    return triangularQuantileImpl(resolvedFloatType(@TypeOf(p, min, mode, max)), p, min, mode, max);
+}
+fn triangularQuantileImpl(comptime PeerType: type, p: PeerType, min: PeerType, mode: PeerType, max: PeerType) PeerType {
     const T = @TypeOf(p, min, mode, max);
     comptime requireFloat(T);
     if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) return std.math.nan(T);
@@ -39194,6 +39458,18 @@ fn requireFloat(comptime T: type) void {
     if (@typeInfo(T) != .float) @compileError("expected float type, found " ++ @typeName(T));
 }
 
+/// Resolve the numeric type of a peer-type helper call. Comptime-only
+/// arguments (for example `betaIncomplete(0.5, 2.0, 3.0)`) default to f64 so
+/// callers do not have to annotate literals; runtime f32/f64 and vector
+/// arguments keep their own type.
+fn resolvedFloatType(comptime T: type) type {
+    return switch (@typeInfo(T)) {
+        .float => T,
+        .comptime_float, .comptime_int => f64,
+        else => T,
+    };
+}
+
 fn requireFloatOrFloatVector(comptime T: type) void {
     switch (@typeInfo(T)) {
         .float => {},
@@ -56257,6 +56533,39 @@ test "betaCdf and betaQuantile round-trip" {
     try std.testing.expectEqual(@as(f64, 1), betaQuantile(@as(f64, 1), @as(f64, 2), @as(f64, 3)));
     try std.testing.expect(std.math.isNan(betaQuantile(@as(f64, -0.1), @as(f64, 2), @as(f64, 3))));
     try std.testing.expect(std.math.isNan(betaQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 3))));
+}
+
+test "distribution helpers accept literal and mixed argument types" {
+    // Fully literal calls default to f64; before the typed wrappers the first
+    // argument kept its comptime_float type and the call failed to compile.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6875), betaIncomplete(0.5, 2.0, 3.0), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6875), betaCdf(0.5, 2, 3), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 3.0), studentTCdf(0.5, 2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.857123460498547), poissonCdf(3, 2), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), binomialCdf(3, 2, 0.4), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.950212931632136), gammaCdf(3, 1, 1), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6914624612740131), normCdf(0.5), 1e-7);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0), probit(0.5), 1e-9);
+
+    // Mixed comptime literals and runtime parameters keep the runtime type.
+    const values = [_]f64{ 2, 3, 0.4 };
+    var index: usize = 0;
+    const runtime_two = values[index];
+    index += 1;
+    const runtime_three = values[index];
+    index += 1;
+    const runtime_p = values[index];
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6875), betaIncomplete(0.5, runtime_two, runtime_three), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6875), betaCdf(0.5, runtime_two, runtime_three), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0 / 3.0), studentTCdf(0.5, runtime_two), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.857123460498547), poissonCdf(3, runtime_two), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), binomialCdf(3, runtime_two, runtime_p), 1e-12);
+
+    // f32 arguments stay f32, including a mixed comptime literal.
+    const literal_f32 = betaIncomplete(0.5, @as(f32, 2), @as(f32, 3));
+    try std.testing.expectEqual(@as(f32, 0.6875), literal_f32);
+    const runtime_f32 = betaIncomplete(@as(f32, 0.5), @as(f32, 2), @as(f32, 3));
+    try std.testing.expectEqual(@as(f32, 0.6875), runtime_f32);
 }
 
 test "fisherFCdf and fisherFQuantile match known values" {
