@@ -14089,12 +14089,12 @@ pub const GeneralizedParetoError = Error;
 /// Inverse CDF sampling: X = μ + σ·(U^{-ξ} - 1)/ξ for ξ ≠ 0;
 ///                       X = μ - σ·ln U for ξ = 0, where U ~ Uniform(0,1].
 fn generalizedParetoPointFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
-    const u = Rng.floatOpenFrom(source, T);
+    const e = Rng.standardExponentialFastFrom(source, T);
     if (xi == 0) {
-        return mu - sigma * @log(u);
+        return mu + sigma * e;
     }
-    // u^{-ξ} = exp(-ξ·ln u); numerically stable.
-    return mu + sigma * (@exp(-xi * @log(u)) - 1) / xi;
+    // u^{-ξ} = exp(-ξ·ln u) = exp(ξ·E) with E = -ln u ~ Exp(1).
+    return mu + sigma * (@exp(xi * e) - 1) / xi;
 }
 
 /// Fill a slice with Generalized Pareto-distributed values.
@@ -25628,7 +25628,9 @@ pub fn rayleighFrom(source: anytype, comptime T: type, scale: T) T {
     std.debug.assert(scale >= 0 and std.math.isFinite(scale));
     if (scale == 0) return 0;
 
-    return scale * @sqrt(-2 * @log(Rng.floatOpenFrom(source, T)));
+    // `-log(U)` for U ~ Uniform(0,1) is Exp(1); the ziggurat kernel is
+    // cheaper than the log transform and gives the same Rayleigh law.
+    return scale * @sqrt(2 * Rng.standardExponentialFastFrom(source, T));
 }
 
 pub fn fillRayleigh(rng: Rng, comptime T: type, dest: []T, scale: T) void {
@@ -25820,7 +25822,7 @@ pub fn Rayleigh(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return 0;
-            return self.scale * @sqrt(-2 * @log(rng.floatOpen(T)));
+            return rayleighFrom(rng, T, self.scale);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -26119,7 +26121,8 @@ pub fn paretoFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     std.debug.assert(paretoParametersValid(T, scale, shape));
     if (scale == 0 or shape == std.math.inf(T)) return scale;
 
-    return scale * @exp((-1 / shape) * @log(Rng.floatOpenFrom(source, T)));
+    // U^{-1/shape} = exp(-log(U)/shape) and -log(U) ~ Exp(1).
+    return scale * @exp(Rng.standardExponentialFastFrom(source, T) / shape);
 }
 
 pub fn fillPareto(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
@@ -26349,9 +26352,7 @@ pub fn Pareto(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.degenerateValue();
-            const u = rng.floatOpen(T);
-            if (self.shape == 1) return self.scale / u;
-            return self.scale * std.math.pow(T, u, -1 / self.shape);
+            return paretoFrom(rng, T, self.scale, self.shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -26416,7 +26417,7 @@ pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     std.debug.assert(weibullParametersValid(T, scale, shape));
     if (scale == 0 or shape == std.math.inf(T)) return scale;
     if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
-    const e = -@log(Rng.floatOpenFrom(source, T));
+    const e = Rng.standardExponentialFastFrom(source, T);
     return scale * @exp((1 / shape) * @log(e));
 }
 
@@ -26656,8 +26657,7 @@ pub fn Weibull(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.degenerateValue();
-            if (self.shape == 1) return self.scale * rng.standardExponential(T);
-            return self.scale * std.math.pow(T, -@log(rng.floatOpen(T)), 1 / self.shape);
+            return weibullFrom(rng, T, self.scale, self.shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -26721,8 +26721,8 @@ pub fn gumbelFrom(source: anytype, comptime T: type, location: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(location) and scale >= 0 and std.math.isFinite(scale));
     if (scale == 0) return location;
-    const u = Rng.floatOpenClosedFrom(source, T);
-    return location - scale * @log(-@log(u));
+    const e = Rng.standardExponentialFastFrom(source, T);
+    return location - scale * @log(e);
 }
 
 pub fn fillGumbel(rng: Rng, comptime T: type, dest: []T, location: T, scale: T) void {
@@ -26929,8 +26929,8 @@ pub fn Gumbel(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.location;
-            const u = rng.floatOpenClosed(T);
-            return self.location - self.scale * @log(-@log(u));
+            const e = Rng.standardExponentialFastFrom(rng, T);
+            return self.location - self.scale * @log(e);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -26982,8 +26982,8 @@ pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, sha
     if (scale == 0) return location;
     if (shape == std.math.inf(T)) return location + scale;
 
-    const u = Rng.floatOpenClosedFrom(source, T);
-    return location + scale * @exp((-1 / shape) * @log(-@log(u)));
+    const e = Rng.standardExponentialFastFrom(source, T);
+    return location + scale * @exp((-1 / shape) * @log(e));
 }
 
 pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
@@ -27238,9 +27238,7 @@ pub fn Frechet(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.degenerateValue();
-            const u = rng.floatOpenClosed(T);
-            if (self.shape == 1) return self.location - self.scale / @log(u);
-            return self.location + self.scale * std.math.pow(T, -@log(u), -1 / self.shape);
+            return frechetFrom(rng, T, self.location, self.scale, self.shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {

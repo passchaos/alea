@@ -6916,5 +6916,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1383-validate-all-refresh.md`, and
 `compare/results/s4-m1384-sampler-copy-avoidance.md`, and
 `compare/results/s4-m1385-validate-all-refresh.md`, and
-`compare/results/s4-m1386-exponential-geometric.md`.
+`compare/results/s4-m1386-exponential-geometric.md`, and
+`compare/results/s4-m1387-exponential-inverse-power.md`.
 
