@@ -8131,6 +8131,135 @@ pub fn fillVectorExponentialNativeF32CheckedFrom(source: anytype, comptime Vecto
     fillVectorExponentialNativeF32From(source, VectorType, dest, rate);
 }
 
+/// Reusable binomial sampler with precomputed draw constants.
+///
+/// `Binomial` keeps only `(trials, p)` and rebuilds the HIN envelope or the
+/// waiting-time rate on every draw. This variant pays that setup once in
+/// `init`, which is about twice as fast when the parameters are only known at
+/// runtime. The sampled law and the per-draw stream match `Binomial` for the
+/// same parameters. The receivers are pointers because the cached HIN setup is
+/// large; copying it per draw would erase the gain.
+pub const CachedBinomial = struct {
+    trials: u64,
+    p: f64,
+    flip: bool,
+    method: Method,
+
+    const Method = union(enum) {
+        constant: u64,
+        fair,
+        dyadic: DyadicBinomialFields,
+        per_trial: u64,
+        waiting: f64,
+        hin: BinomialHinSetup,
+    };
+
+    pub fn init(trials: u64, p: f64) Error!CachedBinomial {
+        if (!(p >= 0 and p <= 1)) return error.InvalidProbability;
+        if (trials == 0 or p == 0) {
+            return .{ .trials = trials, .p = p, .flip = false, .method = .{ .constant = 0 } };
+        }
+        if (p == 1) {
+            return .{ .trials = trials, .p = p, .flip = false, .method = .{ .constant = trials } };
+        }
+        if (p == 0.5) {
+            return .{ .trials = trials, .p = p, .flip = false, .method = .fair };
+        }
+        const flip = p > 0.5;
+        const folded = if (flip) 1.0 - p else p;
+        if (trials <= 64) {
+            if (dyadicBinomialFields(folded)) |fields| {
+                return .{ .trials = trials, .p = p, .flip = flip, .method = .{ .dyadic = fields } };
+            }
+            return .{
+                .trials = trials,
+                .p = p,
+                .flip = flip,
+                .method = .{ .per_trial = Rng.probabilityThreshold(folded) },
+            };
+        }
+        if (binomialHinSetup(trials, folded)) |setup| {
+            return .{ .trials = trials, .p = p, .flip = flip, .method = .{ .hin = setup } };
+        }
+        return .{
+            .trials = trials,
+            .p = p,
+            .flip = flip,
+            .method = .{ .waiting = -@log(1.0 - folded) },
+        };
+    }
+
+    pub fn new(trials: u64, p: f64) Error!CachedBinomial {
+        return init(trials, p);
+    }
+
+    pub fn trialsValue(self: *const CachedBinomial) u64 {
+        return self.trials;
+    }
+
+    pub fn probabilityValue(self: *const CachedBinomial) f64 {
+        return self.p;
+    }
+
+    /// Binomial CDF at `k` with this sampler's trials/probability.
+    pub fn cdf(self: *const CachedBinomial, k: f64) f64 {
+        return binomialCdf(k, @as(f64, @floatFromInt(self.trials)), self.p);
+    }
+
+    /// Binomial quantile for probability `q`.
+    pub fn quantile(self: *const CachedBinomial, q: f64) f64 {
+        return binomialQuantile(q, @as(f64, @floatFromInt(self.trials)), self.p);
+    }
+
+    pub fn expectedValue(self: *const CachedBinomial) f64 {
+        return @as(f64, @floatFromInt(self.trials)) * self.p;
+    }
+
+    pub fn varianceValue(self: *const CachedBinomial) f64 {
+        return @as(f64, @floatFromInt(self.trials)) * self.p * (1 - self.p);
+    }
+
+    pub fn minValue(self: *const CachedBinomial) u64 {
+        _ = self;
+        return 0;
+    }
+
+    pub fn maxValue(self: *const CachedBinomial) u64 {
+        return self.trials;
+    }
+
+    pub fn sample(self: *const CachedBinomial, rng: Rng) u64 {
+        return self.sampleFrom(rng);
+    }
+
+    pub fn sampleFrom(self: *const CachedBinomial, source: anytype) u64 {
+        const sampled = switch (self.method) {
+            .constant => |value| return value,
+            .fair => binomialFairFrom(source, self.trials),
+            .dyadic => |fields| binomialDyadicFrom(source, self.trials, fields.m, fields.k),
+            .per_trial => |threshold| per_trial: {
+                var successes: u64 = 0;
+                var i: u64 = 0;
+                while (i < self.trials) : (i += 1) {
+                    successes += @intFromBool(Rng.nextFrom(source) < threshold);
+                }
+                break :per_trial successes;
+            },
+            .waiting => |q| binomialWaitingFrom(source, self.trials, q),
+            .hin => |*setup| binomialHinDrawFrom(source, self.trials, setup),
+        };
+        return if (self.flip) self.trials - sampled else sampled;
+    }
+
+    pub fn fill(self: *const CachedBinomial, rng: Rng, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(rng);
+    }
+
+    pub fn fillFrom(self: *const CachedBinomial, source: anytype, dest: []u64) void {
+        for (dest) |*item| item.* = self.sampleFrom(source);
+    }
+};
+
 test "native f32x8 vector fills match facade and pass statistical sanity" {
     // True SIMD f32x8 ziggurat (mask-based lane rejection) uses native f32 ziggurat tables
     // instead of casting f64 ziggurat output to f32.  The bit-consumption order differs from
@@ -54121,6 +54250,63 @@ test "binomial waiting-time region has plausible moments" {
         try std.testing.expect(@abs(mean - case.mean) < 0.06);
         try std.testing.expect(@abs(variance - case.variance) < 0.25);
     }
+}
+
+test "cached binomial matches the plain sampler stream" {
+    const alea = @import("root.zig");
+
+    const Case = struct { trials: u64, p: f64 };
+    const cases = [_]Case{
+        .{ .trials = 0, .p = 0.25 },
+        .{ .trials = 10, .p = 0 },
+        .{ .trials = 10, .p = 1 },
+        .{ .trials = 10, .p = 0.5 },
+        .{ .trials = 40, .p = 0.25 },
+        .{ .trials = 40, .p = 1.0 / 3.0 },
+        .{ .trials = 1000, .p = 0.012 },
+        .{ .trials = 10_000, .p = 0.01 },
+        .{ .trials = 1000, .p = 0.9 },
+        .{ .trials = 100, .p = 0.7 },
+    };
+
+    for (cases) |case| {
+        const plain = try Binomial.init(case.trials, case.p);
+        const cached = try CachedBinomial.init(case.trials, case.p);
+        try std.testing.expectEqual(plain.trialsValue(), cached.trialsValue());
+        try std.testing.expectEqual(plain.probabilityValue(), cached.probabilityValue());
+        try std.testing.expectEqual(plain.minValue(), cached.minValue());
+        try std.testing.expectEqual(plain.maxValue(), cached.maxValue());
+        try std.testing.expectEqual(plain.expectedValue(), cached.expectedValue());
+        try std.testing.expectEqual(plain.varianceValue(), cached.varianceValue());
+        try std.testing.expectApproxEqAbs(plain.cdf(3), cached.cdf(3), 1e-12);
+        try std.testing.expectApproxEqAbs(plain.quantile(0.25), cached.quantile(0.25), 1e-12);
+
+        var plain_engine = alea.FastPrng.init(0xc0_1d);
+        var cached_engine = alea.FastPrng.init(0xc0_1d);
+        var i: usize = 0;
+        while (i < 256) : (i += 1) {
+            const expected = plain.sampleFrom(&plain_engine);
+            const actual = cached.sampleFrom(&cached_engine);
+            try std.testing.expectEqual(expected, actual);
+        }
+
+        var plain_fill_engine = alea.FastPrng.init(0xc0_2e);
+        var cached_fill_engine = alea.FastPrng.init(0xc0_2e);
+        var plain_values: [16]u64 = undefined;
+        var cached_values: [16]u64 = undefined;
+        plain.fillFrom(&plain_fill_engine, &plain_values);
+        cached.fillFrom(&cached_fill_engine, &cached_values);
+        try std.testing.expectEqualSlices(u64, &plain_values, &cached_values);
+
+        var plain_rng_engine = alea.FastPrng.init(0xc0_3f);
+        var cached_rng_engine = alea.FastPrng.init(0xc0_3f);
+        const plain_rng = Rng.init(&plain_rng_engine);
+        const cached_rng = Rng.init(&cached_rng_engine);
+        try std.testing.expectEqual(plain.sample(plain_rng), cached.sample(cached_rng));
+    }
+
+    try std.testing.expectError(error.InvalidProbability, CachedBinomial.init(10, -0.1));
+    try std.testing.expectError(error.InvalidProbability, CachedBinomial.init(10, 1.1));
 }
 
 test "binomial sampler has plausible moments" {

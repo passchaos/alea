@@ -275,6 +275,10 @@ NegativeBinomial, Poisson (including the local `rand_distr::Poisson::MAX_LAMBDA`
 threshold exposed as `poisson_max_lambda`, `poissonMaxLambda`,
 `Poisson.max_lambda`, and `Poisson.MAX_LAMBDA`), Geometric trial/failure
 counts, Hypergeometric, and vector discrete samplers.
+`CachedBinomial` is the reusable binomial sampler for parameters that are only
+known at runtime: `init` pays the HIN envelope, waiting-time rate, packed
+dyadic fields, or per-trial threshold once, and `sample`/`fill` then draw about
+twice as fast as `Binomial` while producing the same per-draw stream.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same

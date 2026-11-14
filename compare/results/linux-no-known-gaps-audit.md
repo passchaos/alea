@@ -6973,5 +6973,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1440-validate-all-refresh.md`, and
 `compare/results/s4-m1441-adapter-random-interop.md`, and
 `compare/results/s4-m1442-validate-all-refresh.md`, and
-`compare/results/s4-m1443-btpe-central-binomial-probe.md`.
+`compare/results/s4-m1443-btpe-central-binomial-probe.md`, and
+`compare/results/s4-m1444-cached-binomial-sampler.md`.
 

@@ -13,6 +13,12 @@ const Options = struct {
 
 var bench_filter: ?[]const u8 = null;
 
+// Runtime-parameter binomial rows: the values are read through volatile
+// pointers so the compiler cannot constant-fold the per-draw setup, which is
+// the workflow the cached sampler exists to speed up.
+var runtime_binomial_trials: u64 = 10_000;
+var runtime_binomial_p: f64 = 0.01;
+
 fn parseOptions(args: []const []const u8) Options {
     var options: Options = .{};
     if (args.len > 1) {
@@ -245,6 +251,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillBinomialScalar(io, stdout, "alea fillBinomial scalar direct", bytes / 64);
     try benchBinomialLarge(io, stdout, "alea binomial large", bytes / 256);
     try benchBinomialMean12(io, stdout, "alea binomial mean-12", bytes / 256);
+    try benchBinomialRuntime(io, stdout, "alea binomial runtime sampler", bytes / 256, false);
+    try benchBinomialRuntime(io, stdout, "alea binomial runtime cached", bytes / 256, true);
     try benchBinomialApprox(io, stdout, "alea binomial poisson approx", bytes / 256);
     try benchNegativeBinomial(io, stdout, "alea negative-binomial", bytes / 128);
     try benchFillNegativeBinomial(io, stdout, "alea fillNegativeBinomial", bytes / 128);
@@ -5468,6 +5476,39 @@ fn benchBinomialMean12(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
         var i: usize = 0;
         var checksum: u64 = 0;
         while (i < count) : (i += 1) checksum +%= alea.distributions.binomial(rng, 1_000, 0.012);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchBinomialRuntime(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, cached: bool) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const trials_value = @volatileCast(&runtime_binomial_trials).*;
+    const p_value = @volatileCast(&runtime_binomial_p).*;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xb16e);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        if (cached) {
+            const dist = alea.distributions.CachedBinomial.init(trials_value, p_value) catch unreachable;
+            while (i < count) : (i += 1) checksum +%= dist.sample(rng);
+        } else {
+            const dist = alea.distributions.Binomial.init(trials_value, p_value) catch unreachable;
+            while (i < count) : (i += 1) checksum +%= dist.sample(rng);
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
