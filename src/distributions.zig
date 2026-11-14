@@ -24512,7 +24512,7 @@ pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T 
 
     const u = Rng.floatOpenFrom(source, T);
     if (shape == 1) return scale * u / (1 - u);
-    return scale * std.math.pow(T, u / (1 - u), 1 / shape);
+    return scale * @exp(@log(u / (1 - u)) * (1 / shape));
 }
 
 pub fn fillLogLogistic(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
@@ -24771,14 +24771,14 @@ pub fn LogLogistic(comptime T: type) type {
             if (self.isDegenerate()) return self.degenerateValue();
             const u = rng.floatOpen(T);
             if (self.method == .ratio) return self.scale * u / (1 - u);
-            return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
+            return self.scale * @exp(@log(u / (1 - u)) * self.inverse_shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.isDegenerate()) return self.degenerateValue();
             const u = Rng.floatOpenFrom(source, T);
             if (self.method == .ratio) return self.scale * u / (1 - u);
-            return self.scale * std.math.pow(T, u / (1 - u), self.inverse_shape);
+            return self.scale * @exp(@log(u / (1 - u)) * self.inverse_shape);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
