@@ -639,7 +639,9 @@ CDF and quantile helpers complement the samplers:
   stable log-factorial delta for the beta-function ratios (huge shapes) and
   switch to the scaled-beta limit (`α+β ≤ n`) or `binomialCdf` (`n < α+β`)
   above one million trials, so huge trial counts no longer stall the
-  recurrence.
+  recurrence. `Chi` and `NoncentralChi` evaluate `Γ(z+1/2)/Γ(z)` with the
+  `√z·(1 − 1/(8z) + 1/(128z²))` asymptotic above `1e7` and use the
+  `√(k+λ)` mean and `(k+2λ)/(2(k+λ))` variance limits above `1e12`.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
