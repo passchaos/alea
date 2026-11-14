@@ -7037,5 +7037,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1505-matrix-normal-scale-gates.md`, and
 `compare/results/s4-m1506-validate-all-refresh.md`, and
 `compare/results/s4-m1507-wishart-bartlett-product.md`, and
-`compare/results/s4-m1508-validate-all-refresh.md`.
+`compare/results/s4-m1508-validate-all-refresh.md`, and
+`compare/results/s4-m1509-longrun-wishart-gates.md`.
 

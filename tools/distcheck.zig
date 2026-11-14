@@ -2062,6 +2062,49 @@ fn checkLongRun(samples: usize) !void {
         }
     }
 
+    // Wishart and Inverse-Wishart joint moment recovery with a non-diagonal
+    // scale; the full Bartlett L*A product is required for these means and the
+    // off-diagonal variance.
+    {
+        var engine = alea.FastPrng.init(0x10d7);
+        const rng = alea.Rng.init(&engine);
+        const scale = [_]f64{ 2, 0.5, 0.5, 1 };
+        var wishart = try alea.distributions.Wishart(f64).init(allocator, &scale, 6);
+        defer wishart.deinit();
+        var iwishart = try alea.distributions.InverseWishart(f64).init(allocator, &scale, 10);
+        defer iwishart.deinit();
+        var sum_w00: f64 = 0;
+        var sum_w01: f64 = 0;
+        var sum_w11: f64 = 0;
+        var sum_w01_sq: f64 = 0;
+        var sum_i00: f64 = 0;
+        var sum_i01: f64 = 0;
+        var sum_i11: f64 = 0;
+        var w: [4]f64 = undefined;
+        var iw: [4]f64 = undefined;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            wishart.sampleInto(rng, &w);
+            sum_w00 += w[0];
+            sum_w01 += w[1];
+            sum_w11 += w[3];
+            sum_w01_sq += w[1] * w[1];
+            iwishart.sampleInto(rng, &iw);
+            sum_i00 += iw[0];
+            sum_i01 += iw[1];
+            sum_i11 += iw[3];
+        }
+        try expectFloatBetween("long wishart mean00", sum_w00 / nf, 11.99, 12.01);
+        try expectFloatBetween("long wishart mean01", sum_w01 / nf, 2.99, 3.01);
+        try expectFloatBetween("long wishart mean11", sum_w11 / nf, 5.99, 6.01);
+        const wishart_mean01 = sum_w01 / nf;
+        try expectFloatBetween("long wishart off-diagonal variance", sum_w01_sq / nf - wishart_mean01 * wishart_mean01, 13.4, 13.6);
+        // E[IW] = Psi / (nu - dim - 1) = Psi / 7.
+        try expectFloatBetween("long inverse wishart mean00", sum_i00 / nf, 0.2807, 0.2907);
+        try expectFloatBetween("long inverse wishart mean01", sum_i01 / nf, 0.0694, 0.0734);
+        try expectFloatBetween("long inverse wishart mean11", sum_i11 / nf, 0.1399, 0.1459);
+    }
+
     // Discrete sampler CDF consistency at fixed thresholds.
     {
         var engine = alea.FastPrng.init(0x10d6);
