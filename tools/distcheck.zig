@@ -885,6 +885,30 @@ fn checkDiscrete() !void {
             return alea.distributions.hypergeometric(r, 10_000, 1_000, 2_000);
         }
     }.sample, 198.5, 201.5);
+    // Variance recovery covers the inverse-transform, H2PE, and draw-loop
+    // sampling paths.
+    try expectDiscreteVariance("hypergeometric variance", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 100, 30, 10);
+        }
+    }.sample, 1.85, 1.97);
+    try expectDiscreteVariance("hypergeometric-large variance", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 5000, 2500, 500);
+        }
+    }.sample, 110.5, 114.5);
+    try expectDiscreteVariance("hypergeometric-skew-large variance", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 10_000, 1_000, 2_000);
+        }
+    }.sample, 141.0, 147.0);
+    // Rare successes fall back to the exact draw loop when the
+    // inverse-transform PMF product overflows.
+    try expectDiscreteVariance("hypergeometric-rare variance", rng, 20_000, struct {
+        fn sample(r: alea.Rng) u64 {
+            return alea.distributions.hypergeometric(r, 100_000, 100, 1_000);
+        }
+    }.sample, 0.90, 1.08);
 
     // Huge-population paths: H2PE, inverse-transform init, and the
     // gamma-Poisson negative-binomial mixture.
@@ -947,6 +971,20 @@ fn expectDiscreteMean(comptime label: []const u8, rng: alea.Rng, samples: usize,
     var i: usize = 0;
     while (i < samples) : (i += 1) sum += @floatFromInt(sampleFn(rng));
     try expectFloatBetween(label, sum / @as(f64, @floatFromInt(samples)), min, max);
+}
+
+fn expectDiscreteVariance(comptime label: []const u8, rng: alea.Rng, samples: usize, sampleFn: *const fn (alea.Rng) u64, min: f64, max: f64) !void {
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const x: f64 = @floatFromInt(sampleFn(rng));
+        sum += x;
+        sum_sq += x * x;
+    }
+    const nf: f64 = @floatFromInt(samples);
+    const mean = sum / nf;
+    try expectFloatBetween(label, sum_sq / nf - mean * mean, min, max);
 }
 
 fn expectPoissonMean(rng: alea.Rng, lambda: f64, min: f64, max: f64) !void {

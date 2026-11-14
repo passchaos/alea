@@ -6168,7 +6168,10 @@ const HypergeometricInverseTransform = struct {
                 @exp(@as(f64, @floatFromInt(population - params.k)) *
                     std.math.log1p(-@as(f64, @floatFromInt(params.n2)) / population_f));
         }
-        if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return error.InvalidParameter;
+        // The inverse-transform setup is an optimization: if the PMF product
+        // overflows or underflows, decline so `Hypergeometric.init` falls
+        // back to the rejection or exact draw-loop method.
+        if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return null;
 
         return .{
             .n1 = params.n1,
@@ -6473,6 +6476,11 @@ fn fractionOfProductsOfFactorials(numerator: struct { u64, u64 }, denominator: s
         if (i <= min_bottom) result /= @floatFromInt(i);
         if (i <= max_top) result *= @floatFromInt(i);
         if (i <= max_bottom) result /= @floatFromInt(i);
+        // The final ratio is a probability, but an intermediate running
+        // product can overflow before the matching divisions. Stop early so
+        // the caller can fall back instead of iterating over a non-finite
+        // value.
+        if (!std.math.isFinite(result) or result == 0) return result;
     }
     return result;
 }
@@ -60200,6 +60208,33 @@ test "hypergeometric edge-shaped huge populations use the inverse transform" {
     }
 }
 
+test "hypergeometric rare-success moderate population falls back without overflow" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x4a16);
+    const rng = Rng.init(&engine);
+
+    // The inverse-transform PMF product multiplies 100 factors near 1e5 and
+    // overflows before the matching divisions; the setup must decline and
+    // fall back to the exact draw loop instead of erroring.
+    const dist = try Hypergeometric.init(100_000, 100, 1_000);
+    try std.testing.expect(dist.method == .draw_loop);
+    _ = hypergeometric(rng, 100_000, 100, 1_000);
+
+    const draws = 50_000;
+    var sum: f64 = 0;
+    var sum_sq: f64 = 0;
+    var i: usize = 0;
+    while (i < draws) : (i += 1) {
+        const x: f64 = @floatFromInt(dist.sample(rng));
+        sum += x;
+        sum_sq += x * x;
+    }
+    const nf: f64 = @floatFromInt(draws);
+    const mean = sum / nf;
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), mean, 0.05);
+    try std.testing.expectApproxEqAbs(dist.varianceValue(), sum_sq / nf - mean * mean, 0.09);
+}
+
 test "negative binomial huge success counts use the mixture" {
     const alea = @import("root.zig");
     var engine = alea.FastPrng.init(0x4d21);
@@ -60314,7 +60349,7 @@ test "negative-binomial and hypergeometric samplers have plausible moments" {
     try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(10, 1, 11));
 }
 
-test "hypergeometric large-population HIN overflow matches local rand_distr" {
+test "hypergeometric large-population HIN overflow falls back to the draw loop" {
     const alea = @import("root.zig");
     const population: u64 = 9_000_000_000_000_000_000;
 
@@ -60330,36 +60365,44 @@ test "hypergeometric large-population HIN overflow matches local rand_distr" {
     var max_population_engine = alea.ScalarPrng.init(0x1160_00ff);
     try std.testing.expect(max_population.sampleFrom(&max_population_engine) <= 1);
 
-    try std.testing.expectError(error.InvalidParameter, Hypergeometric.init(population, 100, 100));
-    try std.testing.expectError(error.InvalidParameter, VectorHypergeometric(@Vector(4, u64)).init(population, 100, 100));
+    // The inverse-transform PMF product overflows for 100 successes near
+    // 9e18. Instead of rejecting these valid parameters (local rand_distr's
+    // PopulationTooLarge behavior), fall back to the exact draw loop.
+    const overflow_fallback = try Hypergeometric.init(population, 100, 100);
+    try std.testing.expectEqual(HypergeometricMethodTag.draw_loop, overflow_fallback.method);
+    try std.testing.expectEqual(@as(u64, 0), overflow_fallback.minValue());
+    try std.testing.expectEqual(@as(u64, 100), overflow_fallback.maxValue());
+    const overflow_vector = try VectorHypergeometric(@Vector(4, u64)).init(population, 100, 100);
+    try std.testing.expectEqual(HypergeometricMethodTag.draw_loop, overflow_vector.sampler.method);
 
     var scalar_engine = alea.ScalarPrng.init(0x1160_0001);
-    var scalar_control = alea.ScalarPrng.init(0x1160_0001);
-    try std.testing.expectError(error.InvalidParameter, hypergeometricCheckedFrom(&scalar_engine, population, 100, 100));
-    try std.testing.expectEqual(scalar_control.next(), scalar_engine.next());
+    const scalar_value = try hypergeometricCheckedFrom(&scalar_engine, population, 100, 100);
+    try std.testing.expect(scalar_value <= 100);
 
     var fill_engine = alea.ScalarPrng.init(0x1160_0002);
-    var fill_control = alea.ScalarPrng.init(0x1160_0002);
     var buf = [_]u64{ 7, 8, 9 };
-    try std.testing.expectError(error.InvalidParameter, fillHypergeometricCheckedFrom(&fill_engine, &buf, population, 100, 100));
-    try std.testing.expectEqualSlices(u64, &.{ 7, 8, 9 }, &buf);
-    try std.testing.expectEqual(fill_control.next(), fill_engine.next());
+    try fillHypergeometricCheckedFrom(&fill_engine, &buf, population, 100, 100);
+    for (buf) |value| try std.testing.expect(value <= 100);
 
     var vector_engine = alea.ScalarPrng.init(0x1160_0003);
-    var vector_control = alea.ScalarPrng.init(0x1160_0003);
-    try std.testing.expectError(error.InvalidParameter, vectorHypergeometricCheckedFrom(&vector_engine, @Vector(4, u64), population, 100, 100));
-    try std.testing.expectEqual(vector_control.next(), vector_engine.next());
+    const vector_value = try vectorHypergeometricCheckedFrom(&vector_engine, @Vector(4, u64), population, 100, 100);
+    inline for (0..4) |lane| try std.testing.expect(vector_value[lane] <= 100);
 
     var vector_fill_engine = alea.ScalarPrng.init(0x1160_0004);
-    var vector_fill_control = alea.ScalarPrng.init(0x1160_0004);
     var vector_buf = [_]@Vector(4, u64){
         @as(@Vector(4, u64), @splat(11)),
         @as(@Vector(4, u64), @splat(12)),
     };
-    try std.testing.expectError(error.InvalidParameter, fillVectorHypergeometricCheckedFrom(&vector_fill_engine, @Vector(4, u64), &vector_buf, population, 100, 100));
-    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(11)), vector_buf[0]);
-    try std.testing.expectEqual(@as(@Vector(4, u64), @splat(12)), vector_buf[1]);
-    try std.testing.expectEqual(vector_fill_control.next(), vector_fill_engine.next());
+    try fillVectorHypergeometricCheckedFrom(&vector_fill_engine, @Vector(4, u64), &vector_buf, population, 100, 100);
+    for (vector_buf) |vec| {
+        inline for (0..4) |lane| try std.testing.expect(vec[lane] <= 100);
+    }
+
+    // Genuinely invalid parameters still reject without consuming randomness.
+    var invalid_engine = alea.ScalarPrng.init(0x1160_0005);
+    var invalid_control = alea.ScalarPrng.init(0x1160_0005);
+    try std.testing.expectError(error.InvalidParameter, hypergeometricCheckedFrom(&invalid_engine, 10, 11, 1));
+    try std.testing.expectEqual(invalid_control.next(), invalid_engine.next());
 }
 
 test "large binomial sampler has plausible moments" {
