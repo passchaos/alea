@@ -23,7 +23,7 @@ command matrix evidence.
 - `rngs` namespace aliases: `rngs.StdRng`, `rngs.SmallRng`, `rngs.SysRng`,
   `rngs.SysError`, `rngs.ChaCha8Rng`, `rngs.ChaCha12Rng`,
   `rngs.ChaCha20Rng`, `rngs.Xoshiro128PlusPlus`,
-  `rngs.Xoshiro256PlusPlus`, `rngs.ReseedingRng`
+  `rngs.Xoshiro256PlusPlus`, `rngs.ReseedingRng`, `rngs.ReaderRng`
 - `prelude` namespace aliases: `prelude.Rng`, `prelude.RngOf`, `prelude.Seed`,
   `prelude.distributions`, `prelude.seq`, `prelude.ascii`, `prelude.StdRng`,
   `prelude.SmallRng`, `prelude.SysRng`, `prelude.SysError`,
@@ -242,6 +242,12 @@ command matrix evidence.
   `ReseedingRng.fill`, `ReseedingRng.fillBytes`, `ReseedingRng.reseedCount`,
   `ReseedingRng.thresholdValue`, `ReseedingRng.remainingDraws`,
   `ReseedingRng.enginePtr`; `Engine` must expose `seedFromU64`.
+- `ReaderRng`: adapts a `std.Io.Reader` byte stream into an engine-like
+  source for replaying captured or synthetic randomness. Members:
+  `ReaderRng.init`, `ReaderRng.next`, `ReaderRng.nextU64`,
+  `ReaderRng.nextU32`, `ReaderRng.fill`, `ReaderRng.fillBytes`,
+  `ReaderRng.tryNext`, `ReaderRng.tryFillBytes`; the infallible surface
+  panics on short reads.
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
   `randomValue`, `randomValueFrom`, `randomValueChecked`,
   `randomValueCheckedFrom`,

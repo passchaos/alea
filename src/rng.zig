@@ -406,6 +406,74 @@ pub fn rngReader(source: anytype, buffer: []u8) RngReader(@TypeOf(source)) {
     return RngReader(@TypeOf(source)).init(source, buffer);
 }
 
+/// Adapts a `std.Io.Reader` byte stream into an engine-like source, so a
+/// captured or synthetic byte stream can drive the whole `Rng` surface. The
+/// infallible `next`/`fill` surface panics on a short or failing read; use
+/// `tryNext` / `tryFillBytes` when the reader can legitimately end early.
+pub const ReaderRng = struct {
+    reader: *std.Io.Reader,
+
+    pub fn init(byte_reader: *std.Io.Reader) ReaderRng {
+        return .{ .reader = byte_reader };
+    }
+
+    pub fn next(self: *ReaderRng) u64 {
+        return self.tryNext() catch @panic("alea ReaderRng: reader failed");
+    }
+
+    pub fn nextU64(self: *ReaderRng) u64 {
+        return self.next();
+    }
+
+    pub fn nextU32(self: *ReaderRng) u32 {
+        var value_bytes: [4]u8 = undefined;
+        self.reader.readSliceAll(&value_bytes) catch @panic("alea ReaderRng: reader failed");
+        return std.mem.readInt(u32, &value_bytes, .little);
+    }
+
+    pub fn tryNext(self: *ReaderRng) std.Io.Reader.Error!u64 {
+        var word_bytes: [8]u8 = undefined;
+        try self.reader.readSliceAll(&word_bytes);
+        return std.mem.readInt(u64, &word_bytes, .little);
+    }
+
+    pub fn fill(self: *ReaderRng, dest: []u8) void {
+        self.reader.readSliceAll(dest) catch @panic("alea ReaderRng: reader failed");
+    }
+
+    pub fn fillBytes(self: *ReaderRng, dest: []u8) void {
+        self.fill(dest);
+    }
+
+    pub fn tryFillBytes(self: *ReaderRng, dest: []u8) std.Io.Reader.Error!void {
+        try self.reader.readSliceAll(dest);
+    }
+};
+
+test "reader rng replays a captured byte stream" {
+    const captured = [_]u8{
+        1, 2, 3, 4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24,
+    };
+    var captured_reader = std.Io.Reader.fixed(&captured);
+    var source = ReaderRng.init(&captured_reader);
+
+    try std.testing.expectEqual(@as(u64, 0x0807_0605_0403_0201), source.next());
+    try std.testing.expectEqual(@as(u32, 0x0c0b_0a09), source.nextU32());
+    var tail: [12]u8 = undefined;
+    source.fill(&tail);
+    try std.testing.expectEqualSlices(u8, &.{ 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 }, &tail);
+    try std.testing.expectError(error.EndOfStream, source.tryNext());
+
+    // The adapter plugs into the type-erased facade.
+    var facade_reader = std.Io.Reader.fixed(&captured);
+    var facade_source = ReaderRng.init(&facade_reader);
+    const rng = Rng.init(&facade_source);
+    try std.testing.expectEqual(@as(u64, 0x0807_0605_0403_0201), rng.nextU64());
+    try std.testing.expectEqual(@as(u64, 0x100f_0e0d_0c0b_0a09), rng.nextU64());
+}
+
 /// Engine adapter that periodically replaces the inner engine state with
 /// `Engine.seedFromU64(seed)` drawn from a reseeder. Long-running services can
 /// keep a fast engine while bounding how much output a single state produces;
