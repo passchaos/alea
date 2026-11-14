@@ -6952,5 +6952,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1419-validate-all-refresh.md`, and
 `compare/results/s4-m1420-dyadic-chance-fills.md`, and
 `compare/results/s4-m1421-validate-all-refresh.md`, and
-`compare/results/s4-m1422-bernoulli-packed-fill.md`.
+`compare/results/s4-m1422-bernoulli-packed-fill.md`, and
+`compare/results/s4-m1423-validate-all-refresh.md`.
 
