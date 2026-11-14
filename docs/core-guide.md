@@ -636,9 +636,13 @@ runtime float type, and explicit f32 arguments keep f32.
   `Φ(−μ) + e^{−μ²/2}·Σ_j μ^j/j!·A_j` with `A₀ = ½·I_x(½, ν/2)`,
   `x = t²/(t²+ν)` and `A_j = (j−1)A_{j−2} − c_{j−1}` for `μ ≤ 10, t ≥ 0`,
   and otherwise the exact χ² mixture `E_V[Φ(t√(V/ν) − μ)]` by adaptive
-  Simpson in `s = √(V/ν)` (the `r = s^ν` substitution removes the
-  `s^{ν−1}` endpoint singularity for `ν < 1`; negative `μ` uses
-  `F_μ(t) = 1 − F_{−μ}(−t)`), log-logistic is closed-form (with `scale = 0` and
+  Simpson in the standardized chi scale `u = α·e^{z/√α}` (`α = ν/2`), which
+  keeps the large-`ν` Gamma bulk `O(1)` instead of a narrow spike that a
+  coarse quadrature can miss; below one degree of freedom the `r = s^ν`
+  substitution removes the `s^{ν−1}` endpoint singularity, and the recursion
+  carries a hard evaluation budget so a near-step `Φ` transition degrades
+  gracefully; negative `μ` uses `F_μ(t) = 1 − F_{−μ}(−t)`, log-logistic is
+  closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via
