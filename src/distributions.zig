@@ -5672,6 +5672,37 @@ const HypergeometricInverseTransform = struct {
     }
 };
 
+/// `lf(b) - lf(b + d)` for `lf(x) = log Γ(x + 1)`. For huge `b` the direct
+/// gamma difference cancels, so the third-order expansion takes over; below
+/// 1e6 the gamma difference is accurate.
+fn hypergeometricLogFactorialDelta(b: f64, d: f64) f64 {
+    if (d == 0) return 0;
+    const x = @abs(d);
+    if (b >= 1.0e6) {
+        if (d > 0) {
+            return -d * @log(b) - d * (d + 1) / (2 * b) +
+                d * (d + 1) * (2 * d + 1) / (12 * b * b) -
+                d * d * (d + 1) * (d + 1) / (12 * b * b * b);
+        }
+        return x * @log(b) - x * (x - 1) / (2 * b) -
+            x * (x - 1) * (2 * x - 1) / (12 * b * b) -
+            x * x * (x - 1) * (x - 1) / (12 * b * b * b);
+    }
+    return std.math.lgamma(f64, b + 1) - std.math.lgamma(f64, b + d + 1);
+}
+
+/// Stable `log(f(y)/f(mode))` for the hypergeometric PMF. Candidates beyond
+/// 32 envelope radii are treated as impossible; their true ratio is below
+/// `e^{-500}`.
+fn hypergeometricLogRatio(n1: f64, n2: f64, k: f64, m: f64, radius: f64, y: f64) f64 {
+    const delta = y - m;
+    if (@abs(delta) > 32.0 * radius) return -std.math.inf(f64);
+    return hypergeometricLogFactorialDelta(m, delta) +
+        hypergeometricLogFactorialDelta(n1 - m, -delta) +
+        hypergeometricLogFactorialDelta(k - m, -delta) +
+        hypergeometricLogFactorialDelta(n2 - k + m, delta);
+}
+
 const HypergeometricRejectionAcceptance = struct {
     n1: u64,
     n2: u64,
@@ -5680,6 +5711,8 @@ const HypergeometricRejectionAcceptance = struct {
     sign_x: i64,
     m: f64,
     a: f64,
+    radius: f64,
+    stable_tail: bool,
     lambda_l: f64,
     lambda_r: f64,
     x_l: f64,
@@ -5704,10 +5737,17 @@ const HypergeometricRejectionAcceptance = struct {
         const d = 1.5 * @sqrt((n_f - k_f) * k_f * n1_f * n2_f / ((n_f - 1.0) * n_f * n_f)) + 0.5;
         const x_l = m - d + 0.5;
         const x_r = m + d + 0.5;
-        const k_l = @exp(a - lnOfFactorial(x_l) - lnOfFactorial(n1_f - x_l) -
-            lnOfFactorial(k_f - x_l) - lnOfFactorial(n2_f - k_f + x_l));
-        const k_r = @exp(a - lnOfFactorial(x_r - 1.0) - lnOfFactorial(n1_f - x_r + 1.0) -
-            lnOfFactorial(k_f - x_r + 1.0) - lnOfFactorial(n2_f - k_f + x_r - 1.0));
+        const stable_tail = @max(params.n1, @max(params.n2, params.k)) >= 1_000_000_000_000;
+        const k_l = if (stable_tail)
+            @exp(hypergeometricLogRatio(n1_f, n2_f, k_f, m, d, x_l))
+        else
+            @exp(a - lnOfFactorial(x_l) - lnOfFactorial(n1_f - x_l) -
+                lnOfFactorial(k_f - x_l) - lnOfFactorial(n2_f - k_f + x_l));
+        const k_r = if (stable_tail)
+            @exp(hypergeometricLogRatio(n1_f, n2_f, k_f, m, d, x_r - 1.0))
+        else
+            @exp(a - lnOfFactorial(x_r - 1.0) - lnOfFactorial(n1_f - x_r + 1.0) -
+                lnOfFactorial(k_f - x_r + 1.0) - lnOfFactorial(n2_f - k_f + x_r - 1.0));
         const lambda_l = -@log(x_l * (n2_f - k_f + x_l) / ((n1_f - x_l + 1.0) * (k_f - x_l + 1.0)));
         const lambda_r = -@log((n1_f - x_r + 1.0) * (k_f - x_r + 1.0) / (x_r * (n2_f - k_f + x_r)));
         const p1 = 2.0 * d;
@@ -5723,6 +5763,8 @@ const HypergeometricRejectionAcceptance = struct {
             .sign_x = params.sign_x,
             .m = m,
             .a = a,
+            .radius = d,
+            .stable_tail = stable_tail,
             .lambda_l = lambda_l,
             .lambda_r = lambda_r,
             .x_l = x_l,
@@ -5817,10 +5859,20 @@ const HypergeometricRejectionAcceptance = struct {
             return true;
         }
 
-        const av_critical = self.a - lnOfFactorial(y) -
-            lnOfFactorial(@as(f64, @floatFromInt(self.n1)) - y) -
-            lnOfFactorial(@as(f64, @floatFromInt(self.k)) - y) -
-            lnOfFactorial(@as(f64, @floatFromInt(self.n2 - self.k)) + y);
+        const av_critical = if (self.stable_tail)
+            hypergeometricLogRatio(
+                @floatFromInt(self.n1),
+                @floatFromInt(self.n2),
+                @floatFromInt(self.k),
+                self.m,
+                self.radius,
+                y,
+            )
+        else
+            self.a - lnOfFactorial(y) -
+                lnOfFactorial(@as(f64, @floatFromInt(self.n1)) - y) -
+                lnOfFactorial(@as(f64, @floatFromInt(self.k)) - y) -
+                lnOfFactorial(@as(f64, @floatFromInt(self.n2 - self.k)) + y);
         return av <= av_critical;
     }
 
@@ -58558,6 +58610,29 @@ test "negative binomial fill matches repeated sampling" {
     for (direct_values) |value| {
         try std.testing.expectEqual(negativeBinomialFrom(&direct_loop_engine, 5, 0.4), value);
     }
+}
+
+test "hypergeometric huge populations stay exact and finite" {
+    const alea = @import("root.zig");
+    // A 5e17-draw loop is infeasible; the H2PE path must be selected and its
+    // stable log-ratio must keep the envelope finite.
+    const dist = try Hypergeometric.init(1_000_000_000_000_000_000, 100_000_000_000_000_000, 500_000_000_000_000_000);
+    try std.testing.expect(dist.method == .rejection_acceptance);
+    var engine = alea.FastPrng.init(0x4a13);
+    const rng = Rng.init(&engine);
+    const draws = 20_000;
+    var sum: f64 = 0;
+    var i: usize = 0;
+    while (i < draws) : (i += 1) sum += @floatFromInt(dist.sample(rng));
+    try std.testing.expect(@abs(sum / @as(f64, @floatFromInt(draws)) - 5.0e16) < 2.0e9);
+
+    const balanced = try Hypergeometric.init(1_000_000_000_000_000_000, 500_000_000_000_000_000, 500_000_000_000_000_000);
+    var engine2 = alea.FastPrng.init(0x4a14);
+    const rng2 = Rng.init(&engine2);
+    var sum2: f64 = 0;
+    i = 0;
+    while (i < draws) : (i += 1) sum2 += @floatFromInt(balanced.sample(rng2));
+    try std.testing.expect(@abs(sum2 / @as(f64, @floatFromInt(draws)) - 2.5e17) < 1.0e10);
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {

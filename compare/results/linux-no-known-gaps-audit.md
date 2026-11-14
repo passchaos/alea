@@ -6992,5 +6992,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1460-huge-parameter-binomial-cdf.md`, and
 `compare/results/s4-m1461-validate-all-refresh.md`, and
 `compare/results/s4-m1462-incomplete-gamma-beta-fallbacks.md`, and
-`compare/results/s4-m1463-validate-all-refresh.md`.
+`compare/results/s4-m1463-validate-all-refresh.md`, and
+`compare/results/s4-m1464-huge-population-hypergeometric.md`.
 

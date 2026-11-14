@@ -603,7 +603,10 @@ CDF and quantile helpers complement the samplers:
   `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`; the
   hypergeometric helpers sum the shorter PMF tail exactly and switch to a
   normal approximation with continuity correction above
-  `hypergeometricExactSdLimit` (σ = 16384), while the Zipf/Zeta helpers use a
+  `hypergeometricExactSdLimit` (σ = 16384), while the `Hypergeometric`
+  sampler's H2PE envelope uses a stable log-PMF ratio for populations at or
+  above 1e12 so huge-population draws stay finite instead of degrading to the
+  per-draw loop; the Zipf/Zeta helpers use a
   128-term direct prefix plus Euler–Maclaurin harmonic numbers (and
   `riemannZetaApprox` for infinite support) and cap representable quantiles
   at 2^53.
