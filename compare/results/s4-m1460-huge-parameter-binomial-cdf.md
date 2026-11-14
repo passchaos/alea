@@ -49,7 +49,9 @@ hundreds of millions.
 ## Validation
 
 - New `binomial CDF fallbacks stay stable for huge parameters` test covers
-  the Poisson, normal, symmetry, and quantile paths.
+  the Poisson, normal, symmetry, and quantile paths. The 1e18-trial quantile
+  assertions are 64-bit-only because the bisection indexes `usize`; 32-bit
+  targets return NaN there by design, and the core guide documents the cap.
 - `zig build test --summary all` passes 912/912 tests (native `alea-tests`
   893/893), `distcheck`, `statcheck`, and the 10M long run pass, and the full
   16MiB benchmark suite keeps all 457 checksums identical.

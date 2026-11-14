@@ -55658,10 +55658,13 @@ test "binomial CDF fallbacks stay stable for huge parameters" {
     // Symmetry folds p > 0.5 onto the lower tail of 1 - p.
     try std.testing.expectEqual(binomialCdf(@as(f64, 8), @as(f64, 20), @as(f64, 0.7)), 1 - binomialCdf(@as(f64, 11), @as(f64, 20), @as(f64, 0.3)));
 
-    // Quantile fallbacks.
-    try std.testing.expectEqual(@as(f64, 1), binomialQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 1e-18)));
+    // Quantile fallbacks. The bisection indexes `usize`, so the 1e18-trial
+    // cases only apply on 64-bit targets; 32-bit targets return NaN there.
+    if (@sizeOf(usize) >= 8) {
+        try std.testing.expectEqual(@as(f64, 1), binomialQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 1e-18)));
+        try std.testing.expectEqual(@as(f64, 3e17), binomialQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 0.3)));
+    }
     try std.testing.expectEqual(@as(f64, 5e8), binomialQuantile(@as(f64, 0.5), @as(f64, 1e9), @as(f64, 0.5)));
-    try std.testing.expectEqual(@as(f64, 3e17), binomialQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 0.3)));
 }
 
 test "geometricCdf and geometricQuantile match known values" {

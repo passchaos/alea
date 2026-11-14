@@ -591,6 +591,8 @@ CDF and quantile helpers complement the samplers:
   fold `p > 0.5` onto the lower tail of `1 − p`, use the Poisson limit when
   `n·p² ≤ 1e-6`, use the normal approximation with continuity correction when
   `n·p·(1−p) ≥ 1e7`, and keep the exact incomplete-beta path elsewhere; the
+  quantile bisection indexes `usize`, so `binomialQuantile` returns NaN when
+  `n` exceeds `maxInt(usize)` (relevant on 32-bit targets); the
   hypergeometric helpers sum the shorter PMF tail exactly and switch to a
   normal approximation with continuity correction above
   `hypergeometricExactSdLimit` (σ = 16384), while the Zipf/Zeta helpers use a
