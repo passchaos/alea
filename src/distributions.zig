@@ -5067,7 +5067,10 @@ pub const NegativeBinomial = struct {
             return;
         }
         const q = -@log(1 - self.p);
-        for (dest) |*item| item.* = negativeBinomialFromLogQ(rng, self.successes, self.p, q);
+        for (dest) |*item| {
+            item.* = negativeBinomialMixtureFrom(rng, self.successes, self.p) orelse
+                negativeBinomialFromLogQ(rng, self.successes, self.p, q);
+        }
     }
 
     pub fn fillFrom(self: NegativeBinomial, source: anytype, dest: []u64) void {
@@ -5076,7 +5079,10 @@ pub const NegativeBinomial = struct {
             return;
         }
         const q = -@log(1 - self.p);
-        for (dest) |*item| item.* = negativeBinomialFromLogQ(source, self.successes, self.p, q);
+        for (dest) |*item| {
+            item.* = negativeBinomialMixtureFrom(source, self.successes, self.p) orelse
+                negativeBinomialFromLogQ(source, self.successes, self.p, q);
+        }
     }
 };
 
@@ -5242,11 +5248,23 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
 pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     std.debug.assert(successes > 0 and p > 0 and p <= 1);
     if (p == 1) return 0;
+    if (negativeBinomialMixtureFrom(source, successes, p)) |sampled| return sampled;
 
     // The per-success rate is fixed, so compute the log once instead of
     // recomputing it inside every geometric draw.
     const q = -@log(1 - p);
     return negativeBinomialFromLogQ(source, successes, p, q);
+}
+
+/// Huge success counts make the per-success geometric sum infeasible; the
+/// exact gamma-Poisson mixture draws in O(1). Returns null when the per-success
+/// loop should be used instead. A mixture mean beyond the Poisson range
+/// saturates to the maximum count.
+inline fn negativeBinomialMixtureFrom(source: anytype, successes: u64, p: f64) ?u64 {
+    if (successes < 1 << 20) return null;
+    const lambda = gammaFrom(source, f64, @as(f64, @floatFromInt(successes)), (1 - p) / p);
+    if (!(lambda < poisson_max_lambda)) return std.math.maxInt(u64);
+    return poissonFrom(source, lambda);
 }
 
 /// Negative-binomial kernel for callers that already hold
@@ -58633,6 +58651,28 @@ test "hypergeometric huge populations stay exact and finite" {
     i = 0;
     while (i < draws) : (i += 1) sum2 += @floatFromInt(balanced.sample(rng2));
     try std.testing.expect(@abs(sum2 / @as(f64, @floatFromInt(draws)) - 2.5e17) < 1.0e10);
+}
+
+test "negative binomial huge success counts use the mixture" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x4d21);
+    const rng = Rng.init(&engine);
+
+    const draws = 20_000;
+    var sum: f64 = 0;
+    var i: usize = 0;
+    while (i < draws) : (i += 1) sum += @floatFromInt(negativeBinomial(rng, 1 << 20, 0.5));
+    try std.testing.expect(@abs(sum / @as(f64, @floatFromInt(draws)) - 1_048_576.0) < 2_000.0);
+
+    // The per-success loop would need 1e9 iterations.
+    try std.testing.expect(negativeBinomial(rng, 1_000_000_000, 0.5) > 900_000_000);
+
+    // A mixture mean beyond the Poisson range saturates.
+    try std.testing.expectEqual(std.math.maxInt(u64), negativeBinomial(rng, 1 << 20, 1e-15));
+
+    var buf: [4]u64 = undefined;
+    fillNegativeBinomial(rng, &buf, 1 << 20, 0.5);
+    for (buf) |value| try std.testing.expect(value > 900_000 and value < 1_200_000);
 }
 
 test "negative-binomial and hypergeometric samplers have plausible moments" {

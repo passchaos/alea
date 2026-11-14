@@ -600,7 +600,9 @@ CDF and quantile helpers complement the samplers:
   quantile bisection indexes `usize`, so `binomialQuantile` returns NaN when
   `n` exceeds `maxInt(usize)` (relevant on 32-bit targets); the
   negative-binomial helper switches to the gamma limit
-  `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`; the
+  `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`, and the sampler switches to the
+  exact gamma-Poisson mixture for `r ≥ 2^20` so huge success counts stay
+  `O(1)` instead of a per-success loop; the
   hypergeometric helpers sum the shorter PMF tail exactly and switch to a
   normal approximation with continuity correction above
   `hypergeometricExactSdLimit` (σ = 16384), while the `Hypergeometric`
