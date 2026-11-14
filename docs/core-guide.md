@@ -623,7 +623,11 @@ CDF and quantile helpers complement the samplers:
   `1e-3`) resolve below the `~1e-14`/`~1e-30` linear floors instead of being
   pinned there. `Dirichlet` sampling rescales the gamma draws by the largest
   draw when their total overflows f64, so huge alpha vectors keep meaningful
-  normalized weights; the finite-total path is unchanged.
+  normalized weights; the finite-total path is unchanged. `Triangular`
+  sampling checks the range product once per call and scales by the width for
+  ranges above `√floatMax` (the check is parameter-only, so the normal loop
+  stays vectorized and stream-identical), and `Kumaraswamy` sampling recovers
+  the rounded-to-zero `1 − u^(1/β)` complement with `-expm1` for huge `β`.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,

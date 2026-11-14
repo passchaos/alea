@@ -23921,11 +23921,22 @@ pub fn triangularFrom(source: anytype, comptime T: type, min: T, mode: T, max: T
     if (!std.math.isFinite(min) or !std.math.isFinite(mode) or !std.math.isFinite(max)) {
         return triangularRustShapeFromUniform(T, u, min, mode, max);
     }
-    const c = (mode - min) / (max - min);
-    if (u < c) {
-        return min + @sqrt(u * (max - min) * (mode - min));
+    // The overflow condition depends only on the parameters, so the hot path
+    // stays branch-free in `u` and the compiler can unswitch the check.
+    const range = max - min;
+    if (range > @sqrt(std.math.floatMax(T))) return triangularHugeFrom(T, u, min, mode, max);
+    const c = (mode - min) / range;
+    if (u < c) return min + @sqrt(u * range * (mode - min));
+    return max - @sqrt((1 - u) * range * (max - mode));
+}
+
+/// Cold overflow path for triangular ranges whose product exceeds f64.
+noinline fn triangularHugeFrom(comptime T: type, u: T, min: T, mode: T, max: T) T {
+    const range = max - min;
+    if (u < (mode - min) / range) {
+        return min + range * @sqrt(u * ((mode - min) / range));
     }
-    return max - @sqrt((1 - u) * (max - min) * (max - mode));
+    return max - range * @sqrt((1 - u) * ((max - mode) / range));
 }
 
 pub fn fillTriangular(rng: Rng, comptime T: type, dest: []T, min: T, mode: T, max: T) void {
@@ -24019,10 +24030,18 @@ fn triangularFromUniformVector(comptime VectorType: type, uniform_vec: VectorTyp
     const one_vec: VectorType = @splat(1);
     const min_vec: VectorType = @splat(min);
     const max_vec: VectorType = @splat(max);
-    const left_scale_vec: VectorType = @splat(width * left_width);
-    const right_scale_vec: VectorType = @splat(width * right_width);
-    const left = min_vec + @sqrt(uniform_vec * left_scale_vec);
-    const right = max_vec - @sqrt((one_vec - uniform_vec) * right_scale_vec);
+    const left_scale = width * left_width;
+    const right_scale = width * right_width;
+    // Normal ranges keep the original product expression; huge ranges scale
+    // by the width first so `width·(mode−min)` cannot overflow.
+    const left = if (std.math.isFinite(left_scale))
+        min_vec + @sqrt(uniform_vec * @as(VectorType, @splat(left_scale)))
+    else
+        min_vec + @as(VectorType, @splat(width)) * @sqrt(uniform_vec * @as(VectorType, @splat(left_width / width)));
+    const right = if (std.math.isFinite(right_scale))
+        max_vec - @sqrt((one_vec - uniform_vec) * @as(VectorType, @splat(right_scale)))
+    else
+        max_vec - @as(VectorType, @splat(width)) * @sqrt((one_vec - uniform_vec) * @as(VectorType, @splat(right_width / width)));
     return @select(Child, uniform_vec < c_vec, left, right);
 }
 
@@ -24156,11 +24175,11 @@ pub fn Triangular(comptime T: type) type {
             if (!std.math.isFinite(self.min) or !std.math.isFinite(self.mode) or !std.math.isFinite(self.max)) {
                 return triangularRustShapeFromUniform(T, u, self.min, self.mode, self.max);
             }
-            const c = (self.mode - self.min) / (self.max - self.min);
-            if (u < c) {
-                return self.min + @sqrt(u * (self.max - self.min) * (self.mode - self.min));
-            }
-            return self.max - @sqrt((1 - u) * (self.max - self.min) * (self.max - self.mode));
+            const range = self.max - self.min;
+            if (range > @sqrt(std.math.floatMax(T))) return triangularHugeFrom(T, u, self.min, self.mode, self.max);
+            const c = (self.mode - self.min) / range;
+            if (u < c) return self.min + @sqrt(u * range * (self.mode - self.min));
+            return self.max - @sqrt((1 - u) * range * (self.max - self.mode));
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -25556,7 +25575,11 @@ pub fn kumaraswamyFrom(source: anytype, comptime T: type, alpha: T, beta_param: 
     if (alpha == 1) return 1 - @exp(-Rng.standardExponentialFastFrom(source, T) * (1 / beta_param));
 
     const e = Rng.standardExponentialFastFrom(source, T);
-    return @exp(@log(1 - @exp(-e * (1 / beta_param))) * (1 / alpha));
+    const p = 1 - @exp(-e * (1 / beta_param));
+    // For huge beta the subtraction rounds to zero; recover the tiny
+    // complement with expm1 so the final power stays near 1.
+    const inner = if (p > 0) p else -std.math.expm1(-e * (1 / beta_param));
+    return @exp(@log(inner) * (1 / alpha));
 }
 
 pub fn fillKumaraswamy(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
@@ -25652,7 +25675,15 @@ fn kumaraswamyFromOpenUniformVector(comptime VectorType: type, uniform_vec: Vect
     const one_vec: VectorType = @splat(1);
     const inverse_alpha_vec: VectorType = @splat(inverse_alpha);
     const inverse_beta_vec: VectorType = @splat(inverse_beta);
-    return @exp(@log(one_vec - @exp(@log(one_vec - uniform_vec) * inverse_beta_vec)) * inverse_alpha_vec);
+    var inner = one_vec - @exp(@log(one_vec - uniform_vec) * inverse_beta_vec);
+    // Huge beta rounds the subtraction to zero; recover those lanes with the
+    // expm1 complement so the final power stays near 1.
+    inline for (0..vectorInfo(VectorType).len) |lane| {
+        if (inner[lane] == 0) {
+            inner[lane] = -std.math.expm1(@log(1 - uniform_vec[lane]) * inverse_beta);
+        }
+    }
+    return @exp(@log(inner) * inverse_alpha_vec);
 }
 
 fn kumaraswamyBetaOneFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_alpha: vectorChild(VectorType)) VectorType {
@@ -39565,24 +39596,49 @@ fn triangularFromUniformsVector(comptime T: type, comptime VectorType: type, des
     const one_vec: VectorType = @splat(1.0);
     const min_vec: VectorType = @splat(min);
     const max_vec: VectorType = @splat(max);
-    const left_scale_vec: VectorType = @splat(width * left_width);
-    const right_scale_vec: VectorType = @splat(width * right_width);
-
+    const left_scale = width * left_width;
+    const right_scale = width * right_width;
+    const scaled = !std.math.isFinite(left_scale) or !std.math.isFinite(right_scale);
+    if (!scaled) {
+        const left_scale_vec: VectorType = @splat(left_scale);
+        const right_scale_vec: VectorType = @splat(right_scale);
+        var i: usize = 0;
+        while (i + len <= dest.len) : (i += len) {
+            const uniform_vec = loadVectorLanes(VectorType, dest, i);
+            const left = min_vec + @sqrt(uniform_vec * left_scale_vec);
+            const right = max_vec - @sqrt((one_vec - uniform_vec) * right_scale_vec);
+            const out = @select(T, uniform_vec < c_vec, left, right);
+            storeVectorLanes(VectorType, dest, i, out);
+        }
+        while (i < dest.len) : (i += 1) {
+            const u = dest[i];
+            dest[i] = if (u < left_width / width)
+                min + @sqrt(u * width * left_width)
+            else
+                max - @sqrt((1 - u) * width * right_width);
+        }
+        return;
+    }
+    // Huge ranges: scale by the width first so `width·(mode−min)` cannot
+    // overflow; the check is parameter-only, so the normal loop above stays
+    // vectorized and stream-identical.
+    const width_vec: VectorType = @splat(width);
+    const left_ratio_vec: VectorType = @splat(left_width / width);
+    const right_ratio_vec: VectorType = @splat(right_width / width);
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const uniform_vec = loadVectorLanes(VectorType, dest, i);
-        const left = min_vec + @sqrt(uniform_vec * left_scale_vec);
-        const right = max_vec - @sqrt((one_vec - uniform_vec) * right_scale_vec);
+        const left = min_vec + width_vec * @sqrt(uniform_vec * left_ratio_vec);
+        const right = max_vec - width_vec * @sqrt((one_vec - uniform_vec) * right_ratio_vec);
         const out = @select(T, uniform_vec < c_vec, left, right);
         storeVectorLanes(VectorType, dest, i, out);
     }
-
     while (i < dest.len) : (i += 1) {
         const u = dest[i];
         dest[i] = if (u < left_width / width)
-            min + @sqrt(u * width * left_width)
+            min + width * @sqrt(u * (left_width / width))
         else
-            max - @sqrt((1 - u) * width * right_width);
+            max - width * @sqrt((1 - u) * (right_width / width));
     }
 }
 
@@ -56311,6 +56367,41 @@ test "tiny-shape and huge-scale quantiles resolve" {
     const beta_q = betaQuantile(@as(f64, 0.5), @as(f64, 1e-3), @as(f64, 1));
     try std.testing.expectApproxEqAbs(@as(f64, 9.332636e-302), beta_q, 1e-305);
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(beta_q, @as(f64, 1e-3), @as(f64, 1)), 1e-12);
+}
+
+test "triangular and kumaraswamy sampling survives extreme parameters" {
+    const alea = @import("root.zig");
+    var engine = alea.ScalarPrng.init(0x5150_d164);
+    const rng = Rng.init(&engine);
+
+    const triangular_dist = try Triangular(f64).init(0, 5e299, 1e300);
+    var i: usize = 0;
+    while (i < 256) : (i += 1) {
+        const x = triangular_dist.sample(rng);
+        try std.testing.expect(std.math.isFinite(x) and x >= 0 and x <= 1e300);
+        const y = triangular_dist.sampleFrom(&engine);
+        try std.testing.expect(std.math.isFinite(y) and y >= 0 and y <= 1e300);
+    }
+    var triangular_buf: [32]f64 = undefined;
+    triangular_dist.fillFrom(&engine, &triangular_buf);
+    for (triangular_buf) |x| try std.testing.expect(std.math.isFinite(x) and x >= 0 and x <= 1e300);
+
+    const kumaraswamy_dist = try Kumaraswamy(f64).init(1e300, 1e300);
+    i = 0;
+    while (i < 256) : (i += 1) {
+        const x = kumaraswamy_dist.sample(rng);
+        try std.testing.expect(x > 0.99 and x <= 1);
+        const y = kumaraswamy_dist.sampleFrom(&engine);
+        try std.testing.expect(y > 0.99 and y <= 1);
+    }
+
+    const V = @Vector(4, f64);
+    const vector_triangular = try VectorTriangular(V).init(0, 5e299, 1e300);
+    const vt = vector_triangular.sample(rng);
+    inline for (0..4) |lane| try std.testing.expect(std.math.isFinite(vt[lane]) and vt[lane] >= 0 and vt[lane] <= 1e300);
+    const vector_kumaraswamy = try VectorKumaraswamy(V).init(1e300, 1e300);
+    const vk = vector_kumaraswamy.sample(rng);
+    inline for (0..4) |lane| try std.testing.expect(vk[lane] > 0.99 and vk[lane] <= 1);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
