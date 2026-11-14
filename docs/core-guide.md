@@ -596,6 +596,16 @@ CDF and quantile helpers complement the samplers:
   semantics), Rice uses the Marcum Q series `e^{−a²/2} Σ (a²/2)^k/k!
   Q(k+1, b²/2)` with a Gaussian tail fallback above `ν/σ > 200`, and Hoyt
   uses the exact `P(2n+1, a·x²)` series with `q ≥ 0.01`.
+- extreme-parameter moments: the `Rice`, `Hoyt`, `Nakagami`, `NoncentralT`,
+  `NoncentralF`, and `ScaledInverseChiSquared` moment helpers use overflow-safe
+  scaled forms and asymptotic branches for huge parameters; `Rice` switches to
+  the deep-Rician limit (`mean → ν`, `variance → σ²`) once `ν/σ > 1e150`,
+  `Nakagami` uses the large-shape gamma-ratio asymptotic above `m = 1e7`,
+  `NoncentralT` uses the `1/(2ν)` variance expansion above `ν = 1e8`, and
+  `Hoyt.expectedValue` uses the Gaussian-circular identity
+  `σ·√(2/π)·E(√(1−q²))` with the complete elliptic integral evaluated by the
+  arithmetic-geometric mean (the earlier Bessel form overestimated the mean
+  for `q < 1`).
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,

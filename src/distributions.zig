@@ -13510,7 +13510,8 @@ pub fn Rice(comptime T: type) type {
         /// K-factor K = ν²/(2σ²) (fading-channel convention).
         pub fn kFactor(self: Self) T {
             if (self.sigma == 0) return std.math.inf(T);
-            return (self.nu * self.nu) / (2 * self.sigma * self.sigma);
+            const ratio = self.nu / self.sigma;
+            return ratio * ratio / 2;
         }
 
         /// Expected value: E[X] = σ·√(π/2) · exp(−t) ·
@@ -13523,7 +13524,10 @@ pub fn Rice(comptime T: type) type {
                 // Rayleigh case: σ·√(π/2).
                 return self.sigma * @sqrt(@as(T, @floatCast(std.math.pi)) / 2);
             }
-            const t = (self.nu * self.nu) / (4 * self.sigma * self.sigma);
+            const ratio = self.nu / self.sigma;
+            // Deep Rician regime: E[X] = ν + σ²/(2ν) rounds to ν.
+            if (ratio > 1.0e150) return self.nu;
+            const t = ratio * ratio / 4;
             const log_i0 = logBesselI0(t);
             // For large t, I₁(t)/I₀(t) → 1; besselI1Ratio gives I₁/I₀.
             const i1_ratio = if (t > 30) @as(T, 1) - 1 / (2 * t) else besselI1Ratio(t);
@@ -13532,11 +13536,15 @@ pub fn Rice(comptime T: type) type {
             return self.sigma * @sqrt(@as(T, @floatCast(std.math.pi)) / 2) * factor;
         }
 
-        /// Variance: 2σ² + ν² − (E[X])².
+        /// Variance: 2σ² + ν² − (E[X])² = 2σ² − (E[X]−ν)·(E[X]+ν).
         pub fn varianceValue(self: Self) T {
             if (self.sigma == 0) return 0;
+            const ratio = self.nu / self.sigma;
+            // Deep Rician regime: Var[X] = σ² − σ⁴/(4ν²) rounds to σ².
+            if (ratio > 1.0e150) return self.sigma * self.sigma;
             const m = self.expectedValue();
-            return 2 * self.sigma * self.sigma + self.nu * self.nu - m * m;
+            const e = m / self.sigma;
+            return self.sigma * self.sigma * (2 - (e - ratio) * (e + ratio));
         }
 
         /// Mode: approximately ν for ν ≫ σ; for small ν/σ we use the
@@ -13805,6 +13813,14 @@ fn fillNakagamiPointsFrom(source: anytype, comptime T: type, dest: []T, m_param:
 ///
 /// Sampling uses a Gamma transform: X = √(Gamma(m, Ω/m)), which is exact
 /// and rejection-free.
+/// `Γ(m + 1/2)/Γ(m)` with the large-`m` asymptotic
+/// `√m·(1 − 1/(8m) + 1/(128m²))`, which avoids the `lgamma` cancellation at
+/// huge shapes.
+fn nakagamiGammaRatio(comptime T: type, m: T) T {
+    if (m > 1.0e7) return @sqrt(m) * (1 - 1 / (8 * m) + 1 / (128 * m * m));
+    return @exp(std.math.lgamma(T, m + 0.5) - std.math.lgamma(T, m));
+}
+
 pub fn Nakagami(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -13861,8 +13877,8 @@ pub fn Nakagami(comptime T: type) type {
                 // Rayleigh case: √(Ω/2) · √(π/2) = √(Ω·π/4) = (√(πΩ))/2.
                 return @sqrt(self.omega * @as(T, @floatCast(std.math.pi))) / 2;
             }
-            const ratio = @exp(std.math.lgamma(T, self.m_param + 0.5) - std.math.lgamma(T, self.m_param));
-            return ratio * @sqrt(self.omega / self.m_param);
+            // `ratio·√Ω/√m` keeps `Ω/m` from overflowing for extreme pairs.
+            return nakagamiGammaRatio(T, self.m_param) * @sqrt(self.omega) / @sqrt(self.m_param);
         }
 
         /// Variance: Var[X] = Ω · (1 − (1/m) · (Γ(m+1/2)/Γ(m))²).
@@ -13872,7 +13888,12 @@ pub fn Nakagami(comptime T: type) type {
                 // Rayleigh variance: Ω·(4−π)/4 = Ω/2 · (2−π/2)... let's compute directly.
                 return self.omega * (4 - @as(T, @floatCast(std.math.pi))) / 4;
             }
-            const ratio = @exp(std.math.lgamma(T, self.m_param + 0.5) - std.math.lgamma(T, self.m_param));
+            if (self.m_param > 1.0e7) {
+                // The `1 − ratio²/m` difference loses the O(1/m) term, so use
+                // the asymptotic Var[X] = Ω·(1/(4m) − 1/(32m²)).
+                return self.omega * (1 / (4 * self.m_param) - 1 / (32 * self.m_param * self.m_param));
+            }
+            const ratio = nakagamiGammaRatio(T, self.m_param);
             return self.omega * (1 - ratio * ratio / self.m_param);
         }
 
@@ -15129,14 +15150,16 @@ pub fn ScaledInverseChiSquared(comptime T: type) type {
 
         pub fn expectedValue(self: Self) ?T {
             if (self.df <= 2) return null;
-            return self.df * self.scale2 / (self.df - 2);
+            // `scale2·df/(df−2)` keeps the `df·scale2` product from overflowing.
+            return self.scale2 * (self.df / (self.df - 2));
         }
 
         pub fn varianceValue(self: Self) ?T {
             if (self.df <= 4) return null;
-            const df_minus_2 = self.df - 2;
-            const df2 = self.df * self.df;
-            return 2 * df2 * self.scale2 * self.scale2 / (df_minus_2 * df_minus_2 * (self.df - 4));
+            const ratio = self.df / (self.df - 2);
+            // `2·ratio²·(scale2/(df−4))·scale2` avoids the overflowing
+            // `scale2²` numerator for huge scales.
+            return 2 * ratio * ratio * (self.scale2 / (self.df - 4)) * self.scale2;
         }
 
         pub fn modeValue(self: Self) T {
@@ -15329,6 +15352,29 @@ pub fn VectorScaledInverseChiSquared(comptime VectorType: type) type {
 
 pub const HoytError = Error;
 
+/// Complete elliptic integral of the second kind
+/// `E(k) = ∫₀^{π/2} √(1 − k²·sin²θ) dθ` for `0 ≤ k ≤ 1`, evaluated with the
+/// arithmetic-geometric mean (quadratic convergence):
+/// `E(k) = (π/2)·(1 − Σ 2^{n−1} c_n²) / a_∞`.
+fn completeEllipticE(comptime T: type, k: T) T {
+    if (!(k < 1)) return 1;
+    var a: T = 1;
+    var b: T = @sqrt(1 - k * k);
+    var sum: T = 0.5 * k * k;
+    var power: T = 1;
+    var iteration: usize = 0;
+    while (iteration < 64) : (iteration += 1) {
+        const c = (a - b) / 2;
+        const b_next = @sqrt(a * b);
+        a = (a + b) / 2;
+        b = b_next;
+        sum += power * c * c;
+        power *= 2;
+        if (c == 0) break;
+    }
+    return @as(T, @floatCast(std.math.pi)) / 2 * (1 - sum) / a;
+}
+
 /// Sample a single Hoyt (Nakagami-q) value with fading parameter q ∈ (0,1] and
 /// spread Ω = E[X²] > 0. The Hoyt distribution models the envelope of a signal
 /// with two unequal-variance Gaussian components (one line-of-sight plus one
@@ -15373,17 +15419,11 @@ fn fillHoytPointsFrom(source: anytype, comptime T: type, dest: []T, q: T, omega:
 /// and requires only two standard normal draws per sample:
 ///   X = σ · √(Z₁² + (q·Z₂)²),  σ = √(Ω/(1+q²)).
 ///
-/// Moments (using besselI0/besselI1 helpers introduced for Rice):
-///   E[X] = σ · √(π/2) · (1+q)/2 · exp(η) · (besselI0(η) + besselI1(η))
-///          where η = q²/(1+q²)²  — wait, correct form (Nakagami 1940):
-///          η = -q/(1+q²)²... the standard formula for Hoyt mean is:
-///   E[X] = σ·√(π/2)·₂F₁(-1/2, 1/2; 1; -(1-q²)²/(4q²)) / √q   (equivalent to
-///   complete elliptic integral E(k) where k² = 1-q²). For implementation
-///   simplicity we use a numerically robust closed form:
-///   E[X] = √(Ω·π/4) · (1+q)/√(1+q²) · exp(-K) · (I₀(K) + I₁(K))
-///   where K = (1-q)²/(4q). When q=1 (Rayleigh) this gives σ·√(π/2), matching
-///   the Rayleigh mean exactly (I₀(0)+I₁(0)=1+0=1, K=0, exp(0)=1, (1+1)/√2=√2,
-///   so √(Ω·π/4)·√2 = √(Ωπ/2) = σ·√(π/2) since σ=√(Ω/2)). ✓
+/// Moments (Gaussian-circular identity):
+///   E[X] = σ · √(2/π) · E(√(1−q²)), where `E(k)` is the complete elliptic
+///          integral of the second kind (via the arithmetic-geometric mean).
+///          At q=1 this gives σ·√(π/2), matching Rayleigh; at q→0 it gives
+///          σ·√(2/π), matching the one-sided Gaussian limit.
 ///
 /// Var(X) = Ω - (E[X])².
 /// Mode: σ · max(q, 1/q)/√(1+q²) ... the mode of a Hoyt is at σ when q=1
@@ -15434,14 +15474,10 @@ pub fn Hoyt(comptime T: type) type {
         pub fn expectedValue(self: Self) T {
             if (self.omega == 0) return 0;
             const sigma_ = self.sigma();
-            // K = (1-q)²/(4q), a common parameterization for Bessel form.
-            const one_minus_q = 1 - self.q;
-            const K = one_minus_q * one_minus_q / (4 * self.q);
-            const i_0 = besselI0(K);
-            const i_1 = besselI1(K);
-            // E[X] = σ·√(π/2) · (1+q)/2 · exp(K) · (I₀(K)+I₁(K))
-            // At q=1, K=0: σ·√(π/2) · 1 · 1 · 1 = σ·√(π/2) ✓
-            return sigma_ * @sqrt(@as(T, std.math.pi) / 2) * (1 + self.q) / 2 * @exp(K) * (i_0 + i_1);
+            // Gaussian-circular identity: E[X] = σ·√(2/π)·E(√(1−q²)) with the
+            // complete elliptic integral of the second kind. The earlier
+            // Bessel-based form overestimated the mean for q < 1.
+            return sigma_ * @sqrt(2 / @as(T, @floatCast(std.math.pi))) * completeEllipticE(T, @sqrt(1 - self.q * self.q));
         }
 
         pub fn varianceValue(self: Self) T {
@@ -15994,6 +16030,10 @@ fn noncentralTParametersValid(comptime T: type, dof: T, mu: T) bool {
 /// For large ν, c(ν) → 1; for ν→1+, c(ν) → ∞ (Cauchy-like heavy tail).
 fn noncentralTScaleFactor(comptime T: type, dof: T) T {
     if (dof == std.math.inf(T)) return 1;
+    // The lgamma difference cancels once `lgamma(dof/2)` exceeds the f64
+    // resolution; the asymptotic `Γ(z−1/2)/Γ(z) ≈ z^(−1/2)(1 + 3/(8z) + 25/(128z²))`
+    // gives `c = 1 + 3/(4ν) + 25/(32ν²)`.
+    if (dof > 1.0e8) return 1 + 3 / (4 * dof) + 25 / (32 * dof * dof);
     const half_nu = dof / 2;
     const lgamma_diff = std.math.lgamma(T, half_nu - 0.5) - std.math.lgamma(T, half_nu);
     return @sqrt(dof / 2) * @exp(lgamma_diff);
@@ -16051,7 +16091,14 @@ pub fn NoncentralT(comptime T: type) type {
             if (self.dof == std.math.inf(T)) return 1;
             if (self.dof <= 2) return null;
             const c = noncentralTScaleFactor(T, self.dof);
-            return self.dof / (self.dof - 2) * (1 + self.mu * self.mu) - self.mu * self.mu * c * c;
+            const scale = self.dof / (self.dof - 2);
+            if (self.dof > 1.0e8) {
+                // `scale − c² = 1/(2ν) + 15/(8ν²) + O(1/ν³)`; using the
+                // difference of two rounded values would lose it entirely.
+                const diff = 1 / (2 * self.dof) + 15 / (8 * self.dof * self.dof);
+                return self.mu * diff * self.mu + scale;
+            }
+            return self.mu * (scale - c * c) * self.mu + scale;
         }
 
         pub fn minValue(_: Self) ?T {
@@ -16313,7 +16360,8 @@ pub fn NoncentralF(comptime T: type) type {
 
         pub fn expectedValue(self: Self) ?T {
             if (self.d2 <= 2) return null;
-            return (self.d2 / (self.d2 - 2)) * ((self.d1 + self.lambda) / self.d1);
+            // `1 + λ/d1` avoids the overflowing `d1 + λ`.
+            return (self.d2 / (self.d2 - 2)) * (1 + self.lambda / self.d1);
         }
 
         pub fn varianceValue(self: Self) ?T {
@@ -16321,11 +16369,15 @@ pub fn NoncentralF(comptime T: type) type {
             const d1 = self.d1;
             const d2 = self.d2;
             const l = self.lambda;
-            // Var(F) = 2·((d1+l)² + (d1+2l)(d2-2))·d2² / (d1·(d2-2)²·(d2-4))
-            // Standard formula for noncentral F variance (Johnson, Kotz, Balakrishnan).
-            const term1 = (d1 + l) * (d1 + l);
-            const term2 = (d1 + 2 * l) * (d2 - 2);
-            return 2 * (term1 + term2) * d2 * d2 / (d1 * (d2 - 2) * (d2 - 2) * (d2 - 4));
+            // Var(F) = 2·(d2/(d2−2))²·[(d1/(d2−4))(1+l/d1)²
+            //                             + ((d2−2)/(d2−4))(1+2l/d1)]
+            // with the `(1+l/d1)²` product split so huge `l` stays finite.
+            const ratio = d2 / (d2 - 2);
+            const inv_b4 = 1 / (d2 - 4);
+            const l_over_d1 = l / d1;
+            const first = d1 * inv_b4 + 2 * l * inv_b4 + (l * inv_b4) * l_over_d1;
+            const second = ((d2 - 2) * inv_b4) * (1 + 2 * l_over_d1);
+            return 2 * ratio * ratio * (first + second);
         }
 
         pub fn minValue(_: Self) T {
@@ -56043,6 +56095,47 @@ test "beta-family moments and CDFs survive overflowing shapes" {
     try std.testing.expectApproxEqAbs(@as(f64, 1e-300), inverse_gamma.varianceValue(), 1e-304);
     const inverse_gaussian = try InverseGaussian(f64).init(1e150, 1e300);
     try std.testing.expectApproxEqAbs(@as(f64, 1e150), inverse_gaussian.varianceValue(), 1e146);
+}
+
+test "fading and noncentral moments survive extreme parameters" {
+    const pi: f64 = @floatCast(std.math.pi);
+
+    // Hoyt mean uses the elliptic form; the old Bessel form exceeded √Ω.
+    const hoyt_dist = try Hoyt(f64).init(0.5, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.2222619), hoyt_dist.expectedValue(), 1e-6);
+    try std.testing.expect(hoyt_dist.varianceValue() > 0);
+    const hoyt_tiny = try Hoyt(f64).init(1e-300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e150 * @sqrt(2 / pi)), hoyt_tiny.expectedValue(), 1e145);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300 * (1 - 2 / pi)), hoyt_tiny.varianceValue(), 1e295);
+
+    // Rice deep-Rician limit: mean → ν, variance → σ².
+    const rice_dist = try Rice(f64).init(1e300, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), rice_dist.expectedValue(), 1e290);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), rice_dist.varianceValue(), 1e-9);
+    const rice_balanced = try Rice(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.548572e300), rice_balanced.expectedValue(), 1e295);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), rice_balanced.kFactor(), 1e-12);
+
+    // Nakagami large-shape asymptotics.
+    const nak_dist = try Nakagami(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e150), nak_dist.expectedValue(), 1e145);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), nak_dist.varianceValue(), 1e-9);
+    const nak_unit = try Nakagami(f64).init(1e300, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), nak_unit.expectedValue(), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.5e-301), nak_unit.varianceValue(), 1e-305);
+
+    // Noncentral t and F large-dof limits.
+    const noncentral_t = try NoncentralT(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), noncentral_t.expectedValue().?, 1e290);
+    try std.testing.expectApproxEqAbs(@as(f64, 5e299), noncentral_t.varianceValue().?, 1e294);
+    const noncentral_f = try NoncentralF(f64).init(1e300, 1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 2), noncentral_f.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 14), noncentral_f.varianceValue().?, 1e-12);
+
+    // Scaled inverse chi-squared with a huge scale.
+    const scaled = try ScaledInverseChiSquared(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), scaled.expectedValue().?, 1e290);
+    try std.testing.expectApproxEqAbs(@as(f64, 2e300), scaled.varianceValue().?, 1e294);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
