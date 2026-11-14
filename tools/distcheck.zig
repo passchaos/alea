@@ -188,6 +188,45 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("matrix normal col covariance", col_cross / nf, 0.35, 0.45);
     }
 
+    // Non-unit matrix-normal scales: the transform must include the Cholesky
+    // diagonal (the strict-lower product sampled unit variance for every
+    // diagonal).
+    {
+        const mean = [2][1]f64{ .{0}, .{0} };
+        const row_covariance = [2][2]f64{ .{ 4, 0 }, .{ 0, 9 } };
+        const col_covariance = [1][1]f64{.{1}};
+        const dist = try alea.distributions.StaticMatrixNormal(f64, 2, 1).init(mean, row_covariance, col_covariance);
+        const samples = 20_000;
+        var var0: f64 = 0;
+        var var1: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const sample = dist.sample(rng);
+            var0 += sample[0][0] * sample[0][0];
+            var1 += sample[1][0] * sample[1][0];
+        }
+        const nf = @as(f64, @floatFromInt(samples));
+        try expectFloatBetween("matrix normal row scale 4", var0 / nf, 3.7, 4.3);
+        try expectFloatBetween("matrix normal row scale 9", var1 / nf, 8.4, 9.6);
+    }
+    {
+        const allocator = if (builtin.target.os.tag == .wasi) std.heap.wasm_allocator else std.heap.smp_allocator;
+        const mean = [_]f64{0};
+        const row_covariance = [_]f64{4};
+        const col_covariance = [_]f64{1};
+        var dist = try alea.distributions.MatrixNormal(f64).init(allocator, &mean, &row_covariance, &col_covariance);
+        defer dist.deinit();
+        const samples = 20_000;
+        var out: [1]f64 = undefined;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            dist.sampleInto(rng, &out);
+            sum_sq += out[0] * out[0];
+        }
+        try expectFloatBetween("dynamic matrix normal row scale 4", sum_sq / @as(f64, @floatFromInt(samples)), 3.7, 4.3);
+    }
+
     // Static matrix-t variance formula.
     {
         const mean = [2][2]f64{ .{ 0, 0 }, .{ 0, 0 } };
