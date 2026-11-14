@@ -984,6 +984,8 @@ test "fillChance dyadic kernels match their probabilities" {
         .{ .p = 0.625, .expected = 0.625 },
         .{ .p = 0.875, .expected = 0.875 },
         .{ .p = 0.9375, .expected = 0.9375 },
+        .{ .p = 0.0078125, .expected = 0.0078125 },
+        .{ .p = 0.0009765625, .expected = 0.0009765625 },
     };
     for (cases) |case| {
         rng.fillChance(&buf, case.p);
@@ -1979,7 +1981,7 @@ fn chanceDyadicRatio(p: f64) ?struct { numerator: u32, denominator: u32 } {
     const mantissa: u64 = (bits & 0x000f_ffff_ffff_ffff) | (@as(u64, 1) << 52);
     const trailing: i32 = @intCast(@ctz(mantissa));
     const m: i32 = 52 - exponent - trailing;
-    if (m < 1 or m > 6) return null;
+    if (m < 1 or m > 31) return null;
     const k: u32 = @intCast(mantissa >> @intCast(trailing));
     return .{ .numerator = k, .denominator = @as(u32, 1) << @intCast(m) };
 }

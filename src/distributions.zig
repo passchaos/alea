@@ -3984,17 +3984,15 @@ pub const Bernoulli = struct {
             @memset(dest, true);
             return;
         }
-        // A dyadic `p = k / 2^m` (m <= 6) stores the threshold `k << (64 - m)`,
-        // so a shift-and-compare recovers the probability for every ratio that
-        // `Rng.fillChance` packs.
-        inline for (1..7) |m| {
-            const shift = 64 - m;
-            const numerator = self.p_int >> shift;
-            if (numerator != 0 and self.p_int == numerator << shift) {
-                const denominator = @as(f64, @floatFromInt(@as(u64, 1) << @intCast(m)));
-                Rng.fillChanceFrom(source, dest, @as(f64, @floatFromInt(numerator)) / denominator);
-                return;
-            }
+        // A dyadic `p = k / 2^m` (m <= 31) stores the threshold
+        // `k << (64 - m)`, so the trailing-zero count recovers the probability
+        // for every ratio that `Rng.fillChance` packs.
+        const trailing = @ctz(self.p_int);
+        if (trailing >= 33) {
+            const denominator = @as(f64, @floatFromInt(@as(u64, 1) << @intCast(64 - trailing)));
+            const numerator: f64 = @floatFromInt(self.p_int >> @intCast(trailing));
+            Rng.fillChanceFrom(source, dest, numerator / denominator);
+            return;
         }
         for (dest) |*item| item.* = Rng.nextFrom(source) < self.p_int;
     }
