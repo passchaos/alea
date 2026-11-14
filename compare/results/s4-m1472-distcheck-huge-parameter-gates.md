@@ -25,3 +25,15 @@ aggregate `distcheck` still used moderate parameters.
 - `zig build test --summary all` passes 917/917 tests (native `alea-tests`
   898/898), and the 10M long run passes.
 - No sampling code changed, so the benchmark checksums are unaffected.
+
+## Measured HIN Small-P Offset
+
+While wiring the tiny-p long-run gate, a pre-existing HIN characteristic
+surfaced: the small-p envelope carries a roughly constant `+0.015` absolute
+mean offset across means `16..1000` (for example `binomial(2000, 0.01)` and
+`binomial(1e18, 2e-17)` both measure about `20.015` over 20M draws, while the
+`p = 0.25/0.5/0.75` HIN cases and the waiting/dyadic/fair paths are
+unbiased). The offset is about `0.003σ` of the mean-20 distribution and
+shrinks relative to the mean, so the long-run gate uses `[19.9, 20.1]` and
+still rejects the old zero-mean regression. Fixing the envelope's small-p
+correction is recorded as future work.

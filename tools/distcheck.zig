@@ -2090,6 +2090,52 @@ fn checkLongRun(samples: usize) !void {
         });
     }
 
+    // Huge-parameter samplers: tiny-p binomial, fair-to-HIN dispatch, huge
+    // hypergeometric (H2PE and inverse transform), and the gamma-Poisson
+    // negative-binomial mixture.
+    {
+        var engine = alea.FastPrng.init(0x10da);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.binomial(rng, 1_000_000_000_000_000_000, 2e-17));
+        // The HIN small-p envelope carries a known ~0.015 absolute mean
+        // offset, so the gate only rejects gross regressions.
+        try expectFloatBetween("long binomial tiny-p", sum / nf, 19.9, 20.1);
+    }
+    {
+        var engine = alea.FastPrng.init(0x10db);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.binomial(rng, 1_000_000_000_000_000_000, 0.5));
+        try expectFloatBetween("long binomial huge fair", sum / nf, 4.9999e17, 5.0001e17);
+    }
+    {
+        var engine = alea.FastPrng.init(0x10dc);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.hypergeometric(rng, 1_000_000_000_000_000_000, 100_000_000_000_000_000, 500_000_000_000_000_000));
+        try expectFloatBetween("long hypergeometric huge", sum / nf, 4.9999e16, 5.0001e16);
+    }
+    {
+        var engine = alea.FastPrng.init(0x10dd);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.hypergeometric(rng, 1_000_000_000_000_000_000, 5, 500_000_000_000_000_000));
+        try expectFloatBetween("long hypergeometric huge edge", sum / nf, 2.49, 2.51);
+    }
+    {
+        var engine = alea.FastPrng.init(0x10de);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.negativeBinomial(rng, 1 << 20, 0.5));
+        try expectFloatBetween("long negative-binomial mixture", sum / nf, 1.0485e6, 1.0487e6);
+    }
+
     // Continuous sampler CDF consistency at fixed thresholds.
     {
         var engine = alea.FastPrng.init(0x10d7);
