@@ -397,7 +397,9 @@ fn probitImpl(comptime PeerType: type, p: PeerType) PeerType {
 /// (Numerical Recipes `betacf`). Converges in a few dozen iterations for
 /// typical parameters; the 300-iteration cap is a safety bound.
 fn betaContinuedFraction(comptime T: type, x: T, a: T, b: T) T {
-    const max_iter = 300;
+    // Large `a + b` near the mean needs roughly 600 iterations to converge;
+    // the previous 300-iteration cap left a 1.3e-3 error at a + b = 9.9e6.
+    const max_iter = 1000;
     const eps = 64 * std.math.floatEps(T);
     const fpmin = std.math.floatMin(T) * 16;
 
@@ -436,9 +438,10 @@ fn betaContinuedFraction(comptime T: type, x: T, a: T, b: T) T {
 /// Regularized incomplete beta function I_x(a, b) for 0 ≤ x ≤ 1 and a, b > 0.
 /// Uses the continued-fraction representation with the symmetry
 /// I_x(a, b) = 1 − I_{1−x}(b, a) for numerical stability. The integer-shape
-/// special cases are exact, and huge `a + b` switches to a normal
-/// approximation with the first Edgeworth correction because the continued
-/// fraction overflows there.
+/// special cases are exact, the continued fraction runs up to 1000 iterations
+/// so large `a + b` near the mean converges, and huge `a + b ≥ 1e7` switches
+/// to a normal approximation with the first Edgeworth correction because the
+/// continued fraction overflows there.
 pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) resolvedFloatType(@TypeOf(x, a, b)) {
     return betaIncompleteImpl(resolvedFloatType(@TypeOf(x, a, b)), x, a, b);
 }
@@ -56670,6 +56673,16 @@ test "distribution helpers accept literal and mixed argument types" {
     try std.testing.expectEqual(@as(f32, 0.6875), literal_f32);
     const runtime_f32 = betaIncomplete(@as(f32, 0.5), @as(f32, 2), @as(f32, 3));
     try std.testing.expectEqual(@as(f32, 0.6875), runtime_f32);
+}
+
+test "betaIncomplete large symmetric shapes resolve the mean" {
+    // I_{1/2}(a, a) = 1/2 by symmetry. With the old 300-iteration cap the
+    // continued fraction returned 0.49997113 at a + b = 8e6 and 0.49869696
+    // at a + b = 9.9e6.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(@as(f64, 0.5), @as(f64, 4_000_000), @as(f64, 4_000_000)), 1e-7);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(@as(f64, 0.5), @as(f64, 4_999_999.5), @as(f64, 4_999_999.5)), 1e-7);
+    // The normal-approximation fallback above 1e7 stays exact at the mean.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(@as(f64, 0.5), @as(f64, 5_000_000.5), @as(f64, 5_000_000.5)), 1e-9);
 }
 
 test "fisherFCdf and fisherFQuantile match known values" {

@@ -574,10 +574,13 @@ runtime float type, and explicit f32 arguments keep f32.
 
 - normal: `normCdf`, `probit`.
 - beta: `betaIncomplete`, `betaCdf`, `betaQuantile`; `betaIncomplete` uses the
-  exact closed forms for `a = 1` and `b = 1`, switches to a normal
-  approximation with the first Edgeworth correction once `a + b ≥ 1e7` (the
-  continued fraction overflows there), and keeps the continued fraction
-  elsewhere. The normal fallback computes its mean, variance, and skew from
+  exact closed forms for `a = 1` and `b = 1`, runs the continued fraction for
+  up to 1000 iterations (enough for `a + b` just below `1e7` to converge near
+  the mean; the previous 300-iteration cap left a `1.3e-3` error at
+  `a + b = 9.9e6`), switches to a normal approximation with the first
+  Edgeworth correction once `a + b ≥ 1e7` (the continued fraction overflows
+  there), and keeps the continued fraction elsewhere. The normal fallback
+  computes its mean, variance, and skew from
   normalized probabilities `a/(a+b)` and `b/(a+b)`, so huge finite shapes
   (`a = b = 1e300`, where `a·b` and `a + b` overflow) stay finite and an
   overflowing shape sum degenerates to a point mass at `a/(a+b)`; the `Beta`,

@@ -114,6 +114,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Negative-binomial gamma-Poisson mixture (`successes >= 2^20`) | `compare/results/s4-m1466-negative-binomial-gamma-poisson-mixture.md` |
 | Huge-population hypergeometric H2PE and inverse-transform init | `compare/results/s4-m1464-huge-population-hypergeometric.md`, `compare/results/s4-m1470-hypergeometric-inverse-init.md` |
 | Large-parameter incomplete gamma/beta CDF fallbacks | `compare/results/s4-m1462-incomplete-gamma-beta-fallbacks.md` |
+| Incomplete-beta continued-fraction iteration cap (large symmetric shapes near the mean) | `compare/results/s4-m1523-beta-cf-iteration-cap.md` |
 | Full Bartlett `L·A` Wishart product (identity-scale off-diagonals and non-diagonal scale covariance) | `compare/results/s4-m1507-wishart-bartlett-product.md` |
 
 ## Not Stable
