@@ -3966,26 +3966,16 @@ pub const Bernoulli = struct {
     }
 
     pub fn fill(self: Bernoulli, rng: Rng, dest: []bool) void {
-        if (self.p_int == 0) {
-            @memset(dest, false);
-            return;
-        }
-        if (self.p_int == always_true) {
-            @memset(dest, true);
-            return;
-        }
-        if (self.p_int == Rng.probabilityThreshold(0.5)) {
-            Rng.fillChanceFrom(rng, dest, 0.5);
-            return;
-        }
-        if (self.p_int == Rng.probabilityThreshold(0.25)) {
-            Rng.fillChanceFrom(rng, dest, 0.25);
-            return;
-        }
-        for (dest) |*item| item.* = Rng.nextFrom(rng) < self.p_int;
+        self.fillDispatch(rng, dest);
     }
 
     pub fn fillFrom(self: Bernoulli, source: anytype, dest: []bool) void {
+        self.fillDispatch(source, dest);
+    }
+
+    /// Bulk fill through the packed chance kernels for the probabilities they
+    /// cover; everything else keeps the per-element threshold loop.
+    fn fillDispatch(self: Bernoulli, source: anytype, dest: []bool) void {
         if (self.p_int == 0) {
             @memset(dest, false);
             return;
@@ -3994,13 +3984,12 @@ pub const Bernoulli = struct {
             @memset(dest, true);
             return;
         }
-        if (self.p_int == Rng.probabilityThreshold(0.5)) {
-            Rng.fillChanceFrom(source, dest, 0.5);
-            return;
-        }
-        if (self.p_int == Rng.probabilityThreshold(0.25)) {
-            Rng.fillChanceFrom(source, dest, 0.25);
-            return;
+        const packed_probabilities = [_]f64{ 0.5, 0.25, 0.75, 0.375, 0.0625, 0.125 };
+        inline for (packed_probabilities) |chance| {
+            if (self.p_int == Rng.probabilityThreshold(chance)) {
+                Rng.fillChanceFrom(source, dest, chance);
+                return;
+            }
         }
         for (dest) |*item| item.* = Rng.nextFrom(source) < self.p_int;
     }

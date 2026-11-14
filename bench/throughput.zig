@@ -127,7 +127,9 @@ pub fn main(init: std.process.Init) !void {
     try benchSeqU32Direct(io, stdout, "alea sample indices u32 direct", 1_000_000, 10_000);
     try stdout.print("\ndistribution throughput\n", .{});
     try benchBernoulli(io, stdout, "alea bernoulli", bytes / 64);
-    try benchFillBernoulli(io, stdout, "alea fillBernoulli p=0.25", bytes / 8);
+    try benchFillBernoulli(io, stdout, "alea fillBernoulli p=0.25", bytes / 8, 0.25);
+    try benchFillBernoulli(io, stdout, "alea fillBernoulli p=3/4", bytes / 8, 0.75);
+    try benchFillBernoulli(io, stdout, "alea fillBernoulli p=1/8", bytes / 8, 0.125);
     try benchAliasTable(io, stdout, "alea alias table", bytes / 256);
     try benchAliasTableDirect(io, stdout, "alea alias table direct", bytes / 256);
     try benchAliasTableScalar(io, stdout, "alea alias table scalar direct", bytes / 256);
@@ -3093,7 +3095,7 @@ fn benchBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: u
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
 
-fn benchFillBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+fn benchFillBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, p: f64) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
@@ -3107,7 +3109,7 @@ fn benchFillBernoulli(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
         var checksum: u64 = 0;
         while (remaining > 0) {
             const n = @min(remaining, out.len);
-            alea.distributions.fillBernoulli(rng, out[0..n], 0.25);
+            alea.distributions.fillBernoulli(rng, out[0..n], p);
             for (out[0..n]) |value| checksum += @intFromBool(value);
             remaining -= n;
         }
