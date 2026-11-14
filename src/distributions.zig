@@ -5875,10 +5875,18 @@ fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     }
 
     const mean = @as(f64, @floatFromInt(trials)) * p;
-    if (mean >= 8) return binomialRejectionSmallPFrom(source, trials, p);
+    if (mean >= binomial_hin_min_mean) return binomialRejectionSmallPFrom(source, trials, p);
 
     return binomialWaitingFrom(source, trials, -@log(1.0 - p));
 }
+
+/// The HIN rejection envelope is tuned for larger means: for `mean < 16` the
+/// exponential waiting-time method is faster on the local aarch64 host (for
+/// example `n = 1000, p = 0.012` measures about 54 ns against about 30 ns,
+/// and the crossover sits near mean 14-19 depending on `trials`). Both
+/// methods are exact binomial samplers, so this only selects the cheaper
+/// stream for the parameter region.
+const binomial_hin_min_mean = 16.0;
 
 const DyadicBinomialFields = struct { m: u32, k: u64 };
 
@@ -6010,7 +6018,7 @@ fn binomialHinSetup(trials: u64, p: f64) ?BinomialHinSetup {
     if (trials <= 64 or !(p > 0) or p >= 0.5) return null;
     const t: f64 = @floatFromInt(trials);
     const mean = t * p;
-    if (!(mean >= 8)) return null;
+    if (!(mean >= binomial_hin_min_mean)) return null;
 
     const np = @floor(t * p);
     const pa = np / t;
@@ -54040,6 +54048,36 @@ test "binomial dyadic fractions match moments" {
         const variance = sum_sq / nf - mean * mean;
         try std.testing.expect(@abs(mean - case.mean) < 0.05);
         try std.testing.expect(@abs(variance - case.variance) < 0.2);
+    }
+}
+
+test "binomial waiting-time region has plausible moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x5a17);
+    const rng = Rng.init(&engine);
+
+    const samples = 200_000;
+    const Case = struct { trials: u64, p: f64, mean: f64, variance: f64 };
+    // Both cases sit in the mean < 16 region that now dispatches to the
+    // exponential waiting-time method instead of the HIN rejection loop.
+    const cases = [_]Case{
+        .{ .trials = 1000, .p = 0.012, .mean = 12.0, .variance = 11.856 },
+        .{ .trials = 100, .p = 0.12, .mean = 12.0, .variance = 10.56 },
+    };
+    for (cases) |case| {
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const value: f64 = @floatFromInt(binomial(rng, case.trials, case.p));
+            sum += value;
+            sum_sq += value * value;
+        }
+        const nf: f64 = @floatFromInt(samples);
+        const mean = sum / nf;
+        const variance = sum_sq / nf - mean * mean;
+        try std.testing.expect(@abs(mean - case.mean) < 0.06);
+        try std.testing.expect(@abs(variance - case.variance) < 0.25);
     }
 }
 
