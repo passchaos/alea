@@ -2999,6 +2999,22 @@ pub const multi = struct {
     pub fn MatrixFisher(comptime T: type) type {
         return distributions_module.MatrixFisher(T);
     }
+
+    pub fn Wishart(comptime T: type) type {
+        return distributions_module.Wishart(T);
+    }
+
+    pub fn InverseWishart(comptime T: type) type {
+        return distributions_module.InverseWishart(T);
+    }
+
+    pub fn StaticWishart(comptime T: type, comptime dimension: usize) type {
+        return distributions_module.StaticWishart(T, dimension);
+    }
+
+    pub fn StaticInverseWishart(comptime T: type, comptime dimension: usize) type {
+        return distributions_module.StaticInverseWishart(T, dimension);
+    }
 };
 
 pub const BernoulliError = error{
@@ -66415,6 +66431,11 @@ test "Wishart batch sampling matches repeated draws and validates lengths" {
         try std.testing.expect(block[0] > 0 and block[3] > 0);
         try std.testing.expect(block[0] * block[3] - block[1] * block[2] > 0);
     }
+
+    comptime std.debug.assert(multi.Wishart(f64) == Wishart(f64));
+    comptime std.debug.assert(multi.InverseWishart(f64) == InverseWishart(f64));
+    comptime std.debug.assert(multi.StaticWishart(f64, 2) == StaticWishart(f64, 2));
+    comptime std.debug.assert(multi.StaticInverseWishart(f64, 2) == StaticInverseWishart(f64, 2));
 }
 
 test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {

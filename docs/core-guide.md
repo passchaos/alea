@@ -555,8 +555,10 @@ Matrix-variate distributions:
   consecutive draws into one flat buffer (dynamic) or `[]Matrix` (static),
   and the dynamic checked variants reject lengths that are not a multiple of
   `dim·dim`.
-- `multi.MatrixNormal`, `multi.StaticMatrixNormal`, `multi.MatrixT`, and
-  `multi.StaticMatrixT` provide namespace discovery.
+- `multi.MatrixNormal`, `multi.StaticMatrixNormal`, `multi.MatrixT`,
+  `multi.StaticMatrixT`, `multi.Wishart`, `multi.InverseWishart`,
+  `multi.StaticWishart`, and `multi.StaticInverseWishart` provide namespace
+  discovery.
 
 Run `zig build run-copulas` and `zig build run-matrix-normal` for runnable
 adoption examples covering static/dynamic copulas and matrix-normal sampling.

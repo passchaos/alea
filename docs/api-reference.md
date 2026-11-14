@@ -3562,6 +3562,7 @@ Reusable samplers:
 - `MatrixVonMisesFisherError`
 - `MatrixFisherError`
 - `Wishart(T)`
+- `multi.Wishart(T)`
 - `Wishart(T).init`
 - `Wishart(T).new`
 - `Wishart(T).deinit`
@@ -3584,6 +3585,7 @@ Reusable samplers:
 - `Wishart(T).sampleManyIntoChecked`
 - `Wishart(T).sampleManyIntoCheckedFrom`
 - `InverseWishart(T)`
+- `multi.InverseWishart(T)`
 - `InverseWishart(T).init`
 - `InverseWishart(T).new`
 - `InverseWishart(T).deinit`
@@ -3605,6 +3607,7 @@ Reusable samplers:
 - `InverseWishart(T).sampleManyIntoChecked`
 - `InverseWishart(T).sampleManyIntoCheckedFrom`
 - `StaticWishart(T, dimension)`
+- `multi.StaticWishart(T, dimension)`
 - `StaticWishart(T, dimension).init`
 - `StaticWishart(T, dimension).new`
 - `StaticWishart(T, dimension).scaleValue`
@@ -3617,6 +3620,7 @@ Reusable samplers:
 - `StaticWishart(T, dimension).sampleManyInto`
 - `StaticWishart(T, dimension).sampleManyIntoFrom`
 - `StaticInverseWishart(T, dimension)`
+- `multi.StaticInverseWishart(T, dimension)`
 - `StaticInverseWishart(T, dimension).init`
 - `StaticInverseWishart(T, dimension).new`
 - `StaticInverseWishart(T, dimension).scaleValue`
