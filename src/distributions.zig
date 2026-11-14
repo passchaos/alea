@@ -4595,16 +4595,22 @@ pub const Multinomial = struct {
     probabilities: []const f64,
     total_probability: f64,
     constant_category: ?usize,
-    /// Cached HIN constants for the first conditional binomial, whose
+    /// Index of the largest probability. Drawing that category first keeps
+    /// the conditional binomials cheap: a dominant category hits the fair or
+    /// flipped path, and the remaining trial count shrinks faster.
+    lead_index: usize,
+    /// Cached HIN constants for the lead conditional binomial, whose
     /// `(trials, p)` pair is fixed across draws.
-    first_hin: ?BinomialHinSetup,
-    first_hin_flip: bool,
+    lead_hin: ?BinomialHinSetup,
+    lead_hin_flip: bool,
 
     pub fn init(trials: u64, probabilities: []const f64) Error!Multinomial {
         if (probabilities.len == 0) return error.EmptyRange;
         var total: f64 = 0;
         var positive_index: ?usize = null;
         var positive_count: usize = 0;
+        var lead_index: usize = 0;
+        var lead_probability = probabilities[0];
         for (probabilities, 0..) |p, index| {
             if (!(p >= 0) or !std.math.isFinite(p)) return error.InvalidProbability;
             total += p;
@@ -4612,16 +4618,20 @@ pub const Multinomial = struct {
                 positive_index = index;
                 positive_count += 1;
             }
+            if (p > lead_probability) {
+                lead_probability = p;
+                lead_index = index;
+            }
         }
         if (!(total > 0) or !std.math.isFinite(total)) return error.InvalidProbability;
 
-        var first_hin: ?BinomialHinSetup = null;
-        var first_hin_flip = false;
-        if (trials > 0 and probabilities[0] > 0) {
-            const p_first = probabilities[0] / total;
-            const q = if (p_first <= 0.5) p_first else 1.0 - p_first;
-            first_hin = binomialHinSetup(trials, q);
-            first_hin_flip = p_first > 0.5;
+        var lead_hin: ?BinomialHinSetup = null;
+        var lead_hin_flip = false;
+        if (trials > 0 and lead_probability > 0) {
+            const p_lead = lead_probability / total;
+            const q = if (p_lead <= 0.5) p_lead else 1.0 - p_lead;
+            lead_hin = binomialHinSetup(trials, q);
+            lead_hin_flip = p_lead > 0.5;
         }
 
         return .{
@@ -4629,8 +4639,9 @@ pub const Multinomial = struct {
             .probabilities = probabilities,
             .total_probability = total,
             .constant_category = if (positive_count == 1) positive_index else null,
-            .first_hin = first_hin,
-            .first_hin_flip = first_hin_flip,
+            .lead_index = lead_index,
+            .lead_hin = lead_hin,
+            .lead_hin_flip = lead_hin_flip,
         };
     }
 
@@ -4771,15 +4782,45 @@ pub const Multinomial = struct {
         return out;
     }
 
-    fn sampleFirstBinomialFrom(self: *const Multinomial, source: anytype, trials: u64, p: f64) u64 {
-        if (self.first_hin != null) {
-            const setup = &self.first_hin.?;
+    fn sampleLeadBinomialFrom(self: *const Multinomial, source: anytype, trials: u64, p: f64) u64 {
+        if (self.lead_hin != null) {
+            const setup = &self.lead_hin.?;
             if (setup.trials == trials) {
                 const sampled = binomialHinDrawFrom(source, trials, setup);
-                return if (self.first_hin_flip) trials - sampled else sampled;
+                return if (self.lead_hin_flip) trials - sampled else sampled;
             }
         }
         return binomialFrom(source, trials, p);
+    }
+
+    /// Index that receives the leftover trials: the last category unless the
+    /// lead category already occupies that slot. Callers guarantee `len >= 2`.
+    fn remainderIndex(self: *const Multinomial) usize {
+        const len = self.probabilities.len;
+        return if (self.lead_index == len - 1) len - 2 else len - 1;
+    }
+
+    /// Draw the lead category, then the remaining categories in input order
+    /// except for the remainder slot, which takes whatever trials are left.
+    fn sampleCountsFrom(self: Multinomial, source: anytype, out: []u64) void {
+        const lead = self.lead_index;
+        const last = self.remainderIndex();
+        var remaining_trials = self.trials;
+        var remaining_probability = self.total_probability;
+        const lead_count = self.sampleLeadBinomialFrom(source, remaining_trials, self.probabilities[lead] / remaining_probability);
+        out[lead] = lead_count;
+        remaining_trials -= lead_count;
+        remaining_probability -= self.probabilities[lead];
+        for (self.probabilities, out, 0..) |p, *slot, index| {
+            if (index == lead or index == last) continue;
+            if (remaining_trials == 0) break;
+            if (p == 0) continue;
+            const normalized = p / remaining_probability;
+            slot.* = binomialFrom(source, remaining_trials, normalized);
+            remaining_trials -= slot.*;
+            remaining_probability -= p;
+        }
+        out[last] = remaining_trials;
     }
 
     pub fn sampleInto(self: Multinomial, rng: Rng, out: []u64) void {
@@ -4794,22 +4835,7 @@ pub const Multinomial = struct {
             out[index] = self.trials;
             return;
         }
-
-        var remaining_trials = self.trials;
-        var remaining_probability = self.total_probability;
-        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1], 0..) |p, *slot, index| {
-            if (remaining_trials == 0) return;
-            if (p == 0) continue;
-            const normalized = p / remaining_probability;
-            const count = if (index == 0)
-                self.sampleFirstBinomialFrom(rng, remaining_trials, normalized)
-            else
-                binomialFrom(rng, remaining_trials, normalized);
-            slot.* = count;
-            remaining_trials -= count;
-            remaining_probability -= p;
-        }
-        out[out.len - 1] = remaining_trials;
+        self.sampleCountsFrom(rng, out);
     }
 
     pub fn sampleIntoChecked(self: Multinomial, rng: Rng, out: []u64) Error!void {
@@ -4877,15 +4903,23 @@ pub const Multinomial = struct {
             return;
         }
         const len = self.probabilities.len;
+        const lead = self.lead_index;
+        const last = self.remainderIndex();
         // The second conditional's normalized probability is fixed across
         // samples while its trial count varies; a small local cache avoids
         // recomputing the HIN setup for the common nearby counts.
-        const cache_second = len >= 3 and self.probabilities[0] > 0 and self.probabilities[1] > 0;
+        var second: ?usize = null;
+        for (0..len) |index| {
+            if (index == lead or index == last) continue;
+            second = index;
+            break;
+        }
+        const cache_second = second != null and self.probabilities[second.?] > 0;
         var second_p: f64 = 0;
         var second_q: f64 = 0;
         var second_flip = false;
         if (cache_second) {
-            second_p = self.probabilities[1] / (self.total_probability - self.probabilities[0]);
+            second_p = self.probabilities[second.?] / (self.total_probability - self.probabilities[lead]);
             second_q = if (second_p <= 0.5) second_p else 1.0 - second_p;
             second_flip = second_p > 0.5;
         }
@@ -4899,13 +4933,16 @@ pub const Multinomial = struct {
             @memset(sample_out, 0);
             var remaining_trials = self.trials;
             var remaining_probability = self.total_probability;
-            for (self.probabilities[0 .. len - 1], sample_out[0 .. len - 1], 0..) |p, *slot, index| {
+            const lead_count = self.sampleLeadBinomialFrom(source, remaining_trials, self.probabilities[lead] / remaining_probability);
+            sample_out[lead] = lead_count;
+            remaining_trials -= lead_count;
+            remaining_probability -= self.probabilities[lead];
+            for (self.probabilities, sample_out, 0..) |p, *slot, index| {
+                if (index == lead or index == last) continue;
                 if (remaining_trials == 0) break;
                 if (p == 0) continue;
                 const normalized = p / remaining_probability;
-                const count = if (index == 0)
-                    self.sampleFirstBinomialFrom(source, remaining_trials, normalized)
-                else if (index == 1 and cache_second)
+                const count = if (second != null and index == second.? and cache_second)
                     sampleCachedSecondBinomialFrom(source, remaining_trials, second_p, second_q, second_flip, &cache, &cache_len, &cache_next)
                 else
                     binomialFrom(source, remaining_trials, normalized);
@@ -4913,7 +4950,7 @@ pub const Multinomial = struct {
                 remaining_trials -= count;
                 remaining_probability -= p;
             }
-            sample_out[len - 1] = remaining_trials;
+            sample_out[last] = remaining_trials;
         }
     }
 
@@ -4929,22 +4966,7 @@ pub const Multinomial = struct {
             out[index] = self.trials;
             return;
         }
-
-        var remaining_trials = self.trials;
-        var remaining_probability = self.total_probability;
-        for (self.probabilities[0 .. self.probabilities.len - 1], out[0 .. out.len - 1], 0..) |p, *slot, index| {
-            if (remaining_trials == 0) return;
-            if (p == 0) continue;
-            const normalized = p / remaining_probability;
-            const count = if (index == 0)
-                self.sampleFirstBinomialFrom(source, remaining_trials, normalized)
-            else
-                binomialFrom(source, remaining_trials, normalized);
-            slot.* = count;
-            remaining_trials -= count;
-            remaining_probability -= p;
-        }
-        out[out.len - 1] = remaining_trials;
+        self.sampleCountsFrom(source, out);
     }
 };
 
@@ -54273,6 +54295,61 @@ test "multinomial sampler returns category counts" {
     try std.testing.expectError(error.EmptyRange, Multinomial.init(1, &.{}));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 1.0, std.math.nan(f64) }));
     try std.testing.expectError(error.InvalidProbability, Multinomial.init(1, &.{ 0.0, 0.0 }));
+}
+
+test "multinomial lead-category ordering keeps moments" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x3a71);
+    const rng = Rng.init(&engine);
+
+    const trials: u64 = 1000;
+    const samples = 50_000;
+    // The largest probability is the last category, so the sampler draws it
+    // first and the remainder slot moves to the middle category.
+    const probs = [_]f64{ 1.0, 2.0, 3.0 };
+    const dist = try Multinomial.init(trials, &probs);
+    var sums = [_]f64{ 0, 0, 0 };
+    var sums_sq = [_]f64{ 0, 0, 0 };
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        var counts: [3]u64 = undefined;
+        dist.sampleInto(rng, &counts);
+        for (counts, 0..) |count, index| {
+            const value: f64 = @floatFromInt(count);
+            sums[index] += value;
+            sums_sq[index] += value * value;
+        }
+    }
+    const nf: f64 = @floatFromInt(samples);
+    const n: f64 = @floatFromInt(trials);
+    for (0..3) |index| {
+        const p = probs[index] / 6.0;
+        const mean = sums[index] / nf;
+        const variance = sums_sq[index] / nf - mean * mean;
+        try std.testing.expect(@abs(mean - n * p) < 3.0);
+        try std.testing.expect(@abs(variance - n * p * (1 - p)) < 8.0);
+    }
+
+    // Two categories where the lead is the last index: the remainder slot
+    // moves to index 0.
+    const pair = try Multinomial.init(1000, &.{ 1.0, 3.0 });
+    var pair_sums = [_]f64{ 0, 0 };
+    i = 0;
+    while (i < samples) : (i += 1) {
+        var counts: [2]u64 = undefined;
+        pair.sampleInto(rng, &counts);
+        pair_sums[0] += @floatFromInt(counts[0]);
+        pair_sums[1] += @floatFromInt(counts[1]);
+    }
+    try std.testing.expect(@abs(pair_sums[0] / nf - 250.0) < 3.0);
+    try std.testing.expect(@abs(pair_sums[1] / nf - 750.0) < 3.0);
+
+    // Zero-probability categories stay zero regardless of the lead order.
+    const sparse = try Multinomial.init(1000, &.{ 0.0, 1.0, 3.0 });
+    var sparse_counts: [3]u64 = undefined;
+    sparse.sampleInto(rng, &sparse_counts);
+    try std.testing.expectEqual(@as(u64, 0), sparse_counts[0]);
+    try std.testing.expectEqual(@as(u64, 1000), sparse_counts[1] + sparse_counts[2]);
 }
 
 test "multivariate normal owns and factors covariance once" {
