@@ -56,6 +56,23 @@ fn runChecks() !void {
     try checkAdvancedMultivariate();
     try checkBetaFamilies();
     try checkCauchyQuantiles();
+    try checkDyadicChanceFills();
+}
+
+/// The packed `fillChance` kernels must match their requested probabilities
+/// across the dedicated masks and the nibble/ratio fallbacks.
+fn checkDyadicChanceFills() !void {
+    var engine = alea.FastPrng.init(0xd1a7);
+    const rng = alea.Rng.init(&engine);
+    var buf: [100_000]bool = undefined;
+    const cases = [_]f64{ 0.25, 0.375, 0.5, 0.0625, 0.75, 0.125, 0.1875, 0.3125, 0.875, 0.0078125 };
+    for (cases) |probability| {
+        rng.fillChance(&buf, probability);
+        var trues: usize = 0;
+        for (buf) |value| trues += @intFromBool(value);
+        const fraction = @as(f64, @floatFromInt(trues)) / @as(f64, @floatFromInt(buf.len));
+        try expectFloatBetween("dyadic fillChance fraction", fraction, probability - 0.006, probability + 0.006);
+    }
 }
 
 /// The Cauchy law has no finite mean, so gate its median and quartiles: for
@@ -1185,6 +1202,7 @@ fn checkVectorDistributions() !void {
     const multinomial = try alea.distributions.Multinomial.init(100, &.{ 1.0, 2.0, 3.0 });
 
     var i: usize = 0;
+    var category_sums = [_]f64{ 0, 0, 0 };
     while (i < 5000) : (i += 1) {
         var simplex: [3]f64 = undefined;
         dirichlet.sampleInto(rng, &simplex);
@@ -1198,7 +1216,10 @@ fn checkVectorDistributions() !void {
         var counts: [3]u64 = undefined;
         multinomial.sampleInto(rng, &counts);
         var total: u64 = 0;
-        for (counts) |count| total += count;
+        for (counts, 0..) |count, index| {
+            total += count;
+            category_sums[index] += @floatFromInt(count);
+        }
         if (total != 100) return error.DistributionCheckFailed;
 
         const circle = alea.distributions.unitCircle(rng, f64);
@@ -1209,6 +1230,14 @@ fn checkVectorDistributions() !void {
         try expectFloatBetween("unit sphere norm", sphere[0] * sphere[0] + sphere[1] * sphere[1] + sphere[2] * sphere[2], 0.999999999999, 1.000000000001);
         const ball = alea.distributions.unitBall(rng, f64);
         if (ball[0] * ball[0] + ball[1] * ball[1] + ball[2] * ball[2] > 1) return error.DistributionCheckFailed;
+    }
+
+    // The multinomial draws its largest category first; the marginal means
+    // must still match n·p_i / total.
+    const sample_count: f64 = 5000;
+    const expected_means = [_]f64{ 100.0 / 6.0, 200.0 / 6.0, 300.0 / 6.0 };
+    for (expected_means, 0..) |expected, index| {
+        try expectFloatBetween("multinomial marginal mean", category_sums[index] / sample_count, expected - 0.5, expected + 0.5);
     }
 
     var direct_engine = alea.ScalarPrng.init(0x7ec8);
