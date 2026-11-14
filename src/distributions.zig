@@ -5402,6 +5402,7 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
+        if (binomialFillHinFrom(self, source, dest)) return;
         for (dest) |*item| {
             item.* = binomialDyadicTryFrom(source, self.trials, self.p) orelse binomialFrom(source, self.trials, self.p);
         }
