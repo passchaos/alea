@@ -729,6 +729,19 @@ fn checkBinomial() !void {
     try expectBinomialMean(rng, 20, 0.2, 3.8, 4.2);
     try expectBinomialMean(rng, 64, 0.5, 31.4, 32.6);
     try expectBinomialMean(rng, 10_000, 0.01, 98.8, 101.2);
+
+    const cached_inversion = try alea.distributions.CachedBinomial.init(1_000, 0.012);
+    try expectCachedBinomialMean(rng, &cached_inversion, 11.8, 12.2);
+    const cached_hin = try alea.distributions.CachedBinomial.init(10_000, 0.01);
+    try expectCachedBinomialMean(rng, &cached_hin, 98.8, 101.2);
+}
+
+fn expectCachedBinomialMean(rng: alea.Rng, dist: *const alea.distributions.CachedBinomial, min: f64, max: f64) !void {
+    const samples = 10_000;
+    var sum: f64 = 0;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) sum += @floatFromInt(dist.sample(rng));
+    try expectFloatBetween("cached binomial", sum / @as(f64, @floatFromInt(samples)), min, max);
 }
 
 fn expectBinomialMean(rng: alea.Rng, trials: u64, p: f64, min: f64, max: f64) !void {
@@ -2004,6 +2017,52 @@ fn checkLongRun(samples: usize) !void {
             @as(f64, @floatFromInt(zipf_hits[0])) * inv_n,
             @as(f64, @floatFromInt(zeta_hits[0])) * inv_n,
             @as(f64, @floatFromInt(bernoulli_hits)) * inv_n,
+        });
+    }
+
+    // Cached binomial sampler: inversion walk (mean < 16) and HIN (mean >= 16).
+    {
+        var engine = alea.FastPrng.init(0x10d9);
+        const rng = alea.Rng.init(&engine);
+        const inversion = try alea.distributions.CachedBinomial.init(1_000, 0.012);
+        const hin = try alea.distributions.CachedBinomial.init(10_000, 0.01);
+        var inversion_hits = [_]usize{0} ** 3;
+        var hin_hits = [_]usize{0} ** 3;
+        var inversion_sum: f64 = 0;
+        var inversion_sum_sq: f64 = 0;
+        var hin_sum: f64 = 0;
+        var hin_sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const a: f64 = @floatFromInt(inversion.sample(rng));
+            inversion_sum += a;
+            inversion_sum_sq += a * a;
+            if (a <= 8) inversion_hits[0] += 1;
+            if (a <= 12) inversion_hits[1] += 1;
+            if (a <= 16) inversion_hits[2] += 1;
+            const b: f64 = @floatFromInt(hin.sample(rng));
+            hin_sum += b;
+            hin_sum_sq += b * b;
+            if (b <= 90) hin_hits[0] += 1;
+            if (b <= 100) hin_hits[1] += 1;
+            if (b <= 110) hin_hits[2] += 1;
+        }
+        const inversion_mean = inversion_sum / nf;
+        const hin_mean = hin_sum / nf;
+        try expectFloatBetween("long cached binomial inversion mean", inversion_mean, 11.98, 12.02);
+        try expectFloatBetween("long cached binomial inversion variance", inversion_sum_sq / nf - inversion_mean * inversion_mean, 11.80, 11.92);
+        try expectFloatBetween("long cached binomial hin mean", hin_mean, 99.90, 100.10);
+        try expectFloatBetween("long cached binomial hin variance", hin_sum_sq / nf - hin_mean * hin_mean, 98.70, 99.30);
+        try expectEmpiricalCdf("long cached binomial inversion cdf(8)", inversion_hits[0], samples, alea.distributions.binomialCdf(@as(f64, 8), @as(f64, 1000), @as(f64, 0.012)));
+        try expectEmpiricalCdf("long cached binomial inversion cdf(12)", inversion_hits[1], samples, alea.distributions.binomialCdf(@as(f64, 12), @as(f64, 1000), @as(f64, 0.012)));
+        try expectEmpiricalCdf("long cached binomial inversion cdf(16)", inversion_hits[2], samples, alea.distributions.binomialCdf(@as(f64, 16), @as(f64, 1000), @as(f64, 0.012)));
+        try expectEmpiricalCdf("long cached binomial hin cdf(90)", hin_hits[0], samples, alea.distributions.binomialCdf(@as(f64, 90), @as(f64, 10000), @as(f64, 0.01)));
+        try expectEmpiricalCdf("long cached binomial hin cdf(100)", hin_hits[1], samples, alea.distributions.binomialCdf(@as(f64, 100), @as(f64, 10000), @as(f64, 0.01)));
+        try expectEmpiricalCdf("long cached binomial hin cdf(110)", hin_hits[2], samples, alea.distributions.binomialCdf(@as(f64, 110), @as(f64, 10000), @as(f64, 0.01)));
+        const inv_n = 1 / @as(f64, @floatFromInt(samples));
+        std.debug.print("long cached binomial cdf: inversion(12)={d:.6} hin(100)={d:.6}\n", .{
+            @as(f64, @floatFromInt(inversion_hits[1])) * inv_n,
+            @as(f64, @floatFromInt(hin_hits[1])) * inv_n,
         });
     }
 
