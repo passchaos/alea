@@ -5175,10 +5175,18 @@ pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     std.debug.assert(successes > 0 and p > 0 and p <= 1);
     if (p == 1) return 0;
 
+    // The per-success rate is fixed, so compute the log once instead of
+    // recomputing it inside every geometric draw.
+    const q = -@log(1 - p);
     var failures: u64 = 0;
     var i: u64 = 0;
     while (i < successes) : (i += 1) {
-        failures += geometricFrom(source, p) - 1;
+        // Matches the previous `geometricFrom(source, p) - 1` saturation.
+        if (geometricFailuresSaturates(p)) {
+            failures += geometricFailureMax - 1;
+        } else {
+            failures += geometricFailuresFromLogQ(source, q);
+        }
     }
     return failures;
 }
@@ -19536,7 +19544,15 @@ pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
     std.debug.assert(geometricProbabilityValid(p, true));
     if (p == 1) return 0;
     if (geometricFailuresSaturates(p)) return geometricFailureMax;
-    return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(source, f64)) / @log(1 - p)));
+    // `floor(E / −log(1−p))` with `E ~ Exp(1)` has tail `exp(−q·k) = (1−p)^k`,
+    // which is exactly the geometric law of `floor(log(1−u) / log(1−p))`.
+    // The ziggurat exponential replaces the log transform at a fraction of
+    // the cost.
+    return geometricFailuresFromLogQ(source, -@log(1 - p));
+}
+
+inline fn geometricFailuresFromLogQ(source: anytype, q: f64) u64 {
+    return @intFromFloat(@floor(standardExponentialFrom(source, f64) / q));
 }
 
 pub fn geometricFailuresChecked(rng: Rng, p: f64) Error!u64 {
@@ -19723,7 +19739,7 @@ pub const Geometric = struct {
     pub fn sample(self: Geometric, rng: Rng) u64 {
         if (self.p == 1) return 1;
         if (geometricFailuresSaturates(self.p)) return geometricFailureMax;
-        return @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - self.p)))) + 1;
+        return geometricFrom(rng, self.p);
     }
 
     pub fn sampleFrom(self: Geometric, source: anytype) u64 {
@@ -19739,8 +19755,7 @@ pub const Geometric = struct {
             @memset(dest, geometricFailureMax);
             return;
         }
-        const p = self.p;
-        for (dest) |*item| item.* = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
+        for (dest) |*item| item.* = geometricFrom(rng, self.p);
     }
 
     pub fn fillFrom(self: Geometric, source: anytype, dest: []u64) void {
@@ -19796,10 +19811,9 @@ pub fn VectorGeometric(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.p == 1) return @splat(1);
             if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
-            const p = self.sampler.p;
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| {
-                out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
+                out[lane] = geometricFrom(rng, self.sampler.p);
             }
             return out;
         }
@@ -19821,11 +19835,10 @@ pub fn VectorGeometric(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
-            const p = self.sampler.p;
             for (dest) |*item| {
                 var out: VectorType = undefined;
                 inline for (0..info.len) |lane| {
-                    out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)))) + 1;
+                    out[lane] = geometricFrom(rng, self.sampler.p);
                 }
                 item.* = out;
             }
@@ -19891,7 +19904,7 @@ pub const GeometricFailures = struct {
     pub fn sample(self: GeometricFailures, rng: Rng) u64 {
         if (self.p == 1) return 0;
         if (geometricFailuresSaturates(self.p)) return geometricFailureMax;
-        return @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - self.p)));
+        return geometricFailuresFrom(rng, self.p);
     }
 
     pub fn sampleFrom(self: GeometricFailures, source: anytype) u64 {
@@ -19907,8 +19920,7 @@ pub const GeometricFailures = struct {
             @memset(dest, geometricFailureMax);
             return;
         }
-        const p = self.p;
-        for (dest) |*item| item.* = @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p)));
+        for (dest) |*item| item.* = geometricFailuresFrom(rng, self.p);
     }
 
     pub fn fillFrom(self: GeometricFailures, source: anytype, dest: []u64) void {
@@ -20006,10 +20018,9 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         pub fn sample(self: Self, rng: Rng) VectorType {
             if (self.sampler.p == 1) return @splat(0);
             if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
-            const p = self.sampler.p;
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| {
-                out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p))));
+                out[lane] = geometricFailuresFrom(rng, self.sampler.p);
             }
             return out;
         }
@@ -20031,11 +20042,10 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
-            const p = self.sampler.p;
             for (dest) |*item| {
                 var out: VectorType = undefined;
                 inline for (0..info.len) |lane| {
-                    out[lane] = @as(u64, @intFromFloat(@floor(@log(1 - Rng.floatOpenFrom(rng, f64)) / @log(1 - p))));
+                    out[lane] = geometricFailuresFrom(rng, self.sampler.p);
                 }
                 item.* = out;
             }
