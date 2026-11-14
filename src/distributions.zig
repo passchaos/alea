@@ -4201,10 +4201,12 @@ pub const Binomial = struct {
     }
 
     pub fn sample(self: Binomial, rng: Rng) u64 {
+        if (binomialDyadicTryFrom(rng, self.trials, self.p)) |sampled| return sampled;
         return binomialFrom(rng, self.trials, self.p);
     }
 
     pub fn sampleFrom(self: Binomial, source: anytype) u64 {
+        if (binomialDyadicTryFrom(source, self.trials, self.p)) |sampled| return sampled;
         return binomialFrom(source, self.trials, self.p);
     }
 
@@ -4217,7 +4219,9 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
-        for (dest) |*item| item.* = binomialFrom(rng, self.trials, self.p);
+        for (dest) |*item| {
+            item.* = binomialDyadicTryFrom(rng, self.trials, self.p) orelse binomialFrom(rng, self.trials, self.p);
+        }
     }
 
     pub fn fillFrom(self: Binomial, source: anytype, dest: []u64) void {
@@ -4229,11 +4233,14 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
-        for (dest) |*item| item.* = binomialFrom(source, self.trials, self.p);
+        for (dest) |*item| {
+            item.* = binomialDyadicTryFrom(source, self.trials, self.p) orelse binomialFrom(source, self.trials, self.p);
+        }
     }
 };
 
 pub fn binomial(rng: Rng, trials: u64, p: f64) u64 {
+    if (binomialDyadicTryFrom(rng, trials, p)) |sampled| return sampled;
     return binomialFrom(rng, trials, p);
 }
 
@@ -5871,6 +5878,63 @@ fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     if (mean >= 8) return binomialRejectionSmallPFrom(source, trials, p);
 
     return binomialWaitingFrom(source, trials, -@log(1.0 - p));
+}
+
+const DyadicBinomialFields = struct { m: u32, k: u64 };
+
+/// Decompose a dyadic probability `p = k / 2^m` (k odd) into the packed-trial
+/// field width. Only the widths with SWAR kernels are accepted.
+inline fn dyadicBinomialFields(p: f64) ?DyadicBinomialFields {
+    if (!(p > 0 and p < 1)) return null;
+    const bits: u64 = @bitCast(p);
+    const biased_exponent: i32 = @intCast((bits >> 52) & 0x7ff);
+    if (biased_exponent == 0 or biased_exponent == 0x7ff) return null;
+    const exponent: i32 = biased_exponent - 1023;
+    const mantissa: u64 = (bits & 0x000f_ffff_ffff_ffff) | (@as(u64, 1) << 52);
+    const trailing: i32 = @intCast(@ctz(mantissa));
+    const m: i32 = 52 - exponent - trailing;
+    if (m < 2 or m > 3) return null;
+    const k: u64 = mantissa >> @intCast(trailing);
+    if (m == 2 and (k == 1 or k == 3)) return .{ .m = 2, .k = k };
+    if (m == 3 and k == 1) return .{ .m = 3, .k = 1 };
+    return null;
+}
+
+/// Exact packed Bernoulli trials for dyadic probabilities: every field of the
+/// word is uniform over `[0, 2^m)`, and a trial succeeds when the field is
+/// below `k`. The SWAR masks count all fields of a word with one popcount.
+fn binomialDyadicFrom(source: anytype, trials: u64, m: u32, k: u64) u64 {
+    const per_word: u64 = @divTrunc(@as(u64, 64), m);
+    var successes: u64 = 0;
+    var remaining = trials;
+    while (remaining > 0) {
+        const bits = Rng.nextFrom(source);
+        const take = @min(remaining, per_word);
+        var mask: u64 = if (m == 2)
+            (if (k == 1)
+                ~bits & ~(bits >> 1) & 0x5555_5555_5555_5555
+            else
+                ~(bits & (bits >> 1)) & 0x5555_5555_5555_5555)
+        else
+            ~(bits | (bits >> 1) | (bits >> 2)) & 0x1249_2492_4924_9249;
+        if (take < per_word) {
+            mask &= (@as(u64, 1) << @intCast(take * m)) - 1;
+        }
+        successes += @popCount(mask);
+        remaining -= take;
+    }
+    return successes;
+}
+
+/// Dyadic fast path for the small-trial binomial entry points. Returns null
+/// when the probability is not one of the packed dyadic shapes.
+fn binomialDyadicTryFrom(source: anytype, trials: u64, p: f64) ?u64 {
+    if (trials == 0 or trials > 64) return null;
+    if (!(p > 0 and p < 1)) return null;
+    const q = if (p <= 0.5) p else 1.0 - p;
+    const fields = dyadicBinomialFields(q) orelse return null;
+    const sampled = binomialDyadicFrom(source, trials, fields.m, fields.k);
+    return if (p <= 0.5) sampled else trials - sampled;
 }
 
 fn binomialWaitingFrom(source: anytype, trials: u64, q: f64) u64 {
