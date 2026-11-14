@@ -5022,7 +5022,8 @@ pub const NegativeBinomial = struct {
             @memset(dest, 0);
             return;
         }
-        for (dest) |*item| item.* = negativeBinomialFrom(rng, self.successes, self.p);
+        const q = -@log(1 - self.p);
+        for (dest) |*item| item.* = negativeBinomialFromLogQ(rng, self.successes, self.p, q);
     }
 
     pub fn fillFrom(self: NegativeBinomial, source: anytype, dest: []u64) void {
@@ -5030,7 +5031,8 @@ pub const NegativeBinomial = struct {
             @memset(dest, 0);
             return;
         }
-        for (dest) |*item| item.* = negativeBinomialFrom(source, self.successes, self.p);
+        const q = -@log(1 - self.p);
+        for (dest) |*item| item.* = negativeBinomialFromLogQ(source, self.successes, self.p, q);
     }
 };
 
@@ -5200,6 +5202,12 @@ pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     // The per-success rate is fixed, so compute the log once instead of
     // recomputing it inside every geometric draw.
     const q = -@log(1 - p);
+    return negativeBinomialFromLogQ(source, successes, p, q);
+}
+
+/// Negative-binomial kernel for callers that already hold
+/// `q = -log(1 - p)`, such as bulk fills whose parameters are fixed.
+inline fn negativeBinomialFromLogQ(source: anytype, successes: u64, p: f64, q: f64) u64 {
     var failures: u64 = 0;
     var i: u64 = 0;
     while (i < successes) : (i += 1) {
@@ -58384,6 +58392,26 @@ test "MatrixFisherO3 general and f32 sampling work" {
                 try std.testing.expect(@abs(dot - (if (i == j) @as(f32, 1) else @as(f32, 0))) < 1e-3);
             }
         }
+    }
+}
+
+test "negative binomial fill matches repeated sampling" {
+    const alea = @import("root.zig");
+
+    var fill_engine = alea.FastPrng.init(0x4c31);
+    var loop_engine = alea.FastPrng.init(0x4c31);
+    var values: [16]u64 = undefined;
+    fillNegativeBinomial(Rng.init(&fill_engine), &values, 5, 0.4);
+    for (values) |value| {
+        try std.testing.expectEqual(negativeBinomial(Rng.init(&loop_engine), 5, 0.4), value);
+    }
+
+    var direct_fill_engine = alea.FastPrng.init(0x4c32);
+    var direct_loop_engine = alea.FastPrng.init(0x4c32);
+    var direct_values: [16]u64 = undefined;
+    fillNegativeBinomialFrom(&direct_fill_engine, &direct_values, 5, 0.4);
+    for (direct_values) |value| {
+        try std.testing.expectEqual(negativeBinomialFrom(&direct_loop_engine, 5, 0.4), value);
     }
 }
 
