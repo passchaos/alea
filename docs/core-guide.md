@@ -294,10 +294,11 @@ counts, Hypergeometric, and vector discrete samplers.
 `CachedBinomial` is the reusable binomial sampler for parameters that are only
 known at runtime: `init` pays the HIN envelope, inverse-CDF constants, packed
 dyadic fields, or per-trial threshold once, and `sample`/`fill` then draw about
-twice as fast as `Binomial`. The law matches `Binomial`; the stream matches
-wherever both use the same method, while the small-mean region uses an exact
-one-uniform inverse-CDF walk that is about 45-51% faster than the waiting-time
-race.
+twice as fast as `Binomial`. The law matches `Binomial`; both types use the
+same exact one-uniform inverse-CDF walk in the small-mean region (`mean < 16`),
+so their streams match there as well. The walk is about 45-51% faster than
+the waiting-time race that `Binomial` previously used; `CachedBinomial` still
+wins for runtime parameters because it precomputes the walk constants once.
 The distributions module also mirrors `Rng.fillNormal*` and
 `Rng.fillExponential*` as top-level helpers for callers who prefer the
 distribution namespace; `fillUniform*` and `fillUniformInclusive*` do the same

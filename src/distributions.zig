@@ -7174,11 +7174,7 @@ fn binomialSmallPFrom(source: anytype, trials: u64, p: f64) u64 {
     const mean = @as(f64, @floatFromInt(trials)) * p;
     if (mean >= binomial_hin_min_mean) return binomialRejectionSmallPFrom(source, trials, p);
 
-    // `log1p` keeps the rate accurate when `p` is below the rounding
-    // threshold of `1 - p`; the branch preserves the existing stream for
-    // ordinary probabilities.
-    const q = if (1.0 - p == 1.0) -std.math.log1p(-p) else -@log(1.0 - p);
-    return binomialWaitingFrom(source, trials, q);
+    return binomialInversionWalkFrom(source, trials, p);
 }
 
 /// The HIN rejection envelope is tuned for larger means: for `mean < 16` the
@@ -9682,6 +9678,30 @@ pub const CachedBinomial = struct {
         for (dest) |*item| item.* = self.sampleFrom(source);
     }
 };
+
+/// One-uniform inverse-CDF walk for small means (`mean < 16`). The walk
+/// advances the PMF recurrence `px *= (n − k)/(k + 1) · p/(1 − p)` from
+/// `(1 − p)^n`, so it needs one uniform and about `mean` flops instead of the
+/// `mean + 1` exponentials of the waiting-time race. Kept out of line and at
+/// the end of the production declarations so the shared `binomialFrom`
+/// layout stays small for beta-binomial/multinomial callers; `CachedBinomial`
+/// precomputes the same `px0`/`ratio` pair.
+fn binomialInversionWalkFrom(source: anytype, trials: u64, p: f64) u64 {
+    const nf: f64 = @floatFromInt(trials);
+    var u = Rng.floatFrom(source, f64);
+    // `log1p` keeps `(1 − p)^n` accurate when `p` is tiny and `1 − p` rounds
+    // to one.
+    var px = @exp(nf * std.math.log1p(-p));
+    const ratio = p / (1.0 - p);
+    var k: u64 = 0;
+    while (k < trials) : (k += 1) {
+        if (u < px) return k;
+        u -= px;
+        const kf: f64 = @floatFromInt(k);
+        px *= (nf - kf) / (kf + 1.0) * ratio;
+    }
+    return trials;
+}
 
 /// Fill through one HIN setup when the parameters hit the rejection region.
 /// The setup is deterministic, so the per-element stream matches the
@@ -56255,6 +56275,24 @@ test "binomial waiting-time region has plausible moments" {
         const variance = sum_sq / nf - mean * mean;
         try std.testing.expect(@abs(mean - case.mean) < 0.06);
         try std.testing.expect(@abs(variance - case.variance) < 0.25);
+    }
+}
+
+test "binomial small-mean walk matches the cached inversion stream" {
+    // Both paths now use the same one-uniform PMF walk, so a shared seed must
+    // produce identical draws in the `mean < 16` region.
+    const alea = @import("root.zig");
+    var engine_a = alea.FastPrng.init(0xb17);
+    var engine_b = alea.FastPrng.init(0xb17);
+    const rng_a = Rng.init(&engine_a);
+    const rng_b = Rng.init(&engine_b);
+    const cached = try CachedBinomial.init(1000, 0.012);
+    for (0..10_000) |_| {
+        try std.testing.expectEqual(binomial(rng_a, 1000, 0.012), cached.sample(rng_b));
+    }
+    const cached_100 = try CachedBinomial.init(100, 0.12);
+    for (0..10_000) |_| {
+        try std.testing.expectEqual(binomial(rng_a, 100, 0.12), cached_100.sample(rng_b));
     }
 }
 
