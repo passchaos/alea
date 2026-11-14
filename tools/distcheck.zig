@@ -682,6 +682,21 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("bernoulli quantile", alea.distributions.bernoulliCdf(alea.distributions.bernoulliQuantile(discrete_q, bernoulli_p), bernoulli_p), discrete_q, 1.0);
     }
 
+    // Huge-lambda Poisson quantile inversion: CDF(k) >= q and CDF(k-1) < q.
+    // The Poisson CDF uses the incomplete-gamma Wilson-Hilferty fallback at
+    // these shapes, so this also guards the fallback's inversion accuracy.
+    {
+        const lambdas = [_]f64{ 1e6, 1e12 };
+        const quantiles = [_]f64{ 1e-6, 0.01, 0.5, 0.99, 1 - 1e-6 };
+        for (lambdas) |lambda| {
+            for (quantiles) |q| {
+                const k = alea.distributions.poissonQuantile(q, lambda);
+                try expectFloatBetween("poisson huge quantile cdf", alea.distributions.poissonCdf(k, lambda), q, 1.0);
+                try expectFloatBetween("poisson huge quantile predecessor", alea.distributions.poissonCdf(k - 1, lambda), 0.0, q);
+            }
+        }
+    }
+
     // Multivariate marginal diagnostics.
     {
         const alpha = [_]f64{ 2, 3, 5 };
