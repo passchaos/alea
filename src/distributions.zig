@@ -23671,8 +23671,10 @@ pub fn cauchyFrom(source: anytype, comptime T: type, median: T, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(cauchyParametersValid(T, median, scale));
     if (scale == 0) return median;
-    const angle = @as(T, @floatCast(std.math.pi)) * Rng.floatOpenFrom(source, T);
-    return median - scale * @cos(angle) / @sin(angle);
+    // The ratio of two independent standard normals is standard Cauchy.
+    const x = Rng.standardNormalFastFrom(source, T);
+    const y = Rng.standardNormalFastFrom(source, T);
+    return median + scale * (x / y);
 }
 
 pub fn fillCauchy(rng: Rng, comptime T: type, dest: []T, median: T, scale: T) void {
@@ -23686,8 +23688,7 @@ pub fn fillCauchyFrom(source: anytype, comptime T: type, dest: []T, median: T, s
         @memset(dest, median);
         return;
     }
-    Rng.fillOpenFrom(source, T, dest);
-    cauchyFromOpenUniforms(T, dest, median, scale);
+    for (dest) |*item| item.* = cauchyFrom(source, T, median, scale);
 }
 
 fn cauchyParametersValid(comptime T: type, median: T, scale: T) bool {
@@ -23876,8 +23877,7 @@ pub fn Cauchy(comptime T: type) type {
 
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return self.median;
-            const angle = @as(T, @floatCast(std.math.pi)) * rng.floatOpen(T);
-            return self.median - self.scale * @cos(angle) / @sin(angle);
+            return cauchyFrom(rng, T, self.median, self.scale);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
@@ -23885,12 +23885,7 @@ pub fn Cauchy(comptime T: type) type {
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
-            if (self.isDegenerate()) {
-                @memset(dest, self.median);
-                return;
-            }
-            rng.fillOpen(T, dest);
-            cauchyFromOpenUniforms(T, dest, self.median, self.scale);
+            fillCauchyFrom(rng, T, dest, self.median, self.scale);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
@@ -29680,7 +29675,9 @@ pub fn Zipf(comptime T: type) type {
                 const inv_b = self.invCdf(Rng.floatFrom(source, T));
                 const x = @floor(inv_b + 1);
                 var threshold: T = 0;
-                if (x > 1) threshold = self.exponent * (@log(x) - @log(inv_b));
+                // `log(x) - log(inv_b) = log(x / inv_b)`; the ratio form pays
+                // one log instead of two and avoids cancelling two nearby logs.
+                if (x > 1) threshold = self.exponent * @log(x / inv_b);
                 if (standardExponentialFrom(source, T) >= threshold) return x;
             }
         }
@@ -45374,39 +45371,59 @@ test "nonfinite cauchy parameters follow local rand_distr acceptance" {
         const control_rng = Rng.init(&control);
 
         try Check.expectEdge(cauchy(rng, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
-        _ = Rng.floatOpenFrom(control_rng, f64);
+        _ = Rng.standardNormalFastFrom(control_rng, f64);
+        _ = Rng.standardNormalFastFrom(control_rng, f64);
         try std.testing.expectEqual(control.next(), engine.next());
 
         try Check.expectEdge(cauchyFrom(&engine, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
-        _ = Rng.floatOpenFrom(&control, f64);
+        _ = Rng.standardNormalFastFrom(&control, f64);
+        _ = Rng.standardNormalFastFrom(&control, f64);
         try std.testing.expectEqual(control.next(), engine.next());
 
         try Check.expectEdge(try cauchyChecked(rng, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
-        _ = Rng.floatOpenFrom(control_rng, f64);
+        _ = Rng.standardNormalFastFrom(control_rng, f64);
+        _ = Rng.standardNormalFastFrom(control_rng, f64);
         try std.testing.expectEqual(control.next(), engine.next());
 
         try Check.expectEdge(try cauchyCheckedFrom(&engine, f64, scenario.median, scenario.scale), scenario.median, scenario.scale);
-        _ = Rng.floatOpenFrom(&control, f64);
+        _ = Rng.standardNormalFastFrom(&control, f64);
+        _ = Rng.standardNormalFastFrom(&control, f64);
         try std.testing.expectEqual(control.next(), engine.next());
 
         fillCauchy(rng, f64, &scalar_buf, scenario.median, scenario.scale);
         for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
-        Rng.fillOpenFrom(control_rng, f64, &scalar_buf);
+        for (0..scalar_buf.len) |k| {
+            _ = k;
+            _ = Rng.standardNormalFastFrom(control_rng, f64);
+            _ = Rng.standardNormalFastFrom(control_rng, f64);
+        }
         try std.testing.expectEqual(control.next(), engine.next());
 
         fillCauchyFrom(&engine, f64, &scalar_buf, scenario.median, scenario.scale);
         for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
-        Rng.fillOpenFrom(&control, f64, &scalar_buf);
+        for (0..scalar_buf.len) |k| {
+            _ = k;
+            _ = Rng.standardNormalFastFrom(&control, f64);
+            _ = Rng.standardNormalFastFrom(&control, f64);
+        }
         try std.testing.expectEqual(control.next(), engine.next());
 
         try fillCauchyChecked(rng, f64, &scalar_buf, scenario.median, scenario.scale);
         for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
-        Rng.fillOpenFrom(control_rng, f64, &scalar_buf);
+        for (0..scalar_buf.len) |k| {
+            _ = k;
+            _ = Rng.standardNormalFastFrom(control_rng, f64);
+            _ = Rng.standardNormalFastFrom(control_rng, f64);
+        }
         try std.testing.expectEqual(control.next(), engine.next());
 
         try fillCauchyCheckedFrom(&engine, f64, &scalar_buf, scenario.median, scenario.scale);
         for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
-        Rng.fillOpenFrom(&control, f64, &scalar_buf);
+        for (0..scalar_buf.len) |k| {
+            _ = k;
+            _ = Rng.standardNormalFastFrom(&control, f64);
+            _ = Rng.standardNormalFastFrom(&control, f64);
+        }
         try std.testing.expectEqual(control.next(), engine.next());
 
         const sampler = try Cauchy(f64).init(scenario.median, scenario.scale);
@@ -45422,21 +45439,31 @@ test "nonfinite cauchy parameters follow local rand_distr acceptance" {
             try std.testing.expect(sampler.maxValue() == null);
         }
         try Check.expectEdge(sampler.sample(rng), scenario.median, scenario.scale);
-        _ = Rng.floatOpenFrom(control_rng, f64);
+        _ = Rng.standardNormalFastFrom(control_rng, f64);
+        _ = Rng.standardNormalFastFrom(control_rng, f64);
         try std.testing.expectEqual(control.next(), engine.next());
 
         try Check.expectEdge(sampler.sampleFrom(&engine), scenario.median, scenario.scale);
-        _ = Rng.floatOpenFrom(&control, f64);
+        _ = Rng.standardNormalFastFrom(&control, f64);
+        _ = Rng.standardNormalFastFrom(&control, f64);
         try std.testing.expectEqual(control.next(), engine.next());
 
         sampler.fill(rng, &scalar_buf);
         for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
-        Rng.fillOpenFrom(control_rng, f64, &scalar_buf);
+        for (0..scalar_buf.len) |k| {
+            _ = k;
+            _ = Rng.standardNormalFastFrom(control_rng, f64);
+            _ = Rng.standardNormalFastFrom(control_rng, f64);
+        }
         try std.testing.expectEqual(control.next(), engine.next());
 
         sampler.fillFrom(&engine, &scalar_buf);
         for (scalar_buf) |sample| try Check.expectEdge(sample, scenario.median, scenario.scale);
-        Rng.fillOpenFrom(&control, f64, &scalar_buf);
+        for (0..scalar_buf.len) |k| {
+            _ = k;
+            _ = Rng.standardNormalFastFrom(&control, f64);
+            _ = Rng.standardNormalFastFrom(&control, f64);
+        }
         try std.testing.expectEqual(control.next(), engine.next());
 
         try Check.expectVectorEdge(vectorCauchy(rng, @Vector(4, f64), scenario.median, scenario.scale), scenario.median, scenario.scale);
