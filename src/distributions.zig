@@ -66457,6 +66457,47 @@ test "Wishart (dynamic) recovers non-diagonal scale covariance" {
     try std.testing.expectApproxEqAbs(6.0, cross_01_11 / nf - m01 * m11, 0.8);
 }
 
+test "Wishart recovers non-diagonal 3x3 scale covariance" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x9a40);
+    const rng = Rng.init(&engine);
+
+    // 3x3 non-diagonal scale, nu = 8. E[W] = nu V and
+    // Var(W_ij) = nu (sigma_ij^2 + sigma_ii sigma_jj).
+    const V = [_]f64{
+        2,   0.3, 0.1,
+        0.3, 1,   0.2,
+        0.1, 0.2, 1.5,
+    };
+    var w = try Wishart(f64).init(allocator, &V, 8);
+    defer w.deinit();
+
+    const n = 40_000;
+    var s = [_]f64{0} ** 9;
+    var sq = [_]f64{0} ** 9;
+    var out: [9]f64 = undefined;
+    for (0..n) |_| {
+        w.sampleInto(rng, &out);
+        for (0..9) |k| {
+            s[k] += out[k];
+            sq[k] += out[k] * out[k];
+        }
+    }
+    const nf: f64 = @floatFromInt(n);
+    inline for (0..9) |k| {
+        try std.testing.expectApproxEqAbs(8 * V[k], s[k] / nf, 0.15);
+    }
+    inline for ([_]usize{ 0, 1, 2, 4, 5, 8 }) |k| {
+        const i = k / 3;
+        const j = k % 3;
+        const mean = s[k] / nf;
+        const var_ref = 8 * (V[k] * V[k] + V[i * 3 + i] * V[j * 3 + j]);
+        const tol = 0.05 * var_ref + 0.5;
+        try std.testing.expectApproxEqAbs(var_ref, sq[k] / nf - mean * mean, tol);
+    }
+}
+
 test "Wishart (dynamic) sampleInto and clone work" {
     const alea = @import("root.zig");
     const allocator = std.testing.allocator;
