@@ -24086,8 +24086,12 @@ pub fn Triangular(comptime T: type) type {
         }
 
         pub fn varianceValue(self: Self) T {
-            return (self.min * self.min + self.mode * self.mode + self.max * self.max -
-                self.min * self.mode - self.min * self.max - self.mode * self.max) / 18;
+            // ((b−a)² + (c−b)² + (a−c)²)/36: the difference form avoids the
+            // `inf − inf` cancellation of the expanded products at huge ranges.
+            const ab = self.min - self.mode;
+            const bc = self.mode - self.max;
+            const ca = self.min - self.max;
+            return (ab * ab + bc * bc + ca * ca) / 36;
         }
 
         pub fn medianValue(self: Self) T {
@@ -25385,10 +25389,16 @@ pub fn LogLogistic(comptime T: type) type {
             const shape = self.shapeValue();
             if (shape <= 2) return null;
             const angle = @as(T, @floatCast(std.math.pi)) / shape;
-            const second_angle = 2 * angle;
-            const second_moment = self.scale * self.scale * second_angle / @sin(second_angle);
-            const mean = self.expectedValue().?;
-            return second_moment - mean * mean;
+            if (shape > 1.0e6) {
+                // 2a/sin(2a) − (a/sin a)² = a²/3 + O(a⁴) with a = π/shape.
+                const t = self.scale * angle;
+                return t * t / 3;
+            }
+            // Factor `scale²` out so a huge scale cannot turn `inf − inf`
+            // into NaN.
+            const second_factor = (2 * angle) / @sin(2 * angle);
+            const mean_factor = angle / @sin(angle);
+            return self.scale * self.scale * (second_factor - mean_factor * mean_factor);
         }
 
         pub fn medianValue(self: Self) T {
@@ -25758,7 +25768,9 @@ pub fn Kumaraswamy(comptime T: type) type {
             if (self.isDegenerate()) return 0;
             const first_moment = self.momentValue(1);
             const second_moment = self.momentValue(2);
-            return second_moment - first_moment * first_moment;
+            // The true variance is non-negative; clamp the rounding noise that
+            // appears when both moments round to the same point mass.
+            return @max(second_moment - first_moment * first_moment, 0);
         }
 
         pub fn modeValue(self: Self) ?T {
@@ -25792,7 +25804,10 @@ pub fn Kumaraswamy(comptime T: type) type {
         fn momentValue(self: Self, order: T) T {
             const beta_param = self.betaValue();
             const beta_arg = 1 + order * self.inverse_alpha;
-            return beta_param * @exp(std.math.lgamma(T, beta_arg) + std.math.lgamma(T, beta_param) - std.math.lgamma(T, beta_arg + beta_param));
+            // `log(Γ(beta_arg)·Γ(β)/Γ(beta_arg+β))`; the stable log-factorial
+            // delta avoids the huge-lgamma cancellation for enormous β.
+            const log_ratio = std.math.lgamma(T, beta_arg) + hypergeometricLogFactorialDelta(beta_param - 1, beta_arg);
+            return beta_param * @exp(log_ratio);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -27235,6 +27250,12 @@ pub fn Weibull(comptime T: type) type {
 
         pub fn varianceValue(self: Self) T {
             if (self.isDegenerate()) return 0;
+            if (self.shape > 1.0e6) {
+                // Γ(1+2/k) − Γ²(1+1/k) = π²/(6k²) + O(1/k³); the gamma
+                // difference cancels in f64 well before this shape.
+                const t = self.scale / self.shape;
+                return t * t * @as(T, @floatCast(std.math.pi * std.math.pi / 6.0));
+            }
             const mean_scale_factor = std.math.gamma(T, 1 + 1 / self.shape);
             const second_moment_scale_factor = std.math.gamma(T, 1 + 2 / self.shape);
             const scale_squared = self.scale * self.scale;
@@ -27796,6 +27817,12 @@ pub fn Frechet(comptime T: type) type {
         pub fn varianceValue(self: Self) ?T {
             if (self.isDegenerate()) return 0;
             if (!(self.shape > 2)) return null;
+            if (self.shape > 1.0e6) {
+                // Γ(1−2/α) − Γ²(1−1/α) = π²/(6α²) + O(1/α³); the gamma
+                // difference cancels in f64 well before this shape.
+                const t = self.scale / self.shape;
+                return t * t * @as(T, @floatCast(std.math.pi * std.math.pi / 6.0));
+            }
             const mean_factor = std.math.gamma(T, 1 - 1 / self.shape);
             const second_moment_factor = std.math.gamma(T, 1 - 2 / self.shape);
             const scale_squared = self.scale * self.scale;
@@ -28470,8 +28497,10 @@ pub fn Pert(comptime T: type) type {
             return .{
                 .min = min,
                 .range = range,
-                .alpha = 1 + shape * (mode - min) / range,
-                .beta_param = 1 + shape * (max - mode) / range,
+                // Normalize before multiplying by the shape so huge
+                // `shape·(mode−min)` products cannot overflow.
+                .alpha = 1 + shape * ((mode - min) / range),
+                .beta_param = 1 + shape * ((max - mode) / range),
             };
         }
 
@@ -28546,13 +28575,18 @@ pub fn Pert(comptime T: type) type {
 
         pub fn expectedValue(self: Self) T {
             if (self.isDegenerate()) return self.degenerateValue();
-            return self.min + self.range * self.alpha / (self.alpha + self.beta_param);
+            // Normalize before multiplying by the range so `range·alpha`
+            // cannot overflow for huge ranges.
+            return self.min + self.range * (self.alpha / (self.alpha + self.beta_param));
         }
 
         pub fn varianceValue(self: Self) T {
             if (self.isDegenerate()) return 0;
             const sum = self.alpha + self.beta_param;
-            return self.range * self.range * self.alpha * self.beta_param / (sum * sum * (sum + 1));
+            // range²·p·q/(sum+1) with `p = alpha/sum`, `q = beta/sum`, using
+            // `range/√(sum+1)` so neither `range²` nor `alpha·beta` overflows.
+            const scaled = self.range / @sqrt(sum + 1);
+            return scaled * scaled * (self.alpha / sum) * (self.beta_param / sum);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -56136,6 +56170,35 @@ test "fading and noncentral moments survive extreme parameters" {
     const scaled = try ScaledInverseChiSquared(f64).init(1e300, 1e300);
     try std.testing.expectApproxEqAbs(@as(f64, 1e300), scaled.expectedValue().?, 1e290);
     try std.testing.expectApproxEqAbs(@as(f64, 2e300), scaled.varianceValue().?, 1e294);
+}
+
+test "scale-family moments survive extreme parameters" {
+    const pi: f64 = @floatCast(std.math.pi);
+
+    const weibull_dist = try Weibull(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), weibull_dist.expectedValue(), 1e290);
+    try std.testing.expectApproxEqAbs(pi * pi / 6, weibull_dist.varianceValue(), 1e-12);
+
+    const frechet_dist = try Frechet(f64).init(0, 1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), frechet_dist.expectedValue().?, 1e290);
+    try std.testing.expectApproxEqAbs(pi * pi / 6, frechet_dist.varianceValue().?, 1e-12);
+
+    const log_logistic_dist = try LogLogistic(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), log_logistic_dist.expectedValue().?, 1e290);
+    try std.testing.expectApproxEqAbs(pi * pi / 3, log_logistic_dist.varianceValue().?, 1e-12);
+
+    const triangular_dist = try Triangular(f64).init(0, 5e299, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 5e299), triangular_dist.expectedValue(), 1e289);
+    try std.testing.expect(std.math.isInf(triangular_dist.varianceValue()));
+
+    const pert_dist = try Pert(f64).init(0, 1e300, 1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1e300), pert_dist.expectedValue(), 1e290);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), pert_dist.varianceValue(), 1e-12);
+
+    const kumaraswamy_dist = try Kumaraswamy(f64).init(1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), kumaraswamy_dist.expectedValue(), 1e-12);
+    try std.testing.expect(kumaraswamy_dist.varianceValue() >= 0);
+    try std.testing.expect(kumaraswamy_dist.varianceValue() < 1e-10);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {

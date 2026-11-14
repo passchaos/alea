@@ -605,7 +605,14 @@ CDF and quantile helpers complement the samplers:
   `Hoyt.expectedValue` uses the Gaussian-circular identity
   `σ·√(2/π)·E(√(1−q²))` with the complete elliptic integral evaluated by the
   arithmetic-geometric mean (the earlier Bessel form overestimated the mean
-  for `q < 1`).
+  for `q < 1`). Scale-family helpers use the same approach: `Weibull` and
+  `Fréchet` switch to `(scale/shape)²·π²/6` above shape `1e6` (the gamma
+  difference cancels), `LogLogistic` switches to `(scale·π/shape)²/3` and
+  factors `scale²` out of the variance, `Triangular` uses the
+  `((b−a)² + (c−b)² + (a−c)²)/36` difference form, `PERT` normalizes the
+  mode fractions before scaling and uses `range/√(α+β+1)`, and
+  `Kumaraswamy` uses the stable log-factorial delta for its beta-function
+  moments (clamping rounding-noise negative variances to zero).
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,
