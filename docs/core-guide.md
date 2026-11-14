@@ -587,12 +587,16 @@ CDF and quantile helpers complement the samplers:
   `binomialQuantile`, `geometricCdf`, `geometricQuantile`,
   `negativeBinomialCdf`, `negativeBinomialQuantile`, `hypergeometricCdf`,
   `hypergeometricQuantile`, `zipfCdf`, `zipfQuantile`, `zetaCdf`,
-  `zetaQuantile`, `bernoulliCdf`, `bernoulliQuantile`; the hypergeometric
-  helpers sum the shorter PMF tail exactly and switch to a normal
-  approximation with continuity correction above `hypergeometricExactSdLimit`
-  (σ = 16384), while the Zipf/Zeta helpers use a 128-term direct prefix plus
-  Euler–Maclaurin harmonic numbers (and `riemannZetaApprox` for infinite
-  support) and cap representable quantiles at 2^53.
+  `zetaQuantile`, `bernoulliCdf`, `bernoulliQuantile`; the binomial helpers
+  fold `p > 0.5` onto the lower tail of `1 − p`, use the Poisson limit when
+  `n·p² ≤ 1e-6`, use the normal approximation with continuity correction when
+  `n·p·(1−p) ≥ 1e7`, and keep the exact incomplete-beta path elsewhere; the
+  hypergeometric helpers sum the shorter PMF tail exactly and switch to a
+  normal approximation with continuity correction above
+  `hypergeometricExactSdLimit` (σ = 16384), while the Zipf/Zeta helpers use a
+  128-term direct prefix plus Euler–Maclaurin harmonic numbers (and
+  `riemannZetaApprox` for infinite support) and cap representable quantiles
+  at 2^53.
 - closed-form continuous: `laplaceCdf` / `laplaceQuantile`, `logisticCdf` /
   `logisticQuantile`, `cauchyCdf` / `cauchyQuantile`, `rayleighCdf` /
   `rayleighQuantile`, `weibullCdf` / `weibullQuantile`, `gumbelCdf` /

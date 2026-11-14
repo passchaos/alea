@@ -817,6 +817,11 @@ pub fn poissonCdf(k: anytype, lambda: anytype) @TypeOf(k, lambda) {
 }
 
 /// Binomial CDF: P(X ≤ k) = I_{1−p}(n−k, k+1) for integer-valued n and k.
+///
+/// The incomplete-beta form loses precision for huge trial counts. Tiny
+/// probabilities (`n·p² ≤ 1e-6`) use the Poisson limit with mean `n·p`, and
+/// large variances (`n·p·(1-p) ≥ 1e7`) use the normal approximation with a
+/// continuity correction; both stay within the stated error orders.
 pub fn binomialCdf(k: anytype, n: anytype, p: anytype) @TypeOf(k, n, p) {
     const T = @TypeOf(k, n, p);
     comptime requireFloat(T);
@@ -827,6 +832,15 @@ pub fn binomialCdf(k: anytype, n: anytype, p: anytype) @TypeOf(k, n, p) {
     const n_floor = @floor(n);
     const k_floor = @floor(k);
     if (k_floor >= n_floor) return 1;
+    if (p > 0.5) {
+        return 1 - binomialCdf(n_floor - k_floor - 1, n_floor, 1 - p);
+    }
+    if (n_floor * p * p <= 1.0e-6) return poissonCdf(k_floor, n_floor * p);
+    const npq = n_floor * p * (1 - p);
+    if (npq >= 1.0e7) {
+        const sd = @sqrt(npq);
+        return normCdf((k_floor + 0.5 - n_floor * p) / sd);
+    }
     return betaIncomplete(1 - p, n_floor - k_floor, k_floor + 1);
 }
 
@@ -55627,6 +55641,27 @@ test "binomialCdf and binomialQuantile match known values" {
     try std.testing.expectEqual(@as(f64, 0), binomialQuantile(@as(f64, 0), @as(f64, 10), @as(f64, 0.5)));
     try std.testing.expectEqual(@as(f64, 10), binomialQuantile(@as(f64, 1), @as(f64, 10), @as(f64, 0.5)));
     try std.testing.expectApproxEqAbs(@as(f32, 0.6230469), binomialCdf(@as(f32, 5), @as(f32, 10), @as(f32, 0.5)), 1e-5);
+}
+
+test "binomial CDF fallbacks stay stable for huge parameters" {
+    // Tiny p: Poisson limit with mean n*p.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3678794411714423), binomialCdf(@as(f64, 0), @as(f64, 1e18), @as(f64, 1e-18)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6159606548330627), binomialCdf(@as(f64, 5), @as(f64, 1e18), @as(f64, 5e-18)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.526562), binomialCdf(@as(f64, 100), @as(f64, 1e18), @as(f64, 1e-16)), 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.559093), binomialCdf(@as(f64, 20), @as(f64, 1e18), @as(f64, 2e-17)), 1e-5);
+
+    // Large npq: normal approximation with continuity correction.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), binomialCdf(@as(f64, 5e8), @as(f64, 1e9), @as(f64, 0.5)), 1e-3);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.001349898), binomialCdf(@as(f64, 5e8 - 3.0 * @sqrt(1e9 * 0.25)), @as(f64, 1e9), @as(f64, 0.5)), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), binomialCdf(@as(f64, 3e17), @as(f64, 1e18), @as(f64, 0.3)), 1e-3);
+
+    // Symmetry folds p > 0.5 onto the lower tail of 1 - p.
+    try std.testing.expectEqual(binomialCdf(@as(f64, 8), @as(f64, 20), @as(f64, 0.7)), 1 - binomialCdf(@as(f64, 11), @as(f64, 20), @as(f64, 0.3)));
+
+    // Quantile fallbacks.
+    try std.testing.expectEqual(@as(f64, 1), binomialQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 1e-18)));
+    try std.testing.expectEqual(@as(f64, 5e8), binomialQuantile(@as(f64, 0.5), @as(f64, 1e9), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 3e17), binomialQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 0.3)));
 }
 
 test "geometricCdf and geometricQuantile match known values" {
