@@ -628,6 +628,10 @@ CDF and quantile helpers complement the samplers:
   ranges above `√floatMax` (the check is parameter-only, so the normal loop
   stays vectorized and stream-identical), and `Kumaraswamy` sampling recovers
   the rounded-to-zero `1 − u^(1/β)` complement with `-expm1` for huge `β`.
+  The circular `VonMises` sampler switches to the concentrated `N(μ, 1/κ)`
+  limit when the Best–Fisher `r` rounds to 1 or overflows to NaN (κ ≳ 4.5e15),
+  avoiding a non-terminating rejection loop; the vMF family already has its
+  `κ > 1e12` point-mass shortcut.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,

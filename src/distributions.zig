@@ -10089,6 +10089,12 @@ pub fn vonMisesFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
     const tau = 1 + disc;
     const rho = (2 * kappa * tau) / ((disc + 1) * (tau + @sqrt(2 * tau)));
     const r = (1 + rho * rho) / (2 * rho);
+    if (r == 1 or std.math.isNan(r)) {
+        // Huge κ rounds ρ to 1 (or overflows `disc` to inf), which makes the
+        // rejection test permanently false. The von Mises law is then
+        // N(mu, 1/κ) to f64 precision, so sample that limit directly.
+        return mu + Rng.normalFastFrom(source, T, 0, 1 / @sqrt(kappa));
+    }
     if (!(r > 0) or !std.math.isFinite(r)) {
         // κ is below the representable Best–Fisher range; the density is
         // uniform to within floating-point resolution.
@@ -10155,7 +10161,19 @@ fn vonMisesVectorFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
     const rho = (two * kappa * tau) / ((disc + one) * (tau + @sqrt(two * tau)));
     const r = (one + rho * rho) / (two * rho);
     const max_float: V = @splat(std.math.floatMax(Child));
-    const invalid = ((r <= zero) | (r > max_float) | (r != r)) & pending;
+    // Huge κ rounds ρ to 1 (or overflows to NaN); those lanes take the
+    // concentrated N(mu, 1/κ) limit instead of spinning in the rejection loop.
+    const concentrated = ((r == one) | (r != r)) & pending;
+    if (@reduce(.Or, concentrated)) {
+        inline for (0..info.len) |lane| {
+            if (concentrated[lane]) {
+                result[lane] = mu[lane] + Rng.normalFastFrom(source, Child, 0, 1 / @sqrt(kappa[lane]));
+            }
+        }
+        pending = @select(bool, concentrated, @as(B, @splat(false)), pending);
+        if (!@reduce(.Or, pending)) return result;
+    }
+    const invalid = ((r <= zero) | (r > max_float)) & pending;
     if (@reduce(.Or, invalid)) {
         const u = Rng.vectorOpenClosedFrom(source, V);
         const uniform_value = mu + (u * two - one) * pi;
@@ -61834,6 +61852,42 @@ test "VonMises tiny kappa stays finite instead of stalling" {
         inline for (0..4) |lane| {
             try std.testing.expect(std.math.isFinite(x[lane]));
             try std.testing.expect(x[lane] >= -pi and x[lane] <= pi);
+        }
+    }
+}
+
+test "VonMises huge kappa samples the concentrated limit instead of stalling" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead_bef0);
+    const rng = Rng.init(&engine);
+
+    // kappa = 1e16 rounds the Best-Fisher `rho` to 1, making the rejection
+    // test permanently false; the sampler now returns N(mu, 1/kappa).
+    inline for ([_]f64{ 1e16, 1e100, 1e300 }) |kappa| {
+        const vm = try VonMises(f64).new(0, kappa);
+        const bound = 8 / @sqrt(kappa);
+        var i: usize = 0;
+        while (i < 128) : (i += 1) {
+            const x = vm.sample(rng);
+            try std.testing.expect(std.math.isFinite(x));
+            try std.testing.expect(@abs(x) <= bound);
+        }
+        var buf: [32]f64 = undefined;
+        vm.fillFrom(&engine, &buf);
+        for (buf) |x| {
+            try std.testing.expect(std.math.isFinite(x));
+            try std.testing.expect(@abs(x) <= bound);
+        }
+    }
+
+    const V = @Vector(4, f64);
+    const concentrated_kappa: V = @splat(1e16);
+    var i: usize = 0;
+    while (i < 64) : (i += 1) {
+        const x = vonMisesFrom(&engine, V, @as(V, @splat(0)), concentrated_kappa);
+        inline for (0..4) |lane| {
+            try std.testing.expect(std.math.isFinite(x[lane]));
+            try std.testing.expect(@abs(x[lane]) <= 8e-8);
         }
     }
 }
