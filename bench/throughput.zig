@@ -70,6 +70,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillRatioQuarter(io, stdout, "alea fillRatio 1/4", bytes / 8);
     try benchFillRatioThreeEighths(io, stdout, "alea fillRatio 3/8", bytes / 8);
     try benchFillRatioHalf(io, stdout, "alea fillRatio 1/2", bytes / 8);
+    try benchFillRatioParam(io, stdout, "alea fillRatio 1/8", bytes / 8, 1, 8);
+    try benchFillRatioParam(io, stdout, "alea fillRatio 5/16", bytes / 8, 5, 16);
     try benchFillTypedF32(io, stdout, "alea fill f32 facade", bytes / 4);
     try benchFillOpenF32(io, stdout, "alea fillOpen f32", bytes / 4);
     try benchFillOpenClosedF32(io, stdout, "alea fillOpenClosed f32", bytes / 4);
@@ -825,6 +827,37 @@ fn benchFillRatioHalf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             rng.fillRatio(out[0..n], 1, 2);
+            for (out[0..n]) |value| checksum += @intFromBool(value);
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillRatioParam(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, numerator: u32, denominator: u32) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]bool = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x71d8);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            rng.fillRatio(out[0..n], numerator, denominator);
             for (out[0..n]) |value| checksum += @intFromBool(value);
             remaining -= n;
         }

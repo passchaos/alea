@@ -1042,16 +1042,12 @@ pub fn fillRatioFrom(source: anytype, dest: []bool, numerator: u32, denominator:
         @memset(dest, true);
         return;
     }
-    if (denominator == 2 and numerator == 1) {
-        fillBoolsFrom(source, dest);
-        return;
-    }
-    if (denominator == 4 and numerator == 1) {
-        fillChanceQuarterFrom(source, dest, false);
-        return;
-    }
-    if (denominator == 4 and numerator == 3) {
-        fillChanceQuarterFrom(source, dest, true);
+    // Small power-of-two denominators share the packed chance kernels, so
+    // `fillRatio(3, 8)` uses the 3/8 kernel and `fillRatio(1, 8)` the nibble
+    // kernel instead of the one-store-per-trial ratio loop.
+    if (std.math.isPowerOfTwo(denominator) and denominator <= 16) {
+        const probability = @as(f64, @floatFromInt(numerator)) / @as(f64, @floatFromInt(denominator));
+        fillChanceFrom(source, dest, probability);
         return;
     }
     if (std.math.isPowerOfTwo(denominator)) {
