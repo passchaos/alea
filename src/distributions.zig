@@ -978,14 +978,16 @@ fn binomialQuantileImpl(comptime PeerType: type, q: PeerType, n: PeerType, p: Pe
     if (!(n >= 0) or !std.math.isFinite(n)) return std.math.nan(T);
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (!(q >= 0 and q <= 1)) return std.math.nan(T);
-    if (n > @as(T, @floatFromInt(std.math.maxInt(usize)))) return std.math.nan(T);
+    // The integer search uses u64 on every target so 32-bit builds support the
+    // same trial counts as 64-bit builds.
+    if (!(n < @as(T, @floatFromInt(std.math.maxInt(u64))))) return std.math.nan(T);
 
-    const n_int: usize = @intFromFloat(@floor(n));
+    const n_int: u64 = @intFromFloat(@floor(n));
     if (q == 0) return 0;
     if (q == 1) return @floatFromInt(n_int);
 
-    var lo: usize = 0;
-    var hi: usize = n_int;
+    var lo: u64 = 0;
+    var hi: u64 = n_int;
     while (lo < hi) {
         const mid = lo + (hi - lo) / 2;
         if (binomialCdf(@as(T, @floatFromInt(mid)), n, p) < q) {
@@ -1067,14 +1069,14 @@ fn negativeBinomialQuantileImpl(comptime PeerType: type, q: PeerType, successes:
     if (p == 1) return 0;
     if (p == 0 or q == 1) return std.math.inf(T);
 
-    var hi: usize = 1;
+    var hi: u64 = 1;
     var expansion: usize = 0;
     while (negativeBinomialCdf(@as(T, @floatFromInt(hi)), successes, p) < q and expansion < 1024) : (expansion += 1) {
-        if (hi > std.math.maxInt(usize) / 2) return std.math.inf(T);
+        if (hi > std.math.maxInt(u64) / 2) return std.math.inf(T);
         hi *= 2;
     }
 
-    var lo: usize = 0;
+    var lo: u64 = 0;
     while (lo < hi) {
         const mid = lo + (hi - lo) / 2;
         if (negativeBinomialCdf(@as(T, @floatFromInt(mid)), successes, p) < q) {
@@ -1097,16 +1099,17 @@ fn poissonQuantileImpl(comptime PeerType: type, q: PeerType, lambda: PeerType) P
     if (!(q >= 0 and q <= 1)) return std.math.nan(T);
     if (q == 0 or lambda == 0) return 0;
     if (q == 1) return std.math.inf(T);
-    if (lambda > @as(T, @floatFromInt(std.math.maxInt(usize) / 4))) return std.math.nan(T);
+    // u64 keeps huge-lambda quantiles working on 32-bit targets.
+    if (lambda > @as(T, @floatFromInt(std.math.maxInt(u64) / 4))) return std.math.nan(T);
 
-    var hi: usize = @as(usize, @intFromFloat(@ceil(lambda))) + 1;
+    var hi: u64 = @as(u64, @intFromFloat(@ceil(lambda))) + 1;
     var expansion: usize = 0;
     while (poissonCdf(@as(T, @floatFromInt(hi)), lambda) < q and expansion < 1024) : (expansion += 1) {
-        if (hi > std.math.maxInt(usize) / 2) return std.math.inf(T);
+        if (hi > std.math.maxInt(u64) / 2) return std.math.inf(T);
         hi *= 2;
     }
 
-    var lo: usize = 0;
+    var lo: u64 = 0;
     while (lo < hi) {
         const mid = lo + (hi - lo) / 2;
         if (poissonCdf(@as(T, @floatFromInt(mid)), lambda) < q) {
@@ -57068,6 +57071,27 @@ test "binomialCdf and binomialQuantile match known values" {
     try std.testing.expectEqual(@as(f64, 0), binomialQuantile(@as(f64, 0), @as(f64, 10), @as(f64, 0.5)));
     try std.testing.expectEqual(@as(f64, 10), binomialQuantile(@as(f64, 1), @as(f64, 10), @as(f64, 0.5)));
     try std.testing.expectApproxEqAbs(@as(f32, 0.6230469), binomialCdf(@as(f32, 5), @as(f32, 10), @as(f32, 0.5)), 1e-5);
+}
+
+test "discrete quantiles use a 64-bit integer search on 32-bit targets" {
+    // These parameters exceed 2^32, so a usize-based search returns NaN or
+    // inf on wasm32; u64 keeps them consistent with 64-bit targets.
+    const poisson_k = poissonQuantile(@as(f64, 0.5), @as(f64, 1e12));
+    try std.testing.expect(std.math.isFinite(poisson_k));
+    try std.testing.expect(poissonCdf(poisson_k, @as(f64, 1e12)) >= 0.5);
+    try std.testing.expect(poissonCdf(poisson_k - 1, @as(f64, 1e12)) < 0.5);
+
+    const binomial_k = binomialQuantile(@as(f64, 0.5), @as(f64, 1e12), @as(f64, 0.5));
+    try std.testing.expect(std.math.isFinite(binomial_k));
+    try std.testing.expect(binomialCdf(binomial_k, @as(f64, 1e12), @as(f64, 0.5)) >= 0.5);
+    try std.testing.expect(binomialCdf(binomial_k - 1, @as(f64, 1e12), @as(f64, 0.5)) < 0.5);
+
+    // Negative-binomial quantile ~ln(2)/1e-10 ≈ 6.93e9 > 2^32.
+    const nb_k = negativeBinomialQuantile(@as(f64, 0.5), @as(f64, 1), @as(f64, 1e-10));
+    try std.testing.expect(std.math.isFinite(nb_k));
+    try std.testing.expect(nb_k > 4.0e9);
+    try std.testing.expect(negativeBinomialCdf(nb_k, @as(f64, 1), @as(f64, 1e-10)) >= 0.5);
+    try std.testing.expect(negativeBinomialCdf(nb_k - 1, @as(f64, 1), @as(f64, 1e-10)) < 0.5);
 }
 
 test "binomial CDF fallbacks stay stable for huge parameters" {

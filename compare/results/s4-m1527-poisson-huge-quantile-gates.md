@@ -37,3 +37,14 @@ fallback's inversion accuracy at huge shapes.
   919/919); no library code changed.
 
 The aggregate `validate-all` refresh is tracked as the following milestone.
+
+## Addendum: WASI Failure Exposed a 32-bit Search Bug
+
+The first `validate-all` run after adding these gates failed the WASI
+distcheck with `poisson huge quantile cdf: nan not in [0.000001, 1.000000]`.
+`poissonQuantile` used `usize` for its integer search, and on wasm32
+(32-bit `usize`) the `lambda > maxInt(usize)/4` guard rejects `lambda = 1e12`.
+The same width dependency affected `binomialQuantile` (`n = 1e12` → NaN) and
+`negativeBinomialQuantile` (quantiles above `2^32` → inf). The u64 search fix
+and its native/WASI regression test are tracked as S4-M1528.
+
