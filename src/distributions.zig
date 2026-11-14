@@ -2607,6 +2607,220 @@ fn hoytQuantileImpl(comptime PeerType: type, p: PeerType, q_param: PeerType, ome
     return @floatCast((lo + hi) / 2);
 }
 
+/// Sum a Poisson(mean) mixture around its mode. `context.term(j)` returns the
+/// j-th mixture term; the result is renormalized by the accumulated weight.
+/// Returns null when the mean is too large for an exact sum.
+fn poissonMixtureSum(mean: f64, max_terms: usize, context: anytype) ?f64 {
+    if (!(mean >= 0) or !std.math.isFinite(mean)) return null;
+    if (mean == 0) return context.term(0);
+    if (mean > 1.0e5) return null;
+    const mode_f = @floor(mean);
+    const mode: u64 = @intFromFloat(mode_f);
+    const log_mode_weight = -mean + mode_f * @log(mean) - std.math.lgamma(f64, mode_f + 1);
+    const mode_weight = @exp(log_mode_weight);
+    if (!(mode_weight > 0) or !std.math.isFinite(mode_weight)) return null;
+
+    var sum: f64 = mode_weight * context.term(mode);
+    var total: f64 = mode_weight;
+    var w = mode_weight;
+    var j = mode;
+    while (j < mode + max_terms) : (j += 1) {
+        w *= mean / @as(f64, @floatFromInt(j + 1));
+        if (w <= total * 1.0e-19) break;
+        sum += w * context.term(j + 1);
+        total += w;
+    }
+    w = mode_weight;
+    j = mode;
+    while (j > 0 and mode - j < max_terms) {
+        w *= @as(f64, @floatFromInt(j)) / mean;
+        j -= 1;
+        if (w <= total * 1.0e-19) break;
+        sum += w * context.term(j);
+        total += w;
+    }
+    return sum / total;
+}
+
+const NoncentralChiSquaredTerm = struct {
+    k: f64,
+    half_x: f64,
+
+    fn term(self: @This(), j: u64) f64 {
+        const a = self.k / 2 + @as(f64, @floatFromInt(j));
+        // k = 0, j = 0: the atom at zero is included for x >= 0.
+        if (a == 0) return 1;
+        return gammaIncompleteP(a, self.half_x);
+    }
+};
+
+/// Noncentral chi-squared CDF: the Poisson(λ/2) mixture of central
+/// chi-squared CDFs. Above λ/2 = 1e5 it uses the Patnaik two-moment central
+/// chi-squared approximation `c·χ²_h` with `c = (k+2λ)/(k+λ)` and
+/// `h = (k+λ)²/(k+2λ)`.
+pub fn noncentralChiSquaredCdf(x: anytype, k: anytype, lambda: anytype) resolvedFloatType(@TypeOf(x, k, lambda)) {
+    return noncentralChiSquaredCdfImpl(resolvedFloatType(@TypeOf(x, k, lambda)), x, k, lambda);
+}
+fn noncentralChiSquaredCdfImpl(comptime PeerType: type, x: PeerType, k: PeerType, lambda: PeerType) PeerType {
+    const T = @TypeOf(x, k, lambda);
+    comptime requireFloat(T);
+    if (!noncentralChiSquaredParametersValid(T, k, lambda)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x < 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    if (lambda == 0) return chiSquaredCdf(x, k);
+    const context = NoncentralChiSquaredTerm{
+        .k = @floatCast(k),
+        .half_x = @floatCast(x / 2),
+    };
+    if (poissonMixtureSum(@floatCast(lambda / 2), 20000, context)) |value| {
+        return @floatCast(std.math.clamp(value, 0, 1));
+    }
+    const total = k + lambda;
+    const c = (k + 2 * lambda) / total;
+    const h = total * total / (k + 2 * lambda);
+    return chiSquaredCdf(x / c, h);
+}
+
+/// Noncentral chi-squared quantile for probability `p`.
+pub fn noncentralChiSquaredQuantile(p: anytype, k: anytype, lambda: anytype) resolvedFloatType(@TypeOf(p, k, lambda)) {
+    return noncentralChiSquaredQuantileImpl(resolvedFloatType(@TypeOf(p, k, lambda)), p, k, lambda);
+}
+fn noncentralChiSquaredQuantileImpl(comptime PeerType: type, p: PeerType, k: PeerType, lambda: PeerType) PeerType {
+    const T = @TypeOf(p, k, lambda);
+    comptime requireFloat(T);
+    if (!noncentralChiSquaredParametersValid(T, k, lambda)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    const p_f: f64 = @floatCast(p);
+    const k_f: f64 = @floatCast(k);
+    const lambda_f: f64 = @floatCast(lambda);
+    if (k_f == 0 and lambda_f > 0 and p_f <= @exp(-lambda_f / 2)) return 0;
+    var hi: f64 = k_f + lambda_f;
+    if (!(hi > 0)) hi = 1;
+    var expansion: usize = 0;
+    while (noncentralChiSquaredCdf(hi, k_f, lambda_f) < p_f and expansion < 1024) : (expansion += 1) {
+        hi *= 2;
+        if (!std.math.isFinite(hi)) return @floatCast(std.math.inf(f64));
+    }
+    var lo: f64 = 0;
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (noncentralChiSquaredCdf(mid, k_f, lambda_f) < p_f) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
+/// Noncentral chi CDF: `χ'(k, λ) = √χ'²(k, λ)`.
+pub fn noncentralChiCdf(x: anytype, k: anytype, lambda: anytype) resolvedFloatType(@TypeOf(x, k, lambda)) {
+    return noncentralChiCdfImpl(resolvedFloatType(@TypeOf(x, k, lambda)), x, k, lambda);
+}
+fn noncentralChiCdfImpl(comptime PeerType: type, x: PeerType, k: PeerType, lambda: PeerType) PeerType {
+    const T = @TypeOf(x, k, lambda);
+    comptime requireFloat(T);
+    if (!noncentralChiParametersValid(T, k, lambda)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x < 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    return noncentralChiSquaredCdf(x * x, k, lambda);
+}
+
+/// Noncentral chi quantile for probability `p`.
+pub fn noncentralChiQuantile(p: anytype, k: anytype, lambda: anytype) resolvedFloatType(@TypeOf(p, k, lambda)) {
+    return noncentralChiQuantileImpl(resolvedFloatType(@TypeOf(p, k, lambda)), p, k, lambda);
+}
+fn noncentralChiQuantileImpl(comptime PeerType: type, p: PeerType, k: PeerType, lambda: PeerType) PeerType {
+    const T = @TypeOf(p, k, lambda);
+    comptime requireFloat(T);
+    if (!noncentralChiParametersValid(T, k, lambda)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    return @sqrt(noncentralChiSquaredQuantile(p, k, lambda));
+}
+
+const NoncentralFTerm = struct {
+    d1: f64,
+    d2: f64,
+    x: f64,
+
+    fn term(self: @This(), j: u64) f64 {
+        const d1 = self.d1 + 2 * @as(f64, @floatFromInt(j));
+        // F' = (χ'²/d1)/(χ²_d2/d2) and χ'² = χ²_{d1+2j}, so the central F
+        // argument picks up the d1/(d1+2j) scale.
+        return fisherFCdf(self.x * self.d1 / d1, d1, self.d2);
+    }
+};
+
+/// Noncentral F CDF: the Poisson(λ/2) mixture of central F CDFs with
+/// `d1 + 2j` numerator degrees of freedom. Above λ/2 = 1e5 it uses the
+/// Patnaik mapping `F' ≈ (c·d2/(d1·h))·F(h, d2)`.
+pub fn noncentralFCdf(x: anytype, d1: anytype, d2: anytype, lambda: anytype) resolvedFloatType(@TypeOf(x, d1, d2, lambda)) {
+    return noncentralFCdfImpl(resolvedFloatType(@TypeOf(x, d1, d2, lambda)), x, d1, d2, lambda);
+}
+fn noncentralFCdfImpl(comptime PeerType: type, x: PeerType, d1: PeerType, d2: PeerType, lambda: PeerType) PeerType {
+    const T = @TypeOf(x, d1, d2, lambda);
+    comptime requireFloat(T);
+    if (!noncentralFParametersValid(T, d1, d2, lambda)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    if (lambda == 0) return fisherFCdf(x, d1, d2);
+    const context = NoncentralFTerm{
+        .d1 = @floatCast(d1),
+        .d2 = @floatCast(d2),
+        .x = @floatCast(x),
+    };
+    if (poissonMixtureSum(@floatCast(lambda / 2), 20000, context)) |value| {
+        return @floatCast(std.math.clamp(value, 0, 1));
+    }
+    const total = d1 + lambda;
+    const c = (d1 + 2 * lambda) / total;
+    const h = total * total / (d1 + 2 * lambda);
+    // χ'² ≈ c·χ²_h, so F' ≈ (c·h/d1)·F(h, d2).
+    return fisherFCdf(x * d1 / (c * h), h, d2);
+}
+
+/// Noncentral F quantile for probability `p`.
+pub fn noncentralFQuantile(p: anytype, d1: anytype, d2: anytype, lambda: anytype) resolvedFloatType(@TypeOf(p, d1, d2, lambda)) {
+    return noncentralFQuantileImpl(resolvedFloatType(@TypeOf(p, d1, d2, lambda)), p, d1, d2, lambda);
+}
+fn noncentralFQuantileImpl(comptime PeerType: type, p: PeerType, d1: PeerType, d2: PeerType, lambda: PeerType) PeerType {
+    const T = @TypeOf(p, d1, d2, lambda);
+    comptime requireFloat(T);
+    if (!noncentralFParametersValid(T, d1, d2, lambda)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    const p_f: f64 = @floatCast(p);
+    const d1_f: f64 = @floatCast(d1);
+    const d2_f: f64 = @floatCast(d2);
+    const lambda_f: f64 = @floatCast(lambda);
+    var hi: f64 = 1;
+    var expansion: usize = 0;
+    while (noncentralFCdf(hi, d1_f, d2_f, lambda_f) < p_f and expansion < 1024) : (expansion += 1) {
+        hi *= 2;
+        if (!std.math.isFinite(hi)) return @floatCast(std.math.inf(f64));
+    }
+    var lo: f64 = 0;
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (noncentralFCdf(mid, d1_f, d2_f, lambda_f) < p_f) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return @floatCast((lo + hi) / 2);
+}
+
 /// Laplace(location, scale) CDF.
 pub fn laplaceCdf(x: anytype, location: anytype, scale: anytype) resolvedFloatType(@TypeOf(x, location, scale)) {
     return laplaceCdfImpl(resolvedFloatType(@TypeOf(x, location, scale)), x, location, scale);
@@ -16343,6 +16557,16 @@ pub fn NoncentralChiSquared(comptime T: type) type {
             return null;
         }
 
+        /// Noncentral chi-squared CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return noncentralChiSquaredCdf(x, self.k, self.lambda);
+        }
+
+        /// Noncentral chi-squared quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return noncentralChiSquaredQuantile(p, self.k, self.lambda);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             if (self.isDegenerate()) return 0;
             return noncentralChiSquaredPointFrom(rng, T, self.k, self.lambda);
@@ -16931,6 +17155,16 @@ pub fn NoncentralF(comptime T: type) type {
             return null;
         }
 
+        /// Noncentral F CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return noncentralFCdf(x, self.d1, self.d2, self.lambda);
+        }
+
+        /// Noncentral F quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return noncentralFQuantile(p, self.d1, self.d2, self.lambda);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return noncentralFPointFrom(rng, T, self.d1, self.d2, self.lambda);
         }
@@ -17241,6 +17475,16 @@ pub fn NoncentralChi(comptime T: type) type {
 
         pub fn maxValue(_: Self) ?T {
             return null;
+        }
+
+        /// Noncentral chi CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return noncentralChiCdf(x, self.k, self.lambda);
+        }
+
+        /// Noncentral chi quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return noncentralChiQuantile(p, self.k, self.lambda);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -65946,6 +66190,74 @@ test "NoncentralChi Monte Carlo second moment (k+λ)" {
     const second = sumsq / @as(f64, n);
     // E[X²] = k + λ = 7
     try std.testing.expectApproxEqAbs(@as(f64, 7), second, 0.2);
+}
+
+test "noncentral chi-squared CDF and quantile match central, Rice, and the sampler" {
+    const xs = [_]f64{ 0.5, 2, 5, 10 };
+    // λ = 0 reduces to the central chi-squared.
+    for (xs) |x| {
+        try std.testing.expectApproxEqAbs(chiSquaredCdf(x, @as(f64, 3)), noncentralChiSquaredCdf(x, @as(f64, 3), @as(f64, 0)), 1e-12);
+    }
+    // χ'(2, ν²) is Rice(x; ν, 1), so the squared variable's CDF is Rice at √x.
+    const nu: f64 = 2;
+    for (xs) |x| {
+        try std.testing.expectApproxEqAbs(riceCdf(@sqrt(x), nu, @as(f64, 1)), noncentralChiSquaredCdf(x, @as(f64, 2), nu * nu), 1e-6);
+    }
+    // k = 0 has an atom e^{-λ/2} at zero.
+    const atom = @exp(-2.0);
+    try std.testing.expectApproxEqAbs(atom, noncentralChiSquaredCdf(@as(f64, 0), @as(f64, 0), @as(f64, 4)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 0), noncentralChiSquaredQuantile(atom * 0.5, @as(f64, 0), @as(f64, 4)));
+    // Quantile round-trips.
+    const dist = try NoncentralChiSquared(f64).init(3, 4);
+    inline for ([_]f64{ 1e-6, 0.3, 0.7, 1 - 1e-6 }) |p| {
+        try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-6);
+    }
+    // Noncentral chi delegates through x².
+    try std.testing.expectApproxEqAbs(noncentralChiSquaredCdf(9, @as(f64, 3), @as(f64, 4)), noncentralChiCdf(3, @as(f64, 3), @as(f64, 4)), 1e-12);
+    const chi_dist = try NoncentralChi(f64).init(3, 4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7), chi_dist.cdf(chi_dist.quantile(0.7)), 1e-6);
+    // f32 support.
+    try std.testing.expect(noncentralChiSquaredCdf(@as(f32, 3), @as(f32, 3), @as(f32, 4)) > 0.1);
+}
+
+test "noncentral F CDF and quantile match central and the sampler" {
+    inline for ([_]f64{ 0.5, 1, 2, 5 }) |x| {
+        try std.testing.expectApproxEqAbs(fisherFCdf(x, @as(f64, 5), @as(f64, 10)), noncentralFCdf(x, @as(f64, 5), @as(f64, 10), @as(f64, 0)), 1e-12);
+    }
+    const dist = try NoncentralF(f64).init(5, 10, 4);
+    inline for ([_]f64{ 1e-6, 0.3, 0.7, 1 - 1e-6 }) |p| {
+        try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-6);
+    }
+    // Empirical CDF from the sampler at the median.
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x126a);
+    const rng = Rng.init(&engine);
+    const median = dist.quantile(0.5);
+    var hits: usize = 0;
+    const n = 50_000;
+    for (0..n) |_| {
+        if (dist.sample(rng) <= median) hits += 1;
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), @as(f64, @floatFromInt(hits)) / @as(f64, @floatFromInt(n)), 0.01);
+    // f32 support.
+    try std.testing.expect(noncentralFCdf(@as(f32, 1), @as(f32, 5), @as(f32, 10), @as(f32, 4)) > 0.1);
+}
+
+test "noncentral chi-squared large-lambda Patnaik fallback matches the sampler" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x126b);
+    const rng = Rng.init(&engine);
+    const k: f64 = 3;
+    const lambda: f64 = 3e5;
+    const mean = k + lambda;
+    const cdf_mean = noncentralChiSquaredCdf(mean, k, lambda);
+    var hits: usize = 0;
+    const n = 20_000;
+    for (0..n) |_| {
+        if (noncentralChiSquared(rng, f64, k, lambda) <= mean) hits += 1;
+    }
+    try std.testing.expectApproxEqAbs(cdf_mean, @as(f64, @floatFromInt(hits)) / @as(f64, @floatFromInt(n)), 0.02);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), cdf_mean, 0.02);
 }
 
 test "NoncentralChi free functions and fill work" {

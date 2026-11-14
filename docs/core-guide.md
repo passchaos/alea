@@ -615,13 +615,19 @@ runtime float type, and explicit f32 arguments keep f32.
   `logLogisticCdf` / `logLogisticQuantile`, `inverseGammaCdf` /
   `inverseGammaQuantile`, `nakagamiCdf` / `nakagamiQuantile`, `exGaussianCdf` /
   `exGaussianQuantile`, `inverseGaussianCdf` / `inverseGaussianQuantile`,
-  `generalizedParetoCdf` / `generalizedParetoQuantile`, and
-  `scaledInverseChiSquaredCdf` / `scaledInverseChiSquaredQuantile`;
+  `generalizedParetoCdf` / `generalizedParetoQuantile`,
+  `scaledInverseChiSquaredCdf` / `scaledInverseChiSquaredQuantile`,
+  `noncentralChiSquaredCdf` / `noncentralChiSquaredQuantile`,
+  `noncentralChiCdf` / `noncentralChiQuantile`, and `noncentralFCdf` /
+  `noncentralFQuantile`;
   Beta-prime uses the incomplete beta form, inverse-gamma uses the incomplete
   gamma upper tail, generalized Pareto uses the closed-form
   `1 − (1 + ξ(x−μ)/σ)^(−1/ξ)` with `expm1`/`log1p` tails and bounded support
   for `ξ < 0`, scaled inverse chi-squared delegates to the inverse-gamma form
-  as `Q(ν/2, ντ²/(2x))`, log-logistic is closed-form (with `scale = 0` and
+  as `Q(ν/2, ντ²/(2x))`, the noncentral chi-squared and noncentral F helpers
+  sum the Poisson(λ/2) mixture around its mode and switch to the Patnaik
+  two-moment central approximation above `λ/2 = 1e5` (noncentral chi delegates
+  through `x²`), log-logistic is closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via

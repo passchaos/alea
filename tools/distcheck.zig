@@ -663,6 +663,13 @@ fn checkAdvancedMultivariate() !void {
         const sics_df: f64 = 5;
         const sics_scale: f64 = 2;
         try expectFloatBetween("scaled-inverse-chi-squared quantile", alea.distributions.scaledInverseChiSquaredCdf(alea.distributions.scaledInverseChiSquaredQuantile(p, sics_df, sics_scale), sics_df, sics_scale), p - 1e-7, p + 1e-7);
+        const nc2_k: f64 = 3;
+        const nc2_lambda: f64 = 4;
+        try expectFloatBetween("noncentral chi-squared quantile", alea.distributions.noncentralChiSquaredCdf(alea.distributions.noncentralChiSquaredQuantile(p, nc2_k, nc2_lambda), nc2_k, nc2_lambda), p - 1e-6, p + 1e-6);
+        const ncf_d1: f64 = 5;
+        const ncf_d2: f64 = 10;
+        const ncf_lambda: f64 = 4;
+        try expectFloatBetween("noncentral f quantile", alea.distributions.noncentralFCdf(alea.distributions.noncentralFQuantile(p, ncf_d1, ncf_d2, ncf_lambda), ncf_d1, ncf_d2, ncf_lambda), p - 1e-6, p + 1e-6);
         const discrete_q: f64 = 0.7;
         const poisson_lambda: f64 = 5;
         try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);
