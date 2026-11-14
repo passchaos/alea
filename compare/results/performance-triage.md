@@ -551,6 +551,7 @@ Four-normal unit ball projection | Checked whether four standard normals project
 | Byte-level rejection for non-dyadic chance fills | The non-dyadic `fillChance` fallback draws one 64-bit word per bool; tried packing eight trials per word with byte fields, where `b < floor(256p)` succeeds, `b >` fails, and `b ==` resolves against the residual probability | The generic loop already runs at 0.53 ns/bool in a tight probe, while the bytewise version measured 2.24 ns/bool at p = 1/3 and 2.17 ns at p = 0.7 (unpredictable nested branches) and only 0.44 ns at p = 0.001. | Not adopted: the word savings do not compensate for the extra branches at ordinary probabilities. |
 | Small dyadic chance fills up to denominator 2^31 | `chanceDyadicRatio` capped denominators at 64, so p = 1/128 used the per-element loop; extended the cap to 2^31 and replaced the Bernoulli six-step shift loop with an `@ctz` recovery | `alea fillChance p=1/128` 838-846M -> 1582-1726M (+87-104%) with a shifted checksum; every other fillChance row keeps its checksum and stays within noise. | Adopted as S4-M1430. |
 | Integer-shape gamma via exponential sums | Gamma(2,1) and Gamma(3,1) are Erlang distributions; tried a sum-of-exponentials fast path in `gammaFrom` and the `Gamma` sampler | Standalone probes show gamma(2) 3.74 -> 2.11 ns and gamma(3) 3.59 -> 3.08 ns, and in context `alea gamma` +19-30%, `alea fillGamma` +63-115%, `alea chi-squared` +13-17%, `alea chi-squared cached` +29%, `alea dirichlet` +12-15%. However, `alea student-t cached` dropped 168-233M -> 122-126M (-30-45%) and `alea beta` 86-90M -> 78-79M (-9-12%) through code layout in every variant (inline Erlang, noinline Erlang, split dispatcher, forced inline). | Not adopted: the collateral regressions on two core distribution rows outweigh the gamma gains. |
+| BTPE central binomial envelope | The triage listed BTPE as the remaining central-region candidate; ported the full five-region envelope from `rand_distr 0.5.1` (the local `~/Work/rand` checkout is absent) and routed `mean >= 12` through it | The corrected port is exact: `binomial large` checksum 6554710 implies mean 100.03 and `binomial mean-12` checksum 786931 implies 12.01, a 200k-draw Python port gives 100.0237/12.0104/20.0090, and released `rand_distr 0.5.1` gives 100.0294/11.9973/19.9992. Interleaved A/B runs still measure `binomial large` 35.6-35.9M -> 27.3-27.9M (-22-24%) and `binomial mean-12` 31.8-31.9M -> 17.2-17.4M (-45-46%). The first port also applied the acceptance test to region 1, which biased the mean to 101.34 and measured 18.9M/17.0M; the reference accepts the central triangle unconditionally. Rust's cached-setup BTPE with `SmallRng` reaches 33.2M at `(10000, 0.01)` and 21.1M at `(1000, 0.012)`, below both Alea rows. | Not adopted. The division-heavy envelope and recursive acceptance cost more than the HIN table loop and the waiting-time race on this host, and Alea already exceeds the local Rust evidence at both points. Evidence: `s4-m1443-btpe-central-binomial-probe.md`. |
 ## Next Candidate
 
 Continue performance triage on the remaining focused watch items only when a
@@ -587,10 +588,13 @@ current blocker audit and the requirements for a successful next candidate:
   (`@log`, `@atan`, Bessel) scalarize, so the current SIMD loops are already
   near parity with four scalar draws. Future work needs a dense vector
   candidate or a layout-stable way to share the scalar tails.
-- Central binomial rejection: HIN holds the `mean >= 16` region at about
-  27-30 ns per draw. A BTPE implementation could replace it for the central
-  region, but it needs the full five-region envelope plus its own validation
-  evidence; no local `rand` source is available to cross-check constants.
+- Central binomial rejection: the full BTPE envelope was implemented,
+  cross-checked against `rand_distr 0.5.1`, and rejected (S4-M1443). It is
+  exact but measures -22-24% at `binomial large` and -45-46% at
+  `binomial mean-12`, and Rust's cached BTPE also stays below both Alea rows.
+  HIN and the exponential waiting-time race remain the right central paths;
+  the remaining binomial pressure is `Rng` facade overhead and the
+  small-mean inverse-CDF layout problem, not a missing central algorithm.
 - Platform runners: QEMU, Wine, and Wasmtime are not installed on the current
   host, so second-platform execution beyond the Node WASI suite and the six
   crosscheck compile targets stays blocked until infrastructure exists.
