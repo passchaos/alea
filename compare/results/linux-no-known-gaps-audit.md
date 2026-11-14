@@ -7034,5 +7034,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1502-validate-all-refresh.md`, and
 `compare/results/s4-m1503-matrix-normal-cholesky-diagonal.md`, and
 `compare/results/s4-m1504-validate-all-refresh.md`, and
-`compare/results/s4-m1505-matrix-normal-scale-gates.md`.
+`compare/results/s4-m1505-matrix-normal-scale-gates.md`, and
+`compare/results/s4-m1506-validate-all-refresh.md`.
 
