@@ -66498,6 +66498,64 @@ test "Wishart recovers non-diagonal 3x3 scale covariance" {
     }
 }
 
+test "MatrixT 3x2 and InverseWishart 3x3 recover non-diagonal scales" {
+    const alea = @import("root.zig");
+    const allocator = std.testing.allocator;
+    var engine = alea.DefaultPrng.init(0x7e7f);
+    const rng = Rng.init(&engine);
+
+    // InverseWishart 3x3: E[X] = Psi / (nu - dim - 1) = Psi / 8.
+    const Psi = [_]f64{
+        2,   0.3, 0.1,
+        0.3, 1,   0.2,
+        0.1, 0.2, 1.5,
+    };
+    var iw = try InverseWishart(f64).init(allocator, &Psi, 12);
+    defer iw.deinit();
+    const iw_n = 100_000;
+    var s = [_]f64{0} ** 9;
+    var out: [9]f64 = undefined;
+    for (0..iw_n) |_| {
+        iw.sampleInto(rng, &out);
+        for (0..9) |k| s[k] += out[k];
+    }
+    const iw_nf: f64 = @floatFromInt(iw_n);
+    inline for (0..9) |k| try std.testing.expectApproxEqAbs(Psi[k] / 8.0, s[k] / iw_nf, 0.004);
+
+    // MatrixT 3x2: Cov(X_ij, X_kl) = U_ik V_jl * nu / (nu - 2) with nu = 8.
+    const U = [_]f64{
+        2,   0.5, 0.2,
+        0.5, 1,   0.3,
+        0.2, 0.3, 1.5,
+    };
+    const V = [_]f64{ 3, 0.8, 0.8, 2 };
+    const mean = [_]f64{0} ** 6;
+    var mt = try MatrixT(f64).init(allocator, &mean, &U, &V, 8);
+    defer mt.deinit();
+    const mt_n = 40_000;
+    var sq = [_]f64{0} ** 6;
+    var cross = [_]f64{0} ** 4;
+    var mo: [6]f64 = undefined;
+    for (0..mt_n) |_| {
+        mt.sampleInto(rng, &mo);
+        for (0..6) |k| sq[k] += mo[k] * mo[k];
+        cross[0] += mo[0] * mo[1];
+        cross[1] += mo[0] * mo[2];
+        cross[2] += mo[0] * mo[3];
+        cross[3] += mo[1] * mo[2];
+    }
+    const mt_nf: f64 = @floatFromInt(mt_n);
+    const factor = 8.0 / 6.0;
+    try std.testing.expectApproxEqAbs(2 * 3 * factor, sq[0] / mt_nf, 0.25);
+    try std.testing.expectApproxEqAbs(2 * 2 * factor, sq[1] / mt_nf, 0.25);
+    try std.testing.expectApproxEqAbs(1 * 3 * factor, sq[2] / mt_nf, 0.2);
+    try std.testing.expectApproxEqAbs(1 * 2 * factor, sq[3] / mt_nf, 0.2);
+    try std.testing.expectApproxEqAbs(U[0] * V[1] * factor, cross[0] / mt_nf, 0.2);
+    try std.testing.expectApproxEqAbs(U[1] * V[0] * factor, cross[1] / mt_nf, 0.2);
+    try std.testing.expectApproxEqAbs(U[1] * V[1] * factor, cross[2] / mt_nf, 0.15);
+    try std.testing.expectApproxEqAbs(U[1] * V[2] * factor, cross[3] / mt_nf, 0.15);
+}
+
 test "Wishart (dynamic) sampleInto and clone work" {
     const alea = @import("root.zig");
     const allocator = std.testing.allocator;
