@@ -70,10 +70,14 @@ to `binomialFrom` outside the dyadic path.
 ## Rejected probe
 
 Caching the HIN setup in the reusable `Binomial` sampler (the pattern
-`Multinomial` uses) does not help: a cached first-conditional draw measured
-31.35 ns against 30.78 ns for the uncached facade. The setup's transcendental
-chain overlaps the rejection loop across independent draws, so only its
-throughput cost matters, and that is already small.
+`Multinomial` uses) was probed and rejected. With literal benchmark
+parameters the facade's setup is already constant-folded, so a cached
+sampler only pays for the larger value: the new `alea binomial large
+sampler` row measured 27.2-27.6M against 29.8-30.4M samples/s for the
+16-byte struct (~8-10% slower). With runtime parameters the cached setup is
+about 2x faster (58-79 ns against 26-47 ns across a parameter grid), but
+serving that case would need a dedicated cached sampler type instead of
+growing `Binomial`.
 
 ## Validation
 
