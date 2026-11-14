@@ -7059,5 +7059,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1527-poisson-huge-quantile-gates.md`, and
 `compare/results/s4-m1528-64bit-discrete-quantile-search.md`, and
 `compare/results/s4-m1529-validate-all-refresh.md`, and
-`compare/results/s4-m1530-hypergeometric-hin-overflow-fallback.md`.
+`compare/results/s4-m1530-hypergeometric-hin-overflow-fallback.md`, and
+`compare/results/s4-m1531-validate-all-refresh.md`.
 
