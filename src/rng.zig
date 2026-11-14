@@ -448,7 +448,17 @@ pub const ReaderRng = struct {
     pub fn tryFillBytes(self: *ReaderRng, dest: []u8) std.Io.Reader.Error!void {
         try self.reader.readSliceAll(dest);
     }
+
+    /// `std.Random` view over the adapter's byte fill.
+    pub fn random(self: *ReaderRng) std.Random {
+        return std.Random.init(self, ReaderRng.fill);
+    }
 };
+
+/// Free-function constructor for `ReaderRng`, mirroring `rngReader`.
+pub fn readerRng(byte_reader: *std.Io.Reader) ReaderRng {
+    return ReaderRng.init(byte_reader);
+}
 
 test "reader rng replays a captured byte stream" {
     const captured = [_]u8{
@@ -472,6 +482,11 @@ test "reader rng replays a captured byte stream" {
     const rng = Rng.init(&facade_source);
     try std.testing.expectEqual(@as(u64, 0x0807_0605_0403_0201), rng.nextU64());
     try std.testing.expectEqual(@as(u64, 0x100f_0e0d_0c0b_0a09), rng.nextU64());
+
+    // std.Random interop through the `readerRng` alias.
+    var random_reader = std.Io.Reader.fixed(&captured);
+    var random_source = readerRng(&random_reader);
+    try std.testing.expectEqual(@as(u32, 0x0403_0201), random_source.random().int(u32));
 }
 
 /// Engine adapter that periodically replaces the inner engine state with
@@ -568,6 +583,11 @@ pub fn ReseedingRng(comptime Engine: type) type {
         pub fn enginePtr(self: *Self) *Engine {
             return &self.engine;
         }
+
+        /// `std.Random` view over the adapter's byte fill.
+        pub fn random(self: *Self) std.Random {
+            return std.Random.init(self, Self.fill);
+        }
     };
 }
 
@@ -634,6 +654,13 @@ test "reseeding rng byte fill respects the reseed boundary" {
     var u32_adapter = ReseedingRng(Engine).init(Engine.seedFromU64(4), reseeder, 1);
     for (&u32_buf) |*slot| slot.* = u32_adapter.nextU32();
     try std.testing.expectEqual(@as(u64, 3), u32_adapter.reseedCount());
+
+    // The std.Random view matches the direct adapter stream.
+    var reseeder_engine_e = alea.SplitMix64.init(0x5eef);
+    var reseeder_engine_f = alea.SplitMix64.init(0x5eef);
+    var random_adapter = ReseedingRng(Engine).init(Engine.seedFromU64(9), Rng.init(&reseeder_engine_e), 8);
+    var direct_adapter = ReseedingRng(Engine).init(Engine.seedFromU64(9), Rng.init(&reseeder_engine_f), 8);
+    try std.testing.expectEqual(direct_adapter.next(), random_adapter.random().int(u64));
 }
 
 pub fn value(self: Rng, comptime T: type) T {

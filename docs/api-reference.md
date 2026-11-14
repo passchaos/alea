@@ -27,6 +27,7 @@ command matrix evidence.
 - `prelude` namespace aliases: `prelude.Rng`, `prelude.RngOf`, `prelude.Seed`,
   `prelude.distributions`, `prelude.seq`, `prelude.ascii`, `prelude.StdRng`,
   `prelude.SmallRng`, `prelude.SysRng`, `prelude.SysError`,
+  `prelude.ReseedingRng`, `prelude.ReaderRng`,
   `prelude.WeightError`, `prelude.WeightedError`, `prelude.weightedErrorMessage`, `prelude.WeightedIndex`, `prelude.WeightedAliasIndex`, `prelude.WeightedTreeIndex`, `prelude.WeightedIntTreeIndex`
 - Constructors: `default`, `defaultSecure`, `fast`, `fastSecure`,
   `scalar`, `scalarSecure`, `hash`, `hashSecure`, `reproducible`, `reproducibleSecure`,
@@ -241,12 +242,14 @@ command matrix evidence.
   `ReseedingRng.next`, `ReseedingRng.nextU64`, `ReseedingRng.nextU32`,
   `ReseedingRng.fill`, `ReseedingRng.fillBytes`, `ReseedingRng.reseedCount`,
   `ReseedingRng.thresholdValue`, `ReseedingRng.remainingDraws`,
-  `ReseedingRng.enginePtr`; `Engine` must expose `seedFromU64`.
+  `ReseedingRng.enginePtr`, `ReseedingRng.random`; `Engine` must expose
+  `seedFromU64`.
 - `ReaderRng`: adapts a `std.Io.Reader` byte stream into an engine-like
   source for replaying captured or synthetic randomness. Members:
   `ReaderRng.init`, `ReaderRng.next`, `ReaderRng.nextU64`,
   `ReaderRng.nextU32`, `ReaderRng.fill`, `ReaderRng.fillBytes`,
-  `ReaderRng.tryNext`, `ReaderRng.tryFillBytes`; the infallible surface
+  `ReaderRng.tryNext`, `ReaderRng.tryFillBytes`, `ReaderRng.random`;
+  `readerRng` is the free-function constructor; the infallible surface
   panics on short reads.
 - Values: `value`, `valueFrom`, `valueChecked`, `valueCheckedFrom`,
   `randomValue`, `randomValueFrom`, `randomValueChecked`,

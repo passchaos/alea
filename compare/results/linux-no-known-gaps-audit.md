@@ -6970,5 +6970,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1437-reader-rng-adapter.md`, and
 `compare/results/s4-m1438-validate-all-refresh.md`, and
 `compare/results/s4-m1439-engine-adapter-example.md`, and
-`compare/results/s4-m1440-validate-all-refresh.md`.
+`compare/results/s4-m1440-validate-all-refresh.md`, and
+`compare/results/s4-m1441-adapter-random-interop.md`.
 
