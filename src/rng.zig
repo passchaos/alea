@@ -932,7 +932,11 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
         return;
     }
     if (p == 0.25) {
-        fillChanceQuarterFrom(source, dest);
+        fillChanceQuarterFrom(source, dest, false);
+        return;
+    }
+    if (p == 0.75) {
+        fillChanceQuarterFrom(source, dest, true);
         return;
     }
     if (p == 0.375) {
@@ -941,6 +945,12 @@ pub fn fillChanceFrom(source: anytype, dest: []bool, p: f64) void {
     }
     if (p == 0.0625) {
         fillChanceSixteenthFrom(source, dest);
+        return;
+    }
+    // Other dyadic probabilities (1/8, 3/16, 5/8, 7/8, ...) pack several
+    // trials per engine word instead of drawing one word per element.
+    if (chanceDyadicRatio(p)) |dyadic| {
+        fillRatioPowerOfTwoFrom(source, dest, dyadic.numerator, dyadic.denominator);
         return;
     }
 
@@ -958,6 +968,10 @@ test "fillChance dyadic kernels match their probabilities" {
         .{ .p = 0.375, .expected = 0.375 },
         .{ .p = 0.5, .expected = 0.5 },
         .{ .p = 0.0625, .expected = 0.0625 },
+        .{ .p = 0.75, .expected = 0.75 },
+        .{ .p = 0.125, .expected = 0.125 },
+        .{ .p = 0.875, .expected = 0.875 },
+        .{ .p = 0.3125, .expected = 0.3125 },
     };
     for (cases) |case| {
         rng.fillChance(&buf, case.p);
@@ -1021,7 +1035,11 @@ pub fn fillRatioFrom(source: anytype, dest: []bool, numerator: u32, denominator:
         return;
     }
     if (denominator == 4 and numerator == 1) {
-        fillChanceQuarterFrom(source, dest);
+        fillChanceQuarterFrom(source, dest, false);
+        return;
+    }
+    if (denominator == 4 and numerator == 3) {
+        fillChanceQuarterFrom(source, dest, true);
         return;
     }
     if (std.math.isPowerOfTwo(denominator)) {
@@ -1917,16 +1935,20 @@ fn fillBoolsFrom(source: anytype, dest: []bool) void {
     }
 }
 
-fn fillChanceQuarterFrom(source: anytype, dest: []bool) void {
+fn fillChanceQuarterFrom(source: anytype, dest: []bool, comptime inverted: bool) void {
     const out_bytes: []u8 = @ptrCast(dest);
     var i: usize = 0;
     while (i < dest.len) {
         const bits = nextFrom(source);
         const take = @min(@as(usize, 32), dest.len - i);
-        // Success fields are the 2-bit groups equal to zero; their low bits sit
-        // at even positions. Compact them to the low `take` bits with the
-        // standard even-bit gather, then expand eight at a time.
-        var mask = ~bits & ~(bits >> 1) & 0x5555_5555_5555_5555;
+        // Success fields are the 2-bit groups equal to zero (or nonzero when
+        // `inverted`, which covers p = 3/4); their low bits sit at even
+        // positions. Compact them to the low `take` bits with the standard
+        // even-bit gather, then expand eight at a time.
+        var mask = if (inverted)
+            (bits | (bits >> 1)) & 0x5555_5555_5555_5555
+        else
+            ~bits & ~(bits >> 1) & 0x5555_5555_5555_5555;
         mask = (mask | (mask >> 1)) & 0x3333_3333_3333_3333;
         mask = (mask | (mask >> 2)) & 0x0f0f_0f0f_0f0f_0f0f;
         mask = (mask | (mask >> 4)) & 0x00ff_00ff_00ff_00ff;
@@ -1935,6 +1957,23 @@ fn fillChanceQuarterFrom(source: anytype, dest: []bool) void {
         storeBoolBits(out_bytes[i..], mask, take);
         i += take;
     }
+}
+
+/// Decompose a dyadic probability `p = k / 2^m` (k odd) into the packed
+/// power-of-two ratio. Only denominators up to 64 are accepted; larger or
+/// non-dyadic probabilities keep the generic threshold loop.
+fn chanceDyadicRatio(p: f64) ?struct { numerator: u32, denominator: u32 } {
+    if (!(p > 0 and p < 1)) return null;
+    const bits: u64 = @bitCast(p);
+    const biased_exponent: i32 = @intCast((bits >> 52) & 0x7ff);
+    if (biased_exponent == 0 or biased_exponent == 0x7ff) return null;
+    const exponent: i32 = biased_exponent - 1023;
+    const mantissa: u64 = (bits & 0x000f_ffff_ffff_ffff) | (@as(u64, 1) << 52);
+    const trailing: i32 = @intCast(@ctz(mantissa));
+    const m: i32 = 52 - exponent - trailing;
+    if (m < 1 or m > 6) return null;
+    const k: u32 = @intCast(mantissa >> @intCast(trailing));
+    return .{ .numerator = k, .denominator = @as(u32, 1) << @intCast(m) };
 }
 
 /// Expand a byte holding two 4-bit fields into two bool bytes: the low field

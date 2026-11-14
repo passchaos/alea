@@ -103,6 +103,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |
 | Multinomial lead-category ordering | `compare/results/s4-m1416-multinomial-lead-order.md` |
 | Stream-preserving speedups (identical checksums) | `compare/results/s4-m1414-one-log-hin-factorial.md`, `compare/results/s4-m1418-bingham-pade-squeeze.md` |
+| Packed dyadic `fillChance` probabilities | `compare/results/s4-m1420-dyadic-chance-fills.md` |
 
 ## Not Stable
 

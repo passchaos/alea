@@ -63,6 +63,8 @@ pub fn main(init: std.process.Init) !void {
     try benchFillChanceHalf(io, stdout, "alea fillChance p=0.5", bytes / 8);
     try benchFillChanceParam(io, stdout, "alea fillChance p=3/8", bytes / 8, 0.375);
     try benchFillChanceParam(io, stdout, "alea fillChance p=1/16", bytes / 8, 0.0625);
+    try benchFillChanceParam(io, stdout, "alea fillChance p=3/4", bytes / 8, 0.75);
+    try benchFillChanceParam(io, stdout, "alea fillChance p=1/8", bytes / 8, 0.125);
     try benchFillRatioQuarter(io, stdout, "alea fillRatio 1/4", bytes / 8);
     try benchFillRatioThreeEighths(io, stdout, "alea fillRatio 3/8", bytes / 8);
     try benchFillRatioHalf(io, stdout, "alea fillRatio 1/2", bytes / 8);
