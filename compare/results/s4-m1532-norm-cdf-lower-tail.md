@@ -58,3 +58,13 @@ uniform to `(ε/2, 1−ε/2)`, so its output mapping is unchanged.
 - `zig build distcheck` passes.
 
 The aggregate `validate-all` refresh is tracked as the following milestone.
+
+## Addendum: Mills-Ratio Tail Follow-Up
+
+The complement-form fix above used the Abramowitz-Stegun erf term, whose
+relative error grows in the deep tail. S4-M1534 switches `|x| >= 6` to the
+Mills-ratio asymptotic series, improving `Φ(-8.5)` from `9.597e-18` to
+`9.4795e-18`, `Φ(-12)` from `1.832e-33` to `1.77648e-33`, and
+`Φ(-37)` from `6.638e-300` to `5.7256e-300`; see
+`compare/results/s4-m1534-norm-cdf-mills-tail.md`. The complement form still
+handles `|x| < 6`.

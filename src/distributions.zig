@@ -245,16 +245,65 @@ fn erfAbramowitzStegunF32(x: f32) f32 {
 pub fn normCdf(x: anytype) resolvedFloatType(@TypeOf(x)) {
     return normCdfImpl(resolvedFloatType(@TypeOf(x)), x);
 }
+/// Upper-tail normal probability Q(x) = Φ(−x) for x ≥ 6 using the
+/// Mills-ratio asymptotic series with adaptive truncation. The series reaches
+/// its smallest term near k ≈ x²/2, so the relative error is about
+/// exp(−x²/2) (1.5e-8 at x = 6, below 1e-70 at x = 37).
+fn normUpperTailF64(x: f64) f64 {
+    const inv_x2 = 1.0 / (x * x);
+    var term: f64 = 1.0;
+    var sum: f64 = 1.0;
+    var prev_abs: f64 = 1.0;
+    var k: usize = 1;
+    while (k < 64) : (k += 1) {
+        const odd: f64 = @floatFromInt(2 * k - 1);
+        term *= -odd * inv_x2;
+        const abs_term = @abs(term);
+        if (abs_term > prev_abs) break;
+        sum += term;
+        prev_abs = abs_term;
+    }
+    return @exp(-0.5 * x * x) * inv_sqrt_2pi * sum / x;
+}
+
+fn normUpperTailF32(x: f32) f32 {
+    const inv_x2 = 1.0 / (x * x);
+    var term: f32 = 1.0;
+    var sum: f32 = 1.0;
+    var prev_abs: f32 = 1.0;
+    var k: usize = 1;
+    while (k < 32) : (k += 1) {
+        const odd: f32 = @floatFromInt(2 * k - 1);
+        term *= -odd * inv_x2;
+        const abs_term = @abs(term);
+        if (abs_term > prev_abs) break;
+        sum += term;
+        prev_abs = abs_term;
+    }
+    const inv_sqrt_2pi_f32: f32 = @floatCast(inv_sqrt_2pi);
+    return @exp(-0.5 * x * x) * inv_sqrt_2pi_f32 * sum / x;
+}
+
 fn normCdfScalarF64(x: f64) f64 {
     // Use the complement form for negative x so the lower tail does not
     // cancel to zero below Φ(-8.5); it resolves down to exp(-x²/2) underflow.
-    if (x < 0) return 0.5 * erfComplementTerm(-x * inv_sqrt_2);
+    // Beyond |x| = 6 the Mills-ratio series is more accurate than the
+    // Abramowitz-Stegun erf complement term.
+    if (x < 0) {
+        const ax = -x;
+        if (ax >= 6.0) return normUpperTailF64(ax);
+        return 0.5 * erfComplementTerm(ax * inv_sqrt_2);
+    }
     return 0.5 * (1.0 + erfAbramowitzStegun(x * inv_sqrt_2));
 }
 
 fn normCdfScalarF32(x: f32) f32 {
     const is2: f32 = @floatCast(inv_sqrt_2);
-    if (x < 0) return 0.5 * erfComplementTermF32(-x * is2);
+    if (x < 0) {
+        const ax = -x;
+        if (ax >= 6.0) return normUpperTailF32(ax);
+        return 0.5 * erfComplementTermF32(ax * is2);
+    }
     return 0.5 * (1.0 + erfAbramowitzStegunF32(x * is2));
 }
 
@@ -63114,9 +63163,9 @@ test "normCdf matches known values" {
 test "normCdf resolves the lower tail below 1e-16" {
     // Φ(-8.5) ≈ 9.48e-18; the old 1+erf form flushed it to zero.
     try std.testing.expect(normCdf(@as(f64, -8.5)) > 0);
-    try std.testing.expectApproxEqAbs(@as(f64, 9.597079779620582e-18), normCdf(@as(f64, -8.5)), 5e-19);
-    // Φ(-12) ≈ 1.78e-33 and Φ(-20) ≈ 2.8e-89.
-    try std.testing.expectApproxEqAbs(@as(f64, 1.831577586760883e-33), normCdf(@as(f64, -12)), 1e-34);
+    try std.testing.expectApproxEqAbs(@as(f64, 9.47953482220332e-18), normCdf(@as(f64, -8.5)), 1e-20);
+    // Φ(-12) ≈ 1.776e-33 and Φ(-20) ≈ 2.754e-89.
+    try std.testing.expectApproxEqAbs(@as(f64, 1.776482112077679e-33), normCdf(@as(f64, -12)), 1e-36);
     try std.testing.expect(normCdf(@as(f64, -20)) > 0);
     // Φ(-38) is subnormal but still positive; Φ(-39) underflows.
     try std.testing.expect(normCdf(@as(f64, -38)) > 0);

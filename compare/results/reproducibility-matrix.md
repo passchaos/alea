@@ -117,6 +117,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Incomplete-beta continued-fraction iteration cap (large symmetric shapes near the mean) | `compare/results/s4-m1523-beta-cf-iteration-cap.md` |
 | Incomplete-gamma series iteration cap (large shapes near the mean) | `compare/results/s4-m1525-gamma-series-iteration-cap.md` |
 | Normal CDF lower-tail complement form (gamma/binomial/negative-binomial tails) | `compare/results/s4-m1532-norm-cdf-lower-tail.md` |
+| Normal CDF Mills-ratio series for `|x| >= 6` | `compare/results/s4-m1534-norm-cdf-mills-tail.md` |
 | Full Bartlett `L·A` Wishart product (identity-scale off-diagonals and non-diagonal scale covariance) | `compare/results/s4-m1507-wishart-bartlett-product.md` |
 
 ## Not Stable

@@ -606,9 +606,11 @@ runtime float type, and explicit f32 arguments keep f32.
   masses. These inherit the `normCdf`/`probit` approximation accuracy
   (~1e-7). `normCdf` uses the complement form for negative `x`, so the lower
   tail resolves to subnormal values (`Φ(−38) ≈ 3e-316`) instead of flushing
-  to zero below `Φ(−8.5)`; this also lets large-shape gamma/chi-squared,
-  binomial, and negative-binomial normal fallbacks invert extreme lower-tail
-  quantiles.
+  to zero below `Φ(−8.5)`; beyond `|x| = 6` it switches to the Mills-ratio
+  asymptotic series, whose relative error is about `exp(−x²/2)` (`~1.5e-8` at
+  `x = 6`, below `1e-70` at `x = 37`). This also lets large-shape
+  gamma/chi-squared, binomial, and negative-binomial normal fallbacks invert
+  extreme lower-tail quantiles.
 - advanced continuous: `betaPrimeCdf` / `betaPrimeQuantile`,
   `logLogisticCdf` / `logLogisticQuantile`, `inverseGammaCdf` /
   `inverseGammaQuantile`, `nakagamiCdf` / `nakagamiQuantile`, `exGaussianCdf` /
