@@ -574,3 +574,23 @@ current blocker audit and the requirements for a successful next candidate:
   Alea4x64 lane-local repair rows all failed to beat current scalar lane-fill
   defaults; future work needs a genuinely dense SIMD candidate that meets
   `simd-distribution-kernel-notes.md`.
+- Packed chance fills: the dyadic series is closed for the current bar
+  (`fillChance` up to denominator 2^31, `fillRatio` power-of-two
+  denominators, the `Bernoulli` threshold dispatch, and the nibble kernels
+  from S4-M1420..S4-M1430). Remaining ideas are non-power-of-two `fillRatio`
+  denominators, which need retry-position bookkeeping and measured only about
+  2x in a standalone byte-rejection probe, and per-trial branch costs that
+  make the bytewise non-dyadic chance fill slower than the one-word loop.
+- Vector directional samplers: the f64x4 Kent, Watson, vMF, and Bingham rows
+  remain the slowest. Scalar-per-lane fallbacks and noinline isolation both
+  regress the scalar rows through code layout, and the vector transcendentals
+  (`@log`, `@atan`, Bessel) scalarize, so the current SIMD loops are already
+  near parity with four scalar draws. Future work needs a dense vector
+  candidate or a layout-stable way to share the scalar tails.
+- Central binomial rejection: HIN holds the `mean >= 16` region at about
+  27-30 ns per draw. A BTPE implementation could replace it for the central
+  region, but it needs the full five-region envelope plus its own validation
+  evidence; no local `rand` source is available to cross-check constants.
+- Platform runners: QEMU, Wine, and Wasmtime are not installed on the current
+  host, so second-platform execution beyond the Node WASI suite and the six
+  crosscheck compile targets stays blocked until infrastructure exists.
