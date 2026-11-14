@@ -746,9 +746,10 @@ fn studentTQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType) Peer
 }
 
 /// Power-series evaluation of the regularized lower incomplete gamma for
-/// `x < a + 1`.
+/// `x < a + 1`. Large shapes near the mean need roughly 500 terms; the
+/// previous 300-iteration cap left a 1.4e-3 error at `a = 9999`.
 fn gammaSeriesP(comptime T: type, a: T, x: T) T {
-    const max_iter = 300;
+    const max_iter = 1000;
     const eps = 64 * std.math.floatEps(T);
     var sum = 1 / a;
     var term = sum;
@@ -56733,6 +56734,18 @@ test "gammaIncompleteP and gammaIncompleteQ match known values" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.63212055), gammaIncompleteP(@as(f32, 1), @as(f32, 1)), 1e-5);
     try std.testing.expect(std.math.isNan(gammaIncompleteP(@as(f64, 0), @as(f64, 1))));
     try std.testing.expectEqual(@as(f64, 0), gammaIncompleteP(@as(f64, 2), @as(f64, 0)));
+}
+
+test "gammaIncompleteP large shape resolves the mean" {
+    // P(a, a) converges to 0.5 + 1/(3√(2πa)) for large a. At a = 9999 the
+    // series needs ~500 terms; the old 300-iteration cap returned
+    // 0.49994383 instead of 0.50132987.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.501329874837), gammaIncompleteP(@as(f64, 9999), @as(f64, 9999)), 1e-9);
+    // The continued-fraction side at x = a + 1 was already accurate.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.505319197905), gammaIncompleteP(@as(f64, 9999), @as(f64, 10000)), 1e-8);
+    // The Wilson-Hilferty fallback above 1e4 agrees with the converged series
+    // to ~1e-7.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.501329813723), gammaIncompleteP(@as(f64, 10000.001), @as(f64, 10000.001)), 1e-12);
 }
 
 test "incomplete gamma and beta stay stable for huge parameters" {

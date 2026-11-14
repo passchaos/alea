@@ -597,7 +597,9 @@ runtime float type, and explicit f32 arguments keep f32.
   incomplete-gamma form, Erlang delegates to the Gamma helpers after
   integer-shape validation, and shapes at or above `1e4` use the
   Wilson-Hilferty cube-root normal approximation, whose error is `O(1/a)`
-  instead of the series/continued-fraction overflow at that scale.
+  instead of the series/continued-fraction overflow at that scale. Below
+  `1e4`, the series runs up to 1000 iterations (enough for `a = 9999` near
+  the mean, where the previous 300-iteration cap left a `1.4e-3` error).
 - normal-derived: `exponentialCdf` / `exponentialQuantile`, `logNormalCdf` /
   `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`; log-normal uses
   `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
