@@ -2190,9 +2190,45 @@ fn checkLongRun(samples: usize) !void {
         var engine = alea.FastPrng.init(0x10de);
         const rng = alea.Rng.init(&engine);
         var sum: f64 = 0;
+        var hits: usize = 0;
         var i: usize = 0;
-        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.negativeBinomial(rng, 1 << 20, 0.5));
+        while (i < samples) : (i += 1) {
+            const x = alea.distributions.negativeBinomial(rng, 1 << 20, 0.5);
+            sum += @floatFromInt(x);
+            if (x <= 1_048_576) hits += 1;
+        }
         try expectFloatBetween("long negative-binomial mixture", sum / nf, 1.0485e6, 1.0487e6);
+        const cdf = alea.distributions.negativeBinomialCdf(@as(f64, 1_048_576), @as(f64, 1 << 20), @as(f64, 0.5));
+        try expectEmpiricalCdf("long negative-binomial mixture cdf(mean)", hits, samples, cdf);
+        std.debug.print("long negative-binomial mixture cdf: empirical={d:.6} (cdf {d:.6})\n", .{
+            @as(f64, @floatFromInt(hits)) / nf,
+            cdf,
+        });
+    }
+    {
+        // Huge-shape beta: the gamma-ratio sampler and the normal-fallback CDF
+        // share the same 1e10-scale parameters.
+        var engine = alea.FastPrng.init(0x10e0);
+        const rng = alea.Rng.init(&engine);
+        const beta_dist = try alea.distributions.Beta(f64).init(1e10, 1e10);
+        var lower: usize = 0;
+        var upper: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x = beta_dist.sample(rng);
+            if (x <= 0.5 - 1e-5) lower += 1;
+            if (x <= 0.5 + 1e-5) upper += 1;
+        }
+        const cdf_lower = alea.distributions.betaCdf(@as(f64, 0.5 - 1e-5), @as(f64, 1e10), @as(f64, 1e10));
+        const cdf_upper = alea.distributions.betaCdf(@as(f64, 0.5 + 1e-5), @as(f64, 1e10), @as(f64, 1e10));
+        try expectEmpiricalCdf("long beta huge cdf(0.5-1e-5)", lower, samples, cdf_lower);
+        try expectEmpiricalCdf("long beta huge cdf(0.5+1e-5)", upper, samples, cdf_upper);
+        std.debug.print("long beta huge cdf: lower={d:.6} (cdf {d:.6}) upper={d:.6} (cdf {d:.6})\n", .{
+            @as(f64, @floatFromInt(lower)) / nf,
+            cdf_lower,
+            @as(f64, @floatFromInt(upper)) / nf,
+            cdf_upper,
+        });
     }
 
     // Continuous sampler CDF consistency at fixed thresholds.
