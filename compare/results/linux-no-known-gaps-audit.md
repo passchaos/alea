@@ -7091,5 +7091,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1559-validate-all-refresh.md`, and
 `compare/results/s4-m1560-binomial-walk-fill-setup.md`, and
 `compare/results/s4-m1561-validate-all-refresh.md`, and
-`compare/results/s4-m1562-binomial-stream-snapshots.md`.
+`compare/results/s4-m1562-binomial-stream-snapshots.md`, and
+`compare/results/s4-m1563-validate-all-refresh.md`.
 
