@@ -66556,6 +66556,71 @@ test "MatrixT 3x2 and InverseWishart 3x3 recover non-diagonal scales" {
     try std.testing.expectApproxEqAbs(U[1] * V[2] * factor, cross[3] / mt_nf, 0.15);
 }
 
+test "StaticWishart 3x3 and StaticMatrixT 3x2 recover non-diagonal scales" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x8f90);
+    const rng = Rng.init(&engine);
+
+    const V3 = [3][3]f64{
+        .{ 2, 0.3, 0.1 },
+        .{ 0.3, 1, 0.2 },
+        .{ 0.1, 0.2, 1.5 },
+    };
+    const sw = try StaticWishart(f64, 3).init(V3, 8);
+    const n = 40_000;
+    var s = [_]f64{0} ** 9;
+    var sq = [_]f64{0} ** 9;
+    for (0..n) |_| {
+        const x = sw.sample(rng);
+        const flat: *const [9]f64 = @ptrCast(&x);
+        for (0..9) |k| {
+            s[k] += flat[k];
+            sq[k] += flat[k] * flat[k];
+        }
+    }
+    const nf: f64 = @floatFromInt(n);
+    const Vf = [_]f64{ 2, 0.3, 0.1, 0.3, 1, 0.2, 0.1, 0.2, 1.5 };
+    inline for (0..9) |k| try std.testing.expectApproxEqAbs(8 * Vf[k], s[k] / nf, 0.15);
+    inline for ([_]usize{ 0, 1, 2, 4, 5, 8 }) |k| {
+        const i = k / 3;
+        const j = k % 3;
+        const mean = s[k] / nf;
+        const var_ref = 8 * (Vf[k] * Vf[k] + Vf[i * 3 + i] * Vf[j * 3 + j]);
+        try std.testing.expectApproxEqAbs(var_ref, sq[k] / nf - mean * mean, 0.05 * var_ref + 0.5);
+    }
+
+    const U = [3][3]f64{
+        .{ 2, 0.5, 0.2 },
+        .{ 0.5, 1, 0.3 },
+        .{ 0.2, 0.3, 1.5 },
+    };
+    const V2 = [2][2]f64{ .{ 3, 0.8 }, .{ 0.8, 2 } };
+    const mean = [3][2]f64{ .{ 0, 0 }, .{ 0, 0 }, .{ 0, 0 } };
+    const smt = try StaticMatrixT(f64, 3, 2).init(mean, U, V2, 8);
+    var msq = [_]f64{0} ** 4;
+    var mcross = [_]f64{0} ** 4;
+    for (0..n) |_| {
+        const x = smt.sample(rng);
+        msq[0] += x[0][0] * x[0][0];
+        msq[1] += x[0][1] * x[0][1];
+        msq[2] += x[1][0] * x[1][0];
+        msq[3] += x[1][1] * x[1][1];
+        mcross[0] += x[0][0] * x[0][1];
+        mcross[1] += x[0][0] * x[1][0];
+        mcross[2] += x[0][0] * x[1][1];
+        mcross[3] += x[0][1] * x[1][0];
+    }
+    const factor = 8.0 / 6.0;
+    try std.testing.expectApproxEqAbs(2 * 3 * factor, msq[0] / nf, 0.25);
+    try std.testing.expectApproxEqAbs(2 * 2 * factor, msq[1] / nf, 0.25);
+    try std.testing.expectApproxEqAbs(1 * 3 * factor, msq[2] / nf, 0.2);
+    try std.testing.expectApproxEqAbs(1 * 2 * factor, msq[3] / nf, 0.2);
+    try std.testing.expectApproxEqAbs(2 * 0.8 * factor, mcross[0] / nf, 0.2);
+    try std.testing.expectApproxEqAbs(0.5 * 3 * factor, mcross[1] / nf, 0.2);
+    try std.testing.expectApproxEqAbs(0.5 * 0.8 * factor, mcross[2] / nf, 0.15);
+    try std.testing.expectApproxEqAbs(0.5 * 0.8 * factor, mcross[3] / nf, 0.15);
+}
+
 test "Wishart (dynamic) sampleInto and clone work" {
     const alea = @import("root.zig");
     const allocator = std.testing.allocator;
