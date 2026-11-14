@@ -198,37 +198,45 @@ fn normPdfImpl(comptime PeerType: type, x: PeerType) PeerType {
 // Φ(x) accurate to ~7.5e-8 everywhere. This is more than sufficient for
 // truncated normal inverse-CDF sampling where Acklam probit already dominates
 // numerical error at ~1e-9 in the body and ~1e-4 in the extreme tails.
-fn erfAbramowitzStegun(x: f64) f64 {
-    // Exact at symmetry point to avoid tiny polynomial bias.
-    if (x == 0) return 0;
+//
+// `erfComplementTerm` returns `1 − erf(ax)` for `ax ≥ 0` directly. Using it
+// for the negative-normal-CDF branch avoids the `1 + erf(x)` cancellation
+// that otherwise flushes the lower tail to zero below about `Φ(-8.5)`.
+fn erfComplementTerm(ax: f64) f64 {
     const p: f64 = 0.3275911;
     const a1: f64 = 0.254829592;
     const a2: f64 = -0.284496736;
     const a3: f64 = 1.421413741;
     const a4: f64 = -1.453152027;
     const a5: f64 = 1.061405429;
-    const sign: f64 = if (x < 0) -1.0 else 1.0;
-    const ax = @abs(x);
     const t = 1.0 / (1.0 + p * ax);
-    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-x * x);
-    return sign * y;
+    return (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-ax * ax);
+}
+
+fn erfAbramowitzStegun(x: f64) f64 {
+    // Exact at symmetry point to avoid tiny polynomial bias.
+    if (x == 0) return 0;
+    const sign: f64 = if (x < 0) -1.0 else 1.0;
+    return sign * (1.0 - erfComplementTerm(@abs(x)));
 }
 
 // f32 variant: same formula in f32 arithmetic, gives ~2e-5 max error,
 // adequate for f32 CDF composition with f32 probit.
-fn erfAbramowitzStegunF32(x: f32) f32 {
-    if (x == 0) return 0;
+fn erfComplementTermF32(ax: f32) f32 {
     const p: f32 = 0.3275911;
     const a1: f32 = 0.254829592;
     const a2: f32 = -0.284496736;
     const a3: f32 = 1.421413741;
     const a4: f32 = -1.453152027;
     const a5: f32 = 1.061405429;
-    const sign: f32 = if (x < 0) -1.0 else 1.0;
-    const ax = @abs(x);
     const t = 1.0 / (1.0 + p * ax);
-    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-x * x);
-    return sign * y;
+    return (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-ax * ax);
+}
+
+fn erfAbramowitzStegunF32(x: f32) f32 {
+    if (x == 0) return 0;
+    const sign: f32 = if (x < 0) -1.0 else 1.0;
+    return sign * (1.0 - erfComplementTermF32(@abs(x)));
 }
 
 /// Standard normal cumulative distribution function Φ(x) = ½·(1 + erf(x/√2)).
@@ -237,37 +245,40 @@ fn erfAbramowitzStegunF32(x: f32) f32 {
 pub fn normCdf(x: anytype) resolvedFloatType(@TypeOf(x)) {
     return normCdfImpl(resolvedFloatType(@TypeOf(x)), x);
 }
+fn normCdfScalarF64(x: f64) f64 {
+    // Use the complement form for negative x so the lower tail does not
+    // cancel to zero below Φ(-8.5); it resolves down to exp(-x²/2) underflow.
+    if (x < 0) return 0.5 * erfComplementTerm(-x * inv_sqrt_2);
+    return 0.5 * (1.0 + erfAbramowitzStegun(x * inv_sqrt_2));
+}
+
+fn normCdfScalarF32(x: f32) f32 {
+    const is2: f32 = @floatCast(inv_sqrt_2);
+    if (x < 0) return 0.5 * erfComplementTermF32(-x * is2);
+    return 0.5 * (1.0 + erfAbramowitzStegunF32(x * is2));
+}
+
 fn normCdfImpl(comptime PeerType: type, x: PeerType) PeerType {
     const T = @TypeOf(x);
     switch (@typeInfo(T)) {
         .float => {
-            if (T == f64) {
-                const half: f64 = 0.5;
-                const is2: f64 = inv_sqrt_2;
-                return half * (1.0 + erfAbramowitzStegun(x * is2));
-            } else {
-                const half: f32 = 0.5;
-                const is2: f32 = @floatCast(inv_sqrt_2);
-                return half * (1.0 + erfAbramowitzStegunF32(x * is2));
-            }
+            if (T == f64) return normCdfScalarF64(x);
+            return normCdfScalarF32(x);
         },
         .vector => |info| {
             const Child = info.child;
+            var result: T = undefined;
             if (Child == f64) {
                 // Per-lane f64; expand with inline for for reliable vectorization.
-                var result: T = undefined;
                 inline for (0..info.len) |lane| {
-                    result[lane] = 0.5 * (1.0 + erfAbramowitzStegun(x[lane] * inv_sqrt_2));
+                    result[lane] = normCdfScalarF64(x[lane]);
                 }
-                return result;
             } else {
-                var result: T = undefined;
-                const is2: f32 = @floatCast(inv_sqrt_2);
                 inline for (0..info.len) |lane| {
-                    result[lane] = 0.5 * (1.0 + erfAbramowitzStegunF32(x[lane] * is2));
+                    result[lane] = normCdfScalarF32(x[lane]);
                 }
-                return result;
             }
+            return result;
         },
         else => @compileError("normCdf requires a float or vector of floats"),
     }
@@ -63097,6 +63108,33 @@ test "normCdf matches known values" {
     const cdf_v = normCdf(v);
     inline for (0..4) |lane| {
         try std.testing.expectApproxEqAbs(@as(f64, 0.5), cdf_v[lane], 1e-12);
+    }
+}
+
+test "normCdf resolves the lower tail below 1e-16" {
+    // Φ(-8.5) ≈ 9.48e-18; the old 1+erf form flushed it to zero.
+    try std.testing.expect(normCdf(@as(f64, -8.5)) > 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 9.597079779620582e-18), normCdf(@as(f64, -8.5)), 5e-19);
+    // Φ(-12) ≈ 1.78e-33 and Φ(-20) ≈ 2.8e-89.
+    try std.testing.expectApproxEqAbs(@as(f64, 1.831577586760883e-33), normCdf(@as(f64, -12)), 1e-34);
+    try std.testing.expect(normCdf(@as(f64, -20)) > 0);
+    // Φ(-38) is subnormal but still positive; Φ(-39) underflows.
+    try std.testing.expect(normCdf(@as(f64, -38)) > 0);
+    try std.testing.expectEqual(@as(f64, 0), normCdf(@as(f64, -39)));
+
+    // SIMD lanes use the same branch, and f32 resolves the tail too.
+    const v: @Vector(4, f64) = .{ -8.5, -1, 1, 0 };
+    const c = normCdf(v);
+    try std.testing.expectApproxEqAbs(normCdf(@as(f64, -8.5)), c[0], 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), c[3], 1e-15);
+    try std.testing.expect(normCdf(@as(f32, -12)) > 0);
+}
+
+test "gammaQuantile resolves the lower tail for large shapes" {
+    inline for ([_]f64{ 1e-300, 1e-100, 1e-20 }) |q| {
+        const x = gammaQuantile(q, @as(f64, 1e6), @as(f64, 1));
+        const back = gammaCdf(x, @as(f64, 1e6), @as(f64, 1));
+        try std.testing.expectApproxEqRel(q, back, 1e-8);
     }
 }
 

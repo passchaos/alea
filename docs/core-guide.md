@@ -604,7 +604,11 @@ runtime float type, and explicit f32 arguments keep f32.
   `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`; log-normal uses
   `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
   masses. These inherit the `normCdf`/`probit` approximation accuracy
-  (~1e-7).
+  (~1e-7). `normCdf` uses the complement form for negative `x`, so the lower
+  tail resolves to subnormal values (`Φ(−38) ≈ 3e-316`) instead of flushing
+  to zero below `Φ(−8.5)`; this also lets large-shape gamma/chi-squared,
+  binomial, and negative-binomial normal fallbacks invert extreme lower-tail
+  quantiles.
 - advanced continuous: `betaPrimeCdf` / `betaPrimeQuantile`,
   `logLogisticCdf` / `logLogisticQuantile`, `inverseGammaCdf` /
   `inverseGammaQuantile`, `nakagamiCdf` / `nakagamiQuantile`, `exGaussianCdf` /
