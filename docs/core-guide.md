@@ -635,7 +635,11 @@ CDF and quantile helpers complement the samplers:
   squared Gaussian sum overflows, and `InverseGaussian` uses a
   parameter-only `sqrt(floatMax)/1600` guard whose cold path evaluates
   `√y·√(4·shape+y)` and `mean·(mean/x)`; the hot scalar/vector kernels stay
-  byte-identical below the guard.
+  byte-identical below the guard. `betaBinomialPmf`/`betaBinomialCdf` use the
+  stable log-factorial delta for the beta-function ratios (huge shapes) and
+  switch to the scaled-beta limit (`α+β ≤ n`) or `binomialCdf` (`n < α+β`)
+  above one million trials, so huge trial counts no longer stall the
+  recurrence.
 - Student-t / Fisher F: `studentTCdf`, `studentTQuantile`, `fisherFCdf`,
   `fisherFQuantile`.
 - discrete: `poissonCdf`, `poissonQuantile`, `binomialCdf`,

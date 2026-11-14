@@ -23352,13 +23352,12 @@ pub fn betaBinomialPmf(k: f64, trials: u64, alpha: f64, beta_param: f64) f64 {
     if (k < 0 or k > n) return 0;
     const floored = @floor(k);
     if (floored != k) return 0;
-    const log_pmf = std.math.lgamma(f64, n + 1) -
-        std.math.lgamma(f64, k + 1) -
-        std.math.lgamma(f64, n - k + 1) +
-        std.math.lgamma(f64, k + alpha) +
-        std.math.lgamma(f64, n - k + beta_param) -
-        std.math.lgamma(f64, n + alpha + beta_param) -
-        (std.math.lgamma(f64, alpha) + std.math.lgamma(f64, beta_param) - std.math.lgamma(f64, alpha + beta_param));
+    // Beta-function ratios via stable log-factorial deltas; direct lgamma
+    // differences cancel for huge shapes (alpha = beta = 1e300).
+    const log_pmf = logChoose(n, floored) -
+        hypergeometricLogFactorialDelta(alpha - 1, floored) -
+        hypergeometricLogFactorialDelta(beta_param - 1, n - floored) +
+        hypergeometricLogFactorialDelta(alpha + beta_param - 1, n);
     return @exp(log_pmf);
 }
 
@@ -23372,10 +23371,19 @@ pub fn betaBinomialCdf(k: f64, trials: u64, alpha: f64, beta_param: f64) f64 {
     if (trials == 0) return 1;
 
     const k_int: u64 = @intFromFloat(@floor(k));
-    var log_pmf = std.math.lgamma(f64, n + beta_param) +
-        std.math.lgamma(f64, alpha + beta_param) -
-        std.math.lgamma(f64, beta_param) -
-        std.math.lgamma(f64, n + alpha + beta_param);
+    if (trials > 1_000_000) {
+        // The exact recurrence is O(k) and would stall for huge trial counts.
+        // For `n ≫ α+β` the law is the scaled beta limit
+        // `P(X/n ≤ x) → I_x(α, β)`; for `n ≪ α+β` it is the binomial limit
+        // with `p = α/(α+β)`.
+        const shape_sum = alpha + beta_param;
+        if (shape_sum <= n) return betaCdf((@floor(k) + 0.5) / n, alpha, beta_param);
+        return binomialCdf(@floor(k), n, alpha / shape_sum);
+    }
+    // Stable initial log-PMF: lgamma(n+β) − lgamma(β) and
+    // lgamma(n+α+β) − lgamma(α+β) as log-factorial deltas.
+    var log_pmf = -hypergeometricLogFactorialDelta(beta_param - 1, n) +
+        hypergeometricLogFactorialDelta(alpha + beta_param - 1, n);
     var log_sum = log_pmf;
     var j: u64 = 0;
     while (j < k_int) : (j += 1) {
@@ -57725,6 +57733,30 @@ test "BetaBinomial pmf and cdf match the uniform and binomial limits" {
     try std.testing.expectEqual(@as(f64, 0), betaBinomialCdf(-1, 10, 2, 3));
     try std.testing.expectEqual(@as(f64, 1), betaBinomialCdf(10, 10, 2, 3));
     try std.testing.expect(std.math.isNan(betaBinomialPmf(3, 10, 0, 3)));
+}
+
+test "BetaBinomial huge shapes and huge trials stay finite" {
+    // Huge shapes converge to Binomial(10, 0.5).
+    const huge = try BetaBinomial.init(10, 1e300, 1e300);
+    try std.testing.expectApproxEqAbs(@as(f64, 638.0 / 1024.0), huge.cdf(5), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 386.0 / 1024.0), huge.cdf(4), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 252.0 / 1024.0), huge.pmf(5), 1e-12);
+    try std.testing.expectEqual(@as(f64, 5), huge.quantile(0.5));
+
+    // Huge trials with alpha = beta = 1 is the uniform limit; the exact
+    // recurrence would stall, so the scaled-beta limit is used.
+    const uniform_limit = try BetaBinomial.init(1_000_000_000_000_000_000, 1, 1);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), uniform_limit.cdf(2.5e17), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), uniform_limit.cdf(5e17), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 5e17), uniform_limit.quantile(0.5), 1e8);
+
+    // Huge trials with large shapes use the binomial limit.
+    const binomial_limit = try BetaBinomial.init(1_000_000_000_000, 1e6, 1e6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), binomial_limit.cdf(5e11), 1e-5);
+
+    // Tiny success probability uses the Poisson limit.
+    const poisson_limit = try BetaBinomial.init(1_000_000_000_000_000_000, 1, 1e30);
+    try std.testing.expectApproxEqAbs(@as(f64, 1), poisson_limit.cdf(0), 1e-9);
 }
 
 test "BetaBinomial quantile and sampler methods work" {
