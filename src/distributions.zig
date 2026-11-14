@@ -1009,6 +1009,10 @@ pub fn poissonQuantile(q: anytype, lambda: anytype) @TypeOf(q, lambda) {
 pub const hypergeometricExactSdLimit: f64 = 16384;
 
 /// Validated, floored hypergeometric diagnostics parameters and support bounds.
+///
+/// Populations above 2^53 cannot be resolved as integers in f64; the
+/// parameters are then treated as real-valued and the support bounds are the
+/// nearest representable values.
 fn hypergeometricDiagnosticSupport(population: f64, successes: f64, draws: f64) ?struct { N: f64, K: f64, n: f64, lo: f64, hi: f64 } {
     if (!std.math.isFinite(population) or !std.math.isFinite(successes) or !std.math.isFinite(draws)) return null;
     if (population < 0 or successes < 0 or draws < 0) return null;
@@ -1016,8 +1020,6 @@ fn hypergeometricDiagnosticSupport(population: f64, successes: f64, draws: f64) 
     const K = @floor(successes);
     const n = @floor(draws);
     if (K > N or n > N) return null;
-    // Integer populations above 2^53 are not exactly representable in f64.
-    if (N > 9007199254740992) return null;
     const failures = N - K;
     return .{
         .N = N,
@@ -1026,6 +1028,97 @@ fn hypergeometricDiagnosticSupport(population: f64, successes: f64, draws: f64) 
         .lo = if (n > failures) n - failures else 0,
         .hi = @min(K, n),
     };
+}
+
+/// Folded hypergeometric view `X = shift + Z` (both folds or neither) or
+/// `X = s − Z` (exactly one fold), where
+/// `Z ~ Hypergeometric(N, min(K, N−K), min(n, N−n))`.
+///
+/// The four symmetries of the hypergeometric law (`X ↔ n−X` with
+/// `K ↔ N−K`, and `X ↔ K−X` with `n ↔ N−n`) reduce both categories to the
+/// smaller side. That keeps the log-gamma PMF, the Poisson limit, and the
+/// normal approximation stable when the population or the counts are huge.
+const HypergeometricFold = struct {
+    /// `n + K − N`, the shift of the both-fold / neither-fold view.
+    shift: f64,
+    /// Folded successes and draws, each at most half the population.
+    successes: f64,
+    draws: f64,
+    fold_successes: bool,
+    fold_draws: bool,
+    /// Mean and standard deviation of the folded `Z`.
+    mean: f64,
+    sd: f64,
+    /// Relative category sizes of the folded view, in `[0, 0.5]`.
+    p: f64,
+    r: f64,
+
+    /// Exactly one fold complements the folded CDF: `P(X ≤ k) = 1 − P(Z ≤ j)`.
+    fn complemented(self: HypergeometricFold) bool {
+        return self.fold_successes != self.fold_draws;
+    }
+
+    /// Folded index of the original threshold `k` (floored).
+    fn index(self: HypergeometricFold, k: f64, K: f64, n: f64) f64 {
+        if (self.fold_successes and self.fold_draws) return k - self.shift;
+        if (self.fold_successes) return n - k - 1;
+        if (self.fold_draws) return K - k - 1;
+        return k;
+    }
+
+    /// Original threshold corresponding to the folded index `j`.
+    fn threshold(self: HypergeometricFold, j: f64, K: f64, n: f64) f64 {
+        if (self.fold_successes and self.fold_draws) return self.shift + j;
+        if (self.fold_successes) return n - 1 - j;
+        if (self.fold_draws) return K - 1 - j;
+        return j;
+    }
+
+    /// Largest folded index, `min(successes, draws)`.
+    fn maxIndex(self: HypergeometricFold) f64 {
+        return @min(self.successes, self.draws);
+    }
+};
+
+fn hypergeometricFold(N: f64, K: f64, n: f64) HypergeometricFold {
+    const fold_successes = K > N - K;
+    const fold_draws = n > N - n;
+    const successes = if (fold_successes) N - K else K;
+    const draws = if (fold_draws) N - n else n;
+    const p = successes / N;
+    const mean = draws * p;
+    const variance = mean * (1 - p) * (N - draws) / (N - 1);
+    return .{
+        .shift = n + K - N,
+        .successes = successes,
+        .draws = draws,
+        .fold_successes = fold_successes,
+        .fold_draws = fold_draws,
+        .mean = mean,
+        .sd = @sqrt(variance),
+        .p = p,
+        .r = draws / N,
+    };
+}
+
+const HypergeometricMethod = enum { exact, normal, poisson };
+
+/// Chooses the evaluation strategy for the folded view.
+///
+/// The exact tail summation is used while the population is at most 1e11 or
+/// the smaller folded category is at most 20000: log-gamma differences lose
+/// precision beyond that, while the product form stays accurate for short
+/// categories. In the unstable region the Poisson limit is used when the
+/// expected number of repeat hits (`mean·max(p, r)`) is well below the
+/// normal-approximation error `O(1/sd)`; otherwise the normal approximation
+/// with continuity correction is used.
+fn hypergeometricMethod(N: f64, fold: HypergeometricFold) HypergeometricMethod {
+    if (fold.sd > hypergeometricExactSdLimit) return .normal;
+    if (N > 1.0e11 and @min(fold.successes, fold.draws) > 20000) {
+        if (fold.sd > 0 and fold.mean * @max(fold.p, fold.r) <= 0.5 / fold.sd) return .poisson;
+        return .normal;
+    }
+    return .exact;
 }
 
 /// `log C(a, b)` via log-gamma differences.
@@ -1062,72 +1155,90 @@ fn hypergeometricLogPmf(N: f64, K: f64, n: f64, j: f64) f64 {
 /// Hypergeometric CDF `P(X ≤ k)` for `X ~ Hypergeometric(population,
 /// successes, draws)`.
 ///
-/// The exact path sums the shorter PMF tail with the ratio recurrence
-/// `P(j−1)/P(j) = j·(N−K−n+j) / ((K−j+1)·(n−j+1))` (and its upward mirror),
-/// starting at `k` or `k+1` and stopping once the geometric bound on the
-/// remaining tail drops below double-precision resolution. The cost is
-/// `O(σ·√ln(1/ε))` rather than `O(support width)`. When
-/// `σ > hypergeometricExactSdLimit` the normal approximation with continuity
-/// correction is used; its error is `O(1/σ)` near the mode and grows in the
-/// far tails. Populations above 2^53 are not exactly representable as
-/// integers and return NaN.
+/// The exact path folds both categories onto their smaller side
+/// (`min(K, N−K)` successes and `min(n, N−n)` draws, which leaves the law
+/// unchanged up to a reflection) and sums the shorter PMF tail with the ratio
+/// recurrence `P(j−1)/P(j) = j·(N−K−n+j) / ((K−j+1)·(n−j+1))` (and its
+/// upward mirror), starting at the folded threshold and stopping once the
+/// geometric bound on the remaining tail drops below double-precision
+/// resolution. The cost is `O(σ·√ln(1/ε))` rather than `O(support width)`.
+///
+/// When `σ > hypergeometricExactSdLimit` the normal approximation with
+/// continuity correction is used; its error is `O(1/σ)` near the mode and
+/// grows in the far tails. Populations above 1e11 with both folded categories
+/// above 20000 leave the log-gamma PMF without enough precision: there the
+/// Poisson limit `Poisson(min(n, N−n)·min(K, N−K)/N)` is used when repeat
+/// hits are negligible, and the normal approximation otherwise. Populations
+/// above 2^53 are treated as real-valued, so the integer support is resolved
+/// only to the nearest representable f64.
 pub fn hypergeometricCdf(k: anytype, population: anytype, successes: anytype, draws: anytype) @TypeOf(k, population, successes, draws) {
     const T = @TypeOf(k, population, successes, draws);
     comptime requireFloat(T);
     const k_f: f64 = @floatCast(k);
     if (std.math.isNan(k_f)) return @floatCast(std.math.nan(f64));
     const params = hypergeometricDiagnosticSupport(@floatCast(population), @floatCast(successes), @floatCast(draws)) orelse return @floatCast(std.math.nan(f64));
-    if (k_f < params.lo) return 0;
-    if (k_f >= params.hi) return 1;
 
     const N = params.N;
     const K = params.K;
     const n = params.n;
-    const mean = n * K / N;
-    const p = K / N;
-    const variance = n * p * (1 - p) * (N - n) / (N - 1);
-    const sd = @sqrt(variance);
+    const fold = hypergeometricFold(N, K, n);
     const kf = @floor(k_f);
-    if (sd > hypergeometricExactSdLimit) {
-        return @floatCast(normCdf((kf + 0.5 - mean) / sd));
+    const j = fold.index(kf, K, n);
+    const hi = fold.maxIndex();
+    if (j < 0) return if (fold.complemented()) 1 else 0;
+    if (j >= hi) return if (fold.complemented()) 0 else 1;
+
+    const method = hypergeometricMethod(N, fold);
+    const mean_x = n * (K / N);
+    if (method == .normal) {
+        if (!(fold.sd > 0)) return @floatCast(if (kf + 0.5 <= mean_x) @as(f64, 0) else 1);
+        return @floatCast(normCdf((kf + 0.5 - mean_x) / fold.sd));
+    }
+    if (method == .poisson) {
+        const value = poissonCdf(j, fold.mean);
+        return @floatCast(if (fold.complemented()) 1 - value else value);
     }
 
     const eps = 64 * std.math.floatEps(f64);
-    if (kf < mean) {
-        // Lower tail: start at kf and walk down to the support minimum.
-        var term = @exp(hypergeometricLogPmf(N, K, n, kf));
+    if (j < fold.mean) {
+        // Lower tail of the folded view: walk down to the support minimum.
+        var term = @exp(hypergeometricLogPmf(N, fold.successes, fold.draws, j));
         var sum = term;
-        var j = kf;
-        while (j > params.lo) {
-            const ratio = (j * (N - K - n + j)) / ((K - j + 1) * (n - j + 1));
+        var i = j;
+        while (i > 0) {
+            const ratio = (i * (N - fold.successes - fold.draws + i)) /
+                ((fold.successes - i + 1) * (fold.draws - i + 1));
             term *= ratio;
             sum += term;
-            j -= 1;
+            i -= 1;
             if (term * ratio <= sum * eps * (1 - ratio)) break;
         }
-        return @floatCast(sum);
+        return @floatCast(if (fold.complemented()) 1 - sum else sum);
     }
 
-    // Upper tail: start at kf+1 and walk up, then complement.
-    var term = @exp(hypergeometricLogPmf(N, K, n, kf + 1));
+    // Upper tail of the folded view: walk up, then complement.
+    var term = @exp(hypergeometricLogPmf(N, fold.successes, fold.draws, j + 1));
     var sum = term;
-    var j = kf + 1;
-    while (j < params.hi) {
-        const ratio = ((K - j) * (n - j)) / ((j + 1) * (N - K - n + j + 1));
+    var i = j + 1;
+    while (i < hi) {
+        const ratio = ((fold.successes - i) * (fold.draws - i)) /
+            ((i + 1) * (N - fold.successes - fold.draws + i + 1));
         term *= ratio;
         sum += term;
-        j += 1;
+        i += 1;
         if (term * ratio <= sum * eps * (1 - ratio)) break;
     }
-    return @floatCast(1 - sum);
+    return @floatCast(if (fold.complemented()) sum else 1 - sum);
 }
 
 /// Smallest integer `k` with `hypergeometricCdf(k, population, successes,
 /// draws) ≥ q`.
 ///
-/// Deterministic bisection over the integer support; in the large-σ regime it
-/// returns the quantile of the same normal approximation used by
-/// `hypergeometricCdf`, so the two helpers stay consistent.
+/// Deterministic bisection over the folded integer support. In the large-σ
+/// regime it returns the quantile of the same normal approximation used by
+/// `hypergeometricCdf`; in the huge-population Poisson regime it inverts the
+/// Poisson limit. Populations above 2^53 are treated as real-valued, so the
+/// returned threshold is the nearest representable f64.
 pub fn hypergeometricQuantile(q: anytype, population: anytype, successes: anytype, draws: anytype) @TypeOf(q, population, successes, draws) {
     const T = @TypeOf(q, population, successes, draws);
     comptime requireFloat(T);
@@ -1135,18 +1246,58 @@ pub fn hypergeometricQuantile(q: anytype, population: anytype, successes: anytyp
     if (!(q_f >= 0 and q_f <= 1)) return @floatCast(std.math.nan(f64));
     const params = hypergeometricDiagnosticSupport(@floatCast(population), @floatCast(successes), @floatCast(draws)) orelse return @floatCast(std.math.nan(f64));
     if (q_f == 0) return @floatCast(params.lo);
+    if (q_f == 1) return @floatCast(params.hi);
 
-    var lo: u64 = @intFromFloat(params.lo);
-    var hi: u64 = @intFromFloat(params.hi);
-    while (lo < hi) {
-        const mid = lo + (hi - lo) / 2;
-        if (hypergeometricCdf(@as(f64, @floatFromInt(mid)), params.N, params.K, params.n) < q_f) {
-            lo = mid + 1;
+    const N = params.N;
+    const K = params.K;
+    const n = params.n;
+    const fold = hypergeometricFold(N, K, n);
+    const method = hypergeometricMethod(N, fold);
+    const mean_x = n * (K / N);
+
+    if (method == .normal) {
+        if (!(fold.sd > 0)) return @floatCast(@min(@max(mean_x, params.lo), params.hi));
+        const z = probitF64(q_f);
+        const k = @ceil(mean_x + fold.sd * z - 0.5);
+        return @floatCast(@min(@max(k, params.lo), params.hi));
+    }
+    if (method == .poisson) {
+        if (!fold.complemented()) {
+            const j = poissonQuantile(q_f, fold.mean);
+            const k = fold.threshold(j, K, n);
+            return @floatCast(@min(@max(k, params.lo), params.hi));
+        }
+        // Complemented view: `P(X ≤ k) = 1 − F(j)` with `j = s − 1 − k`.
+        // The smallest such `k` uses the largest `j` with `F(j) ≤ 1 − q`.
+        const s = if (fold.fold_successes) n else K;
+        const target = 1 - q_f;
+        const j0 = poissonQuantile(target, fold.mean);
+        const j1 = if (poissonCdf(j0, fold.mean) > target) j0 else j0 + 1;
+        return @floatCast(@min(@max(s - j1, params.lo), params.hi));
+    }
+
+    // Exact bisection over the folded support: it is at most 20000, or the
+    // population itself is at most 1e11, so it always fits in u64.
+    const hi_j: u64 = @intFromFloat(fold.maxIndex());
+    var lo: u64 = 0;
+    var high: u64 = hi_j + 1;
+    while (lo < high) {
+        const mid = lo + (high - lo) / 2;
+        const k_mid = fold.threshold(@floatFromInt(mid), K, n);
+        const below = hypergeometricCdf(k_mid, params.N, params.K, params.n) < q_f;
+        if (fold.complemented()) {
+            // The folded CDF decreases in `j`: find the first index that
+            // drops below `q`, one past the target threshold.
+            if (below) high = mid else lo = mid + 1;
         } else {
-            hi = mid;
+            if (below) lo = mid + 1 else high = mid;
         }
     }
-    return @floatCast(@as(f64, @floatFromInt(lo)));
+    const k = if (fold.complemented())
+        (if (fold.fold_successes) n else K) - @as(f64, @floatFromInt(lo))
+    else
+        fold.threshold(@floatFromInt(lo), K, n);
+    return @floatCast(@min(@max(k, params.lo), params.hi));
 }
 
 /// Generalized harmonic number `H(x, s) = Σ_{j=1}^{x} j^{-s}` for
@@ -55953,6 +56104,46 @@ test "hypergeometricCdf large-population paths" {
     // N=1e12 with three successes uses the product-form log-PMF:
     // pmf(0) = (1 − 3/N)^n·(1 + O(1/N)) = 0.995³.
     try std.testing.expectApproxEqAbs(@as(f64, 0.985074875), hypergeometricCdf(@as(f64, 0), @as(f64, 1e12), @as(f64, 3), @as(f64, 5e9)), 1e-9);
+}
+
+test "hypergeometricCdf and hypergeometricQuantile beyond 2^53" {
+    // Balanced huge population: σ = 1.5e8, so the normal fallback is used.
+    const population: f64 = 1e18;
+    const successes: f64 = 1e17;
+    const draws: f64 = 5e17;
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), hypergeometricCdf(@as(f64, 5e16), population, successes, draws), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8413447460685429), hypergeometricCdf(@as(f64, 5e16 + 1.5e8), population, successes, draws), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.15865525393145707), hypergeometricCdf(@as(f64, 5e16 - 1.5e8), population, successes, draws), 1e-4);
+    try std.testing.expectEqual(@as(f64, 5e16), hypergeometricQuantile(@as(f64, 0.5), population, successes, draws));
+    try std.testing.expectApproxEqAbs(@as(f64, 5e16 + 1.959963984540054 * 1.5e8), hypergeometricQuantile(@as(f64, 0.975), population, successes, draws), 64);
+    inline for ([_]f64{ 0.01, 0.25, 0.5, 0.75, 0.99 }) |q| {
+        try std.testing.expect(hypergeometricCdf(hypergeometricQuantile(q, population, successes, draws), population, successes, draws) >= q - 1e-6);
+    }
+
+    // Rare-success huge population: the Poisson limit covers the same regime
+    // as the huge sampler. P(Poisson(100) ≤ 100) = 0.5265621985299984.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5265621985299984), hypergeometricCdf(@as(f64, 100), @as(f64, 1e18), @as(f64, 1e10), @as(f64, 1e10)), 1e-8);
+    try std.testing.expectEqual(@as(f64, 100), hypergeometricQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 1e10), @as(f64, 1e10)));
+
+    // Log-gamma differences lose all precision at N > 1e11 when both folded
+    // categories exceed 20000; the Poisson limit restores the references
+    // P(Poisson(0.001) = 0) = 0.999000499833375 and P(Poisson(1) ≤ 1) = 2/e.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.999000499833375), hypergeometricCdf(@as(f64, 0), @as(f64, 1e15), @as(f64, 1e6), @as(f64, 1e6)), 1e-9);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7357588823428847), hypergeometricCdf(@as(f64, 1), @as(f64, 1e12), @as(f64, 1e6), @as(f64, 1e6)), 1e-9);
+
+    // Near-full draws fold to the undrawn complement: X = K − Z with
+    // Z ~ Hypergeometric(1e18, 1e6, 1e10), so P(X ≤ 999999) = 1 − e^-0.01.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.009950166250831893), hypergeometricCdf(@as(f64, 999999), @as(f64, 1e18), @as(f64, 1e6), @as(f64, 1e18 - 1e10)), 1e-9);
+    try std.testing.expectEqual(@as(f64, 999999), hypergeometricQuantile(@as(f64, 0.005), @as(f64, 1e18), @as(f64, 1e6), @as(f64, 1e18 - 1e10)));
+    try std.testing.expectEqual(@as(f64, 1e6), hypergeometricQuantile(@as(f64, 0.5), @as(f64, 1e18), @as(f64, 1e6), @as(f64, 1e18 - 1e10)));
+
+    // Exact four-fold symmetry on a small population: N=10, K=7, n=8 gives
+    // X = 5 + Z with Z ~ Hypergeometric(10, 3, 2), pmf {21, 21, 3}/45.
+    try std.testing.expectApproxEqAbs(@as(f64, 21.0 / 45.0), hypergeometricCdf(@as(f64, 5), @as(f64, 10), @as(f64, 7), @as(f64, 8)), 1e-14);
+    try std.testing.expectApproxEqAbs(@as(f64, 42.0 / 45.0), hypergeometricCdf(@as(f64, 6), @as(f64, 10), @as(f64, 7), @as(f64, 8)), 1e-14);
+    try std.testing.expectEqual(@as(f64, 1), hypergeometricCdf(@as(f64, 7), @as(f64, 10), @as(f64, 7), @as(f64, 8)));
+    try std.testing.expectEqual(@as(f64, 5), hypergeometricQuantile(@as(f64, 0.1), @as(f64, 10), @as(f64, 7), @as(f64, 8)));
+    try std.testing.expectEqual(@as(f64, 6), hypergeometricQuantile(@as(f64, 0.5), @as(f64, 10), @as(f64, 7), @as(f64, 8)));
 }
 
 test "zipfCdf and zipfQuantile match generalized harmonic values" {

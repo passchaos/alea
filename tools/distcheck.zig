@@ -808,6 +808,30 @@ fn checkDiscrete() !void {
         }
     }.sample, 2.4, 2.6);
 
+    // Huge-population CDF and quantile: normal fallback above 2^53, the
+    // Poisson limit for rare categories, and the near-full-draws complement.
+    {
+        const population: f64 = 1e18;
+        const successes: f64 = 1e17;
+        const draws: f64 = 5e17;
+        var q: f64 = 0.05;
+        while (q < 1) : (q += 0.1) {
+            const k = alea.distributions.hypergeometricQuantile(q, population, successes, draws);
+            try expectFloatBetween("hypergeometric huge quantile", alea.distributions.hypergeometricCdf(k, population, successes, draws), q - 1e-6, 1.0);
+            try expectFloatBetween("hypergeometric huge quantile tail", alea.distributions.hypergeometricCdf(k - 1e7, population, successes, draws), 0.0, q - 1e-3);
+        }
+        try expectFloatBetween("hypergeometric huge median", alea.distributions.hypergeometricQuantile(0.5, population, successes, draws), 5e16 - 1, 5e16 + 1);
+
+        const rare_successes: f64 = 1e10;
+        const rare_draws: f64 = 1e10;
+        try expectFloatBetween("hypergeometric huge rare cdf", alea.distributions.hypergeometricCdf(@as(f64, 100), population, rare_successes, rare_draws), 0.5265, 0.5267);
+        try expectFloatBetween("hypergeometric huge rare median", alea.distributions.hypergeometricQuantile(0.5, population, rare_successes, rare_draws), 99, 101);
+
+        const near_full = 1e18 - 1e10;
+        try expectFloatBetween("hypergeometric huge folded cdf", alea.distributions.hypergeometricCdf(@as(f64, 999999), population, 1e6, near_full), 0.0099, 0.0100);
+        try expectFloatBetween("hypergeometric huge folded quantile", alea.distributions.hypergeometricQuantile(0.5, population, 1e6, near_full), 1e6 - 1, 1e6 + 1);
+    }
+
     // Hypergeometric CDF agrees with empirical frequencies.
     {
         const dist = try alea.distributions.Hypergeometric.init(100, 30, 10);
@@ -2115,9 +2139,44 @@ fn checkLongRun(samples: usize) !void {
         var engine = alea.FastPrng.init(0x10dc);
         const rng = alea.Rng.init(&engine);
         var sum: f64 = 0;
+        var below: usize = 0;
+        var above: usize = 0;
         var i: usize = 0;
-        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.hypergeometric(rng, 1_000_000_000_000_000_000, 100_000_000_000_000_000, 500_000_000_000_000_000));
+        while (i < samples) : (i += 1) {
+            const x = alea.distributions.hypergeometric(rng, 1_000_000_000_000_000_000, 100_000_000_000_000_000, 500_000_000_000_000_000);
+            sum += @floatFromInt(x);
+            if (x <= 49_999_999_900_000_000) below += 1;
+            if (x <= 50_000_000_100_000_000) above += 1;
+        }
         try expectFloatBetween("long hypergeometric huge", sum / nf, 4.9999e16, 5.0001e16);
+        // Normal fallback at ±⅔σ: Φ(−2/3) and Φ(2/3).
+        const cdf_below = alea.distributions.hypergeometricCdf(@as(f64, 49_999_999_900_000_000), @as(f64, 1e18), @as(f64, 1e17), @as(f64, 5e17));
+        const cdf_above = alea.distributions.hypergeometricCdf(@as(f64, 50_000_000_100_000_000), @as(f64, 1e18), @as(f64, 1e17), @as(f64, 5e17));
+        try expectEmpiricalCdf("long hypergeometric huge cdf(mean−1e8)", below, samples, cdf_below);
+        try expectEmpiricalCdf("long hypergeometric huge cdf(mean+1e8)", above, samples, cdf_above);
+        std.debug.print("long hypergeometric huge cdf: below={d:.6} (cdf {d:.6}) above={d:.6} (cdf {d:.6})\n", .{
+            @as(f64, @floatFromInt(below)) / nf,
+            cdf_below,
+            @as(f64, @floatFromInt(above)) / nf,
+            cdf_above,
+        });
+    }
+    {
+        // Rare-category huge population: the Poisson limit shares its
+        // regime with the H2PE sampler.
+        var engine = alea.FastPrng.init(0x10df);
+        const rng = alea.Rng.init(&engine);
+        var hits: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            if (alea.distributions.hypergeometric(rng, 1_000_000_000_000_000_000, 10_000_000_000, 10_000_000_000) <= 100) hits += 1;
+        }
+        const cdf_rare = alea.distributions.hypergeometricCdf(@as(f64, 100), @as(f64, 1e18), @as(f64, 1e10), @as(f64, 1e10));
+        try expectEmpiricalCdf("long hypergeometric huge rare cdf(100)", hits, samples, cdf_rare);
+        std.debug.print("long hypergeometric huge rare cdf: empirical={d:.6} (cdf {d:.6})\n", .{
+            @as(f64, @floatFromInt(hits)) / nf,
+            cdf_rare,
+        });
     }
     {
         var engine = alea.FastPrng.init(0x10dd);

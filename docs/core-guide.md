@@ -605,13 +605,21 @@ CDF and quantile helpers complement the samplers:
   `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`, and the sampler switches to the
   exact gamma-Poisson mixture for `r ≥ 2^20` so huge success counts stay
   `O(1)` instead of a per-success loop; the
-  hypergeometric helpers sum the shorter PMF tail exactly and switch to a
-  normal approximation with continuity correction above
-  `hypergeometricExactSdLimit` (σ = 16384), while the `Hypergeometric`
-  sampler's H2PE envelope uses a stable log-PMF ratio for populations at or
-  above 1e12 and its inverse transform starts from a `log1p` limit for
-  products longer than 1e6, so huge-population draws stay finite instead of
-  degrading to the per-draw loop; the Zipf/Zeta helpers use a
+  hypergeometric helpers fold both categories onto their smaller side
+  (`min(K, N−K)` successes and `min(n, N−n)` draws), sum the shorter folded
+  PMF tail exactly, and switch to a normal approximation with continuity
+  correction above `hypergeometricExactSdLimit` (σ = 16384); populations
+  above 1e11 whose folded categories both exceed 20000 lose log-gamma
+  precision, so they use the Poisson limit when the expected repeat hits
+  `mean·max(p, r)` stay small and the normal approximation otherwise, and
+  populations above 2^53 are treated as real-valued instead of returning
+  NaN; `hypergeometricQuantile` inverts the same strategy (closed-form
+  normal, Poisson inverse, or bisection over the folded support), while the
+  `Hypergeometric` sampler's H2PE envelope uses a stable log-PMF ratio for
+  populations at or above 1e12 and its inverse transform starts from a
+  `log1p` limit for products longer than 1e6, so huge-population draws stay
+  finite instead of degrading to the per-draw loop; the Zipf/Zeta helpers
+  use a
   128-term direct prefix plus Euler–Maclaurin harmonic numbers (and
   `riemannZetaApprox` for infinite support) and cap representable quantiles
   at 2^53.
