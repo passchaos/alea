@@ -555,13 +555,19 @@ adoption examples covering static/dynamic copulas and matrix-normal sampling.
 CDF and quantile helpers complement the samplers:
 
 - normal: `normCdf`, `probit`.
-- beta: `betaIncomplete`, `betaCdf`, `betaQuantile`.
+- beta: `betaIncomplete`, `betaCdf`, `betaQuantile`; `betaIncomplete` uses the
+  exact closed forms for `a = 1` and `b = 1`, switches to a normal
+  approximation with the first Edgeworth correction once `a + b ≥ 1e7` (the
+  continued fraction overflows there), and keeps the continued fraction
+  elsewhere.
 - gamma family: `gammaIncompleteP`, `gammaIncompleteQ`, `gammaCdf`,
   `gammaQuantile`, `chiSquaredCdf`, `chiSquaredQuantile`, `chiCdf`,
   `chiQuantile`, `erlangCdf`, `erlangQuantile`, `maxwellCdf`,
   `maxwellQuantile`; the Maxwell and Chi helpers share the chi-squared
-  incomplete-gamma form, and Erlang delegates to the Gamma helpers after
-  integer-shape validation.
+  incomplete-gamma form, Erlang delegates to the Gamma helpers after
+  integer-shape validation, and shapes at or above `1e4` use the
+  Wilson-Hilferty cube-root normal approximation, whose error is `O(1/a)`
+  instead of the series/continued-fraction overflow at that scale.
 - normal-derived: `exponentialCdf` / `exponentialQuantile`, `logNormalCdf` /
   `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`; log-normal uses
   `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
@@ -593,6 +599,8 @@ CDF and quantile helpers complement the samplers:
   `n·p·(1−p) ≥ 1e7`, and keep the exact incomplete-beta path elsewhere; the
   quantile bisection indexes `usize`, so `binomialQuantile` returns NaN when
   `n` exceeds `maxInt(usize)` (relevant on 32-bit targets); the
+  negative-binomial helper switches to the gamma limit
+  `P(Gamma(r) ≤ (k+1)·p)` when `r·p ≤ 1e-6`; the
   hypergeometric helpers sum the shorter PMF tail exactly and switch to a
   normal approximation with continuity correction above
   `hypergeometricExactSdLimit` (σ = 16384), while the Zipf/Zeta helpers use a

@@ -426,7 +426,10 @@ fn betaContinuedFraction(comptime T: type, x: T, a: T, b: T) T {
 
 /// Regularized incomplete beta function I_x(a, b) for 0 ≤ x ≤ 1 and a, b > 0.
 /// Uses the continued-fraction representation with the symmetry
-/// I_x(a, b) = 1 − I_{1−x}(b, a) for numerical stability.
+/// I_x(a, b) = 1 − I_{1−x}(b, a) for numerical stability. The integer-shape
+/// special cases are exact, and huge `a + b` switches to a normal
+/// approximation with the first Edgeworth correction because the continued
+/// fraction overflows there.
 pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
     const T = @TypeOf(x, a, b);
     comptime requireFloat(T);
@@ -434,6 +437,20 @@ pub fn betaIncomplete(x: anytype, a: anytype, b: anytype) @TypeOf(x, a, b) {
     if (!(x >= 0)) return std.math.nan(T);
     if (x == 0) return 0;
     if (x >= 1) return 1;
+
+    if (a == 1) return -std.math.expm1(b * std.math.log1p(-x));
+    if (b == 1) return std.math.pow(T, x, a);
+
+    const sum = a + b;
+    if (sum >= 1.0e7) {
+        const mean = a / sum;
+        const variance = a * b / (sum * sum * (sum + 1));
+        const sd = @sqrt(variance);
+        const z = (x - mean) / sd;
+        const skew = 2 * (b - a) * @sqrt(sum + 1) / ((sum + 2) * @sqrt(a * b));
+        const corrected = normCdf(z) + skew / 6 * (1 - z * z) * normPdf(z);
+        return std.math.clamp(corrected, 0, 1);
+    }
 
     const log_beta = std.math.lgamma(T, a) + std.math.lgamma(T, b) - std.math.lgamma(T, a + b);
     const front = @exp(a * @log(x) + b * std.math.log1p(-x) - log_beta);
@@ -720,6 +737,14 @@ fn gammaContinuedFractionQ(comptime T: type, a: T, x: T) T {
     return @exp(log_prefactor) * h;
 }
 
+/// Wilson-Hilferty z-score for large gamma shapes: the cube-root transform
+/// keeps the normal approximation error `O(1/a)` instead of `O(1/√a)`.
+inline fn gammaLargeShapeZ(comptime T: type, a: T, x: T) T {
+    const mean = 1 - 1 / (9 * a);
+    const sd = 1 / (3 * @sqrt(a));
+    return (std.math.cbrt(x / a) - mean) / sd;
+}
+
 /// Regularized lower incomplete gamma P(a, x) = γ(a, x)/Γ(a).
 pub fn gammaIncompleteP(a: anytype, x: anytype) @TypeOf(a, x) {
     const T = @TypeOf(a, x);
@@ -728,6 +753,7 @@ pub fn gammaIncompleteP(a: anytype, x: anytype) @TypeOf(a, x) {
     if (std.math.isNan(x)) return std.math.nan(T);
     if (x <= 0) return 0;
     if (x == std.math.inf(T)) return 1;
+    if (a >= 1.0e4) return normCdf(gammaLargeShapeZ(T, a, x));
     if (x < a + 1) return gammaSeriesP(T, a, x);
     return 1 - gammaContinuedFractionQ(T, a, x);
 }
@@ -740,6 +766,7 @@ pub fn gammaIncompleteQ(a: anytype, x: anytype) @TypeOf(a, x) {
     if (std.math.isNan(x)) return std.math.nan(T);
     if (x <= 0) return 1;
     if (x == std.math.inf(T)) return 0;
+    if (a >= 1.0e4) return normCdf(-gammaLargeShapeZ(T, a, x));
     if (x < a + 1) return 1 - gammaSeriesP(T, a, x);
     return gammaContinuedFractionQ(T, a, x);
 }
@@ -911,6 +938,9 @@ pub fn negativeBinomialCdf(k: anytype, successes: anytype, p: anytype) @TypeOf(k
     if (k == std.math.inf(T)) return 1;
     if (p == 0) return 0;
     if (p == 1) return 1;
+    // Tiny success probability: `I_p(successes, k+1)` tends to the gamma
+    // limit `P(Gamma(successes) ≤ k·p)` with an `O(successes·p)` error.
+    if (successes * p <= 1.0e-6) return gammaIncompleteP(successes, (@floor(k) + 1) * p);
     return betaIncomplete(p, successes, @floor(k) + 1);
 }
 
@@ -55582,6 +55612,23 @@ test "gammaIncompleteP and gammaIncompleteQ match known values" {
     try std.testing.expectApproxEqAbs(@as(f32, 0.63212055), gammaIncompleteP(@as(f32, 1), @as(f32, 1)), 1e-5);
     try std.testing.expect(std.math.isNan(gammaIncompleteP(@as(f64, 0), @as(f64, 1))));
     try std.testing.expectEqual(@as(f64, 0), gammaIncompleteP(@as(f64, 2), @as(f64, 0)));
+}
+
+test "incomplete gamma and beta stay stable for huge parameters" {
+    // Wilson-Hilferty gamma fallback: Q(a,a) = 0.5 - pdf(a)/3 + O(1/a).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.498670), gammaIncompleteQ(@as(f64, 1e4), @as(f64, 1e4)), 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.499579), gammaIncompleteQ(@as(f64, 1e5), @as(f64, 1e5)), 1e-5);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), gammaIncompleteQ(@as(f64, 1e9), @as(f64, 1e9)), 1e-4);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), poissonCdf(@as(f64, 1e8), @as(f64, 1e8)), 1e-3);
+
+    // Huge symmetric beta.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(@as(f64, 0.5), @as(f64, 1e7), @as(f64, 1e7)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), betaIncomplete(@as(f64, 0.5), @as(f64, 1e9), @as(f64, 1e9)), 1e-6);
+
+    // Exact `a == 1` special case and the tiny-p negative-binomial limit.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), betaIncomplete(@as(f64, 1e-18), @as(f64, 1), @as(f64, 1e18)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), negativeBinomialCdf(@as(f64, 1e18), @as(f64, 1), @as(f64, 1e-18)), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5595067), negativeBinomialCdf(@as(f64, 1e18), @as(f64, 5), @as(f64, 5e-18)), 1e-4);
 }
 
 test "gammaCdf and gammaQuantile round-trip" {
