@@ -104,6 +104,20 @@ machinery. The adapter owns value sources, borrows pointer
 sources, fills `std.Io.Reader` destinations completely, and records the
 underlying error in `lastError()` when a fallible source reports one through
 `tryFillBytes`, `tryNextU64`, or `tryNext`.
+`Rng.ReseedingRng(Engine)` (also `rngs.ReseedingRng`) wraps a fast
+deterministic engine and reseeds it from a source RNG after exactly
+`reseed_threshold` raw draws with `Engine.seedFromU64(reseeder.nextU64())`;
+`reseedCount()`, `thresholdValue()`, and `remainingDraws()` expose the cadence,
+byte fills never cross a reseed boundary, and `enginePtr()` borrows the wrapped
+state for diagnostics. `Rng.ReaderRng` (also `rngs.ReaderRng`) is the inverse
+adapter: it turns a `std.Io.Reader` byte stream into an engine-like source with
+little-endian `next`/`nextU64` (8 bytes), `nextU32` (4 bytes), byte
+`fill`/`fillBytes`, and fallible `tryNext`/`tryFillBytes` for replaying
+captured randomness, with the infallible surface panicking on short reads.
+Use the root `readerRng(reader)` constructor to build one directly. Both
+adapters expose `random()` so `std.Random` views and `Rng.init`/`RngOf` work
+unchanged, and `prelude.ReseedingRng` / `prelude.ReaderRng` expose the names
+for facade-style code.
 
 ## Seeding
 
