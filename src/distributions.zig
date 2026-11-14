@@ -28821,10 +28821,18 @@ pub fn unitBallVolumeFrom(source: anytype, comptime T: type, comptime n: usize) 
     }
     if (comptime n == 3) return unitBallFrom(source, T);
 
-    // General n-dimensional case
+    // General n-dimensional case: uniform direction on S^{n-1} scaled by
+    // r = U^{1/n}. Fourth and eighth roots have exact repeated-square-root
+    // forms; other dimensions use one log and one exp instead of the generic
+    // power routine.
     var point = unitSphereSurfaceFrom(source, T, n);
     const u = Rng.floatFrom(source, T);
-    const scale = std.math.pow(T, u, 1.0 / @as(T, @floatFromInt(n)));
+    const scale = if (comptime n == 4)
+        @sqrt(@sqrt(u))
+    else if (comptime n == 8)
+        @sqrt(@sqrt(@sqrt(u)))
+    else
+        @exp(@log(u) / @as(T, @floatFromInt(n)));
     inline for (0..n) |i| point[i] *= scale;
     return point;
 }
