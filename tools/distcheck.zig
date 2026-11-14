@@ -1263,6 +1263,51 @@ fn checkExtremeAndShape() !void {
             return alea.distributions.pert(r, f64, -1, 0.5, 2, 4);
         }
     }.sample, 0.45, 0.55);
+    try expectContinuousMean("pareto", rng, 100_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.pareto(r, f64, 2, 3);
+        }
+    }.sample, 2.90, 3.10);
+    try expectContinuousMean("generalized-pareto", rng, 100_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.generalizedPareto(r, f64, 1, 2, 0.3);
+        }
+    }.sample, 3.75, 3.95);
+    try expectContinuousMean("inverse-gamma", rng, 50_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.inverseGamma(r, f64, 4, 2);
+        }
+    }.sample, 0.64, 0.69);
+    try expectContinuousMean("scaled-inverse-chi-squared", rng, 100_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.scaledInverseChiSquared(r, f64, 5, 2);
+        }
+    }.sample, 3.20, 3.45);
+    try expectContinuousMean("ex-gaussian", rng, 50_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.exGaussian(r, f64, 1, 2, 3);
+        }
+    }.sample, 3.90, 4.10);
+    try expectContinuousMean("triangular", rng, 25_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.triangular(r, f64, 1, 2, 5);
+        }
+    }.sample, 2.60, 2.73);
+    try expectContinuousMean("nakagami", rng, 50_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.nakagami(r, f64, 2, 1);
+        }
+    }.sample, 0.92, 0.96);
+    try expectContinuousMean("rice", rng, 50_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.rice(r, f64, 1, 1);
+        }
+    }.sample, 1.52, 1.58);
+    try expectContinuousMean("hoyt", rng, 50_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.hoyt(r, f64, 0.5, 1);
+        }
+    }.sample, 0.85, 0.88);
 }
 
 fn checkInverseAndRank() !void {
