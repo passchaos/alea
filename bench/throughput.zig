@@ -46,6 +46,7 @@ pub fn main(init: std.process.Init) !void {
     try benchEngine(io, stdout, "xoshiro256**", alea.Xoshiro256, bytes, &buffer);
     try benchEngine(io, stdout, "pcg64", alea.Pcg64, bytes, &buffer);
     try benchEngine(io, stdout, "chacha12", alea.ChaCha, bytes, &buffer);
+    try benchReseedingFill(io, stdout, "alea reseeding-xoshiro256++ fill", alea.Xoshiro256PlusPlus, bytes, &buffer, 1 << 20);
     try stdout.print("\nscalar next throughput\n", .{});
     try benchNext(io, stdout, "splitmix64 next", alea.SplitMix64, bytes / 8);
     try benchNext(io, stdout, "alea4x64 next", alea.Alea4x64, bytes / 8);
@@ -53,6 +54,7 @@ pub fn main(init: std.process.Init) !void {
     try benchNext(io, stdout, "xoshiro256** next", alea.Xoshiro256, bytes / 8);
     try benchNext(io, stdout, "xoshiro256++ next", alea.Xoshiro256PlusPlus, bytes / 8);
     try benchNext(io, stdout, "pcg64 next", alea.Pcg64, bytes / 8);
+    try benchReseedingNext(io, stdout, "alea reseeding-xoshiro256++ next", alea.Xoshiro256PlusPlus, bytes / 8, 1 << 20);
     try stdout.print("\nfill-only throughput\n", .{});
     try benchFillOnly(io, stdout, "alea4x64 fill-only", alea.Alea4x64, bytes, &buffer);
     try benchFillOnly(io, stdout, "xoshiro256++ fill-only", alea.Xoshiro256PlusPlus, bytes, &buffer);
@@ -567,6 +569,61 @@ fn benchNext(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engi
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M next/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchReseedingNext(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, count: usize, threshold: u64) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var reseeder_engine = alea.SplitMix64.init(0x1234_5678);
+        var adapter = alea.Rng.ReseedingRng(Engine).init(Engine.seedFromU64(0x1234_5678), alea.Rng.init(&reseeder_engine), threshold);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) checksum ^= adapter.next();
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M next/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchReseedingFill(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, bytes: usize, buffer: []u8, threshold: u64) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_mib_per_s: f64 = 0;
+    var best_checksum: u8 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var reseeder_engine = alea.SplitMix64.init(0x1234_5678);
+        var adapter = alea.Rng.ReseedingRng(Engine).init(Engine.seedFromU64(0x1234_5678), alea.Rng.init(&reseeder_engine), threshold);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = bytes;
+        var checksum: u8 = 0;
+        while (remaining > 0) {
+            const n = @min(buffer.len, remaining);
+            adapter.fill(buffer[0..n]);
+            for (buffer[0..n]) |byte| checksum ^= byte;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const mib_per_s = (@as(f64, @floatFromInt(bytes)) / @as(f64, @floatFromInt(MiB))) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (mib_per_s > best_mib_per_s) {
+            best_mib_per_s = mib_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} MiB/s checksum={}\n", .{ name, best_mib_per_s, best_checksum });
 }
 
 fn benchFillOnly(io: std.Io, stdout: *std.Io.Writer, name: []const u8, comptime Engine: type, bytes: usize, buffer: []u8) !void {

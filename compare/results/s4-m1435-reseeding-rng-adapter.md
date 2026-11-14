@@ -45,6 +45,17 @@ after exactly `reseed_threshold` engine draws.
   `compare/results/reproducibility-matrix.md` records the deterministic
   stream contract.
 
+## Benchmark
+
+New rows `alea reseeding-xoshiro256++ fill` and
+`alea reseeding-xoshiro256++ next` (threshold `1 << 20` draws) compare the
+adapter against the plain engine on the same 16 MiB workload:
+
+- fill: `xoshiro256++` 2899-2914 MiB/s against 2894-2929 MiB/s for the
+  adapter (parity, because the adapter chunks at reseed boundaries),
+- next: `xoshiro256++` 1453M draws/s against 1427-1430M for the adapter
+  (~1.6% for the per-draw reseed check).
+
 ## Next bar
 
 Broader platform runners, vector-directional layout work, or newly discovered
