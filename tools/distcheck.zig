@@ -658,6 +658,11 @@ fn checkAdvancedMultivariate() !void {
         const hoyt_q: f64 = 0.5;
         const hoyt_omega: f64 = 1;
         try expectFloatBetween("hoyt quantile", alea.distributions.hoytCdf(alea.distributions.hoytQuantile(p, hoyt_q, hoyt_omega), hoyt_q, hoyt_omega), p - 1e-5, p + 1e-5);
+        const gpd_xi: f64 = 0.3;
+        try expectFloatBetween("generalized-pareto quantile", alea.distributions.generalizedParetoCdf(alea.distributions.generalizedParetoQuantile(p, 1, 2, gpd_xi), 1, 2, gpd_xi), p - 1e-9, p + 1e-9);
+        const sics_df: f64 = 5;
+        const sics_scale: f64 = 2;
+        try expectFloatBetween("scaled-inverse-chi-squared quantile", alea.distributions.scaledInverseChiSquaredCdf(alea.distributions.scaledInverseChiSquaredQuantile(p, sics_df, sics_scale), sics_df, sics_scale), p - 1e-7, p + 1e-7);
         const discrete_q: f64 = 0.7;
         const poisson_lambda: f64 = 5;
         try expectFloatBetween("poisson quantile", alea.distributions.poissonCdf(alea.distributions.poissonQuantile(discrete_q, poisson_lambda), poisson_lambda), discrete_q, 1.0);

@@ -614,9 +614,14 @@ runtime float type, and explicit f32 arguments keep f32.
 - advanced continuous: `betaPrimeCdf` / `betaPrimeQuantile`,
   `logLogisticCdf` / `logLogisticQuantile`, `inverseGammaCdf` /
   `inverseGammaQuantile`, `nakagamiCdf` / `nakagamiQuantile`, `exGaussianCdf` /
-  `exGaussianQuantile`, `inverseGaussianCdf` / `inverseGaussianQuantile`;
+  `exGaussianQuantile`, `inverseGaussianCdf` / `inverseGaussianQuantile`,
+  `generalizedParetoCdf` / `generalizedParetoQuantile`, and
+  `scaledInverseChiSquaredCdf` / `scaledInverseChiSquaredQuantile`;
   Beta-prime uses the incomplete beta form, inverse-gamma uses the incomplete
-  gamma upper tail, log-logistic is closed-form (with `scale = 0` and
+  gamma upper tail, generalized Pareto uses the closed-form
+  `1 − (1 + ξ(x−μ)/σ)^(−1/ξ)` with `expm1`/`log1p` tails and bounded support
+  for `ξ < 0`, scaled inverse chi-squared delegates to the inverse-gamma form
+  as `Q(ν/2, ντ²/(2x))`, log-logistic is closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via

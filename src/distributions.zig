@@ -927,6 +927,28 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         if (!std.math.isFinite(hi)) return std.math.inf(T);
     }
 
+    if (1 - p < 1.0e-7) {
+        // Inverting the lower CDF near p = 1 has only one ulp of 1 in the
+        // target probability. Bisect on the upper tail directly, where the
+        // continued fraction resolves Q to relative precision.
+        const target = 1 - p;
+        var tail_expansion: usize = 0;
+        while (gammaIncompleteQ(shape, hi / scale) >= target and tail_expansion < 64) : (tail_expansion += 1) {
+            hi *= 2;
+            if (!std.math.isFinite(hi)) return std.math.inf(T);
+        }
+        var tail_iteration: usize = 0;
+        while (tail_iteration < 100) : (tail_iteration += 1) {
+            const mid = (lo + hi) / 2;
+            if (gammaIncompleteQ(shape, mid / scale) > target) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        return (lo + hi) / 2;
+    }
+
     var iteration: usize = 0;
     while (iteration < 100) : (iteration += 1) {
         const mid = (lo + hi) / 2;
@@ -1968,6 +1990,84 @@ fn inverseGammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerTyp
     if (p == 1) return std.math.inf(T);
     const g = gammaQuantile(1 - p, shape, 1 / scale);
     return 1 / g;
+}
+
+/// Scaled inverse chi-squared CDF (Gelman BDA parameterization): this is
+/// `InverseGamma(nu/2, nu·tau²/2)`, evaluated as
+/// `Q(nu/2, nu·tau²/(2x))` without forming the overflowing scale product.
+pub fn scaledInverseChiSquaredCdf(x: anytype, df: anytype, scale_squared: anytype) resolvedFloatType(@TypeOf(x, df, scale_squared)) {
+    return scaledInverseChiSquaredCdfImpl(resolvedFloatType(@TypeOf(x, df, scale_squared)), x, df, scale_squared);
+}
+fn scaledInverseChiSquaredCdfImpl(comptime PeerType: type, x: PeerType, df: PeerType, scale_squared: PeerType) PeerType {
+    const T = @TypeOf(x, df, scale_squared);
+    comptime requireFloat(T);
+    if (!(df > 0) or !(scale_squared > 0) or !std.math.isFinite(df) or !std.math.isFinite(scale_squared)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x <= 0) return 0;
+    if (x == std.math.inf(T)) return 1;
+    const half_df: T = df / 2;
+    return gammaIncompleteQ(half_df, half_df * (scale_squared / x));
+}
+
+/// Scaled inverse chi-squared quantile. `p = 0 → 0`, `p = 1 → +∞`.
+pub fn scaledInverseChiSquaredQuantile(p: anytype, df: anytype, scale_squared: anytype) resolvedFloatType(@TypeOf(p, df, scale_squared)) {
+    return scaledInverseChiSquaredQuantileImpl(resolvedFloatType(@TypeOf(p, df, scale_squared)), p, df, scale_squared);
+}
+fn scaledInverseChiSquaredQuantileImpl(comptime PeerType: type, p: PeerType, df: PeerType, scale_squared: PeerType) PeerType {
+    const T = @TypeOf(p, df, scale_squared);
+    comptime requireFloat(T);
+    if (!(df > 0) or !(scale_squared > 0) or !std.math.isFinite(df) or !std.math.isFinite(scale_squared)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return 0;
+    if (p == 1) return std.math.inf(T);
+    const half_df: T = df / 2;
+    const g = gammaQuantile(1 - p, half_df, 1);
+    return half_df * (scale_squared / g);
+}
+
+/// Generalized Pareto CDF with location `mu`, scale `sigma > 0`, and shape
+/// `xi`. `sigma = 0` is the point mass at `mu`; `xi < 0` has an upper bound
+/// `mu - sigma/xi`.
+pub fn generalizedParetoCdf(x: anytype, mu: anytype, sigma: anytype, xi: anytype) resolvedFloatType(@TypeOf(x, mu, sigma, xi)) {
+    return generalizedParetoCdfImpl(resolvedFloatType(@TypeOf(x, mu, sigma, xi)), x, mu, sigma, xi);
+}
+fn generalizedParetoCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType, xi: PeerType) PeerType {
+    const T = @TypeOf(x, mu, sigma, xi);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or sigma < 0 or !std.math.isFinite(xi)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (sigma == 0) return if (x < mu) 0 else 1;
+    if (x <= mu) return 0;
+    if (xi < 0) {
+        const upper = mu - sigma / xi;
+        if (x >= upper) return 1;
+    }
+    if (x == std.math.inf(T)) return 1;
+    const y = (x - mu) / sigma;
+    if (xi == 0) return -std.math.expm1(-y);
+    // `log1p` keeps the tail accurate when `xi*y` is tiny and would otherwise
+    // cancel inside `1 + xi*y`.
+    const xy = xi * y;
+    if (!(xy > -1)) return 1;
+    return -std.math.expm1(-std.math.log1p(xy) / xi);
+}
+
+/// Generalized Pareto quantile. `p = 0 → mu`; `p = 1` returns the finite
+/// upper bound for `xi < 0` and `+∞` otherwise.
+pub fn generalizedParetoQuantile(p: anytype, mu: anytype, sigma: anytype, xi: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, xi)) {
+    return generalizedParetoQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma, xi)), p, mu, sigma, xi);
+}
+fn generalizedParetoQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType, xi: PeerType) PeerType {
+    const T = @TypeOf(p, mu, sigma, xi);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or sigma < 0 or !std.math.isFinite(xi)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return mu;
+    if (sigma == 0) return mu;
+    if (p == 1) return if (xi < 0) mu - sigma / xi else std.math.inf(T);
+    const log_tail = std.math.log1p(-p);
+    if (xi == 0) return mu - sigma * log_tail;
+    return mu + sigma * std.math.expm1(-xi * log_tail) / xi;
 }
 
 /// Nakagami-m CDF: `P(m, m·x²/Ω)`. `Ω = 0` is the point mass at 0.
@@ -15296,6 +15396,16 @@ pub fn GeneralizedPareto(comptime T: type) type {
             return null; // ξ ≥ 0: support extends to ∞
         }
 
+        /// Generalized Pareto CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return generalizedParetoCdf(x, self.mu, self.sigma, self.xi);
+        }
+
+        /// Generalized Pareto quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return generalizedParetoQuantile(p, self.mu, self.sigma, self.xi);
+        }
+
         pub fn sample(self: Self, rng: Rng) T {
             return self.sampleFrom(rng);
         }
@@ -15597,6 +15707,16 @@ pub fn ScaledInverseChiSquared(comptime T: type) type {
         pub fn maxValue(self: Self) ?T {
             _ = self;
             return null;
+        }
+
+        /// Scaled inverse chi-squared CDF at `x`.
+        pub fn cdf(self: Self, x: T) T {
+            return scaledInverseChiSquaredCdf(x, self.df, self.scale2);
+        }
+
+        /// Scaled inverse chi-squared quantile for probability `p`.
+        pub fn quantile(self: Self, p: T) T {
+            return scaledInverseChiSquaredQuantile(p, self.df, self.scale2);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -65227,6 +65347,69 @@ test "ScaledInverseChiSquared constructor validates parameters" {
     try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(5, -1));
     try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(std.math.nan(f64), 1));
     try std.testing.expectError(error.InvalidParameter, ScaledInverseChiSquared(f64).init(5, std.math.nan(f64)));
+}
+
+test "GeneralizedPareto CDF and quantile match closed forms" {
+    // xi = 0 is the exponential case: F(x) = 1 - exp(-(x-mu)/sigma).
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6321205588285577), generalizedParetoCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 0)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.6931471805599453), generalizedParetoQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 1), @as(f64, 0)), 1e-12);
+    // xi = 0.2: F(1) = 1 - 1.2^-5.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5981224279835391), generalizedParetoCdf(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 0.2)), 1e-12);
+    // xi = -0.25: bounded support at 4; F(2) = 1 - 0.5^4.
+    try std.testing.expectApproxEqAbs(@as(f64, 0.9375), generalizedParetoCdf(@as(f64, 2), @as(f64, 0), @as(f64, 1), @as(f64, -0.25)), 1e-12);
+    try std.testing.expectEqual(@as(f64, 1), generalizedParetoCdf(@as(f64, 4), @as(f64, 0), @as(f64, 1), @as(f64, -0.25)));
+    try std.testing.expectEqual(@as(f64, 4), generalizedParetoQuantile(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, -0.25)));
+    try std.testing.expectEqual(std.math.inf(f64), generalizedParetoQuantile(@as(f64, 1), @as(f64, 0), @as(f64, 1), @as(f64, 0.2)));
+
+    // Round-trips across all three shape regimes. mu = 0 keeps the tiny
+    // p = 1e-12 quantile free of location-subtraction rounding.
+    inline for ([_]f64{ -0.25, 0, 0.3 }) |xi| {
+        inline for ([_]f64{ 1e-12, 0.1, 0.5, 0.9, 1 - 1e-12 }) |p| {
+            const x = generalizedParetoQuantile(p, @as(f64, 0), @as(f64, 2), xi);
+            try std.testing.expectApproxEqRel(p, generalizedParetoCdf(x, @as(f64, 0), @as(f64, 2), xi), 1e-9);
+        }
+    }
+    // A non-zero location stays accurate away from the extreme lower tail.
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        const x = generalizedParetoQuantile(p, @as(f64, 1), @as(f64, 2), @as(f64, 0.3));
+        try std.testing.expectApproxEqRel(p, generalizedParetoCdf(x, @as(f64, 1), @as(f64, 2), @as(f64, 0.3)), 1e-9);
+    }
+
+    // Point mass at sigma = 0.
+    try std.testing.expectEqual(@as(f64, 0), generalizedParetoCdf(@as(f64, 0.99), @as(f64, 1), @as(f64, 0), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 1), generalizedParetoCdf(@as(f64, 1), @as(f64, 1), @as(f64, 0), @as(f64, 0.5)));
+    try std.testing.expectEqual(@as(f64, 1), generalizedParetoQuantile(@as(f64, 0.3), @as(f64, 1), @as(f64, 0), @as(f64, 0.5)));
+    // Struct methods mirror the free functions.
+    const dist = try GeneralizedPareto(f64).init(1, 2, 0.3);
+    try std.testing.expectApproxEqAbs(generalizedParetoCdf(@as(f64, 2), @as(f64, 1), @as(f64, 2), @as(f64, 0.3)), dist.cdf(2), 1e-12);
+    try std.testing.expectApproxEqAbs(generalizedParetoQuantile(@as(f64, 0.7), @as(f64, 1), @as(f64, 2), @as(f64, 0.3)), dist.quantile(0.7), 1e-12);
+    // f32 support.
+    try std.testing.expectApproxEqAbs(@as(f32, 0.63212055), generalizedParetoCdf(@as(f32, 1), @as(f32, 0), @as(f32, 1), @as(f32, 0)), 1e-6);
+}
+
+test "ScaledInverseChiSquared CDF and quantile match InverseGamma" {
+    const dist = try ScaledInverseChiSquared(f64).init(5, 2);
+    // ScaledInvChiSq(5, 2) = InverseGamma(2.5, 5).
+    inline for ([_]f64{ 0.1, 0.5, 1, 2, 5 }) |x| {
+        try std.testing.expectApproxEqAbs(inverseGammaCdf(x, @as(f64, 2.5), @as(f64, 5)), dist.cdf(x), 1e-12);
+    }
+    inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
+        try std.testing.expectApproxEqRel(p, dist.cdf(dist.quantile(p)), 1e-7);
+    }
+    // The quantile inverts through `1 - p`, so for tiny p the representable
+    // complement `1 - (1 - p)` is the exact round-trip target.
+    const tiny_p: f64 = 1e-12;
+    const tiny_target = 1 - (1 - tiny_p);
+    try std.testing.expectApproxEqRel(tiny_target, dist.cdf(dist.quantile(tiny_p)), 1e-7);
+    const near_one: f64 = 1 - 1e-12;
+    try std.testing.expectApproxEqRel(near_one, dist.cdf(dist.quantile(near_one)), 1e-7);
+    try std.testing.expectEqual(@as(f64, 0), dist.cdf(0));
+    try std.testing.expectEqual(@as(f64, 1), dist.cdf(std.math.inf(f64)));
+    try std.testing.expectEqual(@as(f64, 0), dist.quantile(0));
+    try std.testing.expectEqual(std.math.inf(f64), dist.quantile(1));
+    // f32 support.
+    const f32_dist = try ScaledInverseChiSquared(f32).init(5, 2);
+    try std.testing.expect(f32_dist.cdf(1) > 0.05 and f32_dist.cdf(1) < 0.1);
 }
 
 test "ScaledInverseChiSquared moments match InverseGamma" {
