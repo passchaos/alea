@@ -609,8 +609,9 @@ CDF and quantile helpers complement the samplers:
   normal approximation with continuity correction above
   `hypergeometricExactSdLimit` (σ = 16384), while the `Hypergeometric`
   sampler's H2PE envelope uses a stable log-PMF ratio for populations at or
-  above 1e12 so huge-population draws stay finite instead of degrading to the
-  per-draw loop; the Zipf/Zeta helpers use a
+  above 1e12 and its inverse transform starts from a `log1p` limit for
+  products longer than 1e6, so huge-population draws stay finite instead of
+  degrading to the per-draw loop; the Zipf/Zeta helpers use a
   128-term direct prefix plus Euler–Maclaurin harmonic numbers (and
   `riemannZetaApprox` for infinite support) and cap representable quantiles
   at 2^53.

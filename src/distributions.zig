@@ -5654,13 +5654,29 @@ const HypergeometricInverseTransform = struct {
         const lower_bound = @max(@as(f64, 0), @as(f64, @floatFromInt(params.k)) - @as(f64, @floatFromInt(params.n2)));
         if (mode - lower_bound >= 10) return null;
 
-        const initial_p, const initial_x = if (params.k < params.n2) .{
-            fractionOfProductsOfFactorials(.{ params.n2, population - params.k }, .{ population, params.n2 - params.k }),
-            @as(u64, 0),
-        } else .{
-            fractionOfProductsOfFactorials(.{ params.n1, params.k }, .{ population, params.k - params.n2 }),
-            params.k - params.n2,
-        };
+        // Initial PMF at the lower support bound. Short products keep the
+        // original association order (stream compatibility); huge products
+        // use the `log1p` limit, which is accurate because a huge product
+        // length with a mode near the bound implies `successes / population`
+        // or its complement is tiny.
+        const population_f: f64 = @floatFromInt(population);
+        var initial_p: f64 = undefined;
+        var initial_x: u64 = undefined;
+        if (params.k < params.n2) {
+            initial_x = 0;
+            initial_p = if (params.k <= 1_000_000)
+                fractionOfProductsOfFactorials(.{ params.n2, population - params.k }, .{ population, params.n2 - params.k })
+            else
+                @exp(@as(f64, @floatFromInt(params.n1)) *
+                    std.math.log1p(-@as(f64, @floatFromInt(params.k)) / population_f));
+        } else {
+            initial_x = params.k - params.n2;
+            initial_p = if (params.n2 <= 1_000_000)
+                fractionOfProductsOfFactorials(.{ params.n1, params.k }, .{ population, params.k - params.n2 })
+            else
+                @exp(@as(f64, @floatFromInt(population - params.k)) *
+                    std.math.log1p(-@as(f64, @floatFromInt(params.n2)) / population_f));
+        }
         if (!(initial_p > 0) or !std.math.isFinite(initial_p)) return error.InvalidParameter;
 
         return .{
@@ -58701,6 +58717,27 @@ test "hypergeometric huge populations stay exact and finite" {
     i = 0;
     while (i < draws) : (i += 1) sum2 += @floatFromInt(balanced.sample(rng2));
     try std.testing.expect(@abs(sum2 / @as(f64, @floatFromInt(draws)) - 2.5e17) < 1.0e10);
+}
+
+test "hypergeometric edge-shaped huge populations use the inverse transform" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x4a15);
+    const rng = Rng.init(&engine);
+    const draws = 20_000;
+    const Case = struct { n: u64, k: u64, d: u64, mean: f64 };
+    const cases = [_]Case{
+        .{ .n = 1_000_000_000_000_000_000, .k = 1, .d = 500_000_000_000_000_000, .mean = 0.5 },
+        .{ .n = 1_000_000_000_000_000_000, .k = 2, .d = 500_000_000_000_000_000, .mean = 1.0 },
+        .{ .n = 1_000_000_000_000_000_000, .k = 5, .d = 500_000_000_000_000_000, .mean = 2.5 },
+    };
+    for (cases) |case| {
+        const dist = try Hypergeometric.init(case.n, case.k, case.d);
+        try std.testing.expect(dist.method == .inverse_transform);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < draws) : (i += 1) sum += @floatFromInt(dist.sample(rng));
+        try std.testing.expect(@abs(sum / @as(f64, @floatFromInt(draws)) - case.mean) < 0.05);
+    }
 }
 
 test "negative binomial huge success counts use the mixture" {
