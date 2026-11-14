@@ -28143,13 +28143,10 @@ pub fn unitBall(rng: Rng, comptime T: type) [3]T {
 
 pub fn unitBallFrom(source: anytype, comptime T: type) [3]T {
     comptime requireFloat(T);
-    if (T == f64) return unitBallF64PointFrom(source);
-    while (true) {
-        const x1 = signedUnitFloatFrom(source, T);
-        const x2 = signedUnitFloatFrom(source, T);
-        const x3 = signedUnitFloatFrom(source, T);
-        if (x1 * x1 + x2 * x2 + x3 * x3 <= 1) return .{ x1, x2, x3 };
-    }
+    // A uniform ball point is a uniform sphere direction scaled by r = U^{1/3}.
+    const dir = unitSphereFrom(source, T);
+    const radius = std.math.cbrt(Rng.floatOpenFrom(source, T));
+    return .{ dir[0] * radius, dir[1] * radius, dir[2] * radius };
 }
 
 pub fn fillUnitBall(rng: Rng, comptime T: type, dest: [][3]T) void {
@@ -28243,13 +28240,10 @@ fn unitSphereF64PointFrom(source: anytype) [3]f64 {
 }
 
 fn unitBallF64PointFrom(source: anytype) [3]f64 {
-    while (true) {
-        const x = signedUnitF64PointFrom(source);
-        const y = signedUnitF64PointFrom(source);
-        const z = signedUnitF64PointFrom(source);
-        const xy = @mulAdd(f64, y, y, x * x);
-        if (@mulAdd(f64, z, z, xy) <= 1) return .{ x, y, z };
-    }
+    // A uniform ball point is a uniform sphere direction scaled by r = U^{1/3}.
+    const dir = unitSphereF64PointFrom(source);
+    const radius = std.math.cbrt(Rng.floatOpenFrom(source, f64));
+    return .{ dir[0] * radius, dir[1] * radius, dir[2] * radius };
 }
 
 fn fillUnitDiscF64From(source: anytype, dest: [][2]f64) void {
@@ -28325,29 +28319,7 @@ fn fillUnitSphereF64From(source: anytype, dest: [][3]f64) void {
 }
 
 fn fillUnitBallF64From(source: anytype, dest: [][3]f64) void {
-    var x_candidates: [4096]f64 = undefined;
-    var y_candidates: [4096]f64 = undefined;
-    var z_candidates: [4096]f64 = undefined;
-
-    var filled: usize = 0;
-    while (filled < dest.len) {
-        const remaining = dest.len - filled;
-        const candidate_count = @min(x_candidates.len, @max(remaining, remaining * 2));
-        fillSignedUnitF64(source, x_candidates[0..candidate_count]);
-        fillSignedUnitF64(source, y_candidates[0..candidate_count]);
-        fillSignedUnitF64(source, z_candidates[0..candidate_count]);
-
-        var i: usize = 0;
-        while (i < candidate_count and filled < dest.len) : (i += 1) {
-            const x = x_candidates[i];
-            const y = y_candidates[i];
-            const z = z_candidates[i];
-            if (x * x + y * y + z * z <= 1) {
-                dest[filled] = .{ x, y, z };
-                filled += 1;
-            }
-        }
-    }
+    for (dest) |*item| item.* = unitBallF64PointFrom(source);
 }
 
 fn fillSignedUnitF64(source: anytype, dest: []f64) void {
