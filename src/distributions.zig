@@ -20640,13 +20640,13 @@ pub fn chiSquared(rng: Rng, comptime T: type, dof: T) T {
 }
 
 pub fn chiSquaredChecked(rng: Rng, comptime T: type, dof: T) Error!T {
-    const dist = try ChiSquared(T).init(dof);
-    return dist.sample(rng);
+    if (!chiSquaredParametersValid(T, dof)) return error.InvalidParameter;
+    return chiSquaredFrom(rng, T, dof);
 }
 
 pub fn chiSquaredCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
-    const dist = try ChiSquared(T).init(dof);
-    return dist.sampleFrom(source);
+    if (!chiSquaredParametersValid(T, dof)) return error.InvalidParameter;
+    return chiSquaredFrom(source, T, dof);
 }
 
 pub fn chiSquaredFrom(source: anytype, comptime T: type, dof: T) T {
@@ -20907,20 +20907,18 @@ pub fn ChiSquared(comptime T: type) type {
 pub fn chi(rng: Rng, comptime T: type, dof: T) T {
     comptime requireFloat(T);
     std.debug.assert(chiSquaredParametersValid(T, dof));
-    if (chiSquaredPoint(T, dof)) |point| return @sqrt(point);
-    if (dof == 1) return @abs(Rng.standardNormalFastFrom(rng, T));
-    const sampler = Chi(T).init(dof) catch unreachable;
-    return sampler.sample(rng);
+    // The direct formula avoids constructing a Chi/ChiSquared sampler per call.
+    return chiFrom(rng, T, dof);
 }
 
 pub fn chiChecked(rng: Rng, comptime T: type, dof: T) Error!T {
-    const dist = try Chi(T).init(dof);
-    return dist.sample(rng);
+    if (!chiSquaredParametersValid(T, dof)) return error.InvalidParameter;
+    return chiFrom(rng, T, dof);
 }
 
 pub fn chiCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
-    const dist = try Chi(T).init(dof);
-    return dist.sampleFrom(source);
+    if (!chiSquaredParametersValid(T, dof)) return error.InvalidParameter;
+    return chiFrom(source, T, dof);
 }
 
 pub fn chiFrom(source: anytype, comptime T: type, dof: T) T {
@@ -21956,18 +21954,19 @@ pub fn Beta(comptime T: type) type {
 pub fn fisherF(rng: Rng, comptime T: type, d1: T, d2: T) T {
     comptime requireFloat(T);
     std.debug.assert(fisherFParametersValid(T, d1, d2));
-    const sampler = FisherF(T).init(d1, d2) catch unreachable;
-    return sampler.sample(rng);
+    // The direct chi-squared formula avoids constructing two Gamma samplers
+    // per call; the reusable FisherF sampler keeps the cached form.
+    return fisherFFrom(rng, T, d1, d2);
 }
 
 pub fn fisherFChecked(rng: Rng, comptime T: type, d1: T, d2: T) Error!T {
-    const dist = try FisherF(T).init(d1, d2);
-    return dist.sample(rng);
+    if (!fisherFParametersValid(T, d1, d2)) return error.InvalidParameter;
+    return fisherFFrom(rng, T, d1, d2);
 }
 
 pub fn fisherFCheckedFrom(source: anytype, comptime T: type, d1: T, d2: T) Error!T {
-    const dist = try FisherF(T).init(d1, d2);
-    return dist.sampleFrom(source);
+    if (!fisherFParametersValid(T, d1, d2)) return error.InvalidParameter;
+    return fisherFFrom(source, T, d1, d2);
 }
 
 pub fn fisherFFrom(source: anytype, comptime T: type, d1: T, d2: T) T {
@@ -22854,19 +22853,19 @@ pub fn FisherF(comptime T: type) type {
 pub fn studentT(rng: Rng, comptime T: type, dof: T) T {
     comptime requireFloat(T);
     std.debug.assert(studentTParametersValid(T, dof));
-    if (dof == std.math.inf(T)) return studentTInfiniteDofFrom(rng, T);
-    const sampler = StudentT(T).init(dof) catch unreachable;
-    return sampler.sample(rng);
+    // The direct formula avoids constructing a ChiSquared/Gamma sampler per
+    // call; the reusable StudentT sampler keeps the cached form.
+    return studentTFrom(rng, T, dof);
 }
 
 pub fn studentTChecked(rng: Rng, comptime T: type, dof: T) Error!T {
-    const dist = try StudentT(T).init(dof);
-    return dist.sample(rng);
+    if (!studentTParametersValid(T, dof)) return error.InvalidParameter;
+    return studentTFrom(rng, T, dof);
 }
 
 pub fn studentTCheckedFrom(source: anytype, comptime T: type, dof: T) Error!T {
-    const dist = try StudentT(T).init(dof);
-    return dist.sampleFrom(source);
+    if (!studentTParametersValid(T, dof)) return error.InvalidParameter;
+    return studentTFrom(source, T, dof);
 }
 
 pub fn studentTFrom(source: anytype, comptime T: type, dof: T) T {
