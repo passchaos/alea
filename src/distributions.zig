@@ -5755,10 +5755,8 @@ noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype
 /// Small-trial inverse-CDF binomial for u64 vectors with arbitrary `p`:
 /// one uniform per lane plus `trials` vector compares against the cached
 /// CDF values computed once per call.
-fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, trials: u64, p: f64) VectorType {
-    const lanes = vectorInfo(VectorType).len;
+fn binomialCdfTable(trials: u64, p: f64, cdf: *[128]f64) usize {
     const q = 1 - p;
-    var cdf: [128]f64 = undefined;
     var pmf = std.math.pow(f64, q, @as(f64, @floatFromInt(trials)));
     var acc = pmf;
     cdf[0] = acc;
@@ -5768,16 +5766,26 @@ fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, tria
         acc += pmf;
         cdf[@intCast(k)] = acc;
     }
+    return @intCast(trials);
+}
+
+fn vectorBinomialFromCdf(comptime VectorType: type, source: anytype, cdf: []const f64) VectorType {
+    const lanes = vectorInfo(VectorType).len;
     const F = @Vector(lanes, f64);
     var uniforms: F = undefined;
     inline for (0..lanes) |lane| uniforms[lane] = Rng.floatOpenFrom(source, f64);
     var out: VectorType = @splat(0);
-    k = 0;
-    while (k < trials) : (k += 1) {
-        const threshold: F = @splat(cdf[@intCast(k)]);
+    for (cdf) |threshold_value| {
+        const threshold: F = @splat(threshold_value);
         out += @select(u64, uniforms > threshold, @as(VectorType, @splat(1)), @as(VectorType, @splat(0)));
     }
     return out;
+}
+
+fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, trials: u64, p: f64) VectorType {
+    var cdf: [128]f64 = undefined;
+    const width = binomialCdfTable(trials, p, &cdf);
+    return vectorBinomialFromCdf(VectorType, source, cdf[0..width]);
 }
 
 /// Fair (p = 1/2) binomial for u64 vectors: every bit is a trial, so the
@@ -5904,6 +5912,17 @@ pub fn VectorBinomial(comptime VectorType: type) type {
             return out;
         }
 
+        fn fillInverseCdf(self: Self, source: anytype, dest: []VectorType) bool {
+            if (self.sampler.p == 0.5 or self.sampler.trials > 128) return false;
+            const complement = self.sampler.p > 0.5;
+            const q = if (complement) 1.0 - self.sampler.p else self.sampler.p;
+            if (dyadicBinomialFields(q) != null) return false;
+            var cdf: [128]f64 = undefined;
+            const width = binomialCdfTable(self.sampler.trials, self.sampler.p, &cdf);
+            for (dest) |*item| item.* = vectorBinomialFromCdf(VectorType, source, cdf[0..width]);
+            return true;
+        }
+
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
             if (self.sampler.trials == 0 or self.sampler.p == 0) {
                 @memset(dest, @as(VectorType, @splat(0)));
@@ -5913,6 +5932,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
                 return;
             }
+            if (self.fillInverseCdf(rng, dest)) return;
             for (dest) |*item| item.* = self.sample(rng);
         }
 
@@ -5925,6 +5945,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
                 return;
             }
+            if (self.fillInverseCdf(source, dest)) return;
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
