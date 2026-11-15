@@ -16812,6 +16812,7 @@ fn fillGeneralizedExtremeValuePointsFrom(source: anytype, comptime T: type, dest
 /// the system `exp` is measurably faster than the pure-Zig musl `expm1`; the
 /// cancellation only affects `|t| ≪ 1`, where the absolute error is bounded by
 /// one ulp of the deviation (about `1e-15` for the standard parameters). The
+/// vector sampler calls this scalar point function once per lane. The
 /// quantile keeps `expm1` because it is not a throughput path.
 pub fn GeneralizedExtremeValue(comptime T: type) type {
     comptime requireFloat(T);
@@ -17010,7 +17011,9 @@ pub fn fillVectorGeneralizedExtremeValueCheckedFrom(source: anytype, comptime Ve
 }
 
 /// Vectorized Generalized Extreme Value sampler. All lanes share the scalar
-/// parameters; one SIMD `Exp(1)` draw feeds the per-lane inverse CDF.
+/// parameters; each lane runs the scalar inverse-CDF draw, which keeps the
+/// system-`exp` scalar transform and pipelines better than a packed SIMD
+/// exponential plus per-lane `expm1`.
 pub fn VectorGeneralizedExtremeValue(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -17070,8 +17073,12 @@ pub fn VectorGeneralizedExtremeValue(comptime VectorType: type) type {
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            const e = Rng.vectorStandardExponentialFrom(source, VectorType);
-            return generalizedExtremeValueFromExponentialVector(VectorType, e, self.sampler.mu, self.sampler.sigma, self.sampler.xi);
+            const L = vectorInfo(VectorType).len;
+            var out: VectorType = undefined;
+            inline for (0..L) |lane| {
+                out[lane] = generalizedExtremeValuePointFrom(source, vectorChild(VectorType), self.sampler.mu, self.sampler.sigma, self.sampler.xi);
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
@@ -17082,22 +17089,6 @@ pub fn VectorGeneralizedExtremeValue(comptime VectorType: type) type {
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
-}
-
-/// Apply the GEV inverse CDF to a vector of `Exp(1)` draws:
-/// `x = μ + σ·expm1(−ξ·ln E)/ξ` for `ξ ≠ 0` and `x = μ − σ·ln E` for `ξ = 0`.
-/// The per-lane `expm1` (pure Zig, inlined into each lane) pipelines better
-/// than per-lane system `exp` calls here, so the vector path keeps it.
-fn generalizedExtremeValueFromExponentialVector(comptime VectorType: type, e: VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
-    const L = vectorInfo(VectorType).len;
-    const mu_v: VectorType = @splat(mu);
-    const sigma_v: VectorType = @splat(sigma);
-    if (xi == 0) return mu_v - sigma_v * @log(e);
-    var out: VectorType = undefined;
-    inline for (0..L) |lane| {
-        out[lane] = mu + sigma * std.math.expm1(-xi * @log(e[lane])) / xi;
-    }
-    return out;
 }
 
 // Scaled Inverse Chi-Squared distribution (adapter over InverseGamma) ---------
