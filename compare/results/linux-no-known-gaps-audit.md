@@ -7243,5 +7243,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1711-zipf-cdf-sample.md`. and
 `compare/results/s4-m1712-validate-all-refresh.md`. and
 `compare/results/s4-m1713-scalar-hypergeometric-cdf-sample-probe.md`. and
-`compare/results/s4-m1714-zipf-sample-cdf-gates.md`.
+`compare/results/s4-m1714-zipf-sample-cdf-gates.md`. and
+`compare/results/s4-m1715-validate-all-refresh.md`.
 
