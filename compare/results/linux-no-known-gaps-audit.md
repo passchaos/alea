@@ -7173,5 +7173,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1641-validate-all-refresh.md`. and
 `compare/results/s4-m1642-vector-geometric-dyadic-kernel.md`. and
 `compare/results/s4-m1643-validate-all-refresh.md`. and
-`compare/results/s4-m1644-vector-geometric-pmf-gate.md`.
+`compare/results/s4-m1644-vector-geometric-pmf-gate.md`. and
+`compare/results/s4-m1645-validate-all-refresh.md`.
 
