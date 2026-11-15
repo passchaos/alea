@@ -493,17 +493,19 @@ Directional distributions on the circle and sphere:
   rejection sampling for `n > 3`, the exact truncated-exponential cosine
   inversion for `n = 3`, `κ = 0` uniform, and `κ → ∞` point-mass fast paths.
 - `VectorVonMises(T)` / `VectorVonMisesFisher(T)` / `VectorWatson(T)` /
-  `VectorBingham(T)` / `VectorKent(T)` — per-lane SIMD samplers: one
+  `VectorBingham(T)` / `VectorKent(T)` — per-lane vector samplers: one
   independent circular von Mises, S² vMF, S² axial Watson, S² Bingham, or S²
   Kent sample per vector lane. The S² vMF cosine marginal is the exact
-  truncated exponential `∝ e^{κw}` on `[-1, 1]`, inverted per lane with
-  `log1p`; the Kent proposal uses the same inversion for its vMF(λ) marginal,
-  so neither path needs an inner Wood rejection loop. Lane retirement remains
-  in the Best–Fisher/Beta/ACG rejection loops. When only a couple of lanes
-  remain, the Watson and Bingham samplers finish them with the scalar sampler
-  instead of redrawing full vectors. The S² samplers return `[3]VectorType`
-  and share the mean direction/axis, quadratic-form matrix, or Kent frame
-  across lanes.
+  truncated exponential `∝ e^{κw}` on `[-1, 1]`, inverted per lane; its
+  inversion log and tangent-circle rejection are scalar work, so
+  `VectorVonMisesFisher` draws each lane with the scalar S² sampler instead of
+  a packed SIMD loop. The Kent proposal uses the same inversion for its vMF(λ)
+  marginal inside its SIMD outer acceptance, so neither path needs an inner
+  Wood rejection loop. Lane retirement remains in the
+  Best–Fisher/Beta/ACG rejection loops. When only a couple of lanes remain, the
+  Watson and Bingham samplers finish them with the scalar sampler instead of
+  redrawing full vectors. The S² samplers return `[3]VectorType` and share the
+  mean direction/axis, quadratic-form matrix, or Kent frame across lanes.
 - `Watson(T, n)` — axial vMF counterpart with bipolar (`κ > 0`), girdle
   (`κ < 0`), and uniform (`κ = 0`) regimes plus Kummer-function moment
   diagnostics.
