@@ -2824,6 +2824,28 @@ fn checkLongRun(samples: usize) !void {
         });
     }
 
+    // Fair clz streams: geometric(0.5) and negative-binomial(5, 0.5).
+    {
+        var engine = alea.FastPrng.init(0x10e2);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.geometric(rng, 0.5));
+        const mean = sum / nf;
+        const tol = longMeanTolerance(2.0, samples, 0.001);
+        try expectFloatBetween("long geometric fair mean", mean, 2.0 - tol, 2.0 + tol);
+    }
+    {
+        var engine = alea.FastPrng.init(0x10e3);
+        const rng = alea.Rng.init(&engine);
+        var sum: f64 = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) sum += @floatFromInt(alea.distributions.negativeBinomial(rng, 5, 0.5));
+        const mean = sum / nf;
+        const tol = longMeanTolerance(10.0, samples, 0.002);
+        try expectFloatBetween("long negative-binomial fair mean", mean, 5.0 - tol, 5.0 + tol);
+    }
+
     // Huge-parameter samplers: tiny-p binomial, fair-to-HIN dispatch, huge
     // hypergeometric (H2PE and inverse transform), and the gamma-Poisson
     // negative-binomial mixture.
