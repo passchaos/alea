@@ -32564,6 +32564,10 @@ inline fn zipfPmfTerm(comptime T: type, k: T, exponent: T) T {
 /// Largest finite Zipf support that uses the hoisted CDF fill.
 const zipf_fill_max = 1024;
 
+/// Largest finite Zipf support whose per-call CDF table is cheap enough for
+/// single samples.
+const zipf_sample_cdf_max = 32;
+
 pub fn Zipf(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -32640,12 +32644,23 @@ pub fn Zipf(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) T {
-            if (self.isDegenerate()) return 1;
-            return self.nextSampleFrom(rng);
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.isDegenerate()) return 1;
+            var table: [zipf_sample_cdf_max]T = undefined;
+            if (self.zipfCdfTable(table[0..])) |n_int| {
+                const total = table[n_int - 1];
+                const u = Rng.floatFrom(source, T) * total;
+                var lo: usize = 0;
+                var hi: usize = n_int;
+                while (lo < hi) {
+                    const mid = lo + (hi - lo) / 2;
+                    if (u > table[mid]) lo = mid + 1 else hi = mid;
+                }
+                return @as(T, @floatFromInt(lo + 1));
+            }
             return self.nextSampleFrom(source);
         }
 
@@ -32665,6 +32680,24 @@ pub fn Zipf(comptime T: type) type {
             }
             if (self.fillCdfFrom(source, dest)) return;
             for (dest) |*item| item.* = self.nextSampleFrom(source);
+        }
+
+        /// Build the cumulative pmf for a finite integer support into
+        /// `table`; returns the support size or null when the table shape
+        /// does not apply.
+        fn zipfCdfTable(self: Self, table: []T) ?usize {
+            const n_value = self.nValue() orelse return null;
+            if (!std.math.isFinite(n_value)) return null;
+            if (n_value != @floor(n_value)) return null;
+            const n_int: usize = @intFromFloat(n_value);
+            if (n_int > table.len) return null;
+            var total: T = 0;
+            var k: usize = 1;
+            while (k <= n_int) : (k += 1) {
+                total += zipfPmfTerm(T, @as(T, @floatFromInt(k)), self.exponent);
+                table[k - 1] = total;
+            }
+            return n_int;
         }
 
         /// Finite integer support with a bounded table: build the cumulative
@@ -57049,9 +57082,10 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (zipf_fill) |value| try std.testing.expect(value >= 1 and value <= 10);
     for (&zipf_loop) |*slot| slot.* = zipf_sampler.sampleFrom(&zipf_loop_engine);
     for (zipf_loop) |value| try std.testing.expect(value >= 1 and value <= 10);
-    // Finite-support fills use the hoisted CDF bulk stream; `sampleFrom`
-    // keeps the rejection-inversion stream, so their draws intentionally
-    // differ (documented in the reproducibility matrix).
+    // Finite integer supports up to 32 use the CDF mapping in both the fill
+    // and `sampleFrom`, so the draws match.
+    try std.testing.expectEqualSlices(f64, &zipf_loop, &zipf_fill);
+    try std.testing.expectEqual(zipf_loop_engine.next(), zipf_fill_engine.next());
     var zipf_harmonic_fill_engine = alea.ScalarPrng.init(0x5877_0002);
     var zipf_harmonic_loop_engine = alea.ScalarPrng.init(0x5877_0002);
     const zipf_harmonic_sampler = try Zipf(f64).init(10, 1);
@@ -57059,6 +57093,8 @@ test "non-uniform samplers can be reused with sample iterators" {
     for (zipf_fill) |value| try std.testing.expect(value >= 1 and value <= 10);
     for (&zipf_loop) |*slot| slot.* = zipf_harmonic_sampler.sampleFrom(&zipf_harmonic_loop_engine);
     for (zipf_loop) |value| try std.testing.expect(value >= 1 and value <= 10);
+    try std.testing.expectEqualSlices(f64, &zipf_loop, &zipf_fill);
+    try std.testing.expectEqual(zipf_harmonic_loop_engine.next(), zipf_harmonic_fill_engine.next());
     fillZipf(rng, f64, &zipf_buf, 10, 1.5);
     for (zipf_buf) |value| try std.testing.expect(value >= 1 and value <= 10);
     fillZipfFrom(&direct_engine, f64, &direct_zipf_buf, 10, 1.5);
