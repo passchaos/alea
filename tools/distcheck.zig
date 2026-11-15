@@ -2781,6 +2781,7 @@ fn checkLongRun(samples: usize) !void {
         var zipf_fill_hits = [_]usize{0} ** 3;
         var vector_zipf_hits = [_]usize{0} ** 3;
         var vector_hypergeometric_hits = [_]usize{0} ** 3;
+        var scalar_hypergeometric_hits = [_]usize{0} ** 3;
         var bernoulli_hits: usize = 0;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
@@ -2889,6 +2890,13 @@ fn checkLongRun(samples: usize) !void {
                 if (vec[lane] <= 3) vector_hypergeometric_hits[1] += 1;
                 if (vec[lane] <= 5) vector_hypergeometric_hits[2] += 1;
             };
+            var sh_buf: [8]u64 = undefined;
+            alea.distributions.fillHypergeometric(rng, &sh_buf, 100, 30, 10);
+            for (sh_buf) |value| {
+                if (value <= 2) scalar_hypergeometric_hits[0] += 1;
+                if (value <= 3) scalar_hypergeometric_hits[1] += 1;
+                if (value <= 5) scalar_hypergeometric_hits[2] += 1;
+            }
         }
         try expectEmpiricalCdf("long binomial cdf(4)", binomial_hits[0], samples, binomial.cdf(4));
         try expectEmpiricalCdf("long binomial cdf(6)", binomial_hits[1], samples, binomial.cdf(6));
@@ -2948,6 +2956,9 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long vector hypergeometric cdf(2)", vector_hypergeometric_hits[0], samples * 8, hypergeometric.cdf(2));
         try expectEmpiricalCdf("long vector hypergeometric cdf(3)", vector_hypergeometric_hits[1], samples * 8, hypergeometric.cdf(3));
         try expectEmpiricalCdf("long vector hypergeometric cdf(5)", vector_hypergeometric_hits[2], samples * 8, hypergeometric.cdf(5));
+        try expectEmpiricalCdf("long fillHypergeometric cdf(2)", scalar_hypergeometric_hits[0], samples * 8, hypergeometric.cdf(2));
+        try expectEmpiricalCdf("long fillHypergeometric cdf(3)", scalar_hypergeometric_hits[1], samples * 8, hypergeometric.cdf(3));
+        try expectEmpiricalCdf("long fillHypergeometric cdf(5)", scalar_hypergeometric_hits[2], samples * 8, hypergeometric.cdf(5));
         try expectEmpiricalCdf("long bernoulli cdf(0)", bernoulli_hits, samples, bernoulli.cdf(0));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
         std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6} zipf(2)={d:.6} zeta(1)={d:.6} bernoulli(0)={d:.6}\n", .{

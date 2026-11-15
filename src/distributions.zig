@@ -6972,6 +6972,11 @@ pub const Hypergeometric = struct {
                 for (dest) |*item| item.* = hypergeometricDrawLoopFrom(rng, self.population, self.successes, self.draws);
             },
             .inverse_transform => {
+                var table: [hypergeometric_cdf_max]f64 = undefined;
+                if (hypergeometricCdfTable(&self.inverse_transform, &table)) |width| {
+                    for (dest) |*item| item.* = hypergeometricFromCdfTable(rng, &self.inverse_transform, table[0..width]);
+                    return;
+                }
                 for (dest) |*item| item.* = self.inverse_transform.sampleFrom(rng);
             },
             .rejection_acceptance => {
@@ -6987,6 +6992,11 @@ pub const Hypergeometric = struct {
                 for (dest) |*item| item.* = hypergeometricDrawLoopFrom(source, self.population, self.successes, self.draws);
             },
             .inverse_transform => {
+                var table: [hypergeometric_cdf_max]f64 = undefined;
+                if (hypergeometricCdfTable(&self.inverse_transform, &table)) |width| {
+                    for (dest) |*item| item.* = hypergeometricFromCdfTable(source, &self.inverse_transform, table[0..width]);
+                    return;
+                }
                 for (dest) |*item| item.* = self.inverse_transform.sampleFrom(source);
             },
             .rejection_acceptance => {
@@ -7132,6 +7142,21 @@ fn vectorHypergeometricFromCdf(
         }
     }
     return out;
+}
+
+/// Scalar inverse-CDF draw from the same hypergeometric table. A uniform above
+/// the last stored cumulative value falls back to the pmf walk.
+fn hypergeometricFromCdfTable(source: anytype, transform: *const HypergeometricInverseTransform, table: []const f64) u64 {
+    const u = Rng.floatFrom(source, f64);
+    if (u > table[table.len - 1]) return transform.sampleFrom(source);
+    var lo: usize = 0;
+    var hi: usize = table.len;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (u > table[mid]) lo = mid + 1 else hi = mid;
+    }
+    const x = transform.initial_x + lo;
+    return if (transform.sign_x > 0) transform.offset_x + x else transform.offset_x - x;
 }
 
 pub fn VectorHypergeometric(comptime VectorType: type) type {
