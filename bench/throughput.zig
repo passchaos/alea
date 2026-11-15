@@ -5,6 +5,7 @@ const builtin = @import("builtin");
 const MiB = 1024 * 1024;
 const trials = 3;
 const V4 = @Vector(4, f64);
+const V4U = @Vector(4, u64);
 const default_bytes = 128 * MiB;
 
 const Options = struct {
@@ -474,6 +475,13 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorDistribution(alea.distributions.VectorTriangular(V4), io, stdout, "alea vector triangular f64x4", bytes / 32, alea.distributions.VectorTriangular(V4).init(-1, 0, 2) catch unreachable, 0x9a13);
     try benchVectorDistribution(alea.distributions.VectorArcsine(V4), io, stdout, "alea vector arcsine f64x4", bytes / 32, alea.distributions.VectorArcsine(V4).init(-1, 3) catch unreachable, 0x9a14);
     try benchVectorDistribution(alea.distributions.VectorMaxwell(V4), io, stdout, "alea vector maxwell f64x4", bytes / 32, alea.distributions.VectorMaxwell(V4).init(2) catch unreachable, 0x9a15);
+    try benchVectorDistribution(alea.distributions.VectorBinomial(V4U), io, stdout, "alea vector binomial f64x4", bytes / 32, alea.distributions.VectorBinomial(V4U).init(40, 0.25) catch unreachable, 0x9a16);
+    try benchVectorDistribution(alea.distributions.VectorPoisson(V4U), io, stdout, "alea vector poisson f64x4", bytes / 32, alea.distributions.VectorPoisson(V4U).init(20) catch unreachable, 0x9a17);
+    try benchVectorDistribution(alea.distributions.VectorGeometric(V4U), io, stdout, "alea vector geometric f64x4", bytes / 32, alea.distributions.VectorGeometric(V4U).init(0.25) catch unreachable, 0x9a18);
+    try benchVectorDistribution(alea.distributions.VectorHypergeometric(V4U), io, stdout, "alea vector hypergeometric f64x4", bytes / 32, alea.distributions.VectorHypergeometric(V4U).init(100, 30, 10) catch unreachable, 0x9a19);
+    try benchVectorDistribution(alea.distributions.VectorNegativeBinomial(V4U), io, stdout, "alea vector negative-binomial f64x4", bytes / 32, alea.distributions.VectorNegativeBinomial(V4U).init(5, 0.4) catch unreachable, 0x9a1a);
+    try benchVectorDistribution(alea.distributions.VectorZipf(V4), io, stdout, "alea vector zipf f64x4", bytes / 32, alea.distributions.VectorZipf(V4).init(10, 1.5) catch unreachable, 0x9a1b);
+    try benchVectorDistribution(alea.distributions.VectorZeta(V4), io, stdout, "alea vector zeta f64x4", bytes / 32, alea.distributions.VectorZeta(V4).init(3) catch unreachable, 0x9a1c);
     try benchSkewNormal(io, stdout, "alea skew-normal", bytes / 128);
     try benchSkewNormalFastDirect(io, stdout, "alea skew-normal fast direct", bytes / 128);
     try benchSkewNormalRaw(alea.FastPrng, io, stdout, "alea skew-normal raw fast direct", bytes / 128, 0x5ce9, 1);
@@ -9937,7 +9945,15 @@ fn benchVectorDistribution(comptime Sampler: type, io: std.Io, stdout: *std.Io.W
         var checksum: f64 = 0;
         while (i < count) : (i += 1) {
             const point = dist.sample(rng);
-            inline for (0..4) |lane| checksum += point[lane];
+            const lanes = @typeInfo(@TypeOf(point)).vector.len;
+            inline for (0..lanes) |lane| {
+                const value = point[lane];
+                if (comptime @typeInfo(@TypeOf(value)) == .float) {
+                    checksum += value;
+                } else {
+                    checksum += @floatFromInt(value);
+                }
+            }
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
