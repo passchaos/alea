@@ -10972,6 +10972,94 @@ pub const StandardLogistic = struct {
 /// Implements Best & Fisher's (1979) efficient rejection algorithm which works well
 /// across all values of kappa without requiring separate cases for small/large kappa.
 /// Samples are returned in radians in the range (-pi, pi] relative to mu.
+/// Relative von Mises CDF `F(d) = ∫_{-π}^{d} e^{κ(cos t − 1)} dt / Z` for
+/// `d ∈ (-π, π]`, `κ >= 0`. For `κ <= 1e4` the Fourier/Bessel series
+///
+///   F = (d+π)/(2π) + (1/π) Σ_{k≥1} (I_k(κ)/I₀(κ)) sin(kd)/k
+///
+/// is evaluated with the continued-fraction ratio recursion
+/// `ρ_{k−1} = 1/(2k/κ + ρ_k)`, `ρ_K = 0`, accumulating the sum downward and
+/// rescaling the running ratio and sum together when the ratio grows large
+/// (no allocation, no overflow). For `κ > 1e4` the first-order uniform
+/// asymptotic `Φ(y) − (y³+3y)φ(y)/(24κ)`, `y = √κ·d`, is used; its remaining
+/// tail error is `O((y⁴/κ)²)` (about `5e-4` at `κ = 1e4`, `p ≈ 1e-12`, and
+/// below `1e-8` for `κ >= 1e6`).
+fn vonMisesRelativeCdf(comptime T: type, d: T, kappa: T) T {
+    const pi: T = @floatCast(std.math.pi);
+    if (d <= -pi) return 0;
+    if (d >= pi) return 1;
+    if (kappa == 0) return (d + pi) / (2 * pi);
+    if (kappa <= 1.0e4) {
+        const kf: f64 = @floatCast(kappa);
+        const k_total: usize = @max(64, @as(usize, @intFromFloat(@ceil(kf + 10 * @sqrt(kf) + 40))));
+        const k_sum: usize = @min(k_total, @max(64, @as(usize, @intFromFloat(@ceil(8.5 * @sqrt(kf) + 40)))));
+        const df: f64 = @floatCast(d);
+        var ratio: f64 = 1;
+        var sum: f64 = 0;
+        var rho: f64 = 0;
+        var k: usize = k_total;
+        while (k >= 1) : (k -= 1) {
+            const k_d: f64 = @floatFromInt(k);
+            if (k <= k_sum) sum += ratio * @sin(k_d * df) / k_d;
+            rho = 1 / (2 * k_d / kf + rho);
+            ratio /= rho;
+            if (ratio > 1.0e100) {
+                sum /= ratio;
+                ratio = 1;
+            }
+        }
+        const f = @as(f64, @floatCast(d + pi)) / @as(f64, @floatCast(2 * pi)) + sum / ratio / std.math.pi;
+        return @min(@as(T, 1), @max(@as(T, 0), @as(T, @floatCast(f))));
+    }
+    const kf: f64 = @floatCast(kappa);
+    const y = @sqrt(kf) * @as(f64, @floatCast(d));
+    const phi = @exp(-0.5 * y * y) / @sqrt(2 * std.math.pi);
+    const correction = (y * y * y + 3 * y) * phi / (24 * kf);
+    const f = normCdf(y) - correction;
+    return @min(@as(T, 1), @max(@as(T, 0), @as(T, @floatCast(f))));
+}
+
+/// Von Mises CDF with the periodic cut at `μ ± π`: `cdf(μ + π) = 1`, and
+/// `cdf(μ − π)` is the same point on the circle. The sample range
+/// `(μ − π, μ + π]` matches the sampler.
+pub fn vonMisesCdf(x: anytype, mu: anytype, kappa: anytype) resolvedFloatType(@TypeOf(x, mu, kappa)) {
+    return vonMisesCdfImpl(resolvedFloatType(@TypeOf(x, mu, kappa)), x, mu, kappa);
+}
+fn vonMisesCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, kappa: PeerType) PeerType {
+    const T = @TypeOf(x, mu, kappa);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(kappa) or kappa < 0 or std.math.isNan(x)) return std.math.nan(T);
+    const delta = x - mu;
+    if (!std.math.isFinite(delta)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    return vonMisesRelativeCdf(T, wrapAngle(delta, pi, two_pi), kappa);
+}
+
+/// Inverse von Mises CDF: `p = 0 → μ − π`, `p = 1 → μ + π`. Uses
+/// deterministic bisection on the relative CDF (64 iterations reach the f64
+/// resolution of the `2π` interval).
+pub fn vonMisesQuantile(p: anytype, mu: anytype, kappa: anytype) resolvedFloatType(@TypeOf(p, mu, kappa)) {
+    return vonMisesQuantileImpl(resolvedFloatType(@TypeOf(p, mu, kappa)), p, mu, kappa);
+}
+fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kappa: PeerType) PeerType {
+    const T = @TypeOf(p, mu, kappa);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(kappa) or kappa < 0 or !(p >= 0 and p <= 1)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    if (p == 0) return mu - pi;
+    if (p == 1) return mu + pi;
+    if (kappa == 0) return mu + 2 * pi * p - pi;
+    var lo: T = -pi;
+    var hi: T = pi;
+    var iteration: usize = 0;
+    while (iteration < 64) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (vonMisesRelativeCdf(T, mid, kappa) < p) lo = mid else hi = mid;
+    }
+    return mu + (lo + hi) / 2;
+}
+
 pub fn VonMises(comptime T: type) type {
     comptime requireFloat(T);
     return struct {
@@ -11026,6 +11114,16 @@ pub fn VonMises(comptime T: type) type {
         /// Samples are bounded to (-pi, pi] relative to the mean direction.
         pub fn maxValue(_: Self) T {
             return @as(T, @floatCast(std.math.pi));
+        }
+
+        /// Periodic CDF with its cut at `mu ± pi`.
+        pub fn cdf(self: Self, x: T) T {
+            return vonMisesCdfImpl(T, x, self.mu, self.kappa);
+        }
+
+        /// Inverse periodic CDF; `quantile(0) = mu - pi`, `quantile(1) = mu + pi`.
+        pub fn quantile(self: Self, p: T) T {
+            return vonMisesQuantileImpl(T, p, self.mu, self.kappa);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -63814,6 +63912,59 @@ test "VonMises constructor validates parameters" {
     const vm10 = try VonMises(f64).new(1.5, 10);
     try std.testing.expectEqual(@as(f64, 1.5), vm10.locationValue());
     try std.testing.expectEqual(@as(f64, 10), vm10.concentrationValue());
+}
+
+test "VonMises CDF and quantile are exact inverses" {
+    // Symmetry: F(mu) = 0.5, F(mu + pi) = 1, F(mu - pi + eps) is small.
+    inline for ([_]f64{ 0.1, 1, 5, 20, 1.0e4, 1.0e5 }) |kappa| {
+        const dist = try VonMises(f64).new(0.7, kappa);
+        try std.testing.expectApproxEqAbs(@as(f64, 0.5), dist.cdf(0.7), 1e-12);
+        try std.testing.expectApproxEqAbs(@as(f64, 1), dist.cdf(0.7 + std.math.pi), 1e-12);
+
+        // Monotone on the open interval between the cut endpoints.
+        var prev: f64 = -1;
+        var i: usize = 1;
+        while (i < 400) : (i += 1) {
+            const d = -std.math.pi + 2 * std.math.pi * @as(f64, @floatFromInt(i)) / 400;
+            const f = dist.cdf(0.7 + d);
+            try std.testing.expect(f >= prev - 1e-12);
+            try std.testing.expect(f >= 0 and f <= 1);
+            prev = f;
+        }
+
+        // Quantile round-trips through the same branch.
+        inline for ([_]f64{ 1e-6, 0.1, 0.5, 0.9, 1 - 1e-6 }) |p| {
+            try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-9);
+        }
+    }
+
+    // The antipodal tail is small for concentrated distributions.
+    inline for ([_]f64{ 5, 20, 1.0e4, 1.0e5 }) |kappa| {
+        const dist = try VonMises(f64).new(0.7, kappa);
+        try std.testing.expect(dist.cdf(0.7 - std.math.pi + 0.05) < 1e-3);
+    }
+
+    // Reference values (Fourier series for kappa <= 1e4, asymptotic above).
+    try std.testing.expectApproxEqAbs(@as(f64, 9.278794490455626e-2), vonMisesCdf(@as(f64, -2.5), @as(f64, 0), @as(f64, 0.1)), 1e-13);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.179048369438034e-2), vonMisesCdf(@as(f64, -2.5), @as(f64, 0), @as(f64, 1)), 1e-13);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.903795453185303e-2), vonMisesCdf(@as(f64, -1), @as(f64, 0), @as(f64, 5)), 1e-13);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.036747132254767e-5), vonMisesCdf(@as(f64, -1), @as(f64, 0), @as(f64, 20)), 1e-16);
+    try std.testing.expectApproxEqAbs(@as(f64, 8.586624818092983e-1), vonMisesCdf(@as(f64, 0.5), @as(f64, 0), @as(f64, 5)), 1e-13);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.350562972623093e-3), vonMisesCdf(@as(f64, -0.03), @as(f64, 0), @as(f64, 1.0e4)), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.194998168301089e-21), vonMisesCdf(@as(f64, -0.03), @as(f64, 0), @as(f64, 1.0e5)), 1e-30);
+
+    // kappa = 0 is uniform on (mu - pi, mu + pi].
+    const uniform_dist = try VonMises(f64).new(1.2, 0);
+    try std.testing.expectApproxEqAbs((0.5 + std.math.pi) / (2 * std.math.pi), vonMisesCdf(@as(f64, 0.5), @as(f64, 0), @as(f64, 0)), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), uniform_dist.cdf(uniform_dist.quantile(0.25)), 1e-12);
+
+    // f32 and invalid-parameter paths.
+    const f32_dist = try VonMises(f32).new(0, 5);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(0), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(f32_dist.quantile(0.5)), 1e-5);
+    try std.testing.expect(std.math.isNan(vonMisesCdf(@as(f64, 0), @as(f64, 0), @as(f64, -1))));
+    try std.testing.expect(std.math.isNan(vonMisesQuantile(@as(f64, 1.5), @as(f64, 0), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(vonMisesCdf(@as(f64, std.math.inf(f64)), @as(f64, 0), @as(f64, 1))));
 }
 
 test "VonMises samples stay within (-pi, pi] bounds relative to mu" {
