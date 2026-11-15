@@ -61,9 +61,12 @@ the f64 resolution of the interval).
 
 ## Documented Limits
 
-- The series has a `~1e-15` absolute cancellation floor, so relative tail
-  accuracy degrades for `p` below `~1e-12` at larger `κ` (for example
-  `κ > 10`).
+- The series has a `~1e-15` absolute cancellation floor. S4-M1613 adds a
+  local density-integral series near the `μ − π` antipode (see
+  `s4-m1613-von-mises-antipode-tail.md`), which fixes the angle-near-antipode
+  tail; the bulk-angle region for large `κ` (for example `κ = 50` at
+  `p = 1e-12`) still uses the Fourier series and keeps its `~3e-5` relative
+  floor.
 - The `κ > 1e4` asymptotic's remaining tail error is `O((y⁴/κ)²)`: about
   `5e-4` at `κ = 1e4`, `p ≈ 1e-12`, and below `1e-8` for `κ >= 1e6`. The
   bulk error is `O(1/κ²)`.

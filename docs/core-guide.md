@@ -489,8 +489,9 @@ Directional distributions on the circle and sphere:
   rejection sampling, κ=0 uniform and large-κ point-mass behavior, plus an
   exact CDF/quantile: the Fourier–Bessel series
   `F(d) = (d+π)/(2π) + (1/π) Σ (I_k/I₀) sin(kd)/k` with a continued-fraction
-  Bessel-ratio recursion for `κ <= 1e4`, and the first-order uniform
-  asymptotic `Φ(y) − (y³+3y)φ(y)/(24κ)`, `y = √κ·d`, above that.
+  Bessel-ratio recursion for `κ <= 1e4`, a local density-integral series
+  near the `μ − π` antipode, and the first-order uniform asymptotic
+  `Φ(y) − (y³+3y)φ(y)/(24κ)`, `y = √κ·d`, above that.
 - `WrappedCauchy(T)` / `StandardWrappedCauchy` — heavy-tailed circular
   distribution with closed-form inverse-CDF sampling, an exact closed-form
   CDF/quantile on `(-π, π]` (represented as `F(x) = ∫_{-π}^{x} f`), and SIMD

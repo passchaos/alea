@@ -11098,6 +11098,18 @@ fn vonMisesRelativeCdf(comptime T: type, d: T, kappa: T) T {
     if (d <= -pi) return 0;
     if (d >= pi) return 1;
     if (kappa == 0) return (d + pi) / (2 * pi);
+    // Near the antipode the Fourier–Bessel sum cancels to its ~1e-15 floor;
+    // integrate the local density expansion instead.
+    const delta = d + pi;
+    const tail_limit: T = @min(@as(T, 1e-3), 0.1 / @sqrt(kappa));
+    if (delta < tail_limit) {
+        const bessel_scaled = @exp(logBesselI0(kappa) - kappa);
+        const prefactor = @exp(-2 * kappa) / (2 * pi * bessel_scaled);
+        const q = kappa * delta * delta;
+        const series = delta * (1 + q / 6 + q * q / 40 + q * q * q / 336 + q * q * q * q / 3456);
+        const f = prefactor * series;
+        return @min(@as(T, 1), @max(@as(T, 0), f));
+    }
     if (kappa <= 1.0e4) {
         const kf: f64 = @floatCast(kappa);
         const k_total: usize = @max(64, @as(usize, @intFromFloat(@ceil(kf + 10 * @sqrt(kf) + 40))));
@@ -69147,4 +69159,5 @@ test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
     wf.sampleInto(rng, &wbuf_f32);
     try std.testing.expect(wbuf_f32[0] > 0);
 }
+
 
