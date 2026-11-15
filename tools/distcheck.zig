@@ -2004,9 +2004,8 @@ fn checkVectorGeometricBins(rng: alea.Rng, vectors: usize, p: f64, comptime labe
     try expectFloatBetween(label, stat, 0, bound);
 }
 
-fn checkVectorBinomialBins(rng: alea.Rng, vectors: usize) !void {
+fn checkVectorBinomialBins(rng: alea.Rng, vectors: usize, p: f64, comptime label: []const u8) !void {
     const trials: u64 = 40;
-    const p: f64 = 0.25;
     const bins = 8;
     const nf: f64 = @floatFromInt(trials);
     const ln_p = @log(p);
@@ -2038,7 +2037,7 @@ fn checkVectorBinomialBins(rng: alea.Rng, vectors: usize) !void {
     }
     const dof: f64 = bins - 1;
     const bound = dof + 6 * @sqrt(2 * dof);
-    try expectFloatBetween("long vector binomial pmf chi-square", stat, 0, bound);
+    try expectFloatBetween(label, stat, 0, bound);
 }
 
 fn checkBinnedChiSquareVector(comptime Model: type, comptime VectorType: type, comptime label: []const u8, rng: alea.Rng, vectors: usize) !void {
@@ -2482,7 +2481,11 @@ fn checkLongRun(samples: usize) !void {
                 return alea.distributions.maxwellCdf(x, 2);
             }
         }, V, "long vector maxwell binned", rng, vector_samples);
-        try checkVectorBinomialBins(rng, vector_samples);
+        try checkVectorBinomialBins(rng, vector_samples, 0.0625, "long vector binomial dyadic pmf chi-square p=0.0625");
+        try checkVectorBinomialBins(rng, vector_samples, 0.125, "long vector binomial dyadic pmf chi-square p=0.125");
+        try checkVectorBinomialBins(rng, vector_samples, 0.25, "long vector binomial dyadic pmf chi-square p=0.25");
+        try checkVectorBinomialBins(rng, vector_samples, 0.375, "long vector binomial dyadic pmf chi-square p=0.375");
+        try checkVectorBinomialBins(rng, vector_samples, 0.75, "long vector binomial dyadic pmf chi-square p=0.75");
         try checkVectorGeometricBins(rng, vector_samples, 0.0625, "long vector geometric pmf chi-square p=0.0625");
         try checkVectorGeometricBins(rng, vector_samples, 0.125, "long vector geometric pmf chi-square p=0.125");
         try checkVectorGeometricBins(rng, vector_samples, 0.25, "long vector geometric pmf chi-square p=0.25");
