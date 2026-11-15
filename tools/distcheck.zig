@@ -2760,6 +2760,7 @@ fn checkLongRun(samples: usize) !void {
         const binomial_inversion = try alea.distributions.Binomial.init(1000, 0.012);
         const vector_zipf = try alea.distributions.VectorZipf(@Vector(4, f64)).init(10, 1.5);
         const vector_hypergeometric = try alea.distributions.VectorHypergeometric(@Vector(4, u64)).init(100, 30, 10);
+        const zipf_fill_dist = try alea.distributions.Zipf(f64).init(10, 1.5);
         const bernoulli = try alea.distributions.Bernoulli.init(0.3);
         var binomial_hits = [_]usize{0} ** 3;
         var poisson_hits = [_]usize{0} ** 3;
@@ -2947,9 +2948,9 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(8)", binomial_inversion_hits[0], samples * 8, binomial_inversion.cdf(8));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(12)", binomial_inversion_hits[1], samples * 8, binomial_inversion.cdf(12));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(16)", binomial_inversion_hits[2], samples * 8, binomial_inversion.cdf(16));
-        try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(2)", zipf_fill_hits[0], samples * 8, zipf_dist.cdf(2));
-        try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(4)", zipf_fill_hits[1], samples * 8, zipf_dist.cdf(4));
-        try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(8)", zipf_fill_hits[2], samples * 8, zipf_dist.cdf(8));
+        try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(2)", zipf_fill_hits[0], samples * 8, zipf_fill_dist.cdf(2));
+        try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(4)", zipf_fill_hits[1], samples * 8, zipf_fill_dist.cdf(4));
+        try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(8)", zipf_fill_hits[2], samples * 8, zipf_fill_dist.cdf(8));
         try expectEmpiricalCdf("long vector zipf cdf(2)", vector_zipf_hits[0], samples * 8, vector_zipf.cdf(2));
         try expectEmpiricalCdf("long vector zipf cdf(4)", vector_zipf_hits[1], samples * 8, vector_zipf.cdf(4));
         try expectEmpiricalCdf("long vector zipf cdf(8)", vector_zipf_hits[2], samples * 8, vector_zipf.cdf(8));

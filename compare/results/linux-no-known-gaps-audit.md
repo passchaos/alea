@@ -7230,5 +7230,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1698-poisson-ad-cdf-probe.md`. and
 `compare/results/s4-m1699-scalar-hypergeometric-cdf-fill.md`. and
 `compare/results/s4-m1700-validate-all-refresh.md`. and
-`compare/results/s4-m1701-vector-geometric-multiword-fix.md`.
+`compare/results/s4-m1701-vector-geometric-multiword-fix.md`. and
+`compare/results/s4-m1702-zipf-fill-gate-fix.md`.
 
