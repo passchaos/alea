@@ -1008,6 +1008,35 @@ fn checkDiscrete() !void {
         try expectFloatBetween("hypergeometric huge folded quantile", alea.distributions.hypergeometricQuantile(0.5, population, 1e6, near_full), 1e6 - 1, 1e6 + 1);
     }
 
+    // Discrete quantile inversion invariants at tail probabilities. The
+    // previous-point bound is non-strict because the CDF can be flat within
+    // its approximation error at extreme parameters.
+    inline for ([_]f64{ 1e-6, 0.5, 1 - 1e-6 }) |q| {
+        const bq = alea.distributions.binomialQuantile(q, 1000, 0.012);
+        try expectFloatBetween("binomial quantile cdf", alea.distributions.binomialCdf(bq, 1000, 0.012), q, 1.0);
+        if (bq > 0) try expectFloatBetween("binomial quantile prev cdf", alea.distributions.binomialCdf(bq - 1, 1000, 0.012), 0.0, q);
+
+        const nbq = alea.distributions.negativeBinomialQuantile(q, 3, 0.5);
+        try expectFloatBetween("negative binomial quantile cdf", alea.distributions.negativeBinomialCdf(nbq, 3, 0.5), q, 1.0);
+        if (nbq > 0) try expectFloatBetween("negative binomial quantile prev cdf", alea.distributions.negativeBinomialCdf(nbq - 1, 3, 0.5), 0.0, q);
+
+        const gq = alea.distributions.geometricQuantile(q, 0.4);
+        try expectFloatBetween("geometric quantile cdf", alea.distributions.geometricCdf(gq, 0.4), q, 1.0);
+        if (gq > 1) try expectFloatBetween("geometric quantile prev cdf", alea.distributions.geometricCdf(gq - 1, 0.4), 0.0, q);
+
+        const hq = alea.distributions.hypergeometricQuantile(q, 100, 30, 10);
+        try expectFloatBetween("hypergeometric quantile cdf", alea.distributions.hypergeometricCdf(hq, 100, 30, 10), q, 1.0);
+        if (hq > 0) try expectFloatBetween("hypergeometric quantile prev cdf", alea.distributions.hypergeometricCdf(hq - 1, 100, 30, 10), 0.0, q);
+
+        const zq = alea.distributions.zipfQuantile(q, 40, 1.5);
+        try expectFloatBetween("zipf quantile cdf", alea.distributions.zipfCdf(zq, 40, 1.5), q, 1.0);
+        if (zq > 1) try expectFloatBetween("zipf quantile prev cdf", alea.distributions.zipfCdf(zq - 1, 40, 1.5), 0.0, q);
+
+        const tq = alea.distributions.zetaQuantile(q, 2.5);
+        try expectFloatBetween("zeta quantile cdf", alea.distributions.zetaCdf(tq, 2.5), q, 1.0);
+        if (tq > 1) try expectFloatBetween("zeta quantile prev cdf", alea.distributions.zetaCdf(tq - 1, 2.5), 0.0, q);
+    }
+
     // Hypergeometric CDF agrees with empirical frequencies.
     {
         const dist = try alea.distributions.Hypergeometric.init(100, 30, 10);
