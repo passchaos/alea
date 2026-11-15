@@ -2765,6 +2765,7 @@ fn checkLongRun(samples: usize) !void {
         const vector_zipf = try alea.distributions.VectorZipf(@Vector(4, f64)).init(10, 1.5);
         const vector_hypergeometric = try alea.distributions.VectorHypergeometric(@Vector(4, u64)).init(100, 30, 10);
         const zipf_fill_dist = try alea.distributions.Zipf(f64).init(10, 1.5);
+        const zipf_sample_dist = try alea.distributions.Zipf(f64).init(10, 1.5);
         const bernoulli = try alea.distributions.Bernoulli.init(0.3);
         var binomial_hits = [_]usize{0} ** 3;
         var poisson_hits = [_]usize{0} ** 3;
@@ -2785,6 +2786,7 @@ fn checkLongRun(samples: usize) !void {
         var binomial_inversion_hits = [_]usize{0} ** 3;
         var binomial_hin_hits = [_]usize{0} ** 3;
         var zipf_fill_hits = [_]usize{0} ** 3;
+        var zipf_sample_hits = [_]usize{0} ** 3;
         var vector_zipf_hits = [_]usize{0} ** 3;
         var vector_hypergeometric_hits = [_]usize{0} ** 3;
         var scalar_hypergeometric_hits = [_]usize{0} ** 3;
@@ -2889,6 +2891,10 @@ fn checkLongRun(samples: usize) !void {
                 if (value <= 4) zipf_fill_hits[1] += 1;
                 if (value <= 8) zipf_fill_hits[2] += 1;
             }
+            const zs = zipf_sample_dist.sample(rng);
+            if (zs <= 2) zipf_sample_hits[0] += 1;
+            if (zs <= 4) zipf_sample_hits[1] += 1;
+            if (zs <= 8) zipf_sample_hits[2] += 1;
             var vz_buf: [2]@Vector(4, f64) = undefined;
             vector_zipf.fill(rng, &vz_buf);
             for (vz_buf) |vec| inline for (0..4) |lane| {
@@ -2966,6 +2972,9 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(2)", zipf_fill_hits[0], samples * 8, zipf_fill_dist.cdf(2));
         try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(4)", zipf_fill_hits[1], samples * 8, zipf_fill_dist.cdf(4));
         try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(8)", zipf_fill_hits[2], samples * 8, zipf_fill_dist.cdf(8));
+        try expectEmpiricalCdf("long sampleZipf(10,1.5) cdf(2)", zipf_sample_hits[0], samples, zipf_sample_dist.cdf(2));
+        try expectEmpiricalCdf("long sampleZipf(10,1.5) cdf(4)", zipf_sample_hits[1], samples, zipf_sample_dist.cdf(4));
+        try expectEmpiricalCdf("long sampleZipf(10,1.5) cdf(8)", zipf_sample_hits[2], samples, zipf_sample_dist.cdf(8));
         try expectEmpiricalCdf("long vector zipf cdf(2)", vector_zipf_hits[0], samples * 8, vector_zipf.cdf(2));
         try expectEmpiricalCdf("long vector zipf cdf(4)", vector_zipf_hits[1], samples * 8, vector_zipf.cdf(4));
         try expectEmpiricalCdf("long vector zipf cdf(8)", vector_zipf_hits[2], samples * 8, vector_zipf.cdf(8));
