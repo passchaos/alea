@@ -5766,7 +5766,7 @@ fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, tria
     while (k < trials) : (k += 1) {
         pmf *= (@as(f64, @floatFromInt(trials - k + 1)) / @as(f64, @floatFromInt(k))) * (p / q);
         acc += pmf;
-        cdf[k] = acc;
+        cdf[@intCast(k)] = acc;
     }
     const F = @Vector(lanes, f64);
     var uniforms: F = undefined;
@@ -5774,7 +5774,7 @@ fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, tria
     var out: VectorType = @splat(0);
     k = 0;
     while (k < trials) : (k += 1) {
-        const threshold: F = @splat(cdf[k]);
+        const threshold: F = @splat(cdf[@intCast(k)]);
         out += @select(u64, uniforms > threshold, @as(VectorType, @splat(1)), @as(VectorType, @splat(0)));
     }
     return out;
