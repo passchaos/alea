@@ -28947,12 +28947,6 @@ pub fn fillVectorParetoCheckedFrom(source: anytype, comptime VectorType: type, d
     sampler.fillFrom(source, dest);
 }
 
-fn paretoFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, scale: vectorChild(VectorType), inverse_shape: vectorChild(VectorType)) VectorType {
-    const scale_vec: VectorType = @splat(scale);
-    const neg_inverse_shape_vec: VectorType = @splat(-inverse_shape);
-    return scale_vec * @exp(@log(uniform_vec) * neg_inverse_shape_vec);
-}
-
 pub fn VectorPareto(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -28999,47 +28993,24 @@ pub fn VectorPareto(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const uniform_vec = rng.vectorOpen(VectorType);
-            if (self.shapeValue() == 1) return @as(VectorType, @splat(self.scaleValue())) / uniform_vec;
-            return paretoFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-            if (self.shapeValue() == 1) return @as(VectorType, @splat(self.scaleValue())) / uniform_vec;
-            return paretoFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = paretoFrom(source, vectorChild(VectorType), self.scaleValue(), self.shapeValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpen(VectorType);
-                if (self.shapeValue() == 1) {
-                    item.* = @as(VectorType, @splat(self.scaleValue())) / uniform_vec;
-                } else {
-                    item.* = paretoFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
-                }
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                if (self.shapeValue() == 1) {
-                    item.* = @as(VectorType, @splat(self.scaleValue())) / uniform_vec;
-                } else {
-                    item.* = paretoFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
-                }
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -29232,13 +29203,6 @@ pub fn fillVectorWeibullCheckedFrom(source: anytype, comptime VectorType: type, 
     sampler.fillFrom(source, dest);
 }
 
-fn weibullFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, scale: vectorChild(VectorType), inverse_shape: vectorChild(VectorType)) VectorType {
-    if (scale == 0) return @splat(0);
-    const scale_vec: VectorType = @splat(scale);
-    const inverse_shape_vec: VectorType = @splat(inverse_shape);
-    return scale_vec * @exp(@log(-@log(uniform_vec)) * inverse_shape_vec);
-}
-
 pub fn VectorWeibull(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -29285,53 +29249,24 @@ pub fn VectorWeibull(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const scale_vec: VectorType = @splat(self.scaleValue());
-            if (self.shapeValue() == 1) return scale_vec * vectorStandardExponential(rng, VectorType);
-            const uniform_vec = rng.vectorOpen(VectorType);
-            return weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const scale_vec: VectorType = @splat(self.scaleValue());
-            if (self.shapeValue() == 1) return scale_vec * vectorStandardExponentialFrom(source, VectorType);
-            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-            return weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), 1 / self.shapeValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = weibullFrom(source, vectorChild(VectorType), self.scaleValue(), self.shapeValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            const scale_vec: VectorType = @splat(self.scaleValue());
-            if (self.shapeValue() == 1) {
-                for (dest) |*item| item.* = scale_vec * vectorStandardExponential(rng, VectorType);
-                return;
-            }
-            const inverse_shape = 1 / self.shapeValue();
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpen(VectorType);
-                item.* = weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), inverse_shape);
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            const scale_vec: VectorType = @splat(self.scaleValue());
-            if (self.shapeValue() == 1) {
-                for (dest) |*item| item.* = scale_vec * vectorStandardExponentialFrom(source, VectorType);
-                return;
-            }
-            const inverse_shape = 1 / self.shapeValue();
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                item.* = weibullFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue(), inverse_shape);
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -29520,13 +29455,6 @@ pub fn fillVectorGumbelCheckedFrom(source: anytype, comptime VectorType: type, d
     sampler.fillFrom(source, dest);
 }
 
-fn gumbelFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
-    if (scale == 0) return @splat(location);
-    const location_vec: VectorType = @splat(location);
-    const scale_vec: VectorType = @splat(scale);
-    return location_vec - scale_vec * @log(-@log(uniform_vec));
-}
-
 pub fn VectorGumbel(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -29573,37 +29501,24 @@ pub fn VectorGumbel(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
-            const uniform_vec = rng.vectorOpenClosed(VectorType);
-            return gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.locationValue());
-            const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
-            return gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = gumbelFrom(source, vectorChild(VectorType), self.locationValue(), self.scaleValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpenClosed(VectorType);
-                item.* = gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
-                item.* = gumbelFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -29788,19 +29703,6 @@ pub fn fillVectorFrechetCheckedFrom(source: anytype, comptime VectorType: type, 
     sampler.fillFrom(source, dest);
 }
 
-fn frechetFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType), negative_inverse_shape: vectorChild(VectorType)) VectorType {
-    const location_vec: VectorType = @splat(location);
-    const scale_vec: VectorType = @splat(scale);
-    const negative_inverse_shape_vec: VectorType = @splat(negative_inverse_shape);
-    return location_vec + scale_vec * @exp(@log(-@log(uniform_vec)) * negative_inverse_shape_vec);
-}
-
-fn frechetShapeOneFromOpenClosedUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
-    const location_vec: VectorType = @splat(location);
-    const negative_scale_vec: VectorType = @splat(-scale);
-    return location_vec + negative_scale_vec / @log(uniform_vec);
-}
-
 pub fn VectorFrechet(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -29851,47 +29753,24 @@ pub fn VectorFrechet(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const uniform_vec = rng.vectorOpenClosed(VectorType);
-            if (self.shapeValue() == 1) return frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-            return frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
-            if (self.shapeValue() == 1) return frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-            return frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = frechetFrom(source, vectorChild(VectorType), self.locationValue(), self.scaleValue(), self.shapeValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpenClosed(VectorType);
-                if (self.shapeValue() == 1) {
-                    item.* = frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-                } else {
-                    item.* = frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
-                }
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenClosedFrom(source, VectorType);
-                if (self.shapeValue() == 1) {
-                    item.* = frechetShapeOneFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-                } else {
-                    item.* = frechetFromOpenClosedUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue(), -1 / self.shapeValue());
-                }
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -47491,7 +47370,8 @@ test "infinite-scale pareto and weibull helpers preserve transform stream shape"
         }
 
         fn consumeVector(source: anytype, comptime VectorType: type) void {
-            _ = Rng.vectorOpenFrom(source, VectorType);
+            // The vector samplers now run the scalar transform once per lane.
+            inline for (0..vectorInfo(VectorType).len) |_| consumeScalar(source, vectorChild(VectorType));
         }
 
         fn consumeVectorFill(source: anytype, comptime VectorType: type, count: usize) void {

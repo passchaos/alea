@@ -7146,5 +7146,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1614-validate-all-refresh.md`, and
 `compare/results/s4-m1615-gev-benchmark-rows.md`, and
 `compare/results/s4-m1616-scalar-per-lane-vector-gev.md`, and
-`compare/results/s4-m1617-validate-all-refresh.md`.
+`compare/results/s4-m1617-validate-all-refresh.md`, and
+`compare/results/s4-m1618-scalar-per-lane-vector-inverse-cdf.md`.
 
