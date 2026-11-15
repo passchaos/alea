@@ -5745,6 +5745,40 @@ pub fn fillVectorBinomialCheckedFrom(source: anytype, comptime VectorType: type,
     dist.fillFrom(source, dest);
 }
 
+/// Packed dyadic binomial for u64 vectors: one word per lane per round with
+/// vector mask/popcount work, so a 40-trial sample costs two vector rounds.
+fn vectorBinomialDyadicFrom(comptime VectorType: type, source: anytype, trials: u64, m: u32, k: u64) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    const Shift = std.math.Log2Int(u64);
+    const sh1: @Vector(lanes, Shift) = @splat(1);
+    const sh2: @Vector(lanes, Shift) = @splat(2);
+    const sh3: @Vector(lanes, Shift) = @splat(3);
+    const c5555: VectorType = @splat(0x5555_5555_5555_5555);
+    const c1249: VectorType = @splat(0x1249_2492_4924_9249);
+    const c1111: VectorType = @splat(0x1111_1111_1111_1111);
+    const per_word: u64 = 64 / m;
+    var out: VectorType = @splat(0);
+    var remaining = trials;
+    while (remaining > 0) {
+        var bits: VectorType = undefined;
+        inline for (0..lanes) |lane| bits[lane] = Rng.nextFrom(source);
+        const take = @min(remaining, per_word);
+        var mask: VectorType = if (m == 2)
+            (if (k == 1) ~bits & ~(bits >> sh1) & c5555 else ~(bits & (bits >> sh1)) & c5555)
+        else if (m == 3)
+            (if (k == 1) ~(bits | (bits >> sh1) | (bits >> sh2)) & c1249 else ~((bits >> sh2) | (bits & (bits >> sh1))) & c1249)
+        else
+            ~(bits | (bits >> sh1) | (bits >> sh2) | (bits >> sh3)) & c1111;
+        if (take < per_word) {
+            const limit: VectorType = @splat((@as(u64, 1) << @intCast(take * m)) - 1);
+            mask &= limit;
+        }
+        out += @as(VectorType, @intCast(@popCount(mask)));
+        remaining -= take;
+    }
+    return out;
+}
+
 pub fn VectorBinomial(comptime VectorType: type) type {
     const info = vectorInfo(VectorType);
     if (info.child != u64) @compileError("VectorBinomial expects a u64 vector");
@@ -5784,16 +5818,20 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.trials == 0 or self.sampler.p == 0) return @splat(0);
-            if (self.sampler.p == 1) return @splat(self.sampler.trials);
-            var out: VectorType = undefined;
-            inline for (0..info.len) |lane| out[lane] = binomialFrom(rng, self.sampler.trials, self.sampler.p);
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.trials == 0 or self.sampler.p == 0) return @splat(0);
             if (self.sampler.p == 1) return @splat(self.sampler.trials);
+            if (self.sampler.trials <= 64) {
+                const complement = self.sampler.p > 0.5;
+                const q = if (complement) 1.0 - self.sampler.p else self.sampler.p;
+                if (dyadicBinomialFields(q)) |fields| {
+                    const sampled = vectorBinomialDyadicFrom(VectorType, source, self.sampler.trials, fields.m, fields.k);
+                    return if (complement) @as(VectorType, @splat(self.sampler.trials)) - sampled else sampled;
+                }
+            }
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -5808,13 +5846,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
                 return;
             }
-            const trials = self.sampler.trials;
-            const p = self.sampler.p;
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| out[lane] = binomialFrom(rng, trials, p);
-                item.* = out;
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -5826,13 +5858,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
                 return;
             }
-            const trials = self.sampler.trials;
-            const p = self.sampler.p;
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| out[lane] = binomialFrom(source, trials, p);
-                item.* = out;
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }

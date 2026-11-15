@@ -119,6 +119,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | `exp2`/`log2` transforms for Weibull, Fréchet, GEV, and LogLogistic sampling (ulp-level stream change) | `compare/results/s4-m1628-exp2-log2-samplers.md` |
 | `exp2`/`log2` Weibull/Fréchet/log-logistic fill streams (ulp-level change) | `compare/results/s4-m1631-exp2-log2-fills.md` |
 | `exp2`/`log2` PowerFunction fill stream (ulp-level change) | `compare/results/s4-m1633-exp2-log2-power-function-fill.md` |
+| Vectorized dyadic `VectorBinomial` (one word per lane per round) | `compare/results/s4-m1636-vector-binomial-dyadic-kernel.md` |
 | Bingham proposal scales and `@log` acceptance | `compare/results/s4-m1360-bingham-precomputed-scales.md`, `compare/results/s4-m1373-bingham-log-ratio.md` |
 | Student-t recurrence table and vectorized copula CDF | `compare/results/s4-m1367-student-t-recurrence-table.md`, `compare/results/s4-m1371-vectorized-copula-cdf.md` |
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |
