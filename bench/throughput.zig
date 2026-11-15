@@ -514,6 +514,8 @@ pub fn main(init: std.process.Init) !void {
     try benchZetaFillDirect(io, stdout, "alea Zeta.fillFrom direct", bytes / 128);
     try stdout.print("\nadvanced multivariate throughput\n", .{});
     try benchBingham(io, stdout, "alea bingham 3d", bytes / 64);
+    try benchVonMises(io, stdout, "alea von mises", bytes / 8);
+    try benchVectorVonMises(io, stdout, "alea vector von mises f64x4", bytes / 32);
     try benchVonMisesFisher(io, stdout, "alea von mises-fisher 3d", bytes / 64);
     try benchVectorVonMisesFisher(io, stdout, "alea vector von mises-fisher f64x4 3d", bytes / 64);
     try benchVectorWatson(io, stdout, "alea vector watson f64x4 3d", bytes / 64);
@@ -11774,6 +11776,62 @@ fn benchVectorVonMisesFisher(io: std.Io, stdout: *std.Io.Writer, name: []const u
             inline for (0..3) |component| {
                 inline for (0..4) |lane| checksum +%= @bitCast(point[component][lane]);
             }
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchVonMises(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const dist = alea.distributions.VonMises(f64).new(0.5, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5f30);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= @bitCast(dist.sample(rng));
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchVectorVonMises(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const V = @Vector(4, f64);
+    const dist = alea.distributions.VectorVonMises(V).new(0.5, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5f31);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| checksum +%= @bitCast(point[lane]);
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
