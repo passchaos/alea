@@ -7189,5 +7189,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1657-validate-all-refresh.md`. and
 `compare/results/s4-m1658-fair-clz-long-gates.md`. and
 `compare/results/s4-m1659-validate-all-refresh.md`. and
-`compare/results/s4-m1660-vector-binomial-non-dyadic-pmf-gates.md`.
+`compare/results/s4-m1660-vector-binomial-non-dyadic-pmf-gates.md`. and
+`compare/results/s4-m1661-validate-all-refresh.md`.
 
