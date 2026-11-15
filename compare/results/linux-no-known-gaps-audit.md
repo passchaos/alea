@@ -7196,5 +7196,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1664-vector-binomial-hoisted-cdf-fill.md`. and
 `compare/results/s4-m1665-validate-all-refresh.md`. and
 `compare/results/s4-m1666-vector-geometric-hoisted-fill.md`. and
-`compare/results/s4-m1667-validate-all-refresh.md`.
+`compare/results/s4-m1667-validate-all-refresh.md`. and
+`compare/results/s4-m1668-vector-negative-binomial-hoisted-rate.md`.
 

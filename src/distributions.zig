@@ -6716,31 +6716,30 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.p == 1) return @splat(0);
-            var out: VectorType = undefined;
-            inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(rng, self.sampler.successes, self.sampler.p);
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.p == 1) return @splat(0);
+            const successes = self.sampler.successes;
+            const p = self.sampler.p;
             var out: VectorType = undefined;
-            inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            if (p == 0.5 and successes < (1 << 20)) {
+                inline for (0..info.len) |lane| out[lane] = negativeBinomialFairFrom(source, successes);
+                return out;
+            }
+            if (successes >= (1 << 20)) {
+                inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(source, successes, p);
+                return out;
+            }
+            // The per-success rate is fixed, so compute the log once per vector.
+            const q = -@log(1 - p);
+            inline for (0..info.len) |lane| out[lane] = negativeBinomialFromLogQ(source, successes, p, q);
             return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.p == 1) {
-                @memset(dest, @as(VectorType, @splat(0)));
-                return;
-            }
-            const successes = self.sampler.successes;
-            const p = self.sampler.p;
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(rng, successes, p);
-                item.* = out;
-            }
+            self.fillFrom(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -6750,9 +6749,27 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
             }
             const successes = self.sampler.successes;
             const p = self.sampler.p;
+            if (p == 0.5 and successes < (1 << 20)) {
+                for (dest) |*item| {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = negativeBinomialFairFrom(source, successes);
+                    item.* = out;
+                }
+                return;
+            }
+            if (successes >= (1 << 20)) {
+                for (dest) |*item| {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(source, successes, p);
+                    item.* = out;
+                }
+                return;
+            }
+            // The per-success rate is fixed, so compute the log once per slice.
+            const q = -@log(1 - p);
             for (dest) |*item| {
                 var out: VectorType = undefined;
-                inline for (0..info.len) |lane| out[lane] = negativeBinomialFrom(source, successes, p);
+                inline for (0..info.len) |lane| out[lane] = negativeBinomialFromLogQ(source, successes, p, q);
                 item.* = out;
             }
         }
