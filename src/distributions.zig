@@ -7075,6 +7075,65 @@ pub fn fillVectorHypergeometricCheckedFrom(source: anytype, comptime VectorType:
     dist.fillFrom(source, dest);
 }
 
+/// Largest hypergeometric support width that uses the vector CDF scan.
+const hypergeometric_cdf_max = 32;
+
+fn hypergeometricCdfTable(transform: *const HypergeometricInverseTransform, table: *[hypergeometric_cdf_max]f64) ?usize {
+    const upper = @min(transform.k, transform.n1);
+    if (transform.initial_x > upper) return null;
+    const width: usize = @intCast(upper - transform.initial_x + 1);
+    if (width > hypergeometric_cdf_max) return null;
+    var p = transform.initial_p;
+    var x = transform.initial_x;
+    var acc: f64 = 0;
+    var i: usize = 0;
+    while (i < width) : (i += 1) {
+        acc += p;
+        table[i] = acc;
+        if (x < upper) {
+            const denominator_tail = if (transform.k <= transform.n2)
+                transform.n2 - transform.k + 1 + x
+            else
+                x - (transform.k - transform.n2) + 1;
+            p *= @as(f64, @floatFromInt(transform.n1 - x)) * @as(f64, @floatFromInt(transform.k - x));
+            p /= @as(f64, @floatFromInt(x + 1)) * @as(f64, @floatFromInt(denominator_tail));
+            x += 1;
+        }
+    }
+    return width;
+}
+
+fn vectorHypergeometricFromCdf(
+    comptime VectorType: type,
+    source: anytype,
+    transform: *const HypergeometricInverseTransform,
+    table: []const f64,
+) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    const F = @Vector(lanes, f64);
+    var uniforms: F = undefined;
+    inline for (0..lanes) |lane| uniforms[lane] = Rng.floatFrom(source, f64);
+    var count: VectorType = @splat(0);
+    for (table) |threshold_value| {
+        const threshold: F = @splat(threshold_value);
+        count += @select(u64, uniforms > threshold, @as(VectorType, @splat(1)), @as(VectorType, @splat(0)));
+    }
+    const last = table[table.len - 1];
+    const reduced = @as(VectorType, @splat(transform.initial_x)) + count;
+    var out: VectorType = undefined;
+    inline for (0..lanes) |lane| {
+        if (uniforms[lane] > last) {
+            out[lane] = transform.sampleFrom(source);
+        } else {
+            out[lane] = if (transform.sign_x > 0)
+                transform.offset_x + reduced[lane]
+            else
+                transform.offset_x - reduced[lane];
+        }
+    }
+    return out;
+}
+
 pub fn VectorHypergeometric(comptime VectorType: type) type {
     const info = vectorInfo(VectorType);
     if (info.child != u64) @compileError("VectorHypergeometric expects a u64 vector");
@@ -7117,55 +7176,37 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
         }
 
         pub fn sample(self: *const Self, rng: Rng) VectorType {
-            if (self.sampler.method == .constant) return @splat(self.sampler.constant);
-            var out: VectorType = undefined;
-            switch (self.sampler.method) {
-                .constant => unreachable,
-                .draw_loop => inline for (0..info.len) |lane| {
-                    out[lane] = hypergeometricDrawLoopFrom(rng, self.sampler.population, self.sampler.successes, self.sampler.draws);
-                },
-                .inverse_transform => inline for (0..info.len) |lane| {
-                    out[lane] = self.sampler.inverse_transform.sampleFrom(rng);
-                },
-                .rejection_acceptance => inline for (0..info.len) |lane| {
-                    out[lane] = self.sampler.rejection_acceptance.sampleFrom(rng);
-                },
-            }
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: *const Self, source: anytype) VectorType {
             if (self.sampler.method == .constant) return @splat(self.sampler.constant);
-            var out: VectorType = undefined;
-            inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
-            return out;
+            switch (self.sampler.method) {
+                .constant => unreachable,
+                .draw_loop => {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = hypergeometricDrawLoopFrom(source, self.sampler.population, self.sampler.successes, self.sampler.draws);
+                    return out;
+                },
+                .inverse_transform => {
+                    var table: [hypergeometric_cdf_max]f64 = undefined;
+                    if (hypergeometricCdfTable(&self.sampler.inverse_transform, &table)) |width| {
+                        return vectorHypergeometricFromCdf(VectorType, source, &self.sampler.inverse_transform, table[0..width]);
+                    }
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = self.sampler.inverse_transform.sampleFrom(source);
+                    return out;
+                },
+                .rejection_acceptance => {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = self.sampler.rejection_acceptance.sampleFrom(source);
+                    return out;
+                },
+            }
         }
 
         pub fn fill(self: *const Self, rng: Rng, dest: []VectorType) void {
-            switch (self.sampler.method) {
-                .constant => @memset(dest, @as(VectorType, @splat(self.sampler.constant))),
-                .draw_loop => {
-                    for (dest) |*item| {
-                        var out: VectorType = undefined;
-                        inline for (0..info.len) |lane| out[lane] = hypergeometricDrawLoopFrom(rng, self.sampler.population, self.sampler.successes, self.sampler.draws);
-                        item.* = out;
-                    }
-                },
-                .inverse_transform => {
-                    for (dest) |*item| {
-                        var out: VectorType = undefined;
-                        inline for (0..info.len) |lane| out[lane] = self.sampler.inverse_transform.sampleFrom(rng);
-                        item.* = out;
-                    }
-                },
-                .rejection_acceptance => {
-                    for (dest) |*item| {
-                        var out: VectorType = undefined;
-                        inline for (0..info.len) |lane| out[lane] = self.sampler.rejection_acceptance.sampleFrom(rng);
-                        item.* = out;
-                    }
-                },
-            }
+            self.fillFrom(rng, dest);
         }
 
         pub fn fillFrom(self: *const Self, source: anytype, dest: []VectorType) void {
@@ -7179,6 +7220,11 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
                     }
                 },
                 .inverse_transform => {
+                    var table: [hypergeometric_cdf_max]f64 = undefined;
+                    if (hypergeometricCdfTable(&self.sampler.inverse_transform, &table)) |width| {
+                        for (dest) |*item| item.* = vectorHypergeometricFromCdf(VectorType, source, &self.sampler.inverse_transform, table[0..width]);
+                        return;
+                    }
                     for (dest) |*item| {
                         var out: VectorType = undefined;
                         inline for (0..info.len) |lane| out[lane] = self.sampler.inverse_transform.sampleFrom(source);
