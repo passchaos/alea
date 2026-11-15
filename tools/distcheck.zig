@@ -1858,6 +1858,36 @@ fn longMeanTolerance(variance: f64, samples: usize, fixed: f64) f64 {
     return @min(fixed, 6 * @sqrt(variance / nf) + 1e-12);
 }
 
+/// Binned chi-square goodness-of-fit gate: the empirical distribution of
+/// `Model.sample` must fall into the 20 equiprobable `Model.cdf` bins with a
+/// statistic within six standard deviations of its `dof = 19` mean. The null
+/// distribution does not depend on the sample count, so the same bound is
+/// valid for the 1e7 and 1e9 long modes.
+fn checkBinnedChiSquare(comptime Model: type, comptime label: []const u8, rng: alea.Rng, samples: usize) !void {
+    const bins = 20;
+    var counts = [_]usize{0} ** bins;
+    var i: usize = 0;
+    while (i < samples) : (i += 1) {
+        const x = Model.sample(rng);
+        const u = Model.cdf(x);
+        var b: usize = 0;
+        if (u > 0) {
+            const scaled = u * bins;
+            b = if (scaled >= bins) bins - 1 else @intFromFloat(scaled);
+        }
+        counts[b] += 1;
+    }
+    const expected = @as(f64, @floatFromInt(samples)) / bins;
+    var stat: f64 = 0;
+    for (counts) |c| {
+        const d = @as(f64, @floatFromInt(c)) - expected;
+        stat += d * d / expected;
+    }
+    const dof: f64 = bins - 1;
+    const bound = dof + 6 * @sqrt(2 * dof);
+    try expectFloatBetween(label ++ " chi-square", stat, 0, bound);
+}
+
 fn checkLongRun(samples: usize) !void {
     const allocator = std.heap.smp_allocator;
     const nf: f64 = @floatFromInt(samples);
@@ -2126,6 +2156,93 @@ fn checkLongRun(samples: usize) !void {
         const empirical = @as(f64, @floatFromInt(below)) / nf;
         const cdf_se = @sqrt(expected_cdf * (1 - expected_cdf) / nf);
         try expectFloatBetween("long gev cdf(3)", empirical, expected_cdf - 6 * cdf_se, expected_cdf + 6 * cdf_se);
+    }
+
+    // Binned chi-square goodness-of-fit gates (20 equiprobable CDF bins).
+    {
+        var engine = alea.FastPrng.init(0x10e0);
+        const rng = alea.Rng.init(&engine);
+        const binned_samples = samples / 4;
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.normal(r, f64, 0, 1);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.normCdf(x);
+            }
+        }, "long normal binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.exponential(r, f64, 1);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.exponentialCdf(x, 1);
+            }
+        }, "long exponential binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.gamma(r, f64, 3, 1);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.gammaCdf(x, 3, 1);
+            }
+        }, "long gamma binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.beta(r, f64, 2, 3);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.betaCdf(x, 2, 3);
+            }
+        }, "long beta binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.studentT(r, f64, 5);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.studentTCdf(x, 5);
+            }
+        }, "long student-t binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.logNormal(r, f64, 0, 1);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.logNormalCdf(x, 0, 1);
+            }
+        }, "long log-normal binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.generalizedExtremeValue(r, f64, 1, 2, 0.3);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.generalizedExtremeValueCdf(x, 1, 2, 0.3);
+            }
+        }, "long gev binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.generalizedPareto(r, f64, 1, 2, 0.3);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.generalizedParetoCdf(x, 1, 2, 0.3);
+            }
+        }, "long gpd binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.vonMises(r, f64, 0.5, 5);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.vonMisesCdf(x, 0.5, 5);
+            }
+        }, "long von mises binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.wrappedCauchy(r, f64, 0.4, 0.5);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.wrappedCauchyCdf(x, 0.4, 0.5);
+            }
+        }, "long wrapped cauchy binned", rng, binned_samples);
     }
 
     // Exact SO(3) matrix Fisher isotropic trace moment.
