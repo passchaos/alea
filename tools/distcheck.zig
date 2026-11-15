@@ -1975,8 +1975,7 @@ fn checkVectorBinomialFairBins(rng: alea.Rng, vectors: usize) !void {
     try expectFloatBetween("long vector binomial fair pmf chi-square", stat, 0, bound);
 }
 
-fn checkVectorGeometricBins(rng: alea.Rng, vectors: usize) !void {
-    const p: f64 = 0.25;
+fn checkVectorGeometricBins(rng: alea.Rng, vectors: usize, p: f64, comptime label: []const u8) !void {
     const bins = 8;
     var bin_prob = [_]f64{0} ** bins;
     var k: usize = 1;
@@ -2002,7 +2001,7 @@ fn checkVectorGeometricBins(rng: alea.Rng, vectors: usize) !void {
     }
     const dof: f64 = bins - 1;
     const bound = dof + 6 * @sqrt(2 * dof);
-    try expectFloatBetween("long vector geometric pmf chi-square", stat, 0, bound);
+    try expectFloatBetween(label, stat, 0, bound);
 }
 
 fn checkVectorBinomialBins(rng: alea.Rng, vectors: usize) !void {
@@ -2484,7 +2483,12 @@ fn checkLongRun(samples: usize) !void {
             }
         }, V, "long vector maxwell binned", rng, vector_samples);
         try checkVectorBinomialBins(rng, vector_samples);
-        try checkVectorGeometricBins(rng, vector_samples);
+        try checkVectorGeometricBins(rng, vector_samples, 0.0625, "long vector geometric pmf chi-square p=0.0625");
+        try checkVectorGeometricBins(rng, vector_samples, 0.125, "long vector geometric pmf chi-square p=0.125");
+        try checkVectorGeometricBins(rng, vector_samples, 0.25, "long vector geometric pmf chi-square p=0.25");
+        try checkVectorGeometricBins(rng, vector_samples, 0.375, "long vector geometric pmf chi-square p=0.375");
+        try checkVectorGeometricBins(rng, vector_samples, 0.5, "long vector geometric pmf chi-square p=0.5");
+        try checkVectorGeometricBins(rng, vector_samples, 0.75, "long vector geometric pmf chi-square p=0.75");
         try checkVectorBinomialFairBins(rng, vector_samples);
         try checkVectorBinomialPmfBins(rng, 40, 0.4, 5, 8, vector_samples);
         try checkVectorBinomialPmfBins(rng, 100, 0.4, 13, 8, vector_samples);
