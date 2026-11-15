@@ -14526,14 +14526,39 @@ fn vectorKentPointFrom(
 
     const s2 = @max(zero, one - w * w);
     const a = beta_v * s2;
-    const theta = vonMisesFrom(source, V, zero, a);
-    var phi = theta / @as(V, @splat(2));
-    const flip = Rng.vectorOpenFrom(source, V) < @as(V, @splat(0.5));
-    phi += @select(Child, flip, @as(V, @splat(@as(Child, @floatCast(std.math.pi)))), zero);
+    // Conditional angle. For `a < 1.5` the uniform-circle proposal
+    // `exp(a(cos 2φ − 1))` accepts with an Exp(1) race and needs no
+    // trigonometric round trip (the same branch the scalar Kent path uses);
+    // larger `a` keeps the von Mises half-angle path.
+    var cos_phi: V = undefined;
+    var sin_phi: V = undefined;
+    if (@reduce(.And, a < @as(V, @splat(1.5)))) {
+        const two: V = @splat(2);
+        var angle_active: B = @splat(true);
+        while (@reduce(.Or, angle_active)) {
+            var circle_cos: V = undefined;
+            var circle_sin: V = undefined;
+            inline for (0..L) |lane| {
+                const circle = unitCircleFrom(source, Child);
+                circle_cos[lane] = circle[0];
+                circle_sin[lane] = circle[1];
+            }
+            const e = vectorStandardExponentialFrom(source, VectorType);
+            const accept = angle_active & (e >= two * a * (one - circle_cos * circle_cos));
+            cos_phi = @select(Child, accept, circle_cos, cos_phi);
+            sin_phi = @select(Child, accept, circle_sin, sin_phi);
+            angle_active = @select(bool, accept, @as(B, @splat(false)), angle_active);
+        }
+    } else {
+        const theta = vonMisesFrom(source, V, zero, a);
+        var phi = theta / @as(V, @splat(2));
+        const flip = Rng.vectorOpenFrom(source, V) < @as(V, @splat(0.5));
+        phi += @select(Child, flip, @as(V, @splat(@as(Child, @floatCast(std.math.pi)))), zero);
+        cos_phi = @cos(phi);
+        sin_phi = @sin(phi);
+    }
 
     const s = @sqrt(s2);
-    const cos_phi = @cos(phi);
-    const sin_phi = @sin(phi);
     const x = w * @as(V, @splat(mean_dir[0])) +
         s * (cos_phi * @as(V, @splat(major_axis[0])) + sin_phi * @as(V, @splat(minor_axis[0])));
     const y = w * @as(V, @splat(mean_dir[1])) +

@@ -501,7 +501,9 @@ Directional distributions on the circle and sphere:
   `VectorVonMisesFisher` draws each lane with the scalar S² sampler instead of
   a packed SIMD loop. The Kent proposal uses the same inversion for its vMF(λ)
   marginal inside its SIMD outer acceptance, so neither path needs an inner
-  Wood rejection loop. Lane retirement remains in the
+  Wood rejection loop. The Kent conditional angle uses the uniform-circle
+  proposal with an Exp(1) race for `a < 1.5` and the von Mises half-angle path
+  above that. Lane retirement remains in the
   Best–Fisher/Beta/ACG rejection loops. When only a couple of lanes remain, the
   Watson and Bingham samplers finish them with the scalar sampler instead of
   redrawing full vectors. The S² samplers return `[3]VectorType` and share the
