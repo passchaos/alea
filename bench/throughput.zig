@@ -457,6 +457,12 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorDistribution(alea.distributions.VectorWeibull(V4), io, stdout, "alea vector weibull f64x4", bytes / 32, alea.distributions.VectorWeibull(V4).init(2, 1.5) catch unreachable, 0x9a02);
     try benchVectorDistribution(alea.distributions.VectorGumbel(V4), io, stdout, "alea vector gumbel f64x4", bytes / 32, alea.distributions.VectorGumbel(V4).init(0, 1) catch unreachable, 0x9a03);
     try benchVectorDistribution(alea.distributions.VectorFrechet(V4), io, stdout, "alea vector frechet f64x4", bytes / 32, alea.distributions.VectorFrechet(V4).init(0, 1, 3) catch unreachable, 0x9a04);
+    try benchScalarDistribution(alea.distributions.GeneralizedPareto(f64), io, stdout, "alea generalized pareto", bytes / 128, alea.distributions.GeneralizedPareto(f64).new(1, 2, 0.3), 0x9a05);
+    try benchVectorDistribution(alea.distributions.VectorGeneralizedPareto(V4), io, stdout, "alea vector generalized pareto f64x4", bytes / 32, alea.distributions.VectorGeneralizedPareto(V4).new(1, 2, 0.3), 0x9a06);
+    try benchVectorDistribution(alea.distributions.VectorRayleigh(V4), io, stdout, "alea vector rayleigh f64x4", bytes / 32, alea.distributions.VectorRayleigh(V4).init(2) catch unreachable, 0x9a07);
+    try benchVectorDistribution(alea.distributions.VectorLaplace(V4), io, stdout, "alea vector laplace f64x4", bytes / 32, alea.distributions.VectorLaplace(V4).init(0, 1) catch unreachable, 0x9a08);
+    try benchVectorDistribution(alea.distributions.VectorKumaraswamy(V4), io, stdout, "alea vector kumaraswamy f64x4", bytes / 32, alea.distributions.VectorKumaraswamy(V4).init(2, 5) catch unreachable, 0x9a09);
+    try benchVectorDistribution(alea.distributions.VectorPowerFunction(V4), io, stdout, "alea vector power-function f64x4", bytes / 32, alea.distributions.VectorPowerFunction(V4).init(-1, 2, 3) catch unreachable, 0x9a0a);
     try benchSkewNormal(io, stdout, "alea skew-normal", bytes / 128);
     try benchSkewNormalFastDirect(io, stdout, "alea skew-normal fast direct", bytes / 128);
     try benchSkewNormalRaw(alea.FastPrng, io, stdout, "alea skew-normal raw fast direct", bytes / 128, 0x5ce9, 1);
@@ -9922,6 +9928,30 @@ fn benchVectorDistribution(comptime Sampler: type, io: std.Io, stdout: *std.Io.W
             const point = dist.sample(rng);
             inline for (0..4) |lane| checksum += point[lane];
         }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchScalarDistribution(comptime Sampler: type, io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, dist: Sampler, seed: u64) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) checksum += dist.sample(rng);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

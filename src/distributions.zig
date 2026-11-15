@@ -16744,44 +16744,26 @@ pub fn VectorGeneralizedPareto(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.sigma == 0) return @splat(self.sampler.mu);
-            const u = rng.vectorOpen(VectorType);
-            return generalizedParetoFromUniformVector(VectorType, u, self.sampler.mu, self.sampler.sigma, self.sampler.xi);
+            return self.sampleFrom(rng);
         }
+
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.sigma == 0) return @splat(self.sampler.mu);
-            const u = Rng.vectorOpenFrom(source, VectorType);
-            return generalizedParetoFromUniformVector(VectorType, u, self.sampler.mu, self.sampler.sigma, self.sampler.xi);
-        }
-        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.sigma == 0) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.mu)));
-                return;
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = generalizedParetoPointFrom(source, vectorChild(VectorType), self.sampler.mu, self.sampler.sigma, self.sampler.xi);
             }
+            return out;
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
             for (dest) |*item| item.* = self.sample(rng);
         }
+
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.sigma == 0) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.mu)));
-                return;
-            }
             for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
-}
-
-/// Apply GPD inverse-CDF to a uniform(0,1) vector.
-/// X = μ - σ·ln U for ξ = 0; X = μ + σ·(U^{-ξ} - 1)/ξ for ξ ≠ 0.
-fn generalizedParetoFromUniformVector(comptime VectorType: type, u: VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
-    const Child = vectorChild(VectorType);
-    const mu_v: VectorType = @splat(mu);
-    const sigma_v: VectorType = @splat(sigma);
-    if (xi == 0) {
-        return mu_v - sigma_v * @log(u);
-    }
-    const xi_v: VectorType = @splat(xi);
-    const one: VectorType = @splat(@as(Child, 1));
-    return mu_v + sigma_v * (@exp(-xi_v * @log(u)) - one) / xi_v;
 }
 
 // Generalized Extreme Value distribution -------------------------------------
@@ -26827,21 +26809,6 @@ pub fn fillVectorLaplaceCheckedFrom(source: anytype, comptime VectorType: type, 
     sampler.fillFrom(source, dest);
 }
 
-fn laplaceFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, location: vectorChild(VectorType), scale: vectorChild(VectorType)) VectorType {
-    const Child = vectorChild(VectorType);
-    if (scale == 0) return @splat(location);
-    const location_vec: VectorType = @splat(location);
-    const scale_vec: VectorType = @splat(scale);
-    const half_vec: VectorType = @splat(0.5);
-    const one_vec: VectorType = @splat(1);
-    const two_vec: VectorType = @splat(2);
-    const positive: VectorType = @splat(1);
-    const negative: VectorType = @splat(-1);
-    const centered = uniform_vec - half_vec;
-    const sign = @select(Child, centered < @as(VectorType, @splat(0)), negative, positive);
-    return location_vec - scale_vec * sign * @log(one_vec - two_vec * @abs(centered));
-}
-
 pub fn VectorLaplace(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -26888,37 +26855,24 @@ pub fn VectorLaplace(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
-            const uniform_vec = rng.vectorOpen(VectorType);
-            return laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.locationValue());
-            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-            return laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = laplaceFrom(source, vectorChild(VectorType), self.locationValue(), self.scaleValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpen(VectorType);
-                item.* = laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                item.* = laplaceFromOpenUniformVector(VectorType, uniform_vec, self.locationValue(), self.scaleValue());
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -27710,32 +27664,6 @@ pub fn fillVectorKumaraswamyCheckedFrom(source: anytype, comptime VectorType: ty
     sampler.fillFrom(source, dest);
 }
 
-fn kumaraswamyFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_alpha: vectorChild(VectorType), inverse_beta: vectorChild(VectorType)) VectorType {
-    const one_vec: VectorType = @splat(1);
-    const inverse_alpha_vec: VectorType = @splat(inverse_alpha);
-    const inverse_beta_vec: VectorType = @splat(inverse_beta);
-    var inner = one_vec - @exp(@log(one_vec - uniform_vec) * inverse_beta_vec);
-    // Huge beta rounds the subtraction to zero; recover those lanes with the
-    // expm1 complement so the final power stays near 1.
-    inline for (0..vectorInfo(VectorType).len) |lane| {
-        if (inner[lane] == 0) {
-            inner[lane] = -std.math.expm1(@log(1 - uniform_vec[lane]) * inverse_beta);
-        }
-    }
-    return @exp(@log(inner) * inverse_alpha_vec);
-}
-
-fn kumaraswamyBetaOneFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_alpha: vectorChild(VectorType)) VectorType {
-    const inverse_alpha_vec: VectorType = @splat(inverse_alpha);
-    return @exp(@log(uniform_vec) * inverse_alpha_vec);
-}
-
-fn kumaraswamyAlphaOneFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, inverse_beta: vectorChild(VectorType)) VectorType {
-    const one_vec: VectorType = @splat(1);
-    const inverse_beta_vec: VectorType = @splat(inverse_beta);
-    return one_vec - @exp(@log(one_vec - uniform_vec) * inverse_beta_vec);
-}
-
 pub fn VectorKumaraswamy(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -27782,58 +27710,24 @@ pub fn VectorKumaraswamy(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const uniform_vec = rng.vectorOpen(VectorType);
-            return switch (self.sampler.method) {
-                .beta_one_sqrt => @sqrt(uniform_vec),
-                .beta_one => kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue()),
-                .alpha_one => kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue()),
-                .generic => kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue()),
-                .point_zero, .point_one => unreachable,
-            };
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-            if (self.sampler.method == .beta_one_sqrt) return @sqrt(uniform_vec);
-            if (self.sampler.method == .beta_one) return kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue());
-            if (self.sampler.method == .alpha_one) return kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue());
-            return kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = kumaraswamyFrom(source, vectorChild(VectorType), self.alphaValue(), self.betaValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpen(VectorType);
-                item.* = switch (self.sampler.method) {
-                    .beta_one_sqrt => @sqrt(uniform_vec),
-                    .beta_one => kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue()),
-                    .alpha_one => kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue()),
-                    .generic => kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue()),
-                    .point_zero, .point_one => unreachable,
-                };
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                item.* = switch (self.sampler.method) {
-                    .beta_one_sqrt => @sqrt(uniform_vec),
-                    .beta_one => kumaraswamyBetaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue()),
-                    .alpha_one => kumaraswamyAlphaOneFromOpenUniformVector(VectorType, uniform_vec, 1 / self.betaValue()),
-                    .generic => kumaraswamyFromOpenUniformVector(VectorType, uniform_vec, 1 / self.alphaValue(), 1 / self.betaValue()),
-                    .point_zero, .point_one => unreachable,
-                };
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -28074,14 +27968,6 @@ pub fn fillVectorPowerFunctionCheckedFrom(source: anytype, comptime VectorType: 
     sampler.fillFrom(source, dest);
 }
 
-fn powerFunctionFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, min: vectorChild(VectorType), width: vectorChild(VectorType), inverse_shape: vectorChild(VectorType)) VectorType {
-    if (width == 0) return @splat(min);
-    const min_vec: VectorType = @splat(min);
-    const width_vec: VectorType = @splat(width);
-    const inverse_shape_vec: VectorType = @splat(inverse_shape);
-    return min_vec + width_vec * @exp(@log(uniform_vec) * inverse_shape_vec);
-}
-
 pub fn VectorPowerFunction(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -28120,101 +28006,24 @@ pub fn VectorPowerFunction(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.minValue());
-            switch (self.sampler.method) {
-                .point_max => return @splat(self.maxValue()),
-                .uniform => return rng.vectorRange(VectorType, self.minValue(), self.maxValue()),
-                .sqrt => {
-                    const uniform_vec = rng.vectorOpen(VectorType);
-                    const min_vec: VectorType = @splat(self.minValue());
-                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
-                    return min_vec + width_vec * @sqrt(uniform_vec);
-                },
-                .generic => {
-                    const uniform_vec = rng.vectorOpen(VectorType);
-                    return powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue() - self.minValue(), 1 / self.shapeValue());
-                },
-            }
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.minValue());
-            switch (self.sampler.method) {
-                .point_max => return @splat(self.maxValue()),
-                .uniform => return Rng.vectorRangeFrom(source, VectorType, self.minValue(), self.maxValue()),
-                .sqrt => {
-                    const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                    const min_vec: VectorType = @splat(self.minValue());
-                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
-                    return min_vec + width_vec * @sqrt(uniform_vec);
-                },
-                .generic => {
-                    const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                    return powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), self.maxValue() - self.minValue(), 1 / self.shapeValue());
-                },
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = powerFunctionFrom(source, vectorChild(VectorType), self.minValue(), self.maxValue(), self.shapeValue());
             }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.minValue())));
-                return;
-            }
-            switch (self.sampler.method) {
-                .point_max => {
-                    @memset(dest, @as(VectorType, @splat(self.maxValue())));
-                },
-                .uniform => {
-                    rng.fillVectorRange(VectorType, dest, self.minValue(), self.maxValue());
-                },
-                .sqrt => {
-                    const min_vec: VectorType = @splat(self.minValue());
-                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
-                    for (dest) |*item| {
-                        const uniform_vec = rng.vectorOpen(VectorType);
-                        item.* = min_vec + width_vec * @sqrt(uniform_vec);
-                    }
-                },
-                .generic => {
-                    const width = self.maxValue() - self.minValue();
-                    const inverse_shape = 1 / self.shapeValue();
-                    for (dest) |*item| {
-                        const uniform_vec = rng.vectorOpen(VectorType);
-                        item.* = powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), width, inverse_shape);
-                    }
-                },
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.minValue())));
-                return;
-            }
-            switch (self.sampler.method) {
-                .point_max => {
-                    @memset(dest, @as(VectorType, @splat(self.maxValue())));
-                },
-                .uniform => {
-                    Rng.fillVectorRangeFrom(source, VectorType, dest, self.minValue(), self.maxValue());
-                },
-                .sqrt => {
-                    const min_vec: VectorType = @splat(self.minValue());
-                    const width_vec: VectorType = @splat(self.maxValue() - self.minValue());
-                    for (dest) |*item| {
-                        const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                        item.* = min_vec + width_vec * @sqrt(uniform_vec);
-                    }
-                },
-                .generic => {
-                    const width = self.maxValue() - self.minValue();
-                    const inverse_shape = 1 / self.shapeValue();
-                    for (dest) |*item| {
-                        const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                        item.* = powerFunctionFromOpenUniformVector(VectorType, uniform_vec, self.minValue(), width, inverse_shape);
-                    }
-                },
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -28455,13 +28264,6 @@ pub fn fillVectorRayleighCheckedFrom(source: anytype, comptime VectorType: type,
     sampler.fillFrom(source, dest);
 }
 
-fn rayleighFromOpenUniformVector(comptime VectorType: type, uniform_vec: VectorType, scale: vectorChild(VectorType)) VectorType {
-    if (scale == 0) return @splat(0);
-    const scale_vec: VectorType = @splat(scale);
-    const neg_two_vec: VectorType = @splat(-2.0);
-    return scale_vec * @sqrt(neg_two_vec * @log(uniform_vec));
-}
-
 pub fn VectorRayleigh(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -28504,37 +28306,24 @@ pub fn VectorRayleigh(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
-            const uniform_vec = rng.vectorOpen(VectorType);
-            return rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(0);
-            const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-            return rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = rayleighFrom(source, vectorChild(VectorType), self.scaleValue());
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = rng.vectorOpen(VectorType);
-                item.* = rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
-                return;
-            }
-            for (dest) |*item| {
-                const uniform_vec = Rng.vectorOpenFrom(source, VectorType);
-                item.* = rayleighFromOpenUniformVector(VectorType, uniform_vec, self.scaleValue());
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }

@@ -113,6 +113,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Scalar GEV sampling `exp(−ξ·ln E) − 1` (vector lanes keep `expm1`) | `compare/results/s4-m1615-gev-benchmark-rows.md` |
 | Scalar-per-lane `VectorGeneralizedExtremeValue` (four scalar GEV draws per vector) | `compare/results/s4-m1616-scalar-per-lane-vector-gev.md` |
 | Scalar-per-lane `VectorPareto`, `VectorWeibull`, `VectorGumbel`, and `VectorFrechet` (four scalar draws per vector) | `compare/results/s4-m1618-scalar-per-lane-vector-inverse-cdf.md` |
+| Scalar-per-lane `VectorRayleigh`, `VectorLaplace`, `VectorKumaraswamy`, `VectorPowerFunction`, and `VectorGeneralizedPareto` (four scalar draws per vector) | `compare/results/s4-m1620-scalar-per-lane-vector-exp1-families.md` |
 | Bingham proposal scales and `@log` acceptance | `compare/results/s4-m1360-bingham-precomputed-scales.md`, `compare/results/s4-m1373-bingham-log-ratio.md` |
 | Student-t recurrence table and vectorized copula CDF | `compare/results/s4-m1367-student-t-recurrence-table.md`, `compare/results/s4-m1371-vectorized-copula-cdf.md` |
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |
