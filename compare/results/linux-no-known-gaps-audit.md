@@ -7112,5 +7112,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1580-vector-kent-log-i0-series.md`, and
 `compare/results/s4-m1581-validate-all-refresh.md`, and
 `compare/results/s4-m1582-vector-bingham-race-probe.md`, and
-`compare/results/s4-m1583-vmf-kent-truncated-exponential.md`.
+`compare/results/s4-m1583-vmf-kent-truncated-exponential.md`, and
+`compare/results/s4-m1584-validate-all-refresh.md`.
 
