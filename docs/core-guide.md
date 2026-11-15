@@ -646,7 +646,9 @@ runtime float type, and explicit f32 arguments keep f32.
   `1 − F = Σ_j w_j B_j` (`B_j = (j−1)B_{j−2} + c_{j−1}`,
   `B₀ = ½·I_y(ν/2, ½)`, `B₁ = E[φ(W)]`) so upper-tail probabilities near one
   keep their relative accuracy instead of cancelling, and the integral path
-  integrates `Φ(μ − t·s)` directly with a range split at the `Φ` transition;
+  integrates `Φ(μ − t·s)` directly with a range split at the `Φ` transition
+  (the scaled lower tail is likewise truncated at `s = (μ+40)/|t|`, so the
+  extreme negative tail does not leave a step at the chi-scale origin);
   negative `μ` uses `F_μ(t) = 1 − F_{−μ}(−t)`, log-logistic is closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion

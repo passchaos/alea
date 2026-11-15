@@ -3054,9 +3054,13 @@ fn noncentralTCdfIntegralF64(t: f64, dof: f64, mu: f64) f64 {
         };
         // The complement is negligible once `μ − t·s < −40`; restricting the
         // range keeps the narrow transition near `s = μ/t` inside a small
-        // panel instead of a long smooth tail.
+        // panel instead of a long smooth tail. The scaled lower tail
+        // (`t < 0`) has the same narrow transition at `s = (μ+40)/|t|`, so it
+        // is truncated there as well instead of leaving a step at `r = 0`.
         const split = if (complement)
             @min(upper, std.math.pow(f64, (mu + 40.0) / t, dof))
+        else if (t < 0)
+            @min(upper, std.math.pow(f64, (mu + 40.0) / -t, dof))
         else
             upper;
         const integral = noncentralTCompositeSimpson(f, 0, split);
@@ -66709,6 +66713,13 @@ test "noncentral t CDF is monotone across parameter regions" {
             try std.testing.expect(value >= previous_quantile);
             previous_quantile = value;
             try std.testing.expectApproxEqAbs(q, noncentralTCdf(value, dof, mu), 1.0e-6);
+        }
+        // Relative tail checks down to `1e-10`; the symmetry path through
+        // `1 − F` leaves about `1e-6` relative error at `dof = 3, mu = −2`.
+        inline for ([_]f64{ 1.0e-6, 1.0e-10 }) |q| {
+            const value = noncentralTQuantile(q, dof, mu);
+            try std.testing.expect(std.math.isFinite(value));
+            try std.testing.expectApproxEqRel(q, noncentralTCdf(value, dof, mu), 1.0e-5);
         }
     }
 }
