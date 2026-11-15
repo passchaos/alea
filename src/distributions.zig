@@ -11117,6 +11117,65 @@ pub const StandardVonMises = struct {
 ///   where U ~ Uniform(0, 1)
 ///
 /// Circular variance = 1 - ρ (exact, no special function needed).
+/// Relative wrapped-Cauchy CDF `F0(d) = 1/2 + atan(((1+ρ)/(1−ρ))·tan(d/2))/π`
+/// for `d ∈ (-π, π]`. This is the circular CDF with its cut at `d = ±π`.
+fn wrappedCauchyRelativeCdf(comptime T: type, d: T, rho: T) T {
+    const pi: T = @floatCast(std.math.pi);
+    if (d <= -pi) return 0;
+    if (d >= pi) return 1;
+    if (rho == 1) return if (d < 0) 0 else 1;
+    if (rho == 0) return (d + pi) / (2 * pi);
+    const k = (1 + rho) / (1 - rho);
+    return 0.5 + std.math.atan(k * @tan(d / 2)) / pi;
+}
+
+/// Wrapped Cauchy CDF on the circle, represented on `(-π, π]`:
+/// `F(x) = ∫_{-π}^{x} f(t) dt`, so `F(-π) = 0` and `F(π) = 1`. The cut is at
+/// `±π`; the function is continuous elsewhere. `ρ = 1` is the point mass at
+/// `μ`, `ρ = 0` is uniform.
+pub fn wrappedCauchyCdf(x: anytype, mu: anytype, rho: anytype) resolvedFloatType(@TypeOf(x, mu, rho)) {
+    return wrappedCauchyCdfImpl(resolvedFloatType(@TypeOf(x, mu, rho)), x, mu, rho);
+}
+fn wrappedCauchyCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, rho: PeerType) PeerType {
+    const T = @TypeOf(x, mu, rho);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !(rho >= 0 and rho <= 1) or std.math.isNan(x)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    if (x <= -pi) return 0;
+    if (x >= pi) return 1;
+    const d_min = wrapAngle(-pi - mu, pi, two_pi);
+    const d = wrapAngle(x - mu, pi, two_pi);
+    var f = wrappedCauchyRelativeCdf(T, d, rho) - wrappedCauchyRelativeCdf(T, d_min, rho);
+    if (d < d_min) f += 1;
+    return @min(@as(T, 1), @max(@as(T, 0), f));
+}
+
+/// Inverse wrapped Cauchy CDF: `p = 0 → -π`, `p = 1 → π`; `ρ = 1` returns
+/// the point mass at `μ`.
+pub fn wrappedCauchyQuantile(p: anytype, mu: anytype, rho: anytype) resolvedFloatType(@TypeOf(p, mu, rho)) {
+    return wrappedCauchyQuantileImpl(resolvedFloatType(@TypeOf(p, mu, rho)), p, mu, rho);
+}
+fn wrappedCauchyQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, rho: PeerType) PeerType {
+    const T = @TypeOf(p, mu, rho);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !(rho >= 0 and rho <= 1) or !(p >= 0 and p <= 1)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    if (p == 0) return -pi;
+    if (p == 1) return pi;
+    if (rho == 1) return wrapAngle(mu, pi, two_pi);
+    const d_min = wrapAngle(-pi - mu, pi, two_pi);
+    const c = wrappedCauchyRelativeCdf(T, d_min, rho);
+    var target = p + c;
+    if (target > 1) target -= 1;
+    const d: T = if (rho == 0)
+        two_pi * target - pi
+    else
+        2 * std.math.atan(@tan(pi * (target - 0.5)) * (1 - rho) / (1 + rho));
+    return wrapAngle(mu + d, pi, two_pi);
+}
+
 pub fn WrappedCauchy(comptime T: type) type {
     comptime requireFloat(T);
     return struct {
@@ -11169,6 +11228,16 @@ pub fn WrappedCauchy(comptime T: type) type {
 
         pub fn maxValue(_: Self) T {
             return @as(T, @floatCast(std.math.pi));
+        }
+
+        /// Circular CDF on `(-π, π]`; `cdf(-π) = 0`, `cdf(π) = 1`.
+        pub fn cdf(self: Self, x: T) T {
+            return wrappedCauchyCdfImpl(T, x, self.mu, self.rho);
+        }
+
+        /// Inverse circular CDF; `quantile(0) = -π`, `quantile(1) = π`.
+        pub fn quantile(self: Self, p: T) T {
+            return wrappedCauchyQuantileImpl(T, p, self.mu, self.rho);
         }
 
         pub fn sample(self: Self, rng: Rng) T {
@@ -64070,6 +64139,63 @@ test "WrappedCauchy constructor validates parameters" {
     const wc1 = try WrappedCauchy(f64).new(1.5, 1.0);
     try std.testing.expectApproxEqAbs(@as(f64, 1.5), wc1.mu, 1e-12);
     try std.testing.expectEqual(@as(f64, 1.0), wc1.rho);
+}
+
+test "WrappedCauchy CDF and quantile are exact inverses" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c20);
+    const rng = Rng.init(&engine);
+
+    inline for ([_]f64{ 0.0, 0.3, 0.6, 0.9 }) |rho| {
+        const dist = try WrappedCauchy(f64).new(0.4, rho);
+        try std.testing.expectEqual(@as(f64, 0), dist.cdf(-std.math.pi));
+        try std.testing.expectEqual(@as(f64, 1), dist.cdf(std.math.pi));
+
+        var prev: f64 = -1;
+        var i: usize = 0;
+        while (i <= 2_000) : (i += 1) {
+            const theta = -std.math.pi + 2 * std.math.pi * @as(f64, @floatFromInt(i)) / 2_000;
+            const f = dist.cdf(theta);
+            try std.testing.expect(f >= prev - 1e-12);
+            try std.testing.expect(f >= 0 and f <= 1);
+            prev = f;
+        }
+
+        inline for ([_]f64{ 1e-9, 1e-4, 0.1, 0.5, 0.9, 1 - 1e-4 }) |p| {
+            try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-12);
+        }
+
+        // The CDF matches the empirical sampler distribution.
+        const samples = 40_000;
+        var below: usize = 0;
+        for (0..samples) |_| {
+            if (dist.sample(rng) <= 0.0) below += 1;
+        }
+        const empirical = @as(f64, @floatFromInt(below)) / samples;
+        try std.testing.expectApproxEqAbs(dist.cdf(0.0), empirical, 0.01);
+    }
+
+    // rho = 1 is the point mass at mu.
+    const point = try WrappedCauchy(f64).new(0.7, 1);
+    try std.testing.expectEqual(@as(f64, 0), point.cdf(0.0));
+    try std.testing.expectEqual(@as(f64, 1), point.cdf(1.0));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7), point.quantile(0.3), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, -std.math.pi), point.quantile(0), 0);
+    try std.testing.expectApproxEqAbs(std.math.pi, point.quantile(1), 0);
+
+    // rho = 0 is uniform on (-pi, pi] regardless of mu.
+    const uniform_dist = try WrappedCauchy(f64).new(0.7, 0);
+    try std.testing.expectApproxEqAbs((0.5 + std.math.pi) / (2 * std.math.pi), uniform_dist.cdf(0.5), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), uniform_dist.cdf(uniform_dist.quantile(0.25)), 1e-12);
+    try std.testing.expectApproxEqAbs(2 * std.math.pi * 0.25 - std.math.pi, uniform_dist.quantile(0.25), 1e-12);
+
+    // f32 and invalid-parameter paths.
+    const f32_dist = try WrappedCauchy(f32).new(0, 0.5);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(0), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(f32_dist.quantile(0.5)), 1e-6);
+    try std.testing.expect(std.math.isNan(wrappedCauchyCdf(@as(f64, 0), @as(f64, 0), @as(f64, 1.5))));
+    try std.testing.expect(std.math.isNan(wrappedCauchyQuantile(@as(f64, 1.5), @as(f64, 0), @as(f64, 0.5))));
+    try std.testing.expect(std.math.isNan(wrappedCauchyCdf(@as(f64, std.math.nan(f64)), @as(f64, 0), @as(f64, 0.5))));
 }
 
 test "WrappedCauchy samples stay within (-pi, pi] bounds" {

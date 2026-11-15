@@ -488,7 +488,9 @@ Directional distributions on the circle and sphere:
 - `VonMises(T)` / `StandardVonMises` — circular von Mises with Best–Fisher
   rejection sampling, κ=0 uniform and large-κ point-mass behavior.
 - `WrappedCauchy(T)` / `StandardWrappedCauchy` — heavy-tailed circular
-  distribution with closed-form inverse-CDF sampling and SIMD vector support.
+  distribution with closed-form inverse-CDF sampling, an exact closed-form
+  CDF/quantile on `(-π, π]` (represented as `F(x) = ∫_{-π}^{x} f`), and SIMD
+  vector support.
 - `VonMisesFisher(T, n)` — vMF on Sⁿ⁻¹ for comptime `n ≥ 2` with Wood (1994)
   rejection sampling for `n > 3`, the exact truncated-exponential cosine
   inversion for `n = 3`, `κ = 0` uniform, and `κ → ∞` point-mass fast paths.
