@@ -31,3 +31,10 @@ no change in the runtime vector row (5.6 -> 5.9 M, noise) and was reverted.
 
 - `bench/throughput.zig`: seven rows, the integer-lane checksum branch in
   `benchVectorDistribution`, and the `V4U` alias.
+
+## Follow-up Probe (Rejected)
+
+Also specialized the dyadic kernel dispatch by `(m, k)` so the mask branches
+are comptime-selected. The vector binomial row stayed at 5.3-5.9 M
+vectors/s, so the per-word mask selection is not the bottleneck; the
+specialization was reverted and the generic `binomialDyadicFrom` stays.
