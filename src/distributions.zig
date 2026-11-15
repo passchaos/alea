@@ -5925,10 +5925,15 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                     return vectorBinomialDyadicLarge(VectorType, source, self.sampler.trials, fields, complement);
                 }
             }
-            if (self.sampler.trials <= 128 and
+            if (self.sampler.trials <= 1024 and
                 std.math.pow(f64, 1 - self.sampler.p, @as(f64, @floatFromInt(self.sampler.trials))) != 0)
             {
-                return vectorBinomialInverseCdfFrom(VectorType, source, self.sampler.trials, self.sampler.p);
+                var table: [1024]f64 = undefined;
+                const width = binomialCdfTable(self.sampler.trials, self.sampler.p, &table);
+                return if (width > 128)
+                    vectorBinomialFromCdfBinary(VectorType, source, table[0..width])
+                else
+                    vectorBinomialFromCdf(VectorType, source, table[0..width]);
             }
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
@@ -50205,6 +50210,15 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
     for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 128);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    const large_binomial_sampler = try VectorBinomial(@Vector(4, u64)).init(200, 0.4);
+    var large_binomial_fill_engine = alea.ScalarPrng.init(0xb1_2001);
+    var large_binomial_loop_engine = alea.ScalarPrng.init(0xb1_2001);
+    var large_binomial_fill: [3]@Vector(4, u64) = undefined;
+    var large_binomial_loop: [3]@Vector(4, u64) = undefined;
+    large_binomial_sampler.fillFrom(&large_binomial_fill_engine, &large_binomial_fill);
+    for (&large_binomial_loop) |*slot| slot.* = large_binomial_sampler.sampleFrom(&large_binomial_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &large_binomial_loop, &large_binomial_fill);
+    try std.testing.expectEqual(large_binomial_loop_engine.next(), large_binomial_fill_engine.next());
     const product_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(4);
     var vector_poisson_fill_engine = alea.ScalarPrng.init(0x5870_0002);
     var vector_poisson_loop_engine = alea.ScalarPrng.init(0x5870_0002);
