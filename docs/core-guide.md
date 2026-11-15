@@ -642,8 +642,10 @@ runtime float type, and explicit f32 arguments keep f32.
   coarse quadrature can miss; below one degree of freedom the `r = s^ν`
   substitution removes the `s^{ν−1}` endpoint singularity, and the recursion
   carries a hard evaluation budget so a near-step `Φ` transition degrades
-  gracefully; negative `μ` uses `F_μ(t) = 1 − F_{−μ}(−t)`, log-logistic is
-  closed-form (with `scale = 0` and
+  gracefully (for `dof < 1` the extreme upper tail near `F = 0.9999` is
+  limited to about `1e-5` absolute accuracy because the complement is a
+  narrow step in the chi scale); negative `μ` uses
+  `F_μ(t) = 1 − F_{−μ}(−t)`, log-logistic is closed-form (with `scale = 0` and
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via

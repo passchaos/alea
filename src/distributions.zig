@@ -66629,6 +66629,41 @@ test "noncentral t CDF matches central, normal limits, and reference values" {
     try std.testing.expect(std.math.isNan(noncentralTCdf(std.math.nan(f64), @as(f64, 5), @as(f64, 1))));
 }
 
+test "noncentral t CDF is monotone across parameter regions" {
+    // Sweep the CDF over a parameter grid and check monotonicity, range, and
+    // quantile round-trips. The extreme lower tails below ~1e-4 are excluded
+    // for `dof < 1` because the absolute-resolution floor documented in the
+    // CDF evidence limits them.
+    const params = [_][2]f64{
+        .{ 0.5, 2 },  .{ 1, 1 },   .{ 3, -2 }, .{ 10, 0.5 },
+        .{ 100, 3 },  .{ 1.0e5, -1 }, .{ 1.0e6, 2 },
+    };
+    for (params) |param| {
+        const dof = param[0];
+        const mu = param[1];
+        var previous: f64 = -1;
+        var t: f64 = -30;
+        while (t <= 30) : (t += 0.5) {
+            const cdf = noncentralTCdf(t, dof, mu);
+            try std.testing.expect(cdf >= 0 and cdf <= 1);
+            try std.testing.expect(cdf >= previous - 1.0e-12);
+            previous = cdf;
+        }
+
+        var previous_quantile: f64 = -std.math.inf(f64);
+        // The extreme upper tail (`1 - 1e-4`) is excluded: for `dof < 1` the
+        // complement is a narrow step in the chi scale and the adaptive budget
+        // can leave ~1e-5 absolute error near `F = 0.9999`.
+        inline for ([_]f64{ 1.0e-4, 0.01, 0.1, 0.5, 0.9, 0.99 }) |q| {
+            const value = noncentralTQuantile(q, dof, mu);
+            try std.testing.expect(std.math.isFinite(value));
+            try std.testing.expect(value >= previous_quantile);
+            previous_quantile = value;
+            try std.testing.expectApproxEqAbs(q, noncentralTCdf(value, dof, mu), 1.0e-6);
+        }
+    }
+}
+
 test "noncentral t quantile round-trips and matches the sampler" {
     const dist = try NoncentralT(f64).init(10, 1);
     inline for ([_]f64{ 1e-6, 0.3, 0.7, 1 - 1e-6 }) |p| {
