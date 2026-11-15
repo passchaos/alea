@@ -22040,26 +22040,23 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            switch (self.sampler.method) {
-                .zero => return @splat(0),
-                .product => |threshold| {
-                    var out: VectorType = undefined;
-                    inline for (0..info.len) |lane| out[lane] = poissonProduct(rng, threshold);
-                    return out;
-                },
-                .ahrens_dieter => |method| {
-                    var out: VectorType = undefined;
-                    inline for (0..info.len) |lane| out[lane] = method.sample(rng);
-                    return out;
-                },
-            }
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
-            if (self.sampler.method == .zero) return @splat(0);
-            var out: VectorType = undefined;
-            inline for (0..info.len) |lane| out[lane] = @intCast(self.sampler.sampleFrom(source));
-            return out;
+            switch (self.sampler.method) {
+                .zero => return @splat(0),
+                .product => |threshold| {
+                    var cdf: [64]f64 = undefined;
+                    const width = poissonCdfTableSmall(-@log(threshold), &cdf);
+                    return vectorPoissonFromCdf(VectorType, source, threshold, cdf[0..width]);
+                },
+                .ahrens_dieter => {
+                    var out: VectorType = undefined;
+                    inline for (0..info.len) |lane| out[lane] = @intCast(self.sampler.sampleFrom(source));
+                    return out;
+                },
+            }
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
@@ -50089,6 +50086,15 @@ test "distribution vector helpers preserve support and stream shape" {
     try std.testing.expectEqualSlices(@Vector(4, u64), &poisson_buf, &direct_poisson_buf);
     for (poisson_buf) |vec| inline for (0..4) |lane| try std.testing.expect(vec[lane] < 128);
     try std.testing.expectEqual(facade_engine.next(), direct_engine.next());
+    const product_poisson_sampler = try VectorPoisson(@Vector(4, u64)).init(4);
+    var vector_poisson_fill_engine = alea.ScalarPrng.init(0x5870_0002);
+    var vector_poisson_loop_engine = alea.ScalarPrng.init(0x5870_0002);
+    var vector_poisson_fill: [3]@Vector(4, u64) = undefined;
+    var vector_poisson_loop: [3]@Vector(4, u64) = undefined;
+    product_poisson_sampler.fillFrom(&vector_poisson_fill_engine, &vector_poisson_fill);
+    for (&vector_poisson_loop) |*slot| slot.* = product_poisson_sampler.sampleFrom(&vector_poisson_loop_engine);
+    try std.testing.expectEqualSlices(@Vector(4, u64), &vector_poisson_loop, &vector_poisson_fill);
+    try std.testing.expectEqual(vector_poisson_loop_engine.next(), vector_poisson_fill_engine.next());
     var vector_poisson_ad_fill_engine = alea.ScalarPrng.init(0x5870_0001);
     var vector_poisson_ad_loop_engine = alea.ScalarPrng.init(0x5870_0001);
     var vector_poisson_ad_fill: [3]@Vector(4, u64) = undefined;
