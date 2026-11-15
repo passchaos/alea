@@ -2376,8 +2376,9 @@ fn skewNormalLowerTailAsym(a: f64, s: f64) f64 {
     return @max(0, total / std.math.pi);
 }
 
-/// Skew-normal CDF: `Φ(z) − 2·T(z, α)` with `z = (x − ξ)/ω`.
-/// `scale = 0` is the point mass at the location.
+/// Skew-normal CDF with `z = (x − ξ)/ω`: `Φ(z) − 2·T(z, α)` normally, and
+/// the Mills-ratio lower-tail expansion for `z < 0`, `α > 0`,
+/// `α·|z| >= 3.5`. `scale = 0` is the point mass at the location.
 pub fn skewNormalCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, location, scale, shape)) {
     return skewNormalCdfImpl(resolvedFloatType(@TypeOf(x, location, scale, shape)), x, location, scale, shape);
 }
@@ -68303,4 +68304,3 @@ test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
     wf.sampleInto(rng, &wbuf_f32);
     try std.testing.expect(wbuf_f32[0] > 0);
 }
-
