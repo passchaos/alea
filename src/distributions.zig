@@ -22966,7 +22966,11 @@ fn vectorGeometricDyadicFrom(comptime VectorType: type, source: anytype, m: u32,
         const ctz = @ctz(mask);
         const fields: VectorType = @intCast(ctz / @as(@Vector(lanes, Shift), @splat(@intCast(m))));
         const word_done = ctz != @as(@Vector(lanes, @TypeOf(ctz[0])), @splat(64));
-        out += @select(u64, word_done, fields, @as(VectorType, @splat(per_word)));
+        // Only lanes that have not already found a success accumulate this
+        // word. Finished lanes still draw words (the stream shape is
+        // unchanged), but their extra words must not change the result.
+        const add = @select(u64, word_done, fields, @as(VectorType, @splat(per_word)));
+        out += @select(u64, !done, add, @as(VectorType, @splat(0)));
         done = done | word_done;
     }
     return out;
@@ -69315,3 +69319,30 @@ test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
 }
 
 
+
+test "vector geometric dyadic multi-word lanes stay exact" {
+    const alea = @import("root.zig");
+    var engine = alea.FastPrng.init(0x9e0_2001);
+    const rng = Rng.init(&engine);
+    const p: f64 = 0.0625;
+    const vectors: usize = 25_000;
+    var first: usize = 0;
+    var total: usize = 0;
+    var sum: u64 = 0;
+    var i: usize = 0;
+    while (i < vectors) : (i += 1) {
+        const point = vectorGeometric(rng, @Vector(4, u64), p);
+        inline for (0..4) |lane| {
+            total += 1;
+            if (point[lane] == 1) first += 1;
+            sum += point[lane];
+        }
+    }
+    const total_f: f64 = @floatFromInt(total);
+    const rate = @as(f64, @floatFromInt(first)) / total_f;
+    const mean = @as(f64, @floatFromInt(sum)) / total_f;
+    // P(X = 1) = p and E[X] = 1/p; the multi-word bug produced 0.018 and
+    // a mean near 25 for this probability.
+    try std.testing.expectApproxEqAbs(p, rate, 0.01);
+    try std.testing.expectApproxEqAbs(1 / p, mean, 0.2);
+}
