@@ -121,6 +121,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | `exp2`/`log2` PowerFunction fill stream (ulp-level change) | `compare/results/s4-m1633-exp2-log2-power-function-fill.md` |
 | Vectorized dyadic `VectorBinomial` (one word per lane per round) | `compare/results/s4-m1636-vector-binomial-dyadic-kernel.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
+| Vectorized dyadic `VectorGeometric` / `VectorGeometricFailures` (one word per lane, `ctz` failures) | `compare/results/s4-m1642-vector-geometric-dyadic-kernel.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |

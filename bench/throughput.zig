@@ -479,6 +479,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorDistribution(alea.distributions.VectorBinomial(V4U), io, stdout, "alea vector binomial large f64x4", bytes / 32, alea.distributions.VectorBinomial(V4U).init(256, 0.25) catch unreachable, 0x9a1d);
     try benchVectorDistribution(alea.distributions.VectorPoisson(V4U), io, stdout, "alea vector poisson f64x4", bytes / 32, alea.distributions.VectorPoisson(V4U).init(20) catch unreachable, 0x9a17);
     try benchVectorDistribution(alea.distributions.VectorGeometric(V4U), io, stdout, "alea vector geometric f64x4", bytes / 32, alea.distributions.VectorGeometric(V4U).init(0.25) catch unreachable, 0x9a18);
+    try benchVectorDistribution(alea.distributions.VectorGeometricFailures(V4U), io, stdout, "alea vector geometric-failures f64x4", bytes / 32, alea.distributions.VectorGeometricFailures(V4U).init(0.25) catch unreachable, 0x9a1e);
     try benchVectorDistribution(alea.distributions.VectorHypergeometric(V4U), io, stdout, "alea vector hypergeometric f64x4", bytes / 32, alea.distributions.VectorHypergeometric(V4U).init(100, 30, 10) catch unreachable, 0x9a19);
     try benchVectorDistribution(alea.distributions.VectorNegativeBinomial(V4U), io, stdout, "alea vector negative-binomial f64x4", bytes / 32, alea.distributions.VectorNegativeBinomial(V4U).init(5, 0.4) catch unreachable, 0x9a1a);
     try benchVectorDistribution(alea.distributions.VectorZipf(V4), io, stdout, "alea vector zipf f64x4", bytes / 32, alea.distributions.VectorZipf(V4).init(10, 1.5) catch unreachable, 0x9a1b);

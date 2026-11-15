@@ -22576,6 +22576,48 @@ pub const Geometric = struct {
     }
 };
 
+/// Dyadic probabilities with the packed geometric field masks: p = 1/2,
+/// 1/4, 3/4, 1/8, 3/8, and 1/16.
+fn dyadicGeometricFields(p: f64) ?DyadicBinomialFields {
+    if (p == 0.5) return .{ .m = 1, .k = 1 };
+    return dyadicBinomialFields(p);
+}
+
+/// Packed geometric failures for u64 vectors: each field is a Bernoulli
+/// trial, so the failures before the first success are `ctz(mask) / m`.
+/// A word with no success (probability at most (3/4)^32) draws another.
+fn vectorGeometricDyadicFrom(comptime VectorType: type, source: anytype, m: u32, k: u64) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    const Shift = std.math.Log2Int(u64);
+    const sh1: @Vector(lanes, Shift) = @splat(1);
+    const sh2: @Vector(lanes, Shift) = @splat(2);
+    const sh3: @Vector(lanes, Shift) = @splat(3);
+    const c5555: VectorType = @splat(0x5555_5555_5555_5555);
+    const c1249: VectorType = @splat(0x1249_2492_4924_9249);
+    const c1111: VectorType = @splat(0x1111_1111_1111_1111);
+    const per_word: u64 = 64 / m;
+    var out: VectorType = @splat(0);
+    var done: @Vector(lanes, bool) = @splat(false);
+    while (!@reduce(.And, done)) {
+        var bits: VectorType = undefined;
+        inline for (0..lanes) |lane| bits[lane] = Rng.nextFrom(source);
+        const mask: VectorType = if (m == 1)
+            ~bits
+        else if (m == 2)
+            (if (k == 1) ~bits & ~(bits >> sh1) & c5555 else ~(bits & (bits >> sh1)) & c5555)
+        else if (m == 3)
+            (if (k == 1) ~(bits | (bits >> sh1) | (bits >> sh2)) & c1249 else ~((bits >> sh2) | (bits & (bits >> sh1))) & c1249)
+        else
+            ~(bits | (bits >> sh1) | (bits >> sh2) | (bits >> sh3)) & c1111;
+        const ctz = @ctz(mask);
+        const fields: VectorType = @intCast(ctz / @as(@Vector(lanes, Shift), @splat(@intCast(m))));
+        const word_done = ctz != @as(@Vector(lanes, @TypeOf(ctz[0])), @splat(64));
+        out += @select(u64, word_done, fields, @as(VectorType, @splat(per_word)));
+        done = done | word_done;
+    }
+    return out;
+}
+
 pub fn VectorGeometric(comptime VectorType: type) type {
     const info = vectorInfo(VectorType);
     if (info.child != u64) @compileError("VectorGeometric expects a u64 vector");
@@ -22614,18 +22656,16 @@ pub fn VectorGeometric(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.p == 1) return @splat(1);
-            if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
-            var out: VectorType = undefined;
-            inline for (0..info.len) |lane| {
-                out[lane] = geometricFrom(rng, self.sampler.p);
-            }
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.p == 1) return @splat(1);
             if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
+            if (dyadicGeometricFields(self.sampler.p)) |fields| {
+                const failures = vectorGeometricDyadicFrom(VectorType, source, fields.m, fields.k);
+                return failures + @as(VectorType, @splat(1));
+            }
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
@@ -22821,18 +22861,15 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.p == 1) return @splat(0);
-            if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
-            var out: VectorType = undefined;
-            inline for (0..info.len) |lane| {
-                out[lane] = geometricFailuresFrom(rng, self.sampler.p);
-            }
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.p == 1) return @splat(0);
             if (geometricFailuresSaturates(self.sampler.p)) return @splat(geometricFailureMax);
+            if (dyadicGeometricFields(self.sampler.p)) |fields| {
+                return vectorGeometricDyadicFrom(VectorType, source, fields.m, fields.k);
+            }
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
