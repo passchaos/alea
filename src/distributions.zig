@@ -24788,8 +24788,7 @@ pub fn fillBeta(rng: Rng, comptime T: type, dest: []T, alpha: T, beta_param: T) 
         for (dest) |*item| item.* = betaChengFrom(rng, T, alpha, beta_param);
         return;
     }
-    const sampler = Beta(T).init(alpha, beta_param) catch unreachable;
-    sampler.fill(rng, dest);
+    for (dest) |*item| item.* = beta(rng, T, alpha, beta_param);
 }
 
 pub fn fillBetaFrom(source: anytype, comptime T: type, dest: []T, alpha: T, beta_param: T) void {
