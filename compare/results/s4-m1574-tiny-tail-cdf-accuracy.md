@@ -53,5 +53,9 @@ CDF/quantile pairs found four real accuracy gaps:
   `s4-m1590-skew-normal-mills-tail.md`).
 - Heavy-tailed families (`StudentT`, `Cauchy`, `Weibull`, `Pareto`,
   `Rayleigh`, `Rice`, `GPD`, `SICS`, `InverseGamma`) at `p = 1e-12`:
-  round-trip relative error is about `2.2e-5`, i.e. an absolute error of
-  `2.2e-17` from the f64 CDF representation near zero, not a formula bug.
+  round-trip relative error was about `2.2e-5`. S4-M1611 showed this was
+  formula cancellation, not an f64 representation floor: the Cauchy,
+  Student-t small-integer, Rice, inverse-gamma, GEV, and beta-quantile tails
+  now round-trip to `~1e-14` or better. The Pareto/GPD near-location offset
+  (`eps/p`), the wrapped-Cauchy `±π` cut, and the von Mises series floor
+  remain documented limits.

@@ -597,7 +597,6 @@ fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
     const pi: T = @floatCast(std.math.pi);
     const abs_t = @abs(t);
     const sqrt_nu = @sqrt(nu);
-    const theta = std.math.atan(abs_t / sqrt_nu);
     const x = nu / (nu + abs_t * abs_t);
     const sin_theta = abs_t / @sqrt(nu + abs_t * abs_t);
 
@@ -606,14 +605,16 @@ fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
     var ib: T = undefined;
     var x_to_a: T = undefined;
     if (odd) {
-        // ν = 1: I_x(1/2, 1/2) = 1 − 2θ/π.
+        // ν = 1: I_x(1/2, 1/2) = 1 − 2θ/π = 2·atan(√ν/|t|)/π; the latter form
+        // avoids the `1 − 2θ/π` cancellation for large |t|.
         a = 0.5;
-        ib = 1 - 2 * theta / pi;
+        ib = 2 * std.math.atan(sqrt_nu / abs_t) / pi;
         x_to_a = @sqrt(x);
     } else {
-        // ν = 2: I_x(1, 1/2) = 1 − sin θ.
+        // ν = 2: I_x(1, 1/2) = 1 − sin θ = x/(1 + sin θ); the latter form
+        // avoids the `1 − sin θ` cancellation for large |t|.
         a = 1;
-        ib = 1 - sin_theta;
+        ib = x / (1 + sin_theta);
         x_to_a = x;
     }
     const inv_ab_table = if (odd) &student_t_inv_ab_odd else &student_t_inv_ab_even;
@@ -625,8 +626,9 @@ fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
         x_to_a *= x;
         a += 1;
     }
-    const cdf = 1 - 0.5 * ib;
-    return if (t >= 0) cdf else 1 - cdf;
+    // For t < 0 the lower tail is `0.5·ib` directly; the previous
+    // `1 − (1 − 0.5·ib)` form cancelled the tail away.
+    return if (t >= 0) 1 - 0.5 * ib else 0.5 * ib;
 }
 
 /// Vectorized integer-degree Student-t CDF for four lanes. Uses the same
@@ -726,7 +728,7 @@ fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_
         } else {
             hi = mid;
         }
-        if (hi - lo <= 64 * std.math.floatEps(T)) break;
+        if (hi - lo <= 64 * std.math.floatEps(T) * @max(hi, std.math.floatMin(T))) break;
     }
     if (lo == 0 and p > 0) {
         // The quantile is below the linear bisection resolution (~1e-14):
@@ -926,6 +928,29 @@ fn gammaCdfImpl(comptime PeerType: type, x: PeerType, shape: PeerType, scale: Pe
 pub fn gammaQuantile(p: anytype, shape: anytype, scale: anytype) resolvedFloatType(@TypeOf(p, shape, scale)) {
     return gammaQuantileImpl(resolvedFloatType(@TypeOf(p, shape, scale)), p, shape, scale);
 }
+/// Solve `Q(shape, y) = q` for `y` by bisecting the upper incomplete gamma
+/// directly, without forming `1 − q`. Used by the inverse-gamma tiny lower
+/// tail, where `1 − p` would lose the tail probability.
+fn gammaUpperQuantileImpl(comptime T: type, q: T, shape: T) T {
+    var lo: T = 0;
+    var hi = @max(@as(T, 1), shape);
+    var expansion: usize = 0;
+    while (gammaIncompleteQ(shape, hi) >= q and expansion < 1024) : (expansion += 1) {
+        hi *= 2;
+        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    }
+    var iteration: usize = 0;
+    while (iteration < 100) : (iteration += 1) {
+        const mid = (lo + hi) / 2;
+        if (gammaIncompleteQ(shape, mid) > q) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return (lo + hi) / 2;
+}
+
 fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, shape, scale);
     comptime requireFloat(T);
@@ -2014,8 +2039,9 @@ fn inverseGammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerTyp
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0) return 0;
     if (p == 1) return std.math.inf(T);
-    const g = gammaQuantile(1 - p, shape, 1 / scale);
-    return 1 / g;
+    // Invert `Q(shape, scale/x) = p` directly; `gammaQuantile(1 - p)` would
+    // lose the tiny lower-tail probability in the `1 - p` subtraction.
+    return scale / gammaUpperQuantileImpl(T, p, shape);
 }
 
 /// Scaled inverse chi-squared CDF (Gelman BDA parameterization): this is
@@ -2047,8 +2073,7 @@ fn scaledInverseChiSquaredQuantileImpl(comptime PeerType: type, p: PeerType, df:
     if (p == 0) return 0;
     if (p == 1) return std.math.inf(T);
     const half_df: T = df / 2;
-    const g = gammaQuantile(1 - p, half_df, 1);
-    return half_df * (scale_squared / g);
+    return half_df * (scale_squared / gammaUpperQuantileImpl(T, p, half_df));
 }
 
 /// Generalized Pareto CDF with location `mu`, scale `sigma > 0`, and shape
@@ -2136,9 +2161,9 @@ fn generalizedExtremeValueQuantileImpl(comptime PeerType: type, p: PeerType, mu:
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0) return if (xi > 0) mu - sigma / xi else -std.math.inf(T);
     if (p == 1) return if (xi < 0) mu - sigma / xi else std.math.inf(T);
-    // E = -ln p = -log1p(p - 1); this form is accurate for p near 1 as well
-    // as for p near 0. `expm1(-xi·ln E)` keeps small |xi| accurate.
-    const e = -std.math.log1p(p - 1);
+    // E = -ln p. `log1p(p - 1)` is accurate for p near 1, but loses the tiny
+    // lower tail because `p - 1` rounds; use `log(p)` for the lower half.
+    const e = if (p < 0.5) -@log(p) else -std.math.log1p(p - 1);
     if (xi == 0) return mu - sigma * @log(e);
     return mu + sigma * std.math.expm1(-xi * @log(e)) / xi;
 }
@@ -2581,6 +2606,36 @@ fn marcumQ1(a: f64, b: f64) f64 {
     return @min(@as(f64, 1), @max(@as(f64, 0), sum));
 }
 
+/// Complementary Marcum Q function `P1 = 1 − Q1` evaluated with the
+/// lower-incomplete-gamma series, so the Rice lower tail does not cancel.
+fn marcumP1(a: f64, b: f64) f64 {
+    if (b == 0) return 0;
+    if (a == 0) return -std.math.expm1(-0.5 * b * b);
+    const half_a2 = 0.5 * a * a;
+    const y = 0.5 * b * b;
+    const log_base = @log(half_a2);
+    const peak = half_a2 + 10 * @sqrt(half_a2 + 1) + 10;
+    const eps = 64 * std.math.floatEps(f64);
+    var log_coeff: f64 = 0;
+    var sum: f64 = 0;
+    var k: usize = 0;
+    while (k < 2_000_000) : (k += 1) {
+        const p = gammaIncompleteP(@as(f64, @floatFromInt(k + 1)), y);
+        var term: f64 = 0;
+        if (p > 0) {
+            const log_term = log_coeff + @log(p) - half_a2;
+            if (log_term > -745.0) {
+                term = @exp(log_term);
+                sum += term;
+            }
+        }
+        const kf: f64 = @floatFromInt(k);
+        if (kf > peak and term <= sum * eps) break;
+        log_coeff += log_base - @log(@as(f64, @floatFromInt(k + 1)));
+    }
+    return @min(@as(f64, 1), @max(@as(f64, 0), sum));
+}
+
 /// Rice mean used by the large-noncentrality Gaussian fallback.
 fn riceMeanForCdf(nu: f64, sigma: f64) f64 {
     if (nu == 0) return sigma * @sqrt(std.math.pi / 2.0);
@@ -2616,7 +2671,7 @@ fn riceCdfImpl(comptime PeerType: type, x: PeerType, nu: PeerType, sigma: PeerTy
         if (sd == 0) return if (x_f < mean) 0 else 1;
         return @floatCast(normCdf((x_f - mean) / sd));
     }
-    return @floatCast(1 - marcumQ1(a, x_f / sigma_f));
+    return @floatCast(marcumP1(a, x_f / sigma_f));
 }
 
 /// Rice quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
@@ -3348,7 +3403,11 @@ fn cauchyCdfImpl(comptime PeerType: type, x: PeerType, median: PeerType, scale: 
     if (std.math.isNan(x)) return std.math.nan(T);
     if (scale == 0) return if (x < median) 0 else 1;
     const pi: T = @floatCast(std.math.pi);
-    return 0.5 + std.math.atan((x - median) / scale) / pi;
+    const z = (x - median) / scale;
+    if (z == 0) return 0.5;
+    // `atan(1/|z|)` avoids the `0.5 + atan(z)/π` cancellation in the tails.
+    if (z < 0) return std.math.atan(-1 / z) / pi;
+    return 1 - std.math.atan(1 / z) / pi;
 }
 
 /// Inverse Cauchy(median, scale) CDF. p=0 → −∞, p=1 → +∞.
@@ -3363,8 +3422,11 @@ fn cauchyQuantileImpl(comptime PeerType: type, p: PeerType, median: PeerType, sc
     if (p == 0) return -std.math.inf(T);
     if (p == 1) return std.math.inf(T);
     if (scale == 0) return median;
+    if (p == 0.5) return median;
     const pi: T = @floatCast(std.math.pi);
-    return median + scale * @tan(pi * (p - 0.5));
+    // `1/tan(πp)` avoids the `p − 0.5` rounding that dominates the lower tail.
+    if (p < 0.5) return median - scale / @tan(pi * p);
+    return median + scale / @tan(pi * (1 - p));
 }
 
 /// Rayleigh(scale) CDF.
@@ -11270,8 +11332,12 @@ fn wrappedCauchyRelativeCdf(comptime T: type, d: T, rho: T) T {
     if (d >= pi) return 1;
     if (rho == 1) return if (d < 0) 0 else 1;
     if (rho == 0) return (d + pi) / (2 * pi);
+    if (d == 0) return 0.5;
     const k = (1 + rho) / (1 - rho);
-    return 0.5 + std.math.atan(k * @tan(d / 2)) / pi;
+    const u = k * @tan(d / 2);
+    // `atan(1/|u|)` avoids the `0.5 + atan(u)/π` cancellation near ±π.
+    if (d < 0) return std.math.atan(1 / @abs(u)) / pi;
+    return 1 - std.math.atan(1 / u) / pi;
 }
 
 /// Wrapped Cauchy CDF on the circle, represented on `(-π, π]`:
@@ -67234,11 +67300,10 @@ test "ScaledInverseChiSquared CDF and quantile match InverseGamma" {
     inline for ([_]f64{ 0.1, 0.5, 0.9 }) |p| {
         try std.testing.expectApproxEqRel(p, dist.cdf(dist.quantile(p)), 1e-7);
     }
-    // The quantile inverts through `1 - p`, so for tiny p the representable
-    // complement `1 - (1 - p)` is the exact round-trip target.
+    // The quantile inverts the upper gamma tail directly, so the tiny-p
+    // round-trip target is p itself (not the representable complement).
     const tiny_p: f64 = 1e-12;
-    const tiny_target = 1 - (1 - tiny_p);
-    try std.testing.expectApproxEqRel(tiny_target, dist.cdf(dist.quantile(tiny_p)), 1e-7);
+    try std.testing.expectApproxEqRel(tiny_p, dist.cdf(dist.quantile(tiny_p)), 1e-7);
     const near_one: f64 = 1 - 1e-12;
     try std.testing.expectApproxEqRel(near_one, dist.cdf(dist.quantile(near_one)), 1e-7);
     try std.testing.expectEqual(@as(f64, 0), dist.cdf(0));
@@ -69082,3 +69147,4 @@ test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
     wf.sampleInto(rng, &wbuf_f32);
     try std.testing.expect(wbuf_f32[0] > 0);
 }
+
