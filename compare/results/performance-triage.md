@@ -566,6 +566,7 @@ Four-normal unit ball projection | Checked whether four standard normals project
 | HIN small-p envelope dominance | The earlier region-1 `c` and region-2 `c2 = −0.2` probes treated the `+0.015` mean offset as a constant shift. An exact acceptance-mass model showed the real cause: the region-2 half-normal envelope is below the target for the nearly flat cells just below the mode, so those cells are under-weighted. | Added `c2 = +c/4` to the region-2 rejection height and its mass term (`e^{c2}·s2·√(π/2)`), restoring dominance with zero violations on a 66-parameter grid; the exact model returns `20.000000`, and Zig 10M-draw multi-seed means are `19.9992..20.0004` against the former `20.015`. The region-2 envelope mass rises by about 19%, so the HIN acceptance rate drops by roughly 5%; a 4e6-draw `distcheck` gate pins the mean. | Adopted as S4-M1550. The affected small-`p` HIN stream changes and `reproducibility-matrix.md` records it. |
 | Vector Kent `log I₀` series | `vectorLogBesselI0` called the branchy scalar A&S Bessel/log helper per lane; the acceptance `log I₀` error on `a = ovalness·s² ∈ [0,1.5]` was up to `3.3e-8`. | Replaced the per-lane calls with a 22-term vector series for `log I₀(a)` when every lane has `a <= 1.5` (truncation `1.2e-11`), keeping the scalar fallback above that. `alea vector kent f64x4 3d` 4.5 -> 4.6 M vectors/s (+2%, within noise) with the unchanged checksum `7297499978426234569`; the acceptance log-ratio error improves ~2700x. | Adopted as S4-M1580. The vector Kent acceptance is versioned for `a <= 1.5` lanes; `reproducibility-matrix.md` records it. |
 | Vector Bingham exponential-race acceptance | The vector Bingham kernel evaluates `log(u)` per lane for the acceptance test; tried the `E >= log_envelope − log_ratio` exponential race already used by Watson/Kent, expecting to remove four per-lane scalar logs. | `alea vector bingham f64x4 3d` fell from 7.4-7.5M to 7.1-7.2M vectors/s (-3-4%) with a changed checksum `7858544676074727599` -> `13061316062112371244`: the vector exponential kernel plus the extra draw costs more than the vector log here. | Rejected and reverted; the log-based acceptance stays. Recorded in `compare/results/s4-m1582-vector-bingham-race-probe.md`. |
+| Exact truncated-exponential S² vMF/Kent marginal | Wood's rejection loop samples the S² cosine marginal `∝ e^{κw}` on `[-1, 1]` through a rational proposal, but the marginal inverts in closed form (`w = −1 + log1p(U·(e^{2κ}−1))/κ`). Kent's proposal marginal is the same vMF(λ) law. | Replaced the scalar/vector Wood loops with the exact inversion: `alea von mises-fisher 3d` 52.1 -> 126.2M samples/s (+142%), `alea vector von mises-fisher f64x4 3d` 10.4 -> 20.1M vectors/s (+93%), `alea vector kent f64x4 3d` 4.4-4.6 -> 5.0M (+9-14%), `alea matrix von mises-fisher 3x1` 44.3 -> 49.4M (+12%), and scalar `alea kent 3d` stays at parity (24.8-25.1M against a 24.7-26.3M baseline). Bingham/Watson rows and checksums are unchanged. The first `log1p`-only form cost scalar Kent ~12%; `@log(1 + x)` for `κ >= 1e-2` (w error below 1.1e-14) recovered it. | Adopted as S4-M1583. The S² vMF, Kent, and single-column matrix-vMF streams change; `reproducibility-matrix.md` records it. `dim > 3` keeps Wood. |
 ## Next Candidate
 
 Continue performance triage on the remaining focused watch items only when a
@@ -596,12 +597,14 @@ current blocker audit and the requirements for a successful next candidate:
   denominators, which need retry-position bookkeeping and measured only about
   2x in a standalone byte-rejection probe, and per-trial branch costs that
   make the bytewise non-dyadic chance fill slower than the one-word loop.
-- Vector directional samplers: the f64x4 Kent, Watson, vMF, and Bingham rows
-  remain the slowest. Scalar-per-lane fallbacks and noinline isolation both
-  regress the scalar rows through code layout, and the vector transcendentals
-  (`@log`, `@atan`, Bessel) scalarize, so the current SIMD loops are already
-  near parity with four scalar draws. Future work needs a dense vector
-  candidate or a layout-stable way to share the scalar tails.
+- Vector directional samplers: S4-M1583 removed the S² vMF/Kent Wood
+  rejection loop with the exact truncated-exponential inversion, lifting
+  `vector von mises-fisher` to 20.1M and `vector kent` to 5.0M vectors/s.
+  The remaining slow rows are `vector kent` and `vector bingham`, whose
+  per-lane Bessel/`@log`/ACG work still scalarizes; scalar-per-lane fallbacks
+  and noinline isolation both regress the scalar rows through code layout.
+  Future work needs a dense vector candidate for the remaining Bessel or
+  Bingham acceptance work, or a layout-stable way to share the scalar tails.
 - Central binomial rejection: the full BTPE envelope was implemented,
   cross-checked against `rand_distr 0.5.1`, and rejected (S4-M1443). It is
   exact but measures -22-24% at `binomial large` and -45-46% at

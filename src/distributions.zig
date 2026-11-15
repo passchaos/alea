@@ -12191,11 +12191,40 @@ fn vmfWoodConstants(comptime T: type, kappa: T, dim: usize) struct { b: T, x0: T
     return .{ .b = b, .x0 = x0, .c = c };
 }
 
+/// Exact marginal sampler for the unit vMF on S². The cosine `w` of the polar
+/// angle from the mean direction has the truncated exponential density
+/// `∝ e^{κw}` on `[-1, 1]`, whose CDF inverts in one log:
+///
+///     w = −1 + log1p(U·(e^{2κ} − 1))/κ
+///
+/// The Wood rejection loop samples the same marginal through a rational
+/// proposal; for `dim == 3` this inversion removes the rejection loop and one
+/// log per candidate. For `κ >= 1e-2` the plain `log(1 + x)` is used (the
+/// rounding of `1 + x` perturbs `w` by at most ~1e-14); smaller rates keep
+/// `log1p` for accuracy. For very large `κ`, `e^{2κ}` would overflow, so the
+/// complementary form `1 + log(U + (1−U)e^{−2κ})/κ` is used instead.
+fn vmfSampleW3From(source: anytype, comptime T: type, kappa: T) T {
+    const u = Rng.floatOpenClosedFrom(source, T);
+    if (kappa == 0) return 2 * u - 1;
+    const overflow_at: T = if (T == f32) 44 else 354;
+    if (kappa < overflow_at) {
+        const x = u * std.math.expm1(2 * kappa);
+        // For f64 and κ >= 1e-2, the rounding of `1 + x` perturbs the log by at
+        // most ~1.1e-16, so the resulting w error stays below 1.1e-14; the
+        // plain log is materially faster than the portable log1p there.
+        const l = if (T == f64 and kappa >= 1e-2) @log(1 + x) else std.math.log1p(x);
+        return -1 + l / kappa;
+    }
+    const em2 = @exp(-2 * kappa);
+    return 1 + @log(u + (1 - u) * em2) / kappa;
+}
+
 /// Sample a univariate tangent-direction value w ∈ [-1, 1] from the vMF
 /// marginal distribution on the cosine of the polar angle from the mean
-/// direction μ (taken as e_1).  Uses Ulrich-Wood rejection sampling.
-/// Works for n ≥ 3.
+/// direction μ (taken as e_1).  Uses Ulrich-Wood rejection sampling for n > 3
+/// and the exact truncated-exponential inversion for n = 3.
 fn vmfSampleWWithConstantsFrom(source: anytype, comptime T: type, kappa: T, dim: usize, b: T, x0: T, c: T) T {
+    if (dim == 3) return vmfSampleW3From(source, T, kappa);
     const d_minus_1: T = @floatFromInt(dim - 1);
     while (true) {
         const z = Rng.floatOpenClosedFrom(source, T);
@@ -12209,6 +12238,9 @@ fn vmfSampleWWithConstantsFrom(source: anytype, comptime T: type, kappa: T, dim:
 }
 
 fn vmfSampleWFrom(source: anytype, comptime T: type, kappa: T, dim: usize) T {
+    // The S² marginal is exactly the truncated exponential on [-1, 1].
+    if (dim == 3) return vmfSampleW3From(source, T, kappa);
+
     if (kappa == 0) {
         // Uniform on sphere S^{n-1}: w = 2B - 1 where B ~ Beta((d-2)/2, (d-2)/2).
         const half_d: T = @as(T, @floatFromInt(dim - 2)) / 2;
@@ -12535,17 +12567,122 @@ pub fn fillVonMisesFisherCheckedFrom(source: anytype, comptime T: type, comptime
 // SIMD von Mises-Fisher sampling on S²
 // -----------------------------------------------------------------------------
 
+/// Vector counterpart of `vmfSampleW3From`. The rate is shared across lanes, so
+/// `expm1(2κ)` stays scalar while each lane pays one log (`@log(1 + x)` for
+/// f64 `κ >= 1e-2`, `log1p` below that). For `κ < 1e-4` the `log1p` series is
+/// evaluated with vector FMAs instead (its argument is below `2e-4`), which
+/// also keeps near-uniform rates free of transcendentals.
+fn vectorVmfSampleW3From(source: anytype, comptime VectorType: type, kappa: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const L = vectorInfo(VectorType).len;
+    const V = @Vector(L, Child);
+    const one: V = @splat(1);
+    const u = Rng.vectorOpenClosedFrom(source, V);
+    if (kappa == 0) return @as(V, @splat(2)) * u - one;
+
+    const overflow_at: Child = if (Child == f32) 44 else 354;
+    if (kappa < overflow_at) {
+        const e2m1 = std.math.expm1(2 * kappa);
+        const x = u * @as(V, @splat(e2m1));
+        var l: V = undefined;
+        if (kappa < 1e-4) {
+            // x <= 2e-4; the four-term series is exact to ~4e-16 relative.
+            l = x * (one - x * (@as(V, @splat(0.5)) - x * (@as(V, @splat(1.0 / 3.0)) - x * @as(V, @splat(0.25)))));
+        } else if (Child == f64 and kappa >= 1e-2) {
+            // The `1 + x` rounding perturbs the log by <= ~1.1e-16, so the w
+            // error stays below 1.1e-14; the plain log is faster than log1p.
+            inline for (0..L) |lane| l[lane] = @log(1 + x[lane]);
+        } else {
+            inline for (0..L) |lane| l[lane] = std.math.log1p(x[lane]);
+        }
+        return l / @as(V, @splat(kappa)) - one;
+    }
+    const em2 = @exp(-2 * kappa);
+    const x = u + (one - u) * @as(V, @splat(em2));
+    var l: V = undefined;
+    inline for (0..L) |lane| l[lane] = @log(x[lane]);
+    return one + l / @as(V, @splat(kappa));
+}
+
+test "vMF S2 marginal inversion matches the truncated exponential" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c10);
+
+    inline for ([_]f64{ 1e-6, 0.25, 5, 50, 400 }) |kappa| {
+        const count = 20_000;
+        var sum: f64 = 0;
+        var below_zero: usize = 0;
+        for (0..count) |_| {
+            const w = vmfSampleW3From(&engine, f64, kappa);
+            try std.testing.expect(w >= -1 and w <= 1);
+            sum += w;
+            if (w <= 0) below_zero += 1;
+        }
+        const nf: f64 = @floatFromInt(count);
+        // F(0) = 1/(1 + e^κ) for the truncated exponential on [-1, 1].
+        const p0 = 1 / (1 + @exp(kappa));
+        const se0 = @sqrt(p0 * (1 - p0) / nf);
+        try std.testing.expectApproxEqAbs(p0, @as(f64, @floatFromInt(below_zero)) / nf, 4 * se0 + 1e-12);
+        if (kappa >= 1e-3) {
+            const expected = 1 / std.math.tanh(kappa) - 1 / kappa;
+            const se = @sqrt((1 - expected * expected) / nf);
+            try std.testing.expectApproxEqAbs(expected, sum / nf, 6 * se + 1e-12);
+        }
+    }
+}
+
+test "vector vMF S2 marginal covers the Taylor and complementary branches" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c11);
+
+    const V4 = @Vector(4, f64);
+    inline for ([_]f64{ 1e-6, 5, 400 }) |kappa| {
+        var sum: f64 = 0;
+        var count: usize = 0;
+        for (0..2_000) |_| {
+            const w = vectorVmfSampleW3From(&engine, V4, kappa);
+            inline for (0..4) |lane| {
+                try std.testing.expect(w[lane] >= -1 and w[lane] <= 1);
+                sum += w[lane];
+                count += 1;
+            }
+        }
+        const nf: f64 = @floatFromInt(count);
+        if (kappa < 1e-3) {
+            try std.testing.expectApproxEqAbs(@as(f64, 0), sum / nf, 0.02);
+        } else {
+            const expected = 1 / std.math.tanh(kappa) - 1 / kappa;
+            const se = @sqrt((1 - expected * expected) / nf);
+            try std.testing.expectApproxEqAbs(expected, sum / nf, 6 * se + 1e-12);
+        }
+    }
+
+    // f32 uses the complementary form from κ >= 44.
+    const V8 = @Vector(8, f32);
+    var sum: f32 = 0;
+    var count: usize = 0;
+    for (0..1_000) |_| {
+        const w = vectorVmfSampleW3From(&engine, V8, @as(f32, 50));
+        inline for (0..8) |lane| {
+            try std.testing.expect(w[lane] >= -1 and w[lane] <= 1);
+            sum += w[lane];
+            count += 1;
+        }
+    }
+    const nf: f32 = @floatFromInt(count);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0 / std.math.tanh(@as(f32, 50)) - 1.0 / 50.0), sum / nf, 0.02);
+}
+
 /// Per-lane SIMD vMF sampler on S² with a shared mean direction and
 /// concentration. Returns `[3]VectorType`, where each lane is one independent
-/// sample. Wood's cosine rejection retires accepted lanes; the tangent angle is
-/// drawn uniformly per lane and the e₁-frame point is Householder-reflected to
-/// the shared mean direction.
+/// sample. The cosine marginal is the exact truncated exponential, inverted
+/// per lane; the tangent angle is drawn uniformly per lane and the e₁-frame
+/// point is Householder-reflected to the shared mean direction.
 fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]vectorChild(VectorType), kappa: vectorChild(VectorType)) [3]VectorType {
     const Child = vectorChild(VectorType);
     const info = vectorInfo(VectorType);
     const L = info.len;
     const V = @Vector(L, Child);
-    const B = @Vector(L, bool);
 
     if (kappa == 0) return vectorUnitSphereFrom(source, VectorType);
     if (kappa > 1e12) {
@@ -12557,41 +12694,8 @@ fn vectorVmfPointFrom(source: anytype, comptime VectorType: type, mean_dir: [3]v
 
     const zero: V = @splat(0);
     const one: V = @splat(1);
-    const two: V = @splat(2);
-    const kappa_v: V = @splat(kappa);
 
-    const consts = vmfWoodConstants(Child, kappa, 3);
-    const b: V = @splat(consts.b);
-    const x0: V = @splat(consts.x0);
-    const c: V = @splat(consts.c);
-
-    var w: V = undefined;
-    var active: B = @splat(true);
-    while (@reduce(.Or, active)) {
-        const z = Rng.vectorOpenClosedFrom(source, V);
-        const wcand = (one - (one + b) * z) / (one - (one - b) * z);
-        // Exp(1) race: `A ≥ log(u)` is equivalent to `E ≥ −A` and avoids the
-        // second vector log per round.
-        const e = vectorStandardExponentialFrom(source, VectorType);
-        const accept = active & (kappa_v * wcand + two * @log(one - x0 * wcand) - c + e >= zero);
-        w = @select(Child, accept, wcand, w);
-        active = @select(bool, accept, @as(B, @splat(false)), active);
-
-        // Once only a few lanes remain, finish them with the scalar marginal
-        // sampler instead of redrawing full vectors.
-        var active_count: usize = 0;
-        inline for (0..L) |lane| {
-            if (active[lane]) active_count += 1;
-        }
-        if (active_count <= 4) {
-            inline for (0..L) |lane| {
-                if (active[lane]) {
-                    w[lane] = vmfSampleWWithConstantsFrom(source, Child, kappa, 3, consts.b, consts.x0, consts.c);
-                }
-            }
-            break;
-        }
-    }
+    const w = vectorVmfSampleW3From(source, VectorType, kappa);
 
     // Per-lane uniform circle draws avoid the vector cos/sin pair.
     var cos_angle: V = undefined;
@@ -14059,23 +14163,15 @@ fn kentConditionalCosSinFrom(source: anytype, comptime T: type, a: T) [2]T {
     return .{ cos_half, sin_phi };
 }
 
-/// Scalar Kent marginal draw: Wood proposal plus I₀-weighted acceptance.
-inline fn kentSampleWFrom(source: anytype, comptime T: type, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) T {
+/// Scalar Kent marginal draw: exact truncated-exponential proposal plus the
+/// I₀-weighted acceptance test.
+inline fn kentSampleWFrom(source: anytype, comptime T: type, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T) T {
     const one: T = 1;
-    const two: T = 2;
     const diff = kappa - proposal_lambda;
     while (true) {
-        var w: T = undefined;
-        if (proposal_lambda == 0) {
-            w = vmfSampleWFrom(source, T, 0, 3);
-        } else {
-            while (true) {
-                const z = Rng.floatOpenClosedFrom(source, T);
-                w = (one - (one + wood_b) * z) / (one - (one - wood_b) * z);
-                const e = standardExponentialFrom(source, T);
-                if (proposal_lambda * w + two * @log(one - wood_x0 * w) - wood_c + e >= 0) break;
-            }
-        }
+        // The vMF(λ) proposal marginal is the truncated exponential on
+        // [-1, 1]; inverting its CDF replaces the Wood rejection loop.
+        const w = vmfSampleW3From(source, T, proposal_lambda);
         // Exact conditional sampler: accept w against the I₀-weighted marginal.
         const s2 = @max(0, one - w * w);
         const a = ovalness * s2;
@@ -14096,16 +14192,13 @@ fn kentPointFrom(
     ovalness: T,
     proposal_lambda: T,
     marginal_max_log: T,
-    wood_b: T,
-    wood_x0: T,
-    wood_c: T,
 ) [3]T {
     if (kappa == 0) return unitSphereSurfaceFrom(source, T, 3);
     if (kappa > 1e12) return mean_dir.*;
     if (ovalness == 0) return vonMisesFisherPointFrom(source, T, 3, mean_dir, kappa);
 
     const one: T = 1;
-    const w = kentSampleWFrom(source, T, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
+    const w = kentSampleWFrom(source, T, kappa, ovalness, proposal_lambda, marginal_max_log);
     const s2 = @max(0, one - w * w);
     const a = ovalness * s2;
     const cos_sin = kentConditionalCosSinFrom(source, T, a);
@@ -14117,9 +14210,9 @@ fn kentPointFrom(
     return x;
 }
 
-fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: *const [3]T, major_axis: *const [3]T, minor_axis: *const [3]T, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T, wood_b: T, wood_x0: T, wood_c: T) void {
+fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir: *const [3]T, major_axis: *const [3]T, minor_axis: *const [3]T, kappa: T, ovalness: T, proposal_lambda: T, marginal_max_log: T) void {
     for (dest) |*item| {
-        item.* = kentPointFrom(source, T, mean_dir, major_axis, minor_axis, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
+        item.* = kentPointFrom(source, T, mean_dir, major_axis, minor_axis, kappa, ovalness, proposal_lambda, marginal_max_log);
     }
 }
 
@@ -14133,6 +14226,8 @@ fn fillKentPointsFrom(source: anytype, comptime T: type, dest: [][3]T, mean_dir:
 /// Sampling uses exact rejection from a Von Mises-Fisher proposal whose
 /// concentration matches the target mean resultant length, with an analytic
 /// supremum envelope, so acceptance stays high across the parameter range.
+/// The proposal cosine is drawn by inverting the exact truncated-exponential
+/// marginal CDF, which removes the inner Wood rejection loop.
 pub fn Kent(comptime T: type) type {
     comptime requireFloat(T);
     return struct {
@@ -14145,9 +14240,6 @@ pub fn Kent(comptime T: type) type {
         ovalness: T,
         proposal_lambda: T,
         marginal_max_log: T,
-        wood_b: T,
-        wood_x0: T,
-        wood_c: T,
 
         /// Construct a Kent distribution from a mean direction, a major axis
         /// (projected onto the tangent plane and normalized), concentration,
@@ -14195,15 +14287,6 @@ pub fn Kent(comptime T: type) type {
             const rho = kentMoments(T, kappa, ovalness)[0];
             const lambda = kentProposalLambda(T, rho);
             const marginal_max_log = kentMarginalMaxLog(T, kappa, ovalness, lambda);
-            var wood_b: T = 0;
-            var wood_x0: T = 0;
-            var wood_c: T = 0;
-            if (lambda > 0) {
-                const wc = vmfWoodConstants(T, lambda, 3);
-                wood_b = wc.b;
-                wood_x0 = wc.x0;
-                wood_c = wc.c;
-            }
 
             return Self{
                 .mean_dir = mean_dir,
@@ -14213,9 +14296,6 @@ pub fn Kent(comptime T: type) type {
                 .ovalness = ovalness,
                 .proposal_lambda = lambda,
                 .marginal_max_log = marginal_max_log,
-                .wood_b = wood_b,
-                .wood_x0 = wood_x0,
-                .wood_c = wood_c,
             };
         }
 
@@ -14289,19 +14369,19 @@ pub fn Kent(comptime T: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) [3]T {
-            return kentPointFrom(rng, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
+            return kentPointFrom(rng, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) [3]T {
-            return kentPointFrom(source, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
+            return kentPointFrom(source, T, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: [][3]T) void {
-            fillKentPointsFrom(rng, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
+            fillKentPointsFrom(rng, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: [][3]T) void {
-            fillKentPointsFrom(source, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log, self.wood_b, self.wood_x0, self.wood_c);
+            fillKentPointsFrom(source, T, dest, &self.mean_dir, &self.major_axis, &self.minor_axis, self.kappa, self.ovalness, self.proposal_lambda, self.marginal_max_log);
         }
     };
 }
@@ -14357,75 +14437,6 @@ pub fn fillKentCheckedFrom(source: anytype, comptime T: type, dest: [][3]T, mean
 // -----------------------------------------------------------------------------
 // SIMD Kent sampling on S²
 // -----------------------------------------------------------------------------
-
-/// Per-lane Wood rejection for the Kent proposal marginal.
-fn vectorWoodW(source: anytype, comptime VectorType: type, lambda: vectorChild(VectorType), b: vectorChild(VectorType), x0: vectorChild(VectorType), c: vectorChild(VectorType)) VectorType {
-    const Child = vectorChild(VectorType);
-    const L = vectorInfo(VectorType).len;
-    const V = @Vector(L, Child);
-    const B = @Vector(L, bool);
-
-    const one: V = @splat(1);
-    const two: V = @splat(2);
-    const lambda_v: V = @splat(lambda);
-    const b_v: V = @splat(b);
-    const x0_v: V = @splat(x0);
-    const c_v: V = @splat(c);
-
-    var w: V = undefined;
-    var active: B = @splat(true);
-    while (@reduce(.Or, active)) {
-        const z = Rng.vectorOpenClosedFrom(source, V);
-        const u = Rng.vectorOpenFrom(source, V);
-        const wcand = (one - (one + b_v) * z) / (one - (one - b_v) * z);
-        const accept = active & (lambda_v * wcand + two * @log(one - x0_v * wcand) - c_v >= @log(u));
-        w = @select(Child, accept, wcand, w);
-        active = @select(bool, accept, @as(B, @splat(false)), active);
-
-        var active_count: usize = 0;
-        inline for (0..L) |lane| {
-            if (active[lane]) active_count += 1;
-        }
-        if (active_count <= 4) {
-            vectorKentWoodTailFrom(source, VectorType, active, lambda, b, x0, c, &w);
-            break;
-        }
-    }
-    return w;
-}
-
-/// Scalar completion for the last pending vector-Kent Wood lanes. Kept out of
-/// line so the scalar Kent path keeps its code layout.
-noinline fn vectorKentWoodTailFrom(
-    source: anytype,
-    comptime VectorType: type,
-    active: @Vector(vectorInfo(VectorType).len, bool),
-    lambda: vectorChild(VectorType),
-    b: vectorChild(VectorType),
-    x0: vectorChild(VectorType),
-    c: vectorChild(VectorType),
-    w: *VectorType,
-) void {
-    const Child = vectorChild(VectorType);
-    const L = vectorInfo(VectorType).len;
-    inline for (0..L) |lane| {
-        if (active[lane]) {
-            if (lambda == 0) {
-                w[lane] = vmfSampleWFrom(source, Child, 0, 3);
-            } else {
-                while (true) {
-                    const z = Rng.floatOpenClosedFrom(source, Child);
-                    const ws = (1 - (1 + b) * z) / (1 - (1 - b) * z);
-                    const e = standardExponentialFrom(source, Child);
-                    if (lambda * ws + 2 * @log(1 - x0 * ws) - c + e >= 0) {
-                        w[lane] = ws;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
 
 /// `log I₀(a)` for the vector Kent acceptance. For `a <= 1` (the common
 /// `ovalness·s²` range) the series `Σ d_k a^{2k}` is evaluated with vector
@@ -14485,9 +14496,6 @@ fn vectorKentPointFrom(
     ovalness: vectorChild(VectorType),
     proposal_lambda: vectorChild(VectorType),
     marginal_max_log: vectorChild(VectorType),
-    wood_b: vectorChild(VectorType),
-    wood_x0: vectorChild(VectorType),
-    wood_c: vectorChild(VectorType),
 ) [3]VectorType {
     const Child = vectorChild(VectorType);
     const L = vectorInfo(VectorType).len;
@@ -14513,7 +14521,9 @@ fn vectorKentPointFrom(
     var w: V = undefined;
     var pending: B = @splat(true);
     while (@reduce(.Or, pending)) {
-        const wcand = vectorWoodW(source, VectorType, proposal_lambda, wood_b, wood_x0, wood_c);
+        // The vMF(λ) proposal marginal is the truncated exponential on [-1, 1];
+        // inverting its CDF replaces the Wood rejection loop.
+        const wcand = vectorVmfSampleW3From(source, VectorType, proposal_lambda);
         const s2 = @max(zero, one - wcand * wcand);
         const a = beta_v * s2;
         const log_ratio = diff * wcand + vectorLogBesselI0(VectorType, a) - max_log;
@@ -14532,7 +14542,7 @@ fn vectorKentPointFrom(
         if (active_count <= 4) {
             inline for (0..L) |lane| {
                 if (pending[lane]) {
-                    w[lane] = kentSampleWFrom(source, Child, kappa, ovalness, proposal_lambda, marginal_max_log, wood_b, wood_x0, wood_c);
+                    w[lane] = kentSampleWFrom(source, Child, kappa, ovalness, proposal_lambda, marginal_max_log);
                 }
             }
             break;
@@ -14618,9 +14628,6 @@ pub fn VectorKent(comptime VectorType: type) type {
                 self.sampler.ovalnessValue(),
                 self.sampler.proposal_lambda,
                 self.sampler.marginal_max_log,
-                self.sampler.wood_b,
-                self.sampler.wood_x0,
-                self.sampler.wood_c,
             );
         }
 

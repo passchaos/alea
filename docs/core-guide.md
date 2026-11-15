@@ -490,12 +490,16 @@ Directional distributions on the circle and sphere:
 - `WrappedCauchy(T)` / `StandardWrappedCauchy` — heavy-tailed circular
   distribution with closed-form inverse-CDF sampling and SIMD vector support.
 - `VonMisesFisher(T, n)` — vMF on Sⁿ⁻¹ for comptime `n ≥ 2` with Wood (1994)
-  rejection sampling, `κ = 0` uniform, and `κ → ∞` point-mass fast paths.
+  rejection sampling for `n > 3`, the exact truncated-exponential cosine
+  inversion for `n = 3`, `κ = 0` uniform, and `κ → ∞` point-mass fast paths.
 - `VectorVonMises(T)` / `VectorVonMisesFisher(T)` / `VectorWatson(T)` /
   `VectorBingham(T)` / `VectorKent(T)` — per-lane SIMD samplers: one
   independent circular von Mises, S² vMF, S² axial Watson, S² Bingham, or S²
-  Kent sample per vector lane, with lane retirement in the
-  Best–Fisher/Wood/Beta/ACG rejection loops. When only a couple of lanes
+  Kent sample per vector lane. The S² vMF cosine marginal is the exact
+  truncated exponential `∝ e^{κw}` on `[-1, 1]`, inverted per lane with
+  `log1p`; the Kent proposal uses the same inversion for its vMF(λ) marginal,
+  so neither path needs an inner Wood rejection loop. Lane retirement remains
+  in the Best–Fisher/Beta/ACG rejection loops. When only a couple of lanes
   remain, the Watson and Bingham samplers finish them with the scalar sampler
   instead of redrawing full vectors. The S² samplers return `[3]VectorType`
   and share the mean direction/axis, quadratic-form matrix, or Kent frame
@@ -509,8 +513,10 @@ Directional distributions on the circle and sphere:
   paths.
 - `Kent(T)` — Fisher-Bingham F5 distribution on S² with concentration `κ ≥ 0`
   and ovalness `0 ≤ β < κ/2`; exact rejection sampling from a mean-matched
-  Von Mises-Fisher proposal, `β = 0` vMF reduction, and deterministic-quadrature
-  mean/covariance diagnostics including γ₂/γ₃ anisotropy.
+  Von Mises-Fisher proposal whose cosine marginal is drawn by inverting the
+  exact truncated-exponential CDF, `β = 0` vMF reduction, and
+  deterministic-quadrature mean/covariance diagnostics including γ₂/γ₃
+  anisotropy.
 - `MatrixVonMisesFisher(T)` — matrix Langevin distribution on the Stiefel
   manifold V_{k,p} (`p > k`) with density `exp(tr(FᵀX))`; a Gibbs sampler
   updates each column from its exact von Mises-Fisher conditional on the
