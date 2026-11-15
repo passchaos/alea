@@ -7234,5 +7234,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1702-zipf-fill-gate-fix.md`. and
 `compare/results/s4-m1703-1e9-long-run-refresh.md`. and
 `compare/results/s4-m1704-validate-all-refresh.md`. and
-`compare/results/s4-m1705-vector-binomial-dyadic-gates.md`.
+`compare/results/s4-m1705-vector-binomial-dyadic-gates.md`. and
+`compare/results/s4-m1706-validate-all-refresh.md`.
 
