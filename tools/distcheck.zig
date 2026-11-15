@@ -2106,6 +2106,28 @@ fn checkLongRun(samples: usize) !void {
         try expectFloatBetween("long von mises cdf(-1)", empirical, expected - 6 * se, expected + 6 * se);
     }
 
+    // Generalized Extreme Value mean and CDF vs the sampler.
+    {
+        var engine = alea.FastPrng.init(0x10d7);
+        const rng = alea.Rng.init(&engine);
+        const dist = try alea.distributions.GeneralizedExtremeValue(f64).init(1, 2, 0.3);
+        const expected_mean = dist.expectedValue().?;
+        const expected_cdf = dist.cdf(3.0);
+        var sum: f64 = 0;
+        var below: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            const x = dist.sample(rng);
+            sum += x;
+            if (x <= 3.0) below += 1;
+        }
+        const mean_tol = longMeanTolerance(dist.varianceValue().?, samples, 0.02);
+        try expectFloatBetween("long gev mean", sum / nf, expected_mean - mean_tol, expected_mean + mean_tol);
+        const empirical = @as(f64, @floatFromInt(below)) / nf;
+        const cdf_se = @sqrt(expected_cdf * (1 - expected_cdf) / nf);
+        try expectFloatBetween("long gev cdf(3)", empirical, expected_cdf - 6 * cdf_se, expected_cdf + 6 * cdf_se);
+    }
+
     // Exact SO(3) matrix Fisher isotropic trace moment.
     {
         var engine = alea.FastPrng.init(0x10ce);
