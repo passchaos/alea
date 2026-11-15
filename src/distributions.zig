@@ -22218,6 +22218,12 @@ pub const Poisson = struct {
                 for (dest) |*item| item.* = poissonFromCdfTable(rng, threshold, table[0..width]);
             },
             .ahrens_dieter => |method| {
+                var table: [64]f64 = undefined;
+                const width = poissonCdfTableSmall(method.lambda, &table);
+                if (method.lambda <= 24 and width > 0 and table[width - 1] > 1.0 - 1e-12) {
+                    for (dest) |*item| item.* = poissonAdCdfFrom(rng, method, table[0..width]);
+                    return;
+                }
                 for (dest) |*item| item.* = method.sample(rng);
             },
         }
@@ -22232,6 +22238,12 @@ pub const Poisson = struct {
                 for (dest) |*item| item.* = poissonFromCdfTable(source, threshold, table[0..width]);
             },
             .ahrens_dieter => |method| {
+                var table: [64]f64 = undefined;
+                const width = poissonCdfTableSmall(method.lambda, &table);
+                if (method.lambda <= 24 and width > 0 and table[width - 1] > 1.0 - 1e-12) {
+                    for (dest) |*item| item.* = poissonAdCdfFrom(source, method, table[0..width]);
+                    return;
+                }
                 for (dest) |*item| item.* = method.sampleFrom(source);
             },
         }
@@ -22646,6 +22658,20 @@ fn poissonFromCdfTable(source: anytype, threshold: f64, cdf: []const f64) u64 {
         if (u > cdf[mid]) lo = mid + 1 else hi = mid;
     }
     if (lo == cdf.len) return poissonProductFrom(source, threshold);
+    return lo;
+}
+
+/// Ahrens-Dieter bulk fill through the same small CDF table, with the AD
+/// kernel as the exact tail fallback.
+fn poissonAdCdfFrom(source: anytype, method: PoissonAhrensDieter, table: []const f64) u64 {
+    const u = Rng.floatFrom(source, f64);
+    if (u > table[table.len - 1]) return method.sampleFrom(source);
+    var lo: usize = 0;
+    var hi: usize = table.len;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (u > table[mid]) lo = mid + 1 else hi = mid;
+    }
     return lo;
 }
 

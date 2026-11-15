@@ -2762,6 +2762,7 @@ fn checkLongRun(samples: usize) !void {
         const binomial_extreme = try alea.distributions.Binomial.init(128, 0.999);
         const binomial_inversion = try alea.distributions.Binomial.init(1000, 0.012);
         const binomial_hin = try alea.distributions.Binomial.init(10_000, 0.01);
+        const poisson20 = try alea.distributions.Poisson.init(20);
         const vector_zipf = try alea.distributions.VectorZipf(@Vector(4, f64)).init(10, 1.5);
         const vector_hypergeometric = try alea.distributions.VectorHypergeometric(@Vector(4, u64)).init(100, 30, 10);
         const zipf_fill_dist = try alea.distributions.Zipf(f64).init(10, 1.5);
@@ -2783,6 +2784,7 @@ fn checkLongRun(samples: usize) !void {
         var vector_binomial_large_hits = [_]usize{0} ** 3;
         var vector_binomial_extreme_hits: usize = 0;
         var scalar_poisson_hits = [_]usize{0} ** 3;
+        var poisson20_fill_hits = [_]usize{0} ** 3;
         var binomial_inversion_hits = [_]usize{0} ** 3;
         var binomial_hin_hits = [_]usize{0} ** 3;
         var zipf_fill_hits = [_]usize{0} ** 3;
@@ -2869,6 +2871,13 @@ fn checkLongRun(samples: usize) !void {
                 if (value <= 2) scalar_poisson_hits[0] += 1;
                 if (value <= 4) scalar_poisson_hits[1] += 1;
                 if (value <= 8) scalar_poisson_hits[2] += 1;
+            }
+            var p20_buf: [8]u64 = undefined;
+            alea.distributions.fillPoisson(rng, &p20_buf, 20);
+            for (p20_buf) |value| {
+                if (value <= 15) poisson20_fill_hits[0] += 1;
+                if (value <= 20) poisson20_fill_hits[1] += 1;
+                if (value <= 25) poisson20_fill_hits[2] += 1;
             }
             var bi_buf: [8]u64 = undefined;
             alea.distributions.fillBinomial(rng, &bi_buf, 1000, 0.012);
@@ -2963,6 +2972,9 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long fillPoisson cdf(2)", scalar_poisson_hits[0], samples * 8, poisson4.cdf(2));
         try expectEmpiricalCdf("long fillPoisson cdf(4)", scalar_poisson_hits[1], samples * 8, poisson4.cdf(4));
         try expectEmpiricalCdf("long fillPoisson cdf(8)", scalar_poisson_hits[2], samples * 8, poisson4.cdf(8));
+        try expectEmpiricalCdf("long fillPoisson(20) cdf(15)", poisson20_fill_hits[0], samples * 8, poisson20.cdf(15));
+        try expectEmpiricalCdf("long fillPoisson(20) cdf(20)", poisson20_fill_hits[1], samples * 8, poisson20.cdf(20));
+        try expectEmpiricalCdf("long fillPoisson(20) cdf(25)", poisson20_fill_hits[2], samples * 8, poisson20.cdf(25));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(8)", binomial_inversion_hits[0], samples * 8, binomial_inversion.cdf(8));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(12)", binomial_inversion_hits[1], samples * 8, binomial_inversion.cdf(12));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(16)", binomial_inversion_hits[2], samples * 8, binomial_inversion.cdf(16));
