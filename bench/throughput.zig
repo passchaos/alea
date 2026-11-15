@@ -563,6 +563,7 @@ pub fn main(init: std.process.Init) !void {
     try benchZipf(io, stdout, "alea zipf", bytes / 128);
     try benchZipfDirect(io, stdout, "alea zipf direct", bytes / 128);
     try benchZipfFillDirect(io, stdout, "alea Zipf.fillFrom direct", bytes / 128);
+    try benchZipfFillCdfDirect(io, stdout, "alea candidate Zipf.fillFrom cdf direct", bytes / 128);
     try benchZeta(io, stdout, "alea zeta", bytes / 128);
     try benchZetaDirect(io, stdout, "alea zeta direct", bytes / 128);
     try benchZetaFillDirect(io, stdout, "alea Zeta.fillFrom direct", bytes / 128);
@@ -11970,6 +11971,54 @@ fn benchZipfFillDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, cou
         while (remaining > 0) {
             const n = @min(remaining, out.len);
             dist.fillFrom(&engine, out[0..n]);
+            for (out[0..n]) |value| checksum += value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchZipfFillCdfDirect(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]f64 = undefined;
+    const n_max: usize = 10;
+    const exponent: f64 = 1.5;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x719f);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            var cdf: [n_max]f64 = undefined;
+            var total: f64 = 0;
+            var k: usize = 1;
+            while (k <= n_max) : (k += 1) {
+                total += std.math.pow(f64, @as(f64, @floatFromInt(k)), -exponent);
+                cdf[k - 1] = total;
+            }
+            for (out[0..n]) |*item| {
+                const u = alea.Rng.floatFrom(&engine, f64) * total;
+                var lo: usize = 0;
+                var hi: usize = n_max;
+                while (lo < hi) {
+                    const mid = lo + (hi - lo) / 2;
+                    if (u > cdf[mid]) lo = mid + 1 else hi = mid;
+                }
+                item.* = @floatFromInt(lo + 1);
+            }
             for (out[0..n]) |value| checksum += value;
             remaining -= n;
         }
