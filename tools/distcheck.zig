@@ -2753,6 +2753,10 @@ fn checkLongRun(samples: usize) !void {
         const vector_zeta = try alea.distributions.VectorZeta(@Vector(4, f64)).init(3);
         const vector_poisson = try alea.distributions.VectorPoisson(@Vector(4, u64)).init(4);
         const poisson4 = try alea.distributions.Poisson.init(4);
+        const vector_binomial_large = try alea.distributions.VectorBinomial(@Vector(4, u64)).init(200, 0.4);
+        const binomial_large = try alea.distributions.Binomial.init(200, 0.4);
+        const vector_binomial_extreme = try alea.distributions.VectorBinomial(@Vector(4, u64)).init(128, 0.999);
+        const binomial_extreme = try alea.distributions.Binomial.init(128, 0.999);
         const bernoulli = try alea.distributions.Bernoulli.init(0.3);
         var binomial_hits = [_]usize{0} ** 3;
         var poisson_hits = [_]usize{0} ** 3;
@@ -2767,6 +2771,8 @@ fn checkLongRun(samples: usize) !void {
         var zeta_4_hits = [_]usize{0} ** 3;
         var vector_zeta_hits = [_]usize{0} ** 3;
         var vector_poisson_hits = [_]usize{0} ** 3;
+        var vector_binomial_large_hits = [_]usize{0} ** 3;
+        var vector_binomial_extreme_hits: usize = 0;
         var bernoulli_hits: usize = 0;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
@@ -2828,6 +2834,18 @@ fn checkLongRun(samples: usize) !void {
                 if (vec[lane] <= 4) vector_poisson_hits[1] += 1;
                 if (vec[lane] <= 8) vector_poisson_hits[2] += 1;
             };
+            var vbl_buf: [2]@Vector(4, u64) = undefined;
+            vector_binomial_large.fill(rng, &vbl_buf);
+            for (vbl_buf) |vec| inline for (0..4) |lane| {
+                if (vec[lane] <= 76) vector_binomial_large_hits[0] += 1;
+                if (vec[lane] <= 80) vector_binomial_large_hits[1] += 1;
+                if (vec[lane] <= 84) vector_binomial_large_hits[2] += 1;
+            };
+            var vbe_buf: [2]@Vector(4, u64) = undefined;
+            vector_binomial_extreme.fill(rng, &vbe_buf);
+            for (vbe_buf) |vec| inline for (0..4) |lane| {
+                if (vec[lane] <= 127) vector_binomial_extreme_hits += 1;
+            };
         }
         try expectEmpiricalCdf("long binomial cdf(4)", binomial_hits[0], samples, binomial.cdf(4));
         try expectEmpiricalCdf("long binomial cdf(6)", binomial_hits[1], samples, binomial.cdf(6));
@@ -2868,6 +2886,10 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long vector poisson cdf(2)", vector_poisson_hits[0], samples * 8, poisson4.cdf(2));
         try expectEmpiricalCdf("long vector poisson cdf(4)", vector_poisson_hits[1], samples * 8, poisson4.cdf(4));
         try expectEmpiricalCdf("long vector poisson cdf(8)", vector_poisson_hits[2], samples * 8, poisson4.cdf(8));
+        try expectEmpiricalCdf("long vector binomial(200,0.4) cdf(76)", vector_binomial_large_hits[0], samples * 8, binomial_large.cdf(76));
+        try expectEmpiricalCdf("long vector binomial(200,0.4) cdf(80)", vector_binomial_large_hits[1], samples * 8, binomial_large.cdf(80));
+        try expectEmpiricalCdf("long vector binomial(200,0.4) cdf(84)", vector_binomial_large_hits[2], samples * 8, binomial_large.cdf(84));
+        try expectEmpiricalCdf("long vector binomial(128,0.999) cdf(127)", vector_binomial_extreme_hits, samples * 8, binomial_extreme.cdf(127));
         try expectEmpiricalCdf("long bernoulli cdf(0)", bernoulli_hits, samples, bernoulli.cdf(0));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
         std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6} zipf(2)={d:.6} zeta(1)={d:.6} bernoulli(0)={d:.6}\n", .{

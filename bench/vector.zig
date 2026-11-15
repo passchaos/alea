@@ -231,6 +231,13 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial u64x4 n=10 p=0.5", lanes / 4, 0xb150, fillDistBinomialU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial u64x4 direct n=10 p=0.5", lanes / 4, 0xb150, fillDistBinomialU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorBinomial.fill u64x4 n=10 p=0.5", lanes / 4, 0xb150, fillDistBinomialSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial mid u64x4 n=100 p=0.4", lanes / 16, 0xb154, fillDistBinomialMidU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial mid u64x4 direct n=100 p=0.4", lanes / 16, 0xb154, fillDistBinomialMidU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorBinomial.fill mid u64x4 n=100 p=0.4", lanes / 16, 0xb154, fillDistBinomialMidSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial large u64x4 n=200 p=0.4", lanes / 32, 0xb152, fillDistBinomialLargeU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomial large u64x4 direct n=200 p=0.4", lanes / 32, 0xb152, fillDistBinomialLargeU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorBinomial.fill large u64x4 n=200 p=0.4", lanes / 32, 0xb152, fillDistBinomialLargeSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea candidate fillVectorBinomial cdf-binary u64x4 n=200 p=0.4", lanes / 32, 0xb153, fillDistBinomialCdfBinaryU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomialPoissonApprox u64x4", lanes / 16, 0xb151, fillDistBinomialApproxU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorBinomialPoissonApprox u64x4 direct", lanes / 16, 0xb151, fillDistBinomialApproxU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorBinomialPoissonApprox.fill u64x4", lanes / 16, 0xb151, fillDistBinomialApproxSamplerU64);
@@ -776,6 +783,64 @@ fn fillDistBinomialU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vec
 fn fillDistBinomialSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorBinomial(@Vector(4, u64)).init(10, 0.5) catch unreachable;
     sampler.fill(rng, dest);
+}
+
+fn fillDistBinomialMidU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorBinomial(rng, @Vector(4, u64), dest, 100, 0.4);
+}
+
+fn fillDistBinomialMidU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorBinomialFrom(engine, @Vector(4, u64), dest, 100, 0.4);
+}
+
+fn fillDistBinomialMidSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorBinomial(@Vector(4, u64)).init(100, 0.4) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistBinomialLargeU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorBinomial(rng, @Vector(4, u64), dest, 200, 0.4);
+}
+
+fn fillDistBinomialLargeU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorBinomialFrom(engine, @Vector(4, u64), dest, 200, 0.4);
+}
+
+fn fillDistBinomialLargeSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorBinomial(@Vector(4, u64)).init(200, 0.4) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+/// Hoisted-CDF binomial candidate for large trials: build the exact table once
+/// per slice, then a per-lane binary search.
+fn fillDistBinomialCdfBinaryU64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    const n: u64 = 200;
+    const p: f64 = 0.4;
+    const q = 1 - p;
+    var cdf: [200]f64 = undefined;
+    var pmf = std.math.pow(f64, q, @as(f64, @floatFromInt(n)));
+    var acc = pmf;
+    cdf[0] = acc;
+    var k: u64 = 1;
+    while (k < n) : (k += 1) {
+        pmf *= (@as(f64, @floatFromInt(n - k + 1)) / @as(f64, @floatFromInt(k))) * (p / q);
+        acc += pmf;
+        cdf[@intCast(k)] = acc;
+    }
+    for (dest) |*item| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| {
+            const u = alea.Rng.floatOpenFrom(engine, f64);
+            var lo: usize = 0;
+            var hi: usize = cdf.len;
+            while (lo < hi) {
+                const mid = lo + (hi - lo) / 2;
+                if (u > cdf[mid]) lo = mid + 1 else hi = mid;
+            }
+            out[lane] = lo;
+        }
+        item.* = out;
+    }
 }
 
 fn fillDistBinomialApproxU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {

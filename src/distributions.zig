@@ -5755,7 +5755,7 @@ noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype
 /// Small-trial inverse-CDF binomial for u64 vectors with arbitrary `p`:
 /// one uniform per lane plus `trials` vector compares against the cached
 /// CDF values computed once per call.
-fn binomialCdfTable(trials: u64, p: f64, cdf: *[128]f64) usize {
+fn binomialCdfTable(trials: u64, p: f64, cdf: *[1024]f64) usize {
     const q = 1 - p;
     var pmf = std.math.pow(f64, q, @as(f64, @floatFromInt(trials)));
     var acc = pmf;
@@ -5783,9 +5783,28 @@ fn vectorBinomialFromCdf(comptime VectorType: type, source: anytype, cdf: []cons
 }
 
 fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, trials: u64, p: f64) VectorType {
-    var cdf: [128]f64 = undefined;
+    var cdf: [1024]f64 = undefined;
     const width = binomialCdfTable(trials, p, &cdf);
     return vectorBinomialFromCdf(VectorType, source, cdf[0..width]);
+}
+
+/// Per-lane binary search over a hoisted binomial CDF table. Used by fills
+/// with more than 32 trials, where the branchless full-table scan is too
+/// wide. The uniform draw and returned index match `vectorBinomialFromCdf`.
+fn vectorBinomialFromCdfBinary(comptime VectorType: type, source: anytype, cdf: []const f64) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    var out: VectorType = undefined;
+    inline for (0..lanes) |lane| {
+        const u = Rng.floatOpenFrom(source, f64);
+        var lo: usize = 0;
+        var hi: usize = cdf.len;
+        while (lo < hi) {
+            const mid = lo + (hi - lo) / 2;
+            if (u > cdf[mid]) lo = mid + 1 else hi = mid;
+        }
+        out[lane] = lo;
+    }
+    return out;
 }
 
 /// Fair (p = 1/2) binomial for u64 vectors: every bit is a trial, so the
@@ -5904,7 +5923,9 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                     return vectorBinomialDyadicLarge(VectorType, source, self.sampler.trials, fields, complement);
                 }
             }
-            if (self.sampler.trials <= 128) {
+            if (self.sampler.trials <= 128 and
+                std.math.pow(f64, 1 - self.sampler.p, @as(f64, @floatFromInt(self.sampler.trials))) != 0)
+            {
                 return vectorBinomialInverseCdfFrom(VectorType, source, self.sampler.trials, self.sampler.p);
             }
             var out: VectorType = undefined;
@@ -5913,13 +5934,22 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         }
 
         fn fillInverseCdf(self: Self, source: anytype, dest: []VectorType) bool {
-            if (self.sampler.p == 0.5 or self.sampler.trials > 128) return false;
+            if (self.sampler.p == 0.5 or self.sampler.trials > 1024) return false;
             const complement = self.sampler.p > 0.5;
             const q = if (complement) 1.0 - self.sampler.p else self.sampler.p;
             if (dyadicBinomialFields(q) != null) return false;
-            var cdf: [128]f64 = undefined;
+            // The forward pmf recurrence starts at `(1-p)^trials`; if that
+            // underflows to zero the table cannot recover, so fall back to the
+            // per-lane sampler for extreme parameter combinations.
+            if (std.math.pow(f64, 1 - self.sampler.p, @as(f64, @floatFromInt(self.sampler.trials))) == 0) return false;
+            var cdf: [1024]f64 = undefined;
             const width = binomialCdfTable(self.sampler.trials, self.sampler.p, &cdf);
-            for (dest) |*item| item.* = vectorBinomialFromCdf(VectorType, source, cdf[0..width]);
+            for (dest) |*item| {
+                item.* = if (width > 128)
+                    vectorBinomialFromCdfBinary(VectorType, source, cdf[0..width])
+                else
+                    vectorBinomialFromCdf(VectorType, source, cdf[0..width]);
+            }
             return true;
         }
 
