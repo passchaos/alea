@@ -7253,5 +7253,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1721-poisson-ad-cdf-fill.md`. and
 `compare/results/s4-m1722-validate-all-refresh.md`. and
 `compare/results/s4-m1723-1e9-long-run-refresh.md`. and
-`compare/results/s4-m1724-gamma-inline-free-function.md`.
+`compare/results/s4-m1724-gamma-inline-free-function.md`. and
+`compare/results/s4-m1725-validate-all-refresh.md`.
 
