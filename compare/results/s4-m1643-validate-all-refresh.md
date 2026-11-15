@@ -19,7 +19,8 @@ tests with the vectorized dyadic geometric kernels present:
 - all six crosscheck targets,
 - the chained WASI report.
 
-A first run reported 10 transient example-compile failures while another
-session was building concurrently; a clean re-run of the same tree passes
-124/124 steps with all example steps succeeding. The vector geometric stream
+A first run was terminated with exit code 143 (SIGTERM) while another session
+was building concurrently, which left 10 example-compile steps marked failed
+in its partial summary; a clean re-run of the same tree passes 124/124 steps
+with all example steps succeeding. The vector geometric stream
 change (S4-M1642) is versioned in `compare/results/reproducibility-matrix.md`.
