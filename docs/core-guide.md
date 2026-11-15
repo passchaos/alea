@@ -644,6 +644,7 @@ runtime float type, and explicit f32 arguments keep f32.
   `inverseGammaQuantile`, `nakagamiCdf` / `nakagamiQuantile`, `exGaussianCdf` /
   `exGaussianQuantile`, `inverseGaussianCdf` / `inverseGaussianQuantile`,
   `generalizedParetoCdf` / `generalizedParetoQuantile`,
+  `generalizedExtremeValueCdf` / `generalizedExtremeValueQuantile`,
   `scaledInverseChiSquaredCdf` / `scaledInverseChiSquaredQuantile`,
   `noncentralChiSquaredCdf` / `noncentralChiSquaredQuantile`,
   `noncentralChiCdf` / `noncentralChiQuantile`, `noncentralFCdf` /
@@ -651,7 +652,9 @@ runtime float type, and explicit f32 arguments keep f32.
   Beta-prime uses the incomplete beta form, inverse-gamma uses the incomplete
   gamma upper tail, generalized Pareto uses the closed-form
   `1 − (1 + ξ(x−μ)/σ)^(−1/ξ)` with `expm1`/`log1p` tails and bounded support
-  for `ξ < 0`, scaled inverse chi-squared delegates to the inverse-gamma form
+  for `ξ < 0`, the generalized extreme value distribution uses
+  `exp(−(1+ξ(x−μ)/σ)^(−1/ξ))` (Gumbel limit at `ξ = 0`) with one `Exp(1)`
+  inverse-CDF draw, scaled inverse chi-squared delegates to the inverse-gamma form
   as `Q(ν/2, ντ²/(2x))`, the noncentral chi-squared and noncentral F helpers
   sum the Poisson(λ/2) mixture around its mode and switch to the Patnaik
   two-moment central approximation above `λ/2 = 1e5` (noncentral chi delegates

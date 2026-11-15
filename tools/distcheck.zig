@@ -660,6 +660,8 @@ fn checkAdvancedMultivariate() !void {
         try expectFloatBetween("hoyt quantile", alea.distributions.hoytCdf(alea.distributions.hoytQuantile(p, hoyt_q, hoyt_omega), hoyt_q, hoyt_omega), p - 1e-5, p + 1e-5);
         const gpd_xi: f64 = 0.3;
         try expectFloatBetween("generalized-pareto quantile", alea.distributions.generalizedParetoCdf(alea.distributions.generalizedParetoQuantile(p, 1, 2, gpd_xi), 1, 2, gpd_xi), p - 1e-9, p + 1e-9);
+        const gev_xi: f64 = 0.3;
+        try expectFloatBetween("generalized-extreme-value quantile", alea.distributions.generalizedExtremeValueCdf(alea.distributions.generalizedExtremeValueQuantile(p, 1, 2, gev_xi), 1, 2, gev_xi), p - 1e-9, p + 1e-9);
         const sics_df: f64 = 5;
         const sics_scale: f64 = 2;
         try expectFloatBetween("scaled-inverse-chi-squared quantile", alea.distributions.scaledInverseChiSquaredCdf(alea.distributions.scaledInverseChiSquaredQuantile(p, sics_df, sics_scale), sics_df, sics_scale), p - 1e-7, p + 1e-7);
@@ -1429,6 +1431,11 @@ fn checkExtremeAndShape() !void {
             return alea.distributions.generalizedPareto(r, f64, 1, 2, 0.3);
         }
     }.sample, 3.75, 3.95);
+    try expectContinuousMean("generalized-extreme-value", rng, 100_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.generalizedExtremeValue(r, f64, 1, 2, 0.3);
+        }
+    }.sample, 2.94, 3.04);
     try expectContinuousMean("inverse-gamma", rng, 50_000, struct {
         fn sample(r: alea.Rng) f64 {
             return alea.distributions.inverseGamma(r, f64, 4, 2);

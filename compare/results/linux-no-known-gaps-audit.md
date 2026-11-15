@@ -7128,5 +7128,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1596-von-mises-cdf.md`, and
 `compare/results/s4-m1597-validate-all-refresh.md`, and
 `compare/results/s4-m1598-von-mises-cdf-gates.md`, and
-`compare/results/s4-m1599-validate-all-refresh.md`.
+`compare/results/s4-m1599-validate-all-refresh.md`, and
+`compare/results/s4-m1600-generalized-extreme-value.md`.
 

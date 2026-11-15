@@ -2096,7 +2096,54 @@ fn generalizedParetoQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     return mu + sigma * std.math.expm1(-xi * log_tail) / xi;
 }
 
-/// Nakagami-m CDF: `P(m, m·x²/Ω)`. `Ω = 0` is the point mass at 0.
+/// Generalized Extreme Value CDF with location `mu`, scale `sigma > 0`, and
+/// shape `xi`. `xi > 0` is the Fréchet regime with lower bound `mu - sigma/xi`,
+/// `xi < 0` is the Weibull regime with upper bound `mu - sigma/xi`, and
+/// `xi = 0` is the Gumbel limit.
+pub fn generalizedExtremeValueCdf(x: anytype, mu: anytype, sigma: anytype, xi: anytype) resolvedFloatType(@TypeOf(x, mu, sigma, xi)) {
+    return generalizedExtremeValueCdfImpl(resolvedFloatType(@TypeOf(x, mu, sigma, xi)), x, mu, sigma, xi);
+}
+fn generalizedExtremeValueCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType, xi: PeerType) PeerType {
+    const T = @TypeOf(x, mu, sigma, xi);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or !(sigma > 0) or !std.math.isFinite(xi)) return std.math.nan(T);
+    if (std.math.isNan(x)) return std.math.nan(T);
+    if (x == std.math.inf(T)) return 1;
+    if (x == -std.math.inf(T)) return 0;
+    const z = (x - mu) / sigma;
+    if (xi == 0) return @exp(-@exp(-z));
+    const y = 1 + xi * z;
+    if (xi > 0) {
+        if (!(y > 0)) return 0; // below the Fréchet lower bound
+    } else {
+        if (!(y > 0)) return 1; // above the reversed-Weibull upper bound
+    }
+    // exp(-y^{-1/ξ}); the inner exponential is stable across both regimes.
+    const inner = @exp(-@log(y) / xi);
+    return @exp(-inner);
+}
+
+/// Generalized Extreme Value quantile. `p = 0` returns the finite lower bound
+/// for `xi > 0` and `-∞` otherwise; `p = 1` returns the finite upper bound for
+/// `xi < 0` and `+∞` otherwise.
+pub fn generalizedExtremeValueQuantile(p: anytype, mu: anytype, sigma: anytype, xi: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, xi)) {
+    return generalizedExtremeValueQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma, xi)), p, mu, sigma, xi);
+}
+fn generalizedExtremeValueQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType, xi: PeerType) PeerType {
+    const T = @TypeOf(p, mu, sigma, xi);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or !(sigma > 0) or !std.math.isFinite(xi)) return std.math.nan(T);
+    if (!(p >= 0 and p <= 1)) return std.math.nan(T);
+    if (p == 0) return if (xi > 0) mu - sigma / xi else -std.math.inf(T);
+    if (p == 1) return if (xi < 0) mu - sigma / xi else std.math.inf(T);
+    // E = -ln p = -log1p(p - 1); this form is accurate for p near 1 as well
+    // as for p near 0. `expm1(-xi·ln E)` keeps small |xi| accurate.
+    const e = -std.math.log1p(p - 1);
+    if (xi == 0) return mu - sigma * @log(e);
+    return mu + sigma * std.math.expm1(-xi * @log(e)) / xi;
+}
+
+
 pub fn nakagamiCdf(x: anytype, m_param: anytype, omega: anytype) resolvedFloatType(@TypeOf(x, m_param, omega)) {
     return nakagamiCdfImpl(resolvedFloatType(@TypeOf(x, m_param, omega)), x, m_param, omega);
 }
@@ -16636,6 +16683,315 @@ fn generalizedParetoFromUniformVector(comptime VectorType: type, u: VectorType, 
     const xi_v: VectorType = @splat(xi);
     const one: VectorType = @splat(@as(Child, 1));
     return mu_v + sigma_v * (@exp(-xi_v * @log(u)) - one) / xi_v;
+}
+
+// Generalized Extreme Value distribution -------------------------------------
+
+pub const GeneralizedExtremeValueError = Error;
+
+/// Sample a Generalized Extreme Value value (panics on invalid parameters).
+fn generalizedExtremeValuePointFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
+    const e = Rng.standardExponentialFastFrom(source, T);
+    if (xi == 0) return mu - sigma * @log(e);
+    return mu + sigma * std.math.expm1(-xi * @log(e)) / xi;
+}
+
+fn fillGeneralizedExtremeValuePointsFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
+    for (dest) |*item| {
+        item.* = generalizedExtremeValuePointFrom(source, T, mu, sigma, xi);
+    }
+}
+
+/// Generalized Extreme Value (GEV) distribution — the block-maxima limit law
+/// of extreme value theory: Fréchet for `ξ > 0`, Gumbel for `ξ = 0`, and
+/// reversed Weibull for `ξ < 0`. Complements the peaks-over-threshold
+/// `GeneralizedPareto`; absent from local Rust `rand_distr`.
+///
+/// Sampling inverts the CDF with one `Exp(1)` draw:
+/// `x = μ + σ·expm1(−ξ·ln E)/ξ` for `ξ ≠ 0` and `x = μ − σ·ln E` for `ξ = 0`.
+pub fn GeneralizedExtremeValue(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        mu: T,
+        sigma: T,
+        xi: T,
+
+        pub fn init(mu: T, sigma: T, xi: T) GeneralizedExtremeValueError!Self {
+            if (!std.math.isFinite(mu)) return error.InvalidParameter;
+            if (!std.math.isFinite(sigma) or !(sigma > 0)) return error.InvalidParameter;
+            if (!std.math.isFinite(xi)) return error.InvalidParameter;
+            return .{ .mu = mu, .sigma = sigma, .xi = xi };
+        }
+
+        pub fn new(mu: T, sigma: T, xi: T) Self {
+            return Self.init(mu, sigma, xi) catch |e| {
+                std.debug.panic("GeneralizedExtremeValue.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn muValue(self: Self) T {
+            return self.mu;
+        }
+        pub fn scaleValue(self: Self) T {
+            return self.sigma;
+        }
+        pub fn sigmaValue(self: Self) T {
+            return self.sigma;
+        }
+        pub fn shapeValue(self: Self) T {
+            return self.xi;
+        }
+        pub fn xiValue(self: Self) T {
+            return self.xi;
+        }
+
+        /// Mean `μ + σ(Γ(1−ξ)−1)/ξ` for `ξ < 1`, `μ + σγ` for `ξ = 0`;
+        /// `null` when the mean diverges (`ξ >= 1`).
+        pub fn expectedValue(self: Self) ?T {
+            if (self.xi >= 1) return null;
+            if (@abs(self.xi) < 1e-8) return self.mu + self.sigma * @as(T, @floatCast(0.5772156649015329));
+            const g1 = std.math.gamma(T, 1 - self.xi);
+            return self.mu + self.sigma * (g1 - 1) / self.xi;
+        }
+
+        /// Variance `σ²(Γ(1−2ξ) − Γ(1−ξ)²)/ξ²` for `ξ < 1/2`,
+        /// `σ²π²/6` for `ξ = 0`; `null` when it diverges.
+        pub fn varianceValue(self: Self) ?T {
+            if (self.xi >= 0.5) return null;
+            if (@abs(self.xi) < 1e-8) {
+                const pi: T = @floatCast(std.math.pi);
+                return self.sigma * self.sigma * pi * pi / 6;
+            }
+            const g1 = std.math.gamma(T, 1 - self.xi);
+            const g2 = std.math.gamma(T, 1 - 2 * self.xi);
+            return self.sigma * self.sigma * (g2 - g1 * g1) / (self.xi * self.xi);
+        }
+
+        pub fn medianValue(self: Self) T {
+            const ln2: T = @log(@as(T, 2));
+            if (self.xi == 0) return self.mu - self.sigma * @log(ln2);
+            return self.mu + self.sigma * (std.math.pow(T, ln2, -self.xi) - 1) / self.xi;
+        }
+
+        pub fn modeValue(self: Self) T {
+            if (self.xi == 0) return self.mu;
+            // For ξ <= -1 the density is monotone and diverges at the upper
+            // bound, so the mode is the bound itself.
+            if (self.xi <= -1) return self.mu - self.sigma / self.xi;
+            return self.mu + self.sigma * (std.math.pow(T, 1 + self.xi, -self.xi) - 1) / self.xi;
+        }
+
+        pub fn minValue(self: Self) ?T {
+            return if (self.xi > 0) self.mu - self.sigma / self.xi else null;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            return if (self.xi < 0) self.mu - self.sigma / self.xi else null;
+        }
+
+        pub fn cdf(self: Self, x: T) T {
+            return generalizedExtremeValueCdf(x, self.mu, self.sigma, self.xi);
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return generalizedExtremeValueQuantile(p, self.mu, self.sigma, self.xi);
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return generalizedExtremeValuePointFrom(source, T, self.mu, self.sigma, self.xi);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillGeneralizedExtremeValuePointsFrom(source, T, dest, self.mu, self.sigma, self.xi);
+        }
+    };
+}
+
+/// Sample a Generalized Extreme Value value (panics on invalid parameters).
+pub fn generalizedExtremeValue(rng: Rng, comptime T: type, mu: T, sigma: T, xi: T) T {
+    return generalizedExtremeValueFrom(rng, T, mu, sigma, xi);
+}
+
+pub fn generalizedExtremeValueFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
+    const dist = GeneralizedExtremeValue(T).new(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+pub fn generalizedExtremeValueChecked(rng: Rng, comptime T: type, mu: T, sigma: T, xi: T) GeneralizedExtremeValueError!T {
+    return generalizedExtremeValueCheckedFrom(rng, T, mu, sigma, xi);
+}
+
+pub fn generalizedExtremeValueCheckedFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) GeneralizedExtremeValueError!T {
+    const dist = try GeneralizedExtremeValue(T).init(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillGeneralizedExtremeValue(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
+    fillGeneralizedExtremeValueFrom(rng, T, dest, mu, sigma, xi);
+}
+
+pub fn fillGeneralizedExtremeValueFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
+    const dist = GeneralizedExtremeValue(T).new(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillGeneralizedExtremeValueChecked(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) GeneralizedExtremeValueError!void {
+    return fillGeneralizedExtremeValueCheckedFrom(rng, T, dest, mu, sigma, xi);
+}
+
+pub fn fillGeneralizedExtremeValueCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) GeneralizedExtremeValueError!void {
+    if (dest.len == 0) return;
+    const dist = try GeneralizedExtremeValue(T).init(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+// --- Generalized Extreme Value vector sampling ------------------------------
+
+/// Sample a vector of GEV-distributed values (panics on invalid parameters).
+pub fn vectorGeneralizedExtremeValue(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
+    return vectorGeneralizedExtremeValueFrom(rng, VectorType, mu, sigma, xi);
+}
+
+/// Source-accepting variant of `vectorGeneralizedExtremeValue`.
+pub fn vectorGeneralizedExtremeValueFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
+    const dist = VectorGeneralizedExtremeValue(VectorType).new(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+/// Checked variant returning error on invalid parameters.
+pub fn vectorGeneralizedExtremeValueChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedExtremeValueError!VectorType {
+    return vectorGeneralizedExtremeValueCheckedFrom(rng, VectorType, mu, sigma, xi);
+}
+
+/// Checked source-accepting variant.
+pub fn vectorGeneralizedExtremeValueCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedExtremeValueError!VectorType {
+    const dist = try VectorGeneralizedExtremeValue(VectorType).init(mu, sigma, xi);
+    return dist.sampleFrom(source);
+}
+
+/// Fill a slice of vectors with GEV-distributed values (panics on invalid parameters).
+pub fn fillVectorGeneralizedExtremeValue(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) void {
+    fillVectorGeneralizedExtremeValueFrom(rng, VectorType, dest, mu, sigma, xi);
+}
+
+/// Source-accepting variant of `fillVectorGeneralizedExtremeValue`.
+pub fn fillVectorGeneralizedExtremeValueFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) void {
+    const dist = VectorGeneralizedExtremeValue(VectorType).new(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+/// Checked fill variant.
+pub fn fillVectorGeneralizedExtremeValueChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedExtremeValueError!void {
+    return fillVectorGeneralizedExtremeValueCheckedFrom(rng, VectorType, dest, mu, sigma, xi);
+}
+
+/// Checked source-accepting fill variant.
+pub fn fillVectorGeneralizedExtremeValueCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) GeneralizedExtremeValueError!void {
+    if (dest.len == 0) return;
+    const dist = try VectorGeneralizedExtremeValue(VectorType).init(mu, sigma, xi);
+    dist.fillFrom(source, dest);
+}
+
+/// Vectorized Generalized Extreme Value sampler. All lanes share the scalar
+/// parameters; one SIMD `Exp(1)` draw feeds the per-lane inverse CDF.
+pub fn VectorGeneralizedExtremeValue(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: GeneralizedExtremeValue(Child),
+
+        pub fn init(mu: Child, sigma: Child, xi: Child) GeneralizedExtremeValueError!Self {
+            return .{ .sampler = try GeneralizedExtremeValue(Child).init(mu, sigma, xi) };
+        }
+
+        pub fn new(mu: Child, sigma: Child, xi: Child) Self {
+            return Self.init(mu, sigma, xi) catch |e| {
+                std.debug.panic("VectorGeneralizedExtremeValue.new: invalid parameters: {}", .{e});
+            };
+        }
+
+        pub fn locationValue(self: Self) Child {
+            return self.sampler.locationValue();
+        }
+        pub fn muValue(self: Self) Child {
+            return self.sampler.muValue();
+        }
+        pub fn scaleValue(self: Self) Child {
+            return self.sampler.scaleValue();
+        }
+        pub fn sigmaValue(self: Self) Child {
+            return self.sampler.sigmaValue();
+        }
+        pub fn shapeValue(self: Self) Child {
+            return self.sampler.shapeValue();
+        }
+        pub fn xiValue(self: Self) Child {
+            return self.sampler.xiValue();
+        }
+        pub fn expectedValue(self: Self) ?Child {
+            return self.sampler.expectedValue();
+        }
+        pub fn varianceValue(self: Self) ?Child {
+            return self.sampler.varianceValue();
+        }
+        pub fn medianValue(self: Self) Child {
+            return self.sampler.medianValue();
+        }
+        pub fn modeValue(self: Self) Child {
+            return self.sampler.modeValue();
+        }
+        pub fn minValue(self: Self) ?Child {
+            return self.sampler.minValue();
+        }
+        pub fn maxValue(self: Self) ?Child {
+            return self.sampler.maxValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            const e = Rng.vectorStandardExponentialFrom(source, VectorType);
+            return generalizedExtremeValueFromExponentialVector(VectorType, e, self.sampler.mu, self.sampler.sigma, self.sampler.xi);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sample(rng);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| item.* = self.sampleFrom(source);
+        }
+    };
+}
+
+/// Apply the GEV inverse CDF to a vector of `Exp(1)` draws:
+/// `x = μ + σ·expm1(−ξ·ln E)/ξ` for `ξ ≠ 0` and `x = μ − σ·ln E` for `ξ = 0`.
+fn generalizedExtremeValueFromExponentialVector(comptime VectorType: type, e: VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
+    const L = vectorInfo(VectorType).len;
+    const mu_v: VectorType = @splat(mu);
+    const sigma_v: VectorType = @splat(sigma);
+    if (xi == 0) return mu_v - sigma_v * @log(e);
+    var out: VectorType = undefined;
+    inline for (0..L) |lane| {
+        out[lane] = mu + sigma * std.math.expm1(-xi * @log(e[lane])) / xi;
+    }
+    return out;
 }
 
 // Scaled Inverse Chi-Squared distribution (adapter over InverseGamma) ---------
@@ -66671,6 +67027,130 @@ test "GeneralizedPareto f32 support" {
         try std.testing.expect(x >= 0);
         try std.testing.expect(std.math.isFinite(x));
     }
+}
+
+test "GeneralizedExtremeValue constructor validates parameters" {
+    _ = try GeneralizedExtremeValue(f64).init(0, 1, 0);
+    _ = try GeneralizedExtremeValue(f64).init(0, 1, 0.2);
+    _ = try GeneralizedExtremeValue(f64).init(0, 1, -0.2);
+    try std.testing.expectError(error.InvalidParameter, GeneralizedExtremeValue(f64).init(0, 0, 0));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedExtremeValue(f64).init(0, -1, 0));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedExtremeValue(f64).init(0, std.math.inf(f64), 0));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedExtremeValue(f64).init(std.math.nan(f64), 1, 0));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedExtremeValue(f64).init(0, 1, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, GeneralizedExtremeValue(f64).init(0, 1, std.math.inf(f64)));
+}
+
+test "GeneralizedExtremeValue moments and limits" {
+    // ξ=0: Gumbel mean μ+σγ and variance σ²π²/6.
+    const gumbel_dist = try GeneralizedExtremeValue(f64).init(0, 1, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5772156649015329), gumbel_dist.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi * std.math.pi / @as(f64, 6), gumbel_dist.varianceValue().?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), gumbel_dist.minValue());
+    try std.testing.expectEqual(@as(?f64, null), gumbel_dist.maxValue());
+
+    // ξ=0.2: Fréchet, finite mean and variance.
+    const frechet_dist = try GeneralizedExtremeValue(f64).init(0, 1, 0.2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8211485686265163), frechet_dist.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.3440355622978806), frechet_dist.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, -5), frechet_dist.minValue().?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), frechet_dist.maxValue());
+    try std.testing.expectApproxEqAbs(@as(f64, -0.1790374799868638), frechet_dist.modeValue(), 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3802804256950254), frechet_dist.medianValue(), 1e-12);
+
+    // ξ=-0.25: reversed Weibull, bounded above.
+    const weibull_dist = try GeneralizedExtremeValue(f64).init(0, 1, -0.25);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.3743900917780909), weibull_dist.expectedValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0345836006472453), weibull_dist.varianceValue().?, 1e-12);
+    try std.testing.expectApproxEqAbs(@as(f64, 4), weibull_dist.maxValue().?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), weibull_dist.minValue());
+
+    // Divergent moments.
+    const heavy = try GeneralizedExtremeValue(f64).init(0, 1, 0.6);
+    try std.testing.expectApproxEqAbs(@as(f64, 2.0302659062628132), heavy.expectedValue().?, 1e-12);
+    try std.testing.expectEqual(@as(?f64, null), heavy.varianceValue());
+    const very_heavy = try GeneralizedExtremeValue(f64).init(0, 1, 1.5);
+    try std.testing.expectEqual(@as(?f64, null), very_heavy.expectedValue());
+}
+
+test "GeneralizedExtremeValue CDF and quantile round-trip" {
+    // ξ=0 matches the Gumbel CDF.
+    inline for ([_]f64{ -2.0, -0.5, 0.0, 1.5 }) |x| {
+        try std.testing.expectApproxEqAbs(gumbelCdf(x, @as(f64, 0.3), @as(f64, 1.2)), generalizedExtremeValueCdf(x, @as(f64, 0.3), @as(f64, 1.2), @as(f64, 0)), 1e-15);
+    }
+    inline for ([_]f64{ 0.0, 0.2, -0.25 }) |xi| {
+        const dist = try GeneralizedExtremeValue(f64).init(0.3, 1.2, xi);
+        inline for ([_]f64{ 1e-6, 0.1, 0.5, 0.9, 1 - 1e-6 }) |p| {
+            try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-6);
+        }
+        // Quantiles stay inside the finite support side.
+        if (xi > 0) try std.testing.expect(dist.quantile(0) == 0.3 - 1.2 / xi);
+        if (xi < 0) try std.testing.expect(dist.quantile(1) == 0.3 - 1.2 / xi);
+    }
+    // Outside the support.
+    try std.testing.expectEqual(@as(f64, 0), generalizedExtremeValueCdf(-6, @as(f64, 0), @as(f64, 1), @as(f64, 0.2)));
+    try std.testing.expectEqual(@as(f64, 1), generalizedExtremeValueCdf(5, @as(f64, 0), @as(f64, 1), @as(f64, -0.25)));
+}
+
+test "GeneralizedExtremeValue sampling support and moments" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9e7);
+    const rng = Rng.init(&engine);
+    const frechet_dist = try GeneralizedExtremeValue(f64).init(0, 1, 0.2);
+    const weibull_dist = try GeneralizedExtremeValue(f64).init(0, 1, -0.25);
+    var sum: f64 = 0;
+    var sumsq: f64 = 0;
+    const n = 20_000;
+    for (0..n) |_| {
+        const x = frechet_dist.sample(rng);
+        try std.testing.expect(x >= -5);
+        try std.testing.expect(std.math.isFinite(x));
+        sum += x;
+        sumsq += x * x;
+        const y = weibull_dist.sample(rng);
+        try std.testing.expect(y <= 4);
+    }
+    const mean = sum / @as(f64, n);
+    const var_ = sumsq / @as(f64, n) - mean * mean;
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8211485686265163), mean, 0.06);
+    try std.testing.expectApproxEqAbs(@as(f64, 3.3440355622978806), var_, 0.2);
+
+    // Free functions and fill.
+    var buf: [64]f64 = undefined;
+    fillGeneralizedExtremeValue(rng, f64, &buf, 0, 1, 0.2);
+    for (buf) |x| try std.testing.expect(x >= -5);
+    try std.testing.expectError(error.InvalidParameter, generalizedExtremeValueChecked(rng, f64, 0, 0, 0));
+    const val = try generalizedExtremeValueChecked(rng, f64, 0, 1, 0);
+    try std.testing.expect(std.math.isFinite(val));
+}
+
+test "GeneralizedExtremeValue vector and f32 support" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x9e8);
+    const rng = Rng.init(&engine);
+    const V4 = @Vector(4, f64);
+    const dist = try VectorGeneralizedExtremeValue(V4).init(0, 1, 0.2);
+    var sum: f64 = 0;
+    var count: usize = 0;
+    for (0..2_000) |_| {
+        const point = dist.sample(rng);
+        inline for (0..4) |lane| {
+            try std.testing.expect(point[lane] >= -5);
+            try std.testing.expect(std.math.isFinite(point[lane]));
+            sum += point[lane];
+            count += 1;
+        }
+    }
+    try std.testing.expectApproxEqAbs(@as(f64, 0.8211485686265163), sum / @as(f64, @floatFromInt(count)), 0.1);
+
+    const V8 = @Vector(8, f32);
+    const f32_dist = try VectorGeneralizedExtremeValue(V8).init(0, 1, 0);
+    for (0..500) |_| {
+        const point = f32_dist.sample(rng);
+        inline for (0..8) |lane| try std.testing.expect(std.math.isFinite(point[lane]));
+    }
+    const scalar_f32 = try GeneralizedExtremeValue(f32).init(0, 1, 0);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5772156), scalar_f32.expectedValue().?, 1e-5);
 }
 
 // Scaled Inverse Chi-Squared tests -------------------------------------------
