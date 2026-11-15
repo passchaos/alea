@@ -851,6 +851,34 @@ fn checkBinomial() !void {
     const cached_hin = try alea.distributions.CachedBinomial.init(10_000, 0.01);
     try expectCachedBinomialMean(rng, &cached_hin, 98.8, 101.2);
 
+    // Small-mean inverse-CDF walk: empirical CDF, mean, and variance at
+    // 200k draws, so a wrong PMF shape is caught beyond the moments test.
+    {
+        const walk = try alea.distributions.Binomial.init(1000, 0.012);
+        const walk_samples: usize = 200_000;
+        var hits = [_]usize{0} ** 3;
+        var sum: f64 = 0;
+        var sum_sq: f64 = 0;
+        var i: usize = 0;
+        while (i < walk_samples) : (i += 1) {
+            const value = walk.sample(rng);
+            const value_f: f64 = @floatFromInt(value);
+            sum += value_f;
+            sum_sq += value_f * value_f;
+            if (value <= 8) hits[0] += 1;
+            if (value <= 12) hits[1] += 1;
+            if (value <= 16) hits[2] += 1;
+        }
+        const nf: f64 = @floatFromInt(walk_samples);
+        const expected = [_]f64{ walk.cdf(8), walk.cdf(12), walk.cdf(16) };
+        for (hits, expected) |h, e| {
+            try expectFloatBetween("binomial walk cdf", @as(f64, @floatFromInt(h)) / nf, e - 0.006, e + 0.006);
+        }
+        const mean = sum / nf;
+        try expectFloatBetween("binomial walk mean", mean, 11.9, 12.1);
+        try expectFloatBetween("binomial walk variance", sum_sq / nf - mean * mean, 11.65, 12.05);
+    }
+
     // Huge-trial paths: tiny-p waiting, fair-to-HIN dispatch, and the stable
     // HIN setup. The tiny-p HIN mean is gated at 4e6 draws: the former
     // +0.015 left-envelope offset sits ~6.7 standard errors outside the gate.
