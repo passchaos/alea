@@ -5642,6 +5642,7 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
+        if (binomialFillWindowFrom(self, rng, dest)) return;
         if (binomialFillHinFrom(self, rng, dest)) return;
         if (binomialFillInversionFrom(self, rng, dest)) return;
         for (dest) |*item| {
@@ -5658,6 +5659,7 @@ pub const Binomial = struct {
             @memset(dest, self.trials);
             return;
         }
+        if (binomialFillWindowFrom(self, source, dest)) return;
         if (binomialFillHinFrom(self, source, dest)) return;
         if (binomialFillInversionFrom(self, source, dest)) return;
         for (dest) |*item| {
@@ -10160,6 +10162,74 @@ fn binomialFillInversionFrom(self: Binomial, source: anytype, dest: []u64) bool 
     }
     return true;
 }
+
+/// Windowed inverse-CDF fill for non-dyadic binomial parameters whose
+/// effective support fits the fixed table. The window covers
+/// `mean +/- 10 sigma`; uniforms below the window use the exact lower-tail CDF
+/// from `binomialCdf`, and uniforms outside the window fall back to the
+/// per-element sampler. Returns false when the window would be too wide or the
+/// dyadic fast path applies.
+fn binomialFillWindowFrom(self: Binomial, source: anytype, dest: []u64) bool {
+    if (self.trials <= 64) return false;
+    const flip = self.p > 0.5;
+    const folded = if (flip) 1.0 - self.p else self.p;
+    if (!(folded > 0 and folded < 1)) return false;
+    if (dyadicBinomialFields(folded) != null) return false;
+    const nf: f64 = @floatFromInt(self.trials);
+    const mean = nf * folded;
+    // Only the inversion region: the binary search returns the same
+    // inverse-CDF index as the inversion walk, so the stream is preserved.
+    // The HIN region keeps its stream-preserving one-setup fill.
+    if (!(mean < binomial_hin_min_mean)) return false;
+    const variance = mean * (1 - folded);
+    if (!(variance > 0)) return false;
+    const sigma = @sqrt(variance);
+    const lo_f = @floor(mean - 10 * sigma);
+    const hi_f = @ceil(mean + 10 * sigma);
+    const lo: u64 = if (lo_f <= 0) 0 else @intFromFloat(lo_f);
+    const hi: u64 = if (hi_f >= nf) self.trials else @intFromFloat(hi_f);
+    if (hi < lo) return false;
+    const width: usize = @intCast(hi - lo + 1);
+    if (width > binomial_window_max) return false;
+
+    const lo_f64: f64 = @floatFromInt(lo);
+    const log_pmf_lo = std.math.lgamma(f64, nf + 1) - std.math.lgamma(f64, lo_f64 + 1) -
+        std.math.lgamma(f64, nf - lo_f64 + 1) + lo_f64 * @log(folded) +
+        (nf - lo_f64) * @log(1 - folded);
+    var pmf = @exp(log_pmf_lo);
+    const lower = if (lo == 0) 0.0 else binomialCdf(lo_f64 - 1, nf, folded);
+    var table: [binomial_window_max]f64 = undefined;
+    var acc = lower;
+    var k: u64 = lo;
+    while (k <= hi) : (k += 1) {
+        if (k > lo) {
+            pmf *= (@as(f64, @floatFromInt(self.trials - k + 1)) / @as(f64, @floatFromInt(k))) *
+                (folded / (1 - folded));
+        }
+        acc += pmf;
+        table[@intCast(k - lo)] = acc;
+    }
+    const last = table[width - 1];
+
+    for (dest) |*item| {
+        const u = Rng.floatFrom(source, f64);
+        if (u <= lower or u > last) {
+            item.* = binomialFrom(source, self.trials, self.p);
+            continue;
+        }
+        var a: usize = 0;
+        var b: usize = width;
+        while (a < b) {
+            const mid = a + (b - a) / 2;
+            if (u > table[mid]) a = mid + 1 else b = mid;
+        }
+        const sampled = lo + a;
+        item.* = if (flip) self.trials - sampled else sampled;
+    }
+    return true;
+}
+
+const binomial_window_max = 512;
 
 /// Fill through one HIN setup when the parameters hit the rejection region.
 /// The setup is deterministic, so the per-element stream matches the
