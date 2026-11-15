@@ -611,8 +611,22 @@ current blocker audit and the requirements for a successful next candidate:
 - SIMD distributions: f32x8 repair is useful evidence, but standard,
   parameterized, same-candidate, all-accepted, block-fallback, FastPrng, and
   Alea4x64 lane-local repair rows all failed to beat current scalar lane-fill
-  defaults; future work needs a genuinely dense SIMD candidate that meets
-  `simd-distribution-kernel-notes.md`.
+  defaults. The S4-M1636/S4-M1640/S4-M1642/S4-M1646 packed discrete kernels
+  are the first dense candidates to clear the bar (vector binomial fair,
+  dyadic small, and dyadic large trials plus vector geometric), and the
+  S4-M1628/S4-M1631/S4-M1633 `exp2`/`log2` transforms lifted the log+exp
+  continuous rows; future work needs a dense kernel for the remaining
+  per-lane samplers (Poisson, hypergeometric, Zipf/Zeta, negative-binomial,
+  Bessel/Bingham directional) that meets `simd-distribution-kernel-notes.md`.
+- Vector discrete samplers: the dyadic/fair space is closed for the current
+  bar. `vector binomial` covers fair (S4-M1646, +125-145%) and dyadic
+  small/large trials (S4-M1636/S4-M1640, +57-70x and ~7x) with pmf-binned 1e9
+  gates (S4-M1638/S4-M1648), and `vector geometric`/`geometric-failures`
+  cover dyadic probabilities (S4-M1642, +66-91%) with its own 1e9 pmf gate
+  (S4-M1644). The negative-binomial dyadic sum and the scalar dyadic
+  geometric kernel were measured and rejected (S4-M1643-adjacent probes);
+  Poisson, hypergeometric, and Zipf/Zeta remain per-lane at scalar parity and
+  need a different dense rejection/inversion shape.
 - Packed chance fills: the dyadic series is closed for the current bar
   (`fillChance` up to denominator 2^31, `fillRatio` power-of-two
   denominators, the `Bernoulli` threshold dispatch, and the nibble kernels
