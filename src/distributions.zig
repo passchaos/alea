@@ -6555,8 +6555,11 @@ pub const NegativeBinomial = struct {
         }
         const q = -@log(1 - self.p);
         for (dest) |*item| {
-            item.* = negativeBinomialMixtureFrom(rng, self.successes, self.p) orelse
-                negativeBinomialFromLogQ(rng, self.successes, self.p, q);
+            item.* = if (self.p == 0.5 and self.successes < 1 << 20)
+                negativeBinomialFairFrom(rng, self.successes)
+            else
+                negativeBinomialMixtureFrom(rng, self.successes, self.p) orelse
+                    negativeBinomialFromLogQ(rng, self.successes, self.p, q);
         }
     }
 
@@ -6567,8 +6570,11 @@ pub const NegativeBinomial = struct {
         }
         const q = -@log(1 - self.p);
         for (dest) |*item| {
-            item.* = negativeBinomialMixtureFrom(source, self.successes, self.p) orelse
-                negativeBinomialFromLogQ(source, self.successes, self.p, q);
+            item.* = if (self.p == 0.5 and self.successes < 1 << 20)
+                negativeBinomialFairFrom(source, self.successes)
+            else
+                negativeBinomialMixtureFrom(source, self.successes, self.p) orelse
+                    negativeBinomialFromLogQ(source, self.successes, self.p, q);
         }
     }
 };
@@ -6732,10 +6738,20 @@ pub fn VectorNegativeBinomial(comptime VectorType: type) type {
     };
 }
 
+/// Fair negative binomial: the sum of `successes` geometric(1/2) failure
+/// counts, each one leading-zero count of a uniform word.
+fn negativeBinomialFairFrom(source: anytype, successes: u64) u64 {
+    var failures: u64 = 0;
+    var s: u64 = 0;
+    while (s < successes) : (s += 1) failures +%= geometricFailuresFrom(source, 0.5);
+    return failures;
+}
+
 pub fn negativeBinomialFrom(source: anytype, successes: u64, p: f64) u64 {
     std.debug.assert(successes > 0 and p > 0 and p <= 1);
     if (p == 1) return 0;
     if (negativeBinomialMixtureFrom(source, successes, p)) |sampled| return sampled;
+    if (p == 0.5) return negativeBinomialFairFrom(source, successes);
 
     // The per-success rate is fixed, so compute the log once instead of
     // recomputing it inside every geometric draw.

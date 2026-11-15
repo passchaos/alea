@@ -125,6 +125,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Vector binomial inverse-CDF path for non-dyadic `p` with `trials <= 64` | `compare/results/s4-m1650-vector-binomial-inverse-cdf.md` |
 | Vector binomial inverse-CDF mid trials (`65..128`) | `compare/results/s4-m1652-vector-binomial-inverse-cdf-mid-trials.md` |
 | Fair geometric `p = 0.5` clz stream | `compare/results/s4-m1654-fair-geometric-clz.md` |
+| Fair negative-binomial `p = 0.5` clz geometric sum | `compare/results/s4-m1656-fair-negative-binomial.md` |
 | Vectorized dyadic `VectorGeometric` / `VectorGeometricFailures` (one word per lane, `ctz` failures) | `compare/results/s4-m1642-vector-geometric-dyadic-kernel.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
