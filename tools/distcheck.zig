@@ -1376,6 +1376,24 @@ fn checkContinuous() !void {
             return alea.distributions.beta(r, f64, 1, 2);
         }
     }.sample, 0.32, 0.34);
+
+    // Circular von Mises CDF vs sampler (kappa = 5, mu = 0.4).
+    {
+        var vm_engine = alea.FastPrng.init(0xc0ff_ee50);
+        const vm_rng = alea.Rng.init(&vm_engine);
+        const dist = try alea.distributions.VonMises(f64).new(0.4, 5);
+        const expected = dist.cdf(-1.0);
+        const samples = 40_000;
+        var below: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            if (dist.sample(vm_rng) <= -1.0) below += 1;
+        }
+        const count: f64 = @floatFromInt(samples);
+        const empirical = @as(f64, @floatFromInt(below)) / count;
+        const se = @sqrt(expected * (1 - expected) / count);
+        try expectFloatBetween("von mises cdf(-1)", empirical, expected - 6 * se, expected + 6 * se);
+    }
 }
 
 fn checkExtremeAndShape() !void {
@@ -2063,6 +2081,22 @@ fn checkLongRun(samples: usize) !void {
         }
         const vmf_tol = longMeanTolerance(0.25, samples, 0.002);
         try expectFloatBetween("long vmf mean resultant", sum / nf, expected - vmf_tol, expected + vmf_tol);
+    }
+
+    // Circular von Mises CDF vs sampler.
+    {
+        var engine = alea.FastPrng.init(0x10d6);
+        const rng = alea.Rng.init(&engine);
+        const dist = try alea.distributions.VonMises(f64).new(0.4, 5);
+        const expected = dist.cdf(-1.0);
+        var below: usize = 0;
+        var i: usize = 0;
+        while (i < samples) : (i += 1) {
+            if (dist.sample(rng) <= -1.0) below += 1;
+        }
+        const empirical = @as(f64, @floatFromInt(below)) / nf;
+        const se = @sqrt(expected * (1 - expected) / nf);
+        try expectFloatBetween("long von mises cdf(-1)", empirical, expected - 6 * se, expected + 6 * se);
     }
 
     // Exact SO(3) matrix Fisher isotropic trace moment.
