@@ -271,6 +271,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoissonAhrensDieter u64x4 lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoissonAhrensDieter u64x4 direct lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorPoissonAhrensDieter.fill u64x4 lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea candidate fillVectorPoisson AD cdf u64x4 lambda=20", lanes / 4, 0xb021, fillDistPoissonAdCdfU64);
     try benchFillVectorOpenF32(io, stdout, "alea fillVectorOpen f32x8", lanes);
     try benchFillVectorOpenClosedF32(io, stdout, "alea fillVectorOpenClosed f32x8", lanes);
     try benchFillVectorRangeF32(io, stdout, "alea fillVectorRange f32x8", lanes);
@@ -1046,6 +1047,37 @@ fn fillDistPoissonMidU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@V
 fn fillDistPoissonMidSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorPoisson(@Vector(4, u64)).init(11) catch unreachable;
     sampler.fill(rng, dest);
+}
+
+/// Windowed inverse-CDF candidate for the Ahrens-Dieter lambda range.
+fn fillDistPoissonAdCdfU64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    const lambda: f64 = 20;
+    var table: [128]f64 = undefined;
+    var p: f64 = @exp(-lambda);
+    var acc: f64 = p;
+    table[0] = acc;
+    var k: usize = 0;
+    while (1 - acc > 1e-15 and k + 1 < table.len) {
+        k += 1;
+        p *= lambda / @as(f64, @floatFromInt(k));
+        acc += p;
+        table[k] = acc;
+    }
+    const width = k + 1;
+    for (dest) |*item| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| {
+            const u = alea.Rng.floatFrom(engine, f64);
+            var lo: usize = 0;
+            var hi: usize = width;
+            while (lo < hi) {
+                const mid = lo + (hi - lo) / 2;
+                if (u > table[mid]) lo = mid + 1 else hi = mid;
+            }
+            out[lane] = @min(lo, width - 1);
+        }
+        item.* = out;
+    }
 }
 
 fn fillDistPoissonAhrensDieterU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
