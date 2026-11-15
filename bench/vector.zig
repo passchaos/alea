@@ -252,6 +252,15 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson u64x4 lambda=12", lanes / 4, 0xb012, fillDistPoissonU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson u64x4 direct lambda=12", lanes / 4, 0xb012, fillDistPoissonU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorPoisson.fill u64x4 lambda=12", lanes / 4, 0xb012, fillDistPoissonSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson small u64x4 lambda=4", lanes / 8, 0xb014, fillDistPoissonSmallU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson small u64x4 direct lambda=4", lanes / 8, 0xb014, fillDistPoissonSmallU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorPoisson.fill small u64x4 lambda=4", lanes / 8, 0xb014, fillDistPoissonSmallSamplerU64);
+    try benchVectorU64x4(io, stdout, "alea candidate fillVectorPoisson small dense u64x4 lambda=4", lanes / 8, 0xb015, fillDistPoissonSmallDenseU64);
+    try benchVectorU64x4(io, stdout, "alea candidate fillVectorPoisson small cdf u64x4 lambda=4", lanes / 8, 0xb016, fillDistPoissonSmallCdfU64);
+    try benchVectorU64x4(io, stdout, "alea candidate fillVectorPoisson small cdf-vector u64x4 lambda=4", lanes / 8, 0xb017, fillDistPoissonSmallCdfVectorU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson mid u64x4 lambda=11", lanes / 8, 0xb018, fillDistPoissonMidU64);
+    try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoisson mid u64x4 direct lambda=11", lanes / 8, 0xb018, fillDistPoissonMidU64Direct);
+    try benchVectorU64x4(io, stdout, "alea distributions.VectorPoisson.fill mid u64x4 lambda=11", lanes / 8, 0xb018, fillDistPoissonMidSamplerU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoissonAhrensDieter u64x4 lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterU64);
     try benchVectorU64x4(io, stdout, "alea distributions.fillVectorPoissonAhrensDieter u64x4 direct lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterU64Direct);
     try benchVectorU64x4(io, stdout, "alea distributions.VectorPoissonAhrensDieter.fill u64x4 lambda=20", lanes / 4, 0xb020, fillDistPoissonAhrensDieterSamplerU64);
@@ -856,6 +865,120 @@ fn fillDistPoissonU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vect
 
 fn fillDistPoissonSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
     const sampler = alea.distributions.VectorPoisson(@Vector(4, u64)).init(12) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistPoissonSmallU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorPoisson(rng, @Vector(4, u64), dest, 4);
+}
+
+fn fillDistPoissonSmallU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorPoissonFrom(engine, @Vector(4, u64), dest, 4);
+}
+
+fn fillDistPoissonSmallSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorPoisson(@Vector(4, u64)).init(4) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+/// Dense small-lambda Poisson candidate: lockstep product-method loop over
+/// all lanes, masking finished lanes. Changes the stream shape because every
+/// lane draws a word until the slowest lane finishes.
+fn fillDistPoissonSmallDenseU64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    const U = @Vector(4, u64);
+    const F = @Vector(4, f64);
+    const threshold: F = @splat(@exp(-4.0));
+    const scale: F = @splat(0x1.0p-53);
+    for (dest) |*item| {
+        var p: F = @splat(1.0);
+        var k: U = @splat(0);
+        var done: @Vector(4, bool) = @splat(false);
+        while (!@reduce(.And, done)) {
+            var words: U = undefined;
+            inline for (0..4) |lane| words[lane] = engine.next();
+            const u = @as(F, @floatFromInt(words >> @splat(11))) * scale;
+            p = @select(f64, done, p, p * u);
+            k += @select(u64, done, @as(U, @splat(0)), @as(U, @splat(1)));
+            done = done | (p <= threshold);
+        }
+        item.* = k - @as(U, @splat(1));
+    }
+}
+
+/// Hoisted-CDF small-lambda Poisson candidate: build the inverse-CDF table
+/// once per slice, then one uniform plus a short linear scan per lane.
+fn fillDistPoissonSmallCdfU64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    const lambda: f64 = 4;
+    var cdf: [64]f64 = undefined;
+    var p: f64 = @exp(-lambda);
+    var sum: f64 = p;
+    var k: usize = 0;
+    cdf[0] = sum;
+    while (sum < 1.0 and k + 1 < cdf.len) {
+        k += 1;
+        p *= lambda / @as(f64, @floatFromInt(k));
+        sum += p;
+        cdf[k] = sum;
+    }
+    const width = k + 1;
+    cdf[width - 1] = 1.0;
+    for (dest) |*item| {
+        var out: @Vector(4, u64) = undefined;
+        inline for (0..4) |lane| {
+            const u = alea.Rng.floatFrom(engine, f64);
+            var idx: usize = 0;
+            while (idx + 1 < width and u > cdf[idx]) idx += 1;
+            out[lane] = idx;
+        }
+        item.* = out;
+    }
+}
+
+/// Branchless vectorized CDF search for the hoisted-CDF Poisson candidate.
+fn fillDistPoissonSmallCdfVectorU64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    const U = @Vector(4, u64);
+    const F = @Vector(4, f64);
+    const lambda: f64 = 4;
+    var cdf: [64]f64 = undefined;
+    var p: f64 = @exp(-lambda);
+    var sum: f64 = p;
+    var k: usize = 0;
+    cdf[0] = sum;
+    while (1 - sum > 1e-15 and k + 1 < cdf.len) {
+        k += 1;
+        p *= lambda / @as(f64, @floatFromInt(k));
+        sum += p;
+        cdf[k] = sum;
+    }
+    const width = k + 1;
+    cdf[width - 1] = 1.0;
+    const scale: F = @splat(0x1.0p-53);
+    for (dest) |*item| {
+        var words: U = undefined;
+        inline for (0..4) |lane| words[lane] = engine.next();
+        const u = @as(F, @floatFromInt(words >> @splat(11))) * scale;
+        var out: U = @splat(width - 1);
+        var found: @Vector(4, bool) = @splat(false);
+        var idx: usize = 0;
+        while (idx < width) : (idx += 1) {
+            const hit = (u <= @as(F, @splat(cdf[idx]))) & !found;
+            out = @select(u64, hit, @as(U, @splat(idx)), out);
+            found = found | hit;
+        }
+        item.* = out;
+    }
+}
+
+fn fillDistPoissonMidU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorPoisson(rng, @Vector(4, u64), dest, 11);
+}
+
+fn fillDistPoissonMidU64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, u64)) void {
+    alea.distributions.fillVectorPoissonFrom(engine, @Vector(4, u64), dest, 11);
+}
+
+fn fillDistPoissonMidSamplerU64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, u64)) void {
+    const sampler = alea.distributions.VectorPoisson(@Vector(4, u64)).init(11) catch unreachable;
     sampler.fill(rng, dest);
 }
 

@@ -22066,11 +22066,9 @@ pub fn VectorPoisson(comptime VectorType: type) type {
             switch (self.sampler.method) {
                 .zero => @memset(dest, @as(VectorType, @splat(0))),
                 .product => |threshold| {
-                    for (dest) |*item| {
-                        var out: VectorType = undefined;
-                        inline for (0..info.len) |lane| out[lane] = poissonProduct(rng, threshold);
-                        item.* = out;
-                    }
+                    var cdf: [64]f64 = undefined;
+                    const width = poissonCdfTableSmall(-@log(threshold), &cdf);
+                    for (dest) |*item| item.* = vectorPoissonFromCdf(VectorType, rng, threshold, cdf[0..width]);
                 },
                 .ahrens_dieter => |method| {
                     for (dest) |*item| {
@@ -22086,11 +22084,9 @@ pub fn VectorPoisson(comptime VectorType: type) type {
             switch (self.sampler.method) {
                 .zero => @memset(dest, @as(VectorType, @splat(0))),
                 .product => |threshold| {
-                    for (dest) |*item| {
-                        var out: VectorType = undefined;
-                        inline for (0..info.len) |lane| out[lane] = poissonProductFrom(source, threshold);
-                        item.* = out;
-                    }
+                    var cdf: [64]f64 = undefined;
+                    const width = poissonCdfTableSmall(-@log(threshold), &cdf);
+                    for (dest) |*item| item.* = vectorPoissonFromCdf(VectorType, source, threshold, cdf[0..width]);
                 },
                 .ahrens_dieter => |method| {
                     for (dest) |*item| {
@@ -22353,6 +22349,54 @@ fn poissonProductFrom(source: anytype, threshold: f64) u64 {
         p *= Rng.floatFrom(source, f64);
     }
     return k - 1;
+}
+
+/// Inverse-CDF table for the small-lambda product method: `cdf[k]` is
+/// `P(X <= k)` up to a `1e-15` tail. The last entry keeps the true cumulative
+/// sum, so the fill kernel can fall back to the exact product method for the
+/// remaining tail instead of clamping it.
+fn poissonCdfTableSmall(lambda: f64, cdf: *[64]f64) usize {
+    var p = @exp(-lambda);
+    var sum = p;
+    cdf[0] = sum;
+    var k: usize = 0;
+    while (1 - sum > 1e-15 and k + 1 < cdf.len) {
+        k += 1;
+        p *= lambda / @as(f64, @floatFromInt(k));
+        sum += p;
+        cdf[k] = sum;
+    }
+    return k + 1;
+}
+
+/// Branchless vector inverse-CDF draw from a small Poisson table. Lanes whose
+/// uniform lands in the truncated tail fall back to the exact product method;
+/// the fallback rate is about `1e-15` per lane.
+fn vectorPoissonFromCdf(
+    comptime VectorType: type,
+    source: anytype,
+    threshold: f64,
+    cdf: []const f64,
+) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    const U = VectorType;
+    const F = @Vector(lanes, f64);
+    const scale: F = @splat(0x1.0p-53);
+    var words: U = undefined;
+    inline for (0..lanes) |lane| words[lane] = Rng.nextFrom(source);
+    const u = @as(F, @floatFromInt(words >> @splat(11))) * scale;
+    var out: U = @splat(cdf.len - 1);
+    var found: @Vector(lanes, bool) = @splat(false);
+    var idx: usize = 0;
+    while (idx < cdf.len) : (idx += 1) {
+        const hit = (u <= @as(F, @splat(cdf[idx]))) & !found;
+        out = @select(u64, hit, @as(U, @splat(idx)), out);
+        found = found | hit;
+    }
+    inline for (0..lanes) |lane| {
+        if (!found[lane]) out[lane] = poissonProductFrom(source, threshold);
+    }
+    return out;
 }
 
 const PoissonAdParts = struct {

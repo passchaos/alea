@@ -57,10 +57,14 @@ raises the f64 vector rows from 128-158M to 212-349M lanes/s in
 `vectorbench -- 16777216 "Zeta"`, at or above the ~250M scalar `zeta` rate.
 The stream shape is versioned; the proposal and acceptance test are the same
 kernel, and a 400k-lane audit over exponents 1.25/1.5/2/3 shows max
-empirical-CDF error 0.00029-0.00060. The remaining dense targets
+empirical-CDF error 0.00029-0.00060. The S4-M1677 small-lambda Poisson fill adds a second adopted dense discrete
+shape: a per-call inverse-CDF table plus a branchless vector search, with the
+exact product method retained for the truncated tail and for
+`sample`/`sampleFrom`. It lifts the lambda-4 fill rows from 66-81M to 130-134M
+lanes/s and the lambda-11 rows from 46-56M to 81M. The remaining dense targets
 (`fisher-f`, Bessel/Bingham directional rows, and the per-lane
-Poisson/hypergeometric/Zipf rows) still need candidates that satisfy the
-requirements below.
+hypergeometric/Zipf rows) still need candidates that satisfy the requirements
+below.
 
 ## Rejected Or Deferred Shapes
 
