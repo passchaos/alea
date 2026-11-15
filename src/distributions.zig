@@ -14323,7 +14323,7 @@ fn kentProposalLambda(comptime T: type, rho: T) T {
 
 fn kentMarginalLog(comptime T: type, kappa: T, ovalness: T, lambda: T, w: T) T {
     const a = ovalness * (1 - w * w);
-    return (kappa - lambda) * w + logBesselI0(a);
+    return (kappa - lambda) * w + logBesselI0Kent(T, a);
 }
 
 /// Supremum of `log(e^{(κ−λ)w}·I₀(β(1−w²)))` over w ∈ [-1, 1]. A coarse grid
@@ -14420,7 +14420,7 @@ inline fn kentSampleWFrom(source: anytype, comptime T: type, kappa: T, ovalness:
         // Exact conditional sampler: accept w against the I₀-weighted marginal.
         const s2 = @max(0, one - w * w);
         const a = ovalness * s2;
-        const log_ratio = diff * w + logBesselI0(a) - marginal_max_log;
+        const log_ratio = diff * w + logBesselI0Kent(T, a) - marginal_max_log;
         // Exp(1) race: E ≥ −log_ratio replaces log(u) ≤ log_ratio.
         const e = standardExponentialFrom(source, T);
         if (e >= -log_ratio) return w;
@@ -14693,23 +14693,11 @@ fn vectorLogBesselI0(comptime VectorType: type, a: VectorType) VectorType {
     const V = @Vector(L, Child);
     if (@reduce(.And, a <= @as(V, @splat(1.5)))) {
         const u = a * a;
-        // log I₀(a) = Σ d_k a^{2k}; the 22-term truncation is below 2e-11 at
-        // a = 1.5 and below 2e-13 at a = 1.
-        const coefficients = [_]f64{
-            0.25,                      -0.015625,                 0.001736111111111111,
-            -0.00022379557291666666,   0.000030924479166666663,   -0.0000044551896460262352,
-            0.00000066029151460931588, -0.000000099901839223488295, 0.000000015355119860522419,
-            -0.0000000023896178307660341, 0.00000000037563719259956686, -0.000000000059540552942858594,
-            0.0000000000095035004344764169, -0.0000000000015259199736005502, 0.00000000000024626425371665465,
-            -0.000000000000039921375403762867, 0.0000000000000064969481258579718, -0.0000000000000010610079984668295,
-            0.00000000000000017380825701815656, -0.000000000000000028551363422370638, 0.0000000000000000047018675972364127,
-            -0.00000000000000000077606813468776429,
-        };
-        var sum: V = @splat(@as(Child, @floatCast(coefficients[coefficients.len - 1])));
-        var i: usize = coefficients.len - 1;
+        var sum: V = @splat(@as(Child, @floatCast(log_bessel_i0_series_coefficients[log_bessel_i0_series_coefficients.len - 1])));
+        var i: usize = log_bessel_i0_series_coefficients.len - 1;
         while (i > 0) {
             i -= 1;
-            sum = sum * u + @as(V, @splat(@as(Child, @floatCast(coefficients[i]))));
+            sum = sum * u + @as(V, @splat(@as(Child, @floatCast(log_bessel_i0_series_coefficients[i]))));
         }
         return u * sum;
     }
@@ -14991,6 +14979,39 @@ fn logBesselI0(z: anytype) @TypeOf(z) {
     const abs_z = @abs(z);
     return abs_z - 0.5 * @log(2 * @as(T, @floatCast(std.math.pi)) * abs_z) +
         1 / (8 * abs_z) - 1 / (16 * abs_z * abs_z);
+}
+
+/// Coefficients of `log I₀(a) = Σ d_k a^{2k}`. The 22-term truncation is
+/// below `2e-11` at `a = 1.5` and `2e-13` at `a = 1`.
+const log_bessel_i0_series_coefficients = [_]f64{
+    0.25,                      -0.015625,                 0.001736111111111111,
+    -0.00022379557291666666,   0.000030924479166666663,   -0.0000044551896460262352,
+    0.00000066029151460931588, -0.000000099901839223488295, 0.000000015355119860522419,
+    -0.0000000023896178307660341, 0.00000000037563719259956686, -0.000000000059540552942858594,
+    0.0000000000095035004344764169, -0.0000000000015259199736005502, 0.00000000000024626425371665465,
+    -0.000000000000039921375403762867, 0.0000000000000064969481258579718, -0.0000000000000010610079984668295,
+    0.00000000000000017380825701815656, -0.000000000000000028551363422370638, 0.0000000000000000047018675972364127,
+    -0.00000000000000000077606813468776429,
+};
+
+/// Scalar `log I₀(a)` from the shared series (validated for `a <= 1.5`).
+fn logBesselI0Series(comptime T: type, a: T) T {
+    const u = a * a;
+    var sum: T = @floatCast(log_bessel_i0_series_coefficients[log_bessel_i0_series_coefficients.len - 1]);
+    var i: usize = log_bessel_i0_series_coefficients.len - 1;
+    while (i > 0) {
+        i -= 1;
+        sum = sum * u + @as(T, @floatCast(log_bessel_i0_series_coefficients[i]));
+    }
+    return u * sum;
+}
+
+/// `log I₀(a)` for the Kent acceptance: the series on the common `a <= 1.5`
+/// range (about 2700x more accurate than the A&S log there) and the A&S
+/// helper above it.
+fn logBesselI0Kent(comptime T: type, a: T) T {
+    if (a <= 1.5) return logBesselI0Series(T, a);
+    return logBesselI0(a);
 }
 
 /// Modified Bessel function of the first kind, order 1: I₁(z).
