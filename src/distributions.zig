@@ -14427,12 +14427,52 @@ noinline fn vectorKentWoodTailFrom(
     }
 }
 
-/// Per-lane log I₀; the Bessel helper is scalar, so evaluate it lane by lane.
+/// `log I₀(a)` for the vector Kent acceptance. For `a <= 1` (the common
+/// `ovalness·s²` range) the series `Σ d_k a^{2k}` is evaluated with vector
+/// FMAs, avoiding four per-lane branchy Bessel/log calls; larger lanes fall
+/// back to the scalar helper.
 fn vectorLogBesselI0(comptime VectorType: type, a: VectorType) VectorType {
+    const Child = vectorChild(VectorType);
     const L = vectorInfo(VectorType).len;
+    const V = @Vector(L, Child);
+    if (@reduce(.And, a <= @as(V, @splat(1.5)))) {
+        const u = a * a;
+        // log I₀(a) = Σ d_k a^{2k}; the 22-term truncation is below 2e-11 at
+        // a = 1.5 and below 2e-13 at a = 1.
+        const coefficients = [_]f64{
+            0.25,                      -0.015625,                 0.001736111111111111,
+            -0.00022379557291666666,   0.000030924479166666663,   -0.0000044551896460262352,
+            0.00000066029151460931588, -0.000000099901839223488295, 0.000000015355119860522419,
+            -0.0000000023896178307660341, 0.00000000037563719259956686, -0.000000000059540552942858594,
+            0.0000000000095035004344764169, -0.0000000000015259199736005502, 0.00000000000024626425371665465,
+            -0.000000000000039921375403762867, 0.0000000000000064969481258579718, -0.0000000000000010610079984668295,
+            0.00000000000000017380825701815656, -0.000000000000000028551363422370638, 0.0000000000000000047018675972364127,
+            -0.00000000000000000077606813468776429,
+        };
+        var sum: V = @splat(@as(Child, @floatCast(coefficients[coefficients.len - 1])));
+        var i: usize = coefficients.len - 1;
+        while (i > 0) {
+            i -= 1;
+            sum = sum * u + @as(V, @splat(@as(Child, @floatCast(coefficients[i]))));
+        }
+        return u * sum;
+    }
     var out: VectorType = undefined;
     inline for (0..L) |lane| out[lane] = logBesselI0(a[lane]);
     return out;
+}
+
+test "vector log I0 series matches the scalar helper" {
+    const V = @Vector(4, f64);
+    inline for ([_]f64{ 0.0, 0.1, 0.5, 1.0, 1.5 }) |a| {
+        const v = vectorLogBesselI0(V, @as(V, @splat(a)));
+        // The series is more accurate than the scalar A&S helper; compare
+        // within that helper's documented ~3e-8 log error.
+        try std.testing.expectApproxEqAbs(logBesselI0(a), v[0], 1.0e-7);
+    }
+    // Above the series range the scalar fallback is used exactly.
+    const v = vectorLogBesselI0(V, @as(V, @splat(2.0)));
+    try std.testing.expectApproxEqAbs(logBesselI0(@as(f64, 2.0)), v[0], 1.0e-12);
 }
 
 fn vectorKentPointFrom(
