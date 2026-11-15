@@ -41586,12 +41586,12 @@ fn powerFunctionFromOpenUniformsVector(comptime T: type, comptime VectorType: ty
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const uniform_vec = loadVectorLanes(VectorType, dest, i);
-        const out = min_vec + width_vec * @exp(@log(uniform_vec) * inverse_shape_vec);
+        const out = min_vec + width_vec * @exp2(@log2(uniform_vec) * inverse_shape_vec);
         storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
-        dest[i] = min + width * @exp(@log(dest[i]) * inverse_shape);
+        dest[i] = min + width * @exp2(@log2(dest[i]) * inverse_shape);
     }
 }
 
@@ -54099,7 +54099,7 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     var power_values = uniforms;
     var expected_power = uniforms;
     powerFunctionFromOpenUniforms(f32, &power_values, -1.0, 3.0, 0.25);
-    for (&expected_power) |*item| item.* = -1.0 + 3.0 * @exp(@log(item.*) * 0.25);
+    for (&expected_power) |*item| item.* = -1.0 + 3.0 * @exp2(@log2(item.*) * 0.25);
     try expectApproxEqualFloatSlices(f32, &expected_power, &power_values);
 
     var gumbel_values = uniforms;
