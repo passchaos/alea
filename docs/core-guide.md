@@ -757,7 +757,10 @@ runtime float type, and explicit f32 arguments keep f32.
   `logisticQuantile`, `cauchyCdf` / `cauchyQuantile`, `rayleighCdf` /
   `rayleighQuantile`, `weibullCdf` / `weibullQuantile`, `gumbelCdf` /
   `gumbelQuantile`; degenerate zero scales are point masses at the
-  location (or zero for Rayleigh/Weibull).
+  location (or zero for Rayleigh/Weibull). Rayleigh's quantile and
+  Weibull's CDF/quantile use `log1p(−p)` / `−expm1(−(x/scale)^shape)` so
+  tiny tails keep their relative accuracy instead of cancelling `1 − p` or
+  `1 − exp(...)`.
 - bounded/derived continuous: `frechetCdf` / `frechetQuantile`, `paretoCdf` /
   `paretoQuantile`, `powerFunctionCdf` / `powerFunctionQuantile`,
   `kumaraswamyCdf` / `kumaraswamyQuantile`, `arcsineCdf` / `arcsineQuantile`,

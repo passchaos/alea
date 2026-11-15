@@ -3292,7 +3292,7 @@ fn rayleighQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType) P
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0 or scale == 0) return 0;
     if (p == 1) return std.math.inf(T);
-    return scale * @sqrt(-2 * @log(1 - p));
+    return scale * @sqrt(-2 * std.math.log1p(-p));
 }
 
 /// Weibull(scale, shape) CDF.
@@ -3307,7 +3307,8 @@ fn weibullCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType, shape: 
     if (std.math.isNan(x)) return std.math.nan(T);
     if (x <= 0) return 0;
     if (scale == 0) return 1;
-    return 1 - @exp(-std.math.pow(T, x / scale, shape));
+    // `−expm1` keeps small-x accuracy instead of cancelling `1 − exp(...)`.
+    return -std.math.expm1(-std.math.pow(T, x / scale, shape));
 }
 
 /// Inverse Weibull(scale, shape) CDF. p=0 → 0, p=1 → +∞.
@@ -3322,7 +3323,7 @@ fn weibullQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType, sh
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0 or scale == 0) return 0;
     if (p == 1) return std.math.inf(T);
-    return scale * std.math.pow(T, -@log(1 - p), 1 / shape);
+    return scale * std.math.pow(T, -std.math.log1p(-p), 1 / shape);
 }
 
 /// Gumbel(location, scale) CDF.
@@ -3397,6 +3398,9 @@ fn paretoCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType, shape: P
     if (scale == 0) return if (x < 0) 0 else 1;
     if (x <= scale) return 0;
     if (x == std.math.inf(T)) return 1;
+    // The ratio-first `(scale/x)^shape` avoids a `x − scale` subtraction,
+    // which loses precision for `x` just above `scale`; the remaining
+    // `1 − pow(...)` error is about one ulp of the CDF value.
     return 1 - std.math.pow(T, scale / x, shape);
 }
 
@@ -58685,6 +58689,8 @@ test "closed-form continuous CDF and quantile round-trips" {
     for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
         try std.testing.expectApproxEqAbs(p, rayleighCdf(rayleighQuantile(p, o), o), 1e-12);
     }
+    // Tiny tail: `log1p(-p)` keeps the quantile accurate.
+    try std.testing.expectApproxEqRel(@as(f64, 1e-12), rayleighCdf(rayleighQuantile(@as(f64, 1e-12), o), o), 1e-10);
 
     // Weibull(1, 2).
     const two: f64 = 2;
@@ -58692,6 +58698,9 @@ test "closed-form continuous CDF and quantile round-trips" {
     for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
         try std.testing.expectApproxEqAbs(p, weibullCdf(weibullQuantile(p, o, two), o, two), 1e-12);
     }
+    // Tiny tails: `−expm1` and `log1p(-p)` keep both directions accurate.
+    try std.testing.expectApproxEqRel(@as(f64, 1e-12), weibullCdf(weibullQuantile(@as(f64, 1e-12), o, o), o, o), 1e-10);
+    try std.testing.expectApproxEqRel(@as(f64, 1e-12), weibullCdf(@as(f64, 1e-12), o, o), 1e-10);
 
     // Gumbel(0, 1).
     try std.testing.expectApproxEqAbs(@exp(@as(f64, -1)), gumbelCdf(z, z, o), 1e-12);
