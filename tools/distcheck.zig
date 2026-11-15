@@ -2743,6 +2743,9 @@ fn checkLongRun(samples: usize) !void {
         const zipf_dist = try alea.distributions.Zipf(f64).init(40, 1.5);
         const zeta_dist = try alea.distributions.Zeta(f64).init(2.5);
         const zeta_light = try alea.distributions.Zeta(f64).init(1.25);
+        const zeta_1_5 = try alea.distributions.Zeta(f64).init(1.5);
+        const zeta_2 = try alea.distributions.Zeta(f64).init(2.0);
+        const zeta_4 = try alea.distributions.Zeta(f64).init(4.0);
         const bernoulli = try alea.distributions.Bernoulli.init(0.3);
         var binomial_hits = [_]usize{0} ** 3;
         var poisson_hits = [_]usize{0} ** 3;
@@ -2752,6 +2755,9 @@ fn checkLongRun(samples: usize) !void {
         var zipf_hits = [_]usize{0} ** 3;
         var zeta_hits = [_]usize{0} ** 3;
         var zeta_light_hits = [_]usize{0} ** 3;
+        var zeta_1_5_hits = [_]usize{0} ** 3;
+        var zeta_2_hits = [_]usize{0} ** 3;
+        var zeta_4_hits = [_]usize{0} ** 3;
         var bernoulli_hits: usize = 0;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
@@ -2788,6 +2794,18 @@ fn checkLongRun(samples: usize) !void {
             if (zl <= 1) zeta_light_hits[0] += 1;
             if (zl <= 2) zeta_light_hits[1] += 1;
             if (zl <= 4) zeta_light_hits[2] += 1;
+            const z15 = zeta_1_5.sample(rng);
+            if (z15 <= 1) zeta_1_5_hits[0] += 1;
+            if (z15 <= 3) zeta_1_5_hits[1] += 1;
+            if (z15 <= 8) zeta_1_5_hits[2] += 1;
+            const z2 = zeta_2.sample(rng);
+            if (z2 <= 1) zeta_2_hits[0] += 1;
+            if (z2 <= 4) zeta_2_hits[1] += 1;
+            if (z2 <= 8) zeta_2_hits[2] += 1;
+            const z4 = zeta_4.sample(rng);
+            if (z4 <= 1) zeta_4_hits[0] += 1;
+            if (z4 <= 3) zeta_4_hits[1] += 1;
+            if (z4 <= 8) zeta_4_hits[2] += 1;
         }
         try expectEmpiricalCdf("long binomial cdf(4)", binomial_hits[0], samples, binomial.cdf(4));
         try expectEmpiricalCdf("long binomial cdf(6)", binomial_hits[1], samples, binomial.cdf(6));
@@ -2813,6 +2831,15 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long zeta(1.25) cdf(1)", zeta_light_hits[0], samples, zeta_light.cdf(1));
         try expectEmpiricalCdf("long zeta(1.25) cdf(2)", zeta_light_hits[1], samples, zeta_light.cdf(2));
         try expectEmpiricalCdf("long zeta(1.25) cdf(4)", zeta_light_hits[2], samples, zeta_light.cdf(4));
+        try expectEmpiricalCdf("long zeta(1.5) cdf(1)", zeta_1_5_hits[0], samples, zeta_1_5.cdf(1));
+        try expectEmpiricalCdf("long zeta(1.5) cdf(3)", zeta_1_5_hits[1], samples, zeta_1_5.cdf(3));
+        try expectEmpiricalCdf("long zeta(1.5) cdf(8)", zeta_1_5_hits[2], samples, zeta_1_5.cdf(8));
+        try expectEmpiricalCdf("long zeta(2) cdf(1)", zeta_2_hits[0], samples, zeta_2.cdf(1));
+        try expectEmpiricalCdf("long zeta(2) cdf(4)", zeta_2_hits[1], samples, zeta_2.cdf(4));
+        try expectEmpiricalCdf("long zeta(2) cdf(8)", zeta_2_hits[2], samples, zeta_2.cdf(8));
+        try expectEmpiricalCdf("long zeta(4) cdf(1)", zeta_4_hits[0], samples, zeta_4.cdf(1));
+        try expectEmpiricalCdf("long zeta(4) cdf(3)", zeta_4_hits[1], samples, zeta_4.cdf(3));
+        try expectEmpiricalCdf("long zeta(4) cdf(8)", zeta_4_hits[2], samples, zeta_4.cdf(8));
         try expectEmpiricalCdf("long bernoulli cdf(0)", bernoulli_hits, samples, bernoulli.cdf(0));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
         std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6} zipf(2)={d:.6} zeta(1)={d:.6} bernoulli(0)={d:.6}\n", .{
