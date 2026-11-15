@@ -116,6 +116,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Scalar-per-lane `VectorRayleigh`, `VectorLaplace`, `VectorKumaraswamy`, `VectorPowerFunction`, and `VectorGeneralizedPareto` (four scalar draws per vector) | `compare/results/s4-m1620-scalar-per-lane-vector-exp1-families.md` |
 | Scalar-per-lane `VectorCauchy` (four ratio-of-two-normals draws per vector; Logistic/LogLogistic keep packed uniforms) | `compare/results/s4-m1622-vector-cauchy-scalar-per-lane.md` |
 | Scalar-per-lane `VectorSkewNormal`, `VectorInverseGaussian`, and `VectorMaxwell` (PERT/NIG/triangular/arcsine/log-normal keep packed paths) | `compare/results/s4-m1624-vector-coverage-and-per-lane-continuation.md` |
+| `exp2`/`log2` transforms for Weibull, Fréchet, GEV, and LogLogistic sampling (ulp-level stream change) | `compare/results/s4-m1628-exp2-log2-samplers.md` |
 | Bingham proposal scales and `@log` acceptance | `compare/results/s4-m1360-bingham-precomputed-scales.md`, `compare/results/s4-m1373-bingham-log-ratio.md` |
 | Student-t recurrence table and vectorized copula CDF | `compare/results/s4-m1367-student-t-recurrence-table.md`, `compare/results/s4-m1371-vectorized-copula-cdf.md` |
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |

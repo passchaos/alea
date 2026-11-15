@@ -16774,7 +16774,7 @@ pub const GeneralizedExtremeValueError = Error;
 fn generalizedExtremeValuePointFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
     const e = Rng.standardExponentialFastFrom(source, T);
     if (xi == 0) return mu - sigma * @log(e);
-    return mu + sigma * (@exp(-xi * @log(e)) - 1) / xi;
+    return mu + sigma * (@exp2(-xi * @log2(e)) - 1) / xi;
 }
 
 fn fillGeneralizedExtremeValuePointsFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
@@ -27206,7 +27206,7 @@ pub fn logLogisticFrom(source: anytype, comptime T: type, scale: T, shape: T) T 
 
     const u = Rng.floatOpenFrom(source, T);
     if (shape == 1) return scale * u / (1 - u);
-    return scale * @exp(@log(u / (1 - u)) * (1 / shape));
+    return scale * @exp2(@log2(u / (1 - u)) * (1 / shape));
 }
 
 pub fn fillLogLogistic(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
@@ -27471,14 +27471,14 @@ pub fn LogLogistic(comptime T: type) type {
             if (self.isDegenerate()) return self.degenerateValue();
             const u = rng.floatOpen(T);
             if (self.method == .ratio) return self.scale * u / (1 - u);
-            return self.scale * @exp(@log(u / (1 - u)) * self.inverse_shape);
+            return self.scale * @exp2(@log2(u / (1 - u)) * self.inverse_shape);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) T {
             if (self.isDegenerate()) return self.degenerateValue();
             const u = Rng.floatOpenFrom(source, T);
             if (self.method == .ratio) return self.scale * u / (1 - u);
-            return self.scale * @exp(@log(u / (1 - u)) * self.inverse_shape);
+            return self.scale * @exp2(@log2(u / (1 - u)) * self.inverse_shape);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []T) void {
@@ -28872,7 +28872,7 @@ pub fn weibullFrom(source: anytype, comptime T: type, scale: T, shape: T) T {
     if (scale == 0 or shape == std.math.inf(T)) return scale;
     if (shape == 1) return scale * Rng.standardExponentialFastFrom(source, T);
     const e = Rng.standardExponentialFastFrom(source, T);
-    return scale * @exp((1 / shape) * @log(e));
+    return scale * @exp2((1 / shape) * @log2(e));
 }
 
 pub fn fillWeibull(rng: Rng, comptime T: type, dest: []T, scale: T, shape: T) void {
@@ -29371,7 +29371,7 @@ pub fn frechetFrom(source: anytype, comptime T: type, location: T, scale: T, sha
     if (shape == std.math.inf(T)) return location + scale;
 
     const e = Rng.standardExponentialFastFrom(source, T);
-    return location + scale * @exp((-1 / shape) * @log(e));
+    return location + scale * @exp2((-1 / shape) * @log2(e));
 }
 
 pub fn fillFrechet(rng: Rng, comptime T: type, dest: []T, location: T, scale: T, shape: T) void {
