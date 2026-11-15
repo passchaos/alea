@@ -1825,6 +1825,14 @@ fn expectVectorMoments(comptime VectorType: type, comptime label: []const u8, sa
 
 /// Longer seeded moment-recovery run for the core and recently added
 /// multivariate/directional families. Invoked with `--long [samples]`.
+/// Six-standard-error tolerance for a long-run sample mean, capped at the
+/// historical fixed tolerance so small-sample runs keep their old behavior.
+/// `variance` is a per-sample variance bound (1/4 for a quantity in [0, 1]).
+fn longMeanTolerance(variance: f64, samples: usize, fixed: f64) f64 {
+    const nf: f64 = @floatFromInt(samples);
+    return @min(fixed, 6 * @sqrt(variance / nf) + 1e-12);
+}
+
 fn checkLongRun(samples: usize) !void {
     const allocator = std.heap.smp_allocator;
     const nf: f64 = @floatFromInt(samples);
@@ -2004,9 +2012,11 @@ fn checkLongRun(samples: usize) !void {
             sum_z += point[2];
             inline for (0..3) |k| sums_sq[k] += point[k] * point[k];
         }
-        try expectFloatBetween("long kent mean resultant", sum_z / nf, rho - 0.003, rho + 0.003);
-        try expectFloatBetween("long kent var0", sums_sq[0] / nf, dist.varianceAt(0) - 0.005, dist.varianceAt(0) + 0.005);
-        try expectFloatBetween("long kent var1", sums_sq[1] / nf, dist.varianceAt(1) - 0.005, dist.varianceAt(1) + 0.005);
+        const kent_mean_tol = longMeanTolerance(dist.varianceAt(2), samples, 0.003);
+        const kent_second_tol = longMeanTolerance(0.25, samples, 0.005);
+        try expectFloatBetween("long kent mean resultant", sum_z / nf, rho - kent_mean_tol, rho + kent_mean_tol);
+        try expectFloatBetween("long kent var0", sums_sq[0] / nf, dist.varianceAt(0) - kent_second_tol, dist.varianceAt(0) + kent_second_tol);
+        try expectFloatBetween("long kent var1", sums_sq[1] / nf, dist.varianceAt(1) - kent_second_tol, dist.varianceAt(1) + kent_second_tol);
     }
 
     {
@@ -2035,7 +2045,8 @@ fn checkLongRun(samples: usize) !void {
             den += weight;
         }
         const expected = num / den;
-        try expectFloatBetween("long bingham mean x0^2", sum_sq / nf, expected - 0.003, expected + 0.003);
+        const bingham_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long bingham mean x0^2", sum_sq / nf, expected - bingham_tol, expected + bingham_tol);
     }
 
     {
@@ -2050,7 +2061,8 @@ fn checkLongRun(samples: usize) !void {
             const point = dist.sample(rng);
             sum += point[2];
         }
-        try expectFloatBetween("long vmf mean resultant", sum / nf, expected - 0.002, expected + 0.002);
+        const vmf_tol = longMeanTolerance(0.25, samples, 0.002);
+        try expectFloatBetween("long vmf mean resultant", sum / nf, expected - vmf_tol, expected + vmf_tol);
     }
 
     // Exact SO(3) matrix Fisher isotropic trace moment.
@@ -2103,7 +2115,8 @@ fn checkLongRun(samples: usize) !void {
                 r[0][2] * (r[1][0] * r[2][1] - r[1][1] * r[2][0]);
             if (det > 0) positive_det += 1;
         }
-        try expectFloatBetween("long matrix fisher o3 det frequency", @as(f64, @floatFromInt(positive_det)) / nf, expected - 0.005, expected + 0.005);
+        const det_tol = longMeanTolerance(expected * (1 - expected), samples, 0.005);
+        try expectFloatBetween("long matrix fisher o3 det frequency", @as(f64, @floatFromInt(positive_det)) / nf, expected - det_tol, expected + det_tol);
     }
 
     // SIMD von Mises-Fisher lane moment.
@@ -2123,7 +2136,8 @@ fn checkLongRun(samples: usize) !void {
             inline for (0..4) |lane| sum_z += point[2][lane];
         }
         const lane_nf: f64 = @floatFromInt(vector_count * 4);
-        try expectFloatBetween("long vector vmf mean", sum_z / lane_nf, expected - 0.003, expected + 0.003);
+        const vector_vmf_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long vector vmf mean", sum_z / lane_nf, expected - vector_vmf_tol, expected + vector_vmf_tol);
     }
 
     // Scalar Watson bipolar and girdle mean cosine-squared moments.
@@ -2143,8 +2157,9 @@ fn checkLongRun(samples: usize) !void {
             const q = girdle.sample(rng);
             girdle_sum += q[2] * q[2];
         }
-        try expectFloatBetween("long watson bipolar mean cos2", bipolar_sum / nf, bipolar_expected - 0.003, bipolar_expected + 0.003);
-        try expectFloatBetween("long watson girdle mean cos2", girdle_sum / nf, girdle_expected - 0.003, girdle_expected + 0.003);
+        const watson_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long watson bipolar mean cos2", bipolar_sum / nf, bipolar_expected - watson_tol, bipolar_expected + watson_tol);
+        try expectFloatBetween("long watson girdle mean cos2", girdle_sum / nf, girdle_expected - watson_tol, girdle_expected + watson_tol);
     }
 
     // SIMD Watson lane mean cosine-squared moment.
@@ -2164,7 +2179,8 @@ fn checkLongRun(samples: usize) !void {
             inline for (0..4) |lane| sum_z2 += point[2][lane] * point[2][lane];
         }
         const lane_nf: f64 = @floatFromInt(vector_count * 4);
-        try expectFloatBetween("long vector watson mean cos2", sum_z2 / lane_nf, expected - 0.003, expected + 0.003);
+        const vector_watson_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long vector watson mean cos2", sum_z2 / lane_nf, expected - vector_watson_tol, expected + vector_watson_tol);
     }
 
     // SIMD Bingham lane axial moment.
@@ -2197,7 +2213,8 @@ fn checkLongRun(samples: usize) !void {
             inline for (0..4) |lane| sum_x0_sq += point[0][lane] * point[0][lane];
         }
         const lane_nf: f64 = @floatFromInt(vector_count * 4);
-        try expectFloatBetween("long vector bingham mean x0^2", sum_x0_sq / lane_nf, expected - 0.003, expected + 0.003);
+        const vector_bingham_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long vector bingham mean x0^2", sum_x0_sq / lane_nf, expected - vector_bingham_tol, expected + vector_bingham_tol);
     }
 
     // SIMD Kent lane mean-resultant recovery.
@@ -2215,7 +2232,8 @@ fn checkLongRun(samples: usize) !void {
             inline for (0..4) |lane| sum_z += point[2][lane];
         }
         const lane_nf: f64 = @floatFromInt(vector_count * 4);
-        try expectFloatBetween("long vector kent mean resultant", sum_z / lane_nf, expected - 0.003, expected + 0.003);
+        const vector_kent_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long vector kent mean resultant", sum_z / lane_nf, expected - vector_kent_tol, expected + vector_kent_tol);
     }
 
     // Gibbs matrix Langevin marginal moments.
