@@ -5752,6 +5752,34 @@ noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype
     return if (complement) @as(VectorType, @splat(trials)) - sampled else sampled;
 }
 
+/// Small-trial inverse-CDF binomial for u64 vectors with arbitrary `p`:
+/// one uniform per lane plus `trials` vector compares against the cached
+/// CDF values computed once per call.
+fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, trials: u64, p: f64) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    const q = 1 - p;
+    var cdf: [64]f64 = undefined;
+    var pmf = std.math.pow(f64, q, @as(f64, @floatFromInt(trials)));
+    var acc = pmf;
+    cdf[0] = acc;
+    var k: u64 = 1;
+    while (k < trials) : (k += 1) {
+        pmf *= (@as(f64, @floatFromInt(trials - k + 1)) / @as(f64, @floatFromInt(k))) * (p / q);
+        acc += pmf;
+        cdf[k] = acc;
+    }
+    const F = @Vector(lanes, f64);
+    var uniforms: F = undefined;
+    inline for (0..lanes) |lane| uniforms[lane] = Rng.floatOpenFrom(source, f64);
+    var out: VectorType = @splat(0);
+    k = 0;
+    while (k < trials) : (k += 1) {
+        const threshold: F = @splat(cdf[k]);
+        out += @select(u64, uniforms > threshold, @as(VectorType, @splat(1)), @as(VectorType, @splat(0)));
+    }
+    return out;
+}
+
 /// Fair (p = 1/2) binomial for u64 vectors: every bit is a trial, so the
 /// successes of up to 64 trials are one word popcount per lane.
 fn vectorBinomialFairFrom(comptime VectorType: type, source: anytype, trials: u64) VectorType {
@@ -5867,6 +5895,9 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 if (dyadicBinomialFields(q)) |fields| {
                     return vectorBinomialDyadicLarge(VectorType, source, self.sampler.trials, fields, complement);
                 }
+            }
+            if (self.sampler.trials <= 64) {
+                return vectorBinomialInverseCdfFrom(VectorType, source, self.sampler.trials, self.sampler.p);
             }
             var out: VectorType = undefined;
             inline for (0..info.len) |lane| out[lane] = self.sampler.sampleFrom(source);
