@@ -213,6 +213,21 @@ fn erfComplementTerm(ax: f64) f64 {
     return (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * @exp(-ax * ax);
 }
 
+/// `erf(t)` from its Taylor series for `|t| < 0.5`, accurate to ~1e-16.
+/// Used where the A&S absolute error (~1.5e-7) would swamp a tiny tail.
+fn erfTaylor(comptime T: type, t: T) T {
+    var term: T = t;
+    var sum: T = t;
+    var n: usize = 1;
+    while (n <= 16) : (n += 1) {
+        const nf: T = @floatFromInt(n);
+        term *= -t * t * (2 * nf - 1) / (nf * (2 * nf + 1));
+        sum += term;
+    }
+    const two_over_sqrt_pi: T = @floatCast(2.0 / @sqrt(std.math.pi));
+    return two_over_sqrt_pi * sum;
+}
+
 fn erfAbramowitzStegun(x: f64) f64 {
     // Exact at symmetry point to avoid tiny polynomial bias.
     if (x == 0) return 0;
@@ -1792,7 +1807,12 @@ fn halfNormalCdfImpl(comptime PeerType: type, x: PeerType, scale: PeerType) Peer
     if (scale == 0) return if (x < 0) 0 else 1;
     if (x <= 0) return 0;
     if (x == std.math.inf(T)) return 1;
-    return 2 * normCdf(x / scale) - 1;
+    // `2Φ(t) − 1` cancels for tiny `t`; use the erf Taylor series there so
+    // the lower tail keeps its relative accuracy.
+    const inv_sqrt_2_t: T = @floatCast(inv_sqrt_2);
+    const t = x / scale * inv_sqrt_2_t;
+    if (t < 0.5) return erfTaylor(T, t);
+    return erfAbramowitzStegun(@floatCast(t));
 }
 
 /// Half-normal quantile. `p = 0 → 0`, `p = 1 → +∞`.
@@ -1807,6 +1827,12 @@ fn halfNormalQuantileImpl(comptime PeerType: type, p: PeerType, scale: PeerType)
     if (p == 0) return 0;
     if (p == 1) return std.math.inf(T);
     if (scale == 0) return 0;
+    // For tiny `p` the probit argument sits at 0.5, where probit's absolute
+    // accuracy limits the result; invert the erf series directly instead.
+    if (p < 1.0e-3) {
+        const pi_t: T = @floatCast(std.math.pi);
+        return scale * @sqrt(pi_t / 2) * p * (1 + pi_t * p * p / 12);
+    }
     return scale * probit((1 + p) / 2);
 }
 
@@ -3432,7 +3458,9 @@ fn kumaraswamyCdfImpl(comptime PeerType: type, x: PeerType, alpha: PeerType, bet
     if (std.math.isNan(x)) return std.math.nan(T);
     if (x <= 0) return 0;
     if (x >= 1) return 1;
-    return 1 - std.math.pow(T, 1 - std.math.pow(T, x, alpha), beta_param);
+    // `1 − (1 − x^α)^β` cancels for tiny `x`; `−expm1(β·log1p(−x^α))` keeps
+    // the lower tail.
+    return -std.math.expm1(beta_param * std.math.log1p(-std.math.pow(T, x, alpha)));
 }
 
 /// Inverse Kumaraswamy(alpha, beta_param) CDF. p=0 → 0, p=1 → 1.
@@ -3447,7 +3475,9 @@ fn kumaraswamyQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0) return 0;
     if (p == 1) return 1;
-    return std.math.pow(T, 1 - std.math.pow(T, 1 - p, 1 / beta_param), 1 / alpha);
+    // `1 − (1−p)^{1/β}` cancels for tiny `p`; the expm1 form keeps the tail.
+    const inner = -std.math.expm1(std.math.log1p(-p) / beta_param);
+    return std.math.pow(T, inner, 1 / alpha);
 }
 
 /// Arcsine(min, max) CDF.
@@ -11816,16 +11846,48 @@ pub fn TruncatedNormal(comptime T: type) type {
             if (x <= self.lower) return 0;
             if (x >= self.upper) return 1;
             const z = (x - self.mean) / self.stddev;
-            const cdf_z = normCdf(z);
-            return std.math.clamp((cdf_z - self.cdf_alpha) / self.Z, 0, 1);
+            const delta = z - self.alpha;
+            const numerator = if (@abs(delta) < 0.125) blk: {
+                // Local Hermite series `Φ(α+δ) − Φ(α) = φ(α)·Σ (−1)^{k−1}
+                // He_{k−1}(α)·δ^k/k!`, so tiny lower-tail windows do not
+                // cancel the two `normCdf` values.
+                var power: T = delta;
+                var he_prev: T = 1; // He_0
+                var he_cur: T = self.alpha; // He_1
+                var sum: T = power * he_prev;
+                var k: usize = 2;
+                while (k <= 16) : (k += 1) {
+                    power *= delta / @as(T, @floatFromInt(k));
+                    const sign: T = if (k % 2 == 0) -1 else 1;
+                    sum += sign * he_cur * power;
+                    const he_next = self.alpha * he_cur - @as(T, @floatFromInt(k - 1)) * he_prev;
+                    he_prev = he_cur;
+                    he_cur = he_next;
+                }
+                break :blk self.pdf_alpha * sum;
+            } else normCdf(z) - self.cdf_alpha;
+            return std.math.clamp(numerator / self.Z, 0, 1);
         }
 
-        /// Truncated-normal quantile: `μ + σ·Φ⁻¹(Φ(α) + p·Z)`.
+        /// Truncated-normal quantile: `μ + σ·Φ⁻¹(Φ(α) + p·Z)`. Extremely
+        /// small edge masses use the local linear inversion
+        /// `δ = mass/φ(edge)` so they are not limited by `probit`'s absolute
+        /// accuracy near the window edge.
         pub fn quantile(self: Self, p: T) T {
             if (!(p >= 0 and p <= 1)) return std.math.nan(T);
             if (self.stddev == 0) return self.mean;
             if (p == 0) return self.lower;
             if (p == 1) return self.upper;
+            const lower_mass = p * self.Z;
+            if (lower_mass < 1.0e-6 and self.pdf_alpha > 0) {
+                const z = self.alpha + lower_mass / self.pdf_alpha;
+                return std.math.clamp(self.mean + self.stddev * z, self.lower, self.upper);
+            }
+            const upper_mass = (1 - p) * self.Z;
+            if (upper_mass < 1.0e-6 and self.pdf_beta > 0) {
+                const z = self.beta - upper_mass / self.pdf_beta;
+                return std.math.clamp(self.mean + self.stddev * z, self.lower, self.upper);
+            }
             const target = self.cdf_alpha + p * self.Z;
             if (!(target > 0)) return self.lower;
             if (!(target < 1)) return self.upper;
@@ -58343,6 +58405,10 @@ test "core continuous CDF and quantile helpers match known values" {
     try std.testing.expectApproxEqAbs(@as(f64, 1), halfNormalQuantile(@as(f64, 0.6826894921370859), @as(f64, 1)), 1e-5);
     try std.testing.expectEqual(@as(f64, 1), halfNormalCdf(@as(f64, 0), @as(f64, 0)));
     try std.testing.expectEqual(@as(f64, 0), halfNormalQuantile(@as(f64, 0.5), @as(f64, 0)));
+    // Tiny lower tail: the erf series keeps the relative accuracy that the
+    // `2Φ(t) − 1` form and the probit-at-0.5 form lose.
+    try std.testing.expectApproxEqRel(@as(f64, @sqrt(2.0 / std.math.pi) * 1e-12), halfNormalCdf(@as(f64, 1e-12), @as(f64, 1)), 1e-10);
+    try std.testing.expectApproxEqRel(@as(f64, 1e-12), halfNormalCdf(halfNormalQuantile(@as(f64, 1e-12), @as(f64, 1)), @as(f64, 1)), 1e-10);
 
     // Chi(3) and Maxwell(1) share the same distribution.
     try std.testing.expectApproxEqAbs(@as(f64, 0.19874804309879923), chiCdf(@as(f64, 1), @as(f64, 3)), 1e-14);
@@ -58709,6 +58775,7 @@ test "derived-family CDF and quantile round-trips" {
     // Kumaraswamy(2, 3).
     const three: f64 = 3;
     try std.testing.expectApproxEqAbs(@as(f64, 0.578125), kumaraswamyCdf(0.5, two, three), 1e-12);
+    try std.testing.expectApproxEqRel(@as(f64, 1e-12), kumaraswamyCdf(kumaraswamyQuantile(@as(f64, 1e-12), two, three), two, three), 1e-9);
     for ([_]f64{ 0.1, 0.25, 0.5, 0.9 }) |p| {
         try std.testing.expectApproxEqAbs(p, kumaraswamyCdf(kumaraswamyQuantile(p, two, three), two, three), 1e-12);
     }
@@ -64181,6 +64248,13 @@ test "TruncatedNormal CDF and quantile match the truncated-normal formulas" {
     try std.testing.expectApproxEqAbs(0, symmetric.quantile(0.5), 1e-10);
     inline for ([_]f64{ 0.01, 0.3, 0.7, 0.99 }) |p| {
         try std.testing.expectApproxEqAbs(p, symmetric.cdf(symmetric.quantile(p)), 1e-7);
+    }
+    // Tiny edge masses: the local linear inversion avoids probit's absolute
+    // accuracy near the window edge. The remaining error is the f64
+    // representation of `x` near `−1` (one ulp is ~8e-5 of the offset at
+    // `p = 1e-12`).
+    inline for ([_]f64{ 1e-9, 1e-12 }) |p| {
+        try std.testing.expectApproxEqRel(p, symmetric.cdf(symmetric.quantile(p)), 2e-4);
     }
     try std.testing.expectEqual(@as(f64, -1), symmetric.quantile(0));
     try std.testing.expectEqual(@as(f64, 1), symmetric.quantile(1));

@@ -606,11 +606,17 @@ runtime float type, and explicit f32 arguments keep f32.
 - normal-derived: `exponentialCdf` / `exponentialQuantile`, `logNormalCdf` /
   `logNormalQuantile`, `halfNormalCdf` / `halfNormalQuantile`, and
   `truncatedNormalCdf` / `truncatedNormalQuantile`; log-normal uses
-  `|log_stddev|`, half-normal uses `2Φ(x/σ) − 1`, and zero scales are point
-  masses. Truncated-normal uses `(Φ(z) − Φ(α))/Z` and
-  `μ + σ·Φ⁻¹(Φ(α) + p·Z)` with the precomputed window constants, and keeps
-  the `σ = 0` point mass. These inherit the `normCdf`/`probit` approximation accuracy
-  (~1e-7). `normCdf` uses the complement form for negative `x`, so the lower
+  `|log_stddev|`, half-normal uses `erf(x/(σ√2))` with its Taylor series for
+  `x/(σ√2) < 0.5` and the A&S form above, and its quantile inverts the erf
+  series for `p < 1e-3` instead of calling `probit` at `0.5`; zero scales are
+  point masses. Truncated-normal uses `(Φ(z) − Φ(α))/Z` with the local
+  Hermite series `φ(α)·Σ (−1)^{k−1} He_{k−1}(α) δ^k/k!` when `|z − α| <
+  0.125`, and `μ + σ·Φ⁻¹(Φ(α) + p·Z)` with a `δ = mass/φ(edge)` linear
+  inversion for edge masses below `1e-6`; it keeps the `σ = 0` point mass.
+  The body values inherit the `normCdf`/`probit` approximation accuracy
+  (~1e-7), while the tiny-tail forms reach `1e-10` relative or better (the
+  truncated-normal quantile is then limited by the f64 representation of `x`
+  near the window edge, about `8e-5` of the offset at `p = 1e-12`). `normCdf` uses the complement form for negative `x`, so the lower
   tail resolves to subnormal values (`Φ(−38) ≈ 3e-316`) instead of flushing
   to zero below `Φ(−8.5)`; beyond `|x| = 6` it switches to the Mills-ratio
   asymptotic series, whose relative error is about `exp(−x²/2)` (`~1.5e-8` at
@@ -674,7 +680,9 @@ runtime float type, and explicit f32 arguments keep f32.
   `((b−a)² + (c−b)² + (a−c)²)/36` difference form, `PERT` normalizes the
   mode fractions before scaling and uses `range/√(α+β+1)`, and
   `Kumaraswamy` uses the stable log-factorial delta for its beta-function
-  moments (clamping rounding-noise negative variances to zero). Closed-form
+  moments (clamping rounding-noise negative variances to zero), and its CDF
+  and quantile use the `−expm1(β·log1p(−x^α))` / `−expm1(log1p(−p)/β)`
+  forms so tiny tails do not cancel. Closed-form
   CDFs use the same ratio-first ordering: `rayleighCdf` evaluates
   `−expm1(−(x/scale)²/2)`, the PERT diagnostic parameters normalize
   `(mode−min)/range` before scaling, `nakagamiCdf` passes
