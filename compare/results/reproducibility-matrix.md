@@ -122,6 +122,8 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Vectorized dyadic `VectorBinomial` (one word per lane per round) | `compare/results/s4-m1636-vector-binomial-dyadic-kernel.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
+| Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
+| Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Bingham proposal scales and `@log` acceptance | `compare/results/s4-m1360-bingham-precomputed-scales.md`, `compare/results/s4-m1373-bingham-log-ratio.md` |
 | Student-t recurrence table and vectorized copula CDF | `compare/results/s4-m1367-student-t-recurrence-table.md`, `compare/results/s4-m1371-vectorized-copula-cdf.md` |
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |
