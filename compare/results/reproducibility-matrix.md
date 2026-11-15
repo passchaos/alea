@@ -123,6 +123,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Vector fair binomial `p = 0.5` path (one word popcount per lane; stream-equivalent to per-lane fair draws) | `compare/results/s4-m1646-vector-binomial-fair-kernel.md` |
 | Vector binomial inverse-CDF path for non-dyadic `p` with `trials <= 64` | `compare/results/s4-m1650-vector-binomial-inverse-cdf.md` |
+| Vector binomial inverse-CDF mid trials (`65..128`) | `compare/results/s4-m1652-vector-binomial-inverse-cdf-mid-trials.md` |
 | Vectorized dyadic `VectorGeometric` / `VectorGeometricFailures` (one word per lane, `ctz` failures) | `compare/results/s4-m1642-vector-geometric-dyadic-kernel.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |
 | Vector binomial large-trial dyadic path (`trials > 64`) | `compare/results/s4-m1640-vector-binomial-large-trials.md` |

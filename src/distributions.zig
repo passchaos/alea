@@ -5758,7 +5758,7 @@ noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype
 fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, trials: u64, p: f64) VectorType {
     const lanes = vectorInfo(VectorType).len;
     const q = 1 - p;
-    var cdf: [64]f64 = undefined;
+    var cdf: [128]f64 = undefined;
     var pmf = std.math.pow(f64, q, @as(f64, @floatFromInt(trials)));
     var acc = pmf;
     cdf[0] = acc;
@@ -5896,7 +5896,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                     return vectorBinomialDyadicLarge(VectorType, source, self.sampler.trials, fields, complement);
                 }
             }
-            if (self.sampler.trials <= 64) {
+            if (self.sampler.trials <= 128) {
                 return vectorBinomialInverseCdfFrom(VectorType, source, self.sampler.trials, self.sampler.p);
             }
             var out: VectorType = undefined;
