@@ -7179,5 +7179,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1647-validate-all-refresh.md`. and
 `compare/results/s4-m1648-vector-binomial-fair-pmf-gate.md`. and
 `compare/results/s4-m1649-validate-all-refresh.md`. and
-`compare/results/s4-m1650-vector-binomial-inverse-cdf.md`.
+`compare/results/s4-m1650-vector-binomial-inverse-cdf.md`. and
+`compare/results/s4-m1651-validate-all-refresh.md`.
 
