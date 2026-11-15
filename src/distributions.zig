@@ -32368,6 +32368,39 @@ pub fn fillVectorZipfCheckedFrom(source: anytype, comptime VectorType: type, des
     sampler.fillFrom(source, dest);
 }
 
+/// Largest finite Zipf support that uses the vector CDF scan.
+const zipf_vector_cdf_max = 32;
+
+fn zipfVectorCdfTable(comptime Child: type, sampler: Zipf(Child), table: *[zipf_vector_cdf_max]Child) ?usize {
+    const n_value = sampler.nValue() orelse return null;
+    if (!std.math.isFinite(n_value)) return null;
+    if (n_value != @floor(n_value)) return null;
+    const n_int: usize = @intFromFloat(n_value);
+    if (n_int > zipf_vector_cdf_max) return null;
+    var total: Child = 0;
+    var k: usize = 1;
+    while (k <= n_int) : (k += 1) {
+        total += zipfPmfTerm(Child, @as(Child, @floatFromInt(k)), sampler.exponent);
+        table[k - 1] = total;
+    }
+    return n_int;
+}
+
+fn vectorZipfFromCdf(comptime VectorType: type, source: anytype, table: []const vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const lanes = vectorInfo(VectorType).len;
+    const F = @Vector(lanes, Child);
+    const total: Child = table[table.len - 1];
+    var uniforms: F = undefined;
+    inline for (0..lanes) |lane| uniforms[lane] = Rng.floatFrom(source, Child) * total;
+    var out: VectorType = @splat(0);
+    for (table) |threshold_value| {
+        const threshold: F = @splat(threshold_value);
+        out += @select(Child, uniforms > threshold, @as(VectorType, @splat(1)), @as(VectorType, @splat(0)));
+    }
+    return out + @as(VectorType, @splat(1));
+}
+
 pub fn VectorZipf(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -32406,34 +32439,32 @@ pub fn VectorZipf(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(1);
-            var out: VectorType = undefined;
-            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(1);
+            var table: [zipf_vector_cdf_max]Child = undefined;
+            if (zipfVectorCdfTable(Child, self.sampler, &table)) |n_int| {
+                return vectorZipfFromCdf(VectorType, source, table[0..n_int]);
+            }
             var out: VectorType = undefined;
             inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(1)));
-                return;
-            }
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
-                item.* = out;
-            }
+            self.fillFrom(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.isDegenerate()) {
                 @memset(dest, @as(VectorType, @splat(1)));
+                return;
+            }
+            var table: [zipf_vector_cdf_max]Child = undefined;
+            if (zipfVectorCdfTable(Child, self.sampler, &table)) |n_int| {
+                for (dest) |*item| item.* = vectorZipfFromCdf(VectorType, source, table[0..n_int]);
                 return;
             }
             for (dest) |*item| {
@@ -32443,6 +32474,17 @@ pub fn VectorZipf(comptime VectorType: type) type {
             }
         }
     };
+}
+
+/// `k^-exponent` with reciprocal fast paths for the common integer and
+/// half-integer exponents, avoiding a generic `pow` per table entry.
+inline fn zipfPmfTerm(comptime T: type, k: T, exponent: T) T {
+    if (exponent == 1) return 1 / k;
+    if (exponent == 1.5) return 1 / (k * @sqrt(k));
+    if (exponent == 2) return 1 / (k * k);
+    if (exponent == 0.5) return 1 / @sqrt(k);
+    if (exponent == 3) return 1 / (k * k * k);
+    return std.math.pow(T, k, -exponent);
 }
 
 /// Largest finite Zipf support that uses the hoisted CDF fill.
@@ -32565,7 +32607,7 @@ pub fn Zipf(comptime T: type) type {
             var total: T = 0;
             var k: usize = 1;
             while (k <= n_int) : (k += 1) {
-                total += std.math.pow(T, @as(T, @floatFromInt(k)), -self.exponent);
+                total += zipfPmfTerm(T, @as(T, @floatFromInt(k)), self.exponent);
                 table[k - 1] = total;
             }
             for (dest) |*item| {
