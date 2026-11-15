@@ -55,8 +55,12 @@ cancellations:
 - Pareto/GPD near the location/scale: the quantile is `μ + O(p)` and f64
   cannot represent the offset with better than `eps/p` relative precision
   (`~2e-4` at `p = 1e-12`), independent of the formula.
-- Wrapped Cauchy near the `±π` cut: the representation CDF subtracts two
-  values near 1 (`~2e-5` at `p = 1e-12`).
+- Wrapped Cauchy near the `±π` cut: the quantile output is an angle near
+  `−π`, and f64 represents the offset `δ = x + π` only to `eps·π/δ`
+  relative (`~2.4e-5` at `p = 1e-12`). A local Taylor tail series was tried
+  and rejected: it is more accurate than the representation CDF for
+  `δ ~ 1e-6..1e-9`, but the quantile's angle representation dominates at the
+  smallest `p`, so the extra code did not improve the round-trip there.
 - von Mises: the Fourier–Bessel series has a `~1e-15` absolute cancellation
   floor (`3e-5` at `p = 1e-12` for `κ = 5`, `8e-3` at `p = 1e-15`), as
   documented in S4-M1596.
