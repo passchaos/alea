@@ -32653,8 +32653,8 @@ pub fn Zeta(comptime T: type) type {
             if (e1 == 0.5) return 1 / (u * u);
             if (e1 == 3) return 1 / std.math.cbrt(u);
             if (e1 == 0.25) {
-                const root = @sqrt(u);
-                return 1 / (root * root);
+                const squared = u * u;
+                return 1 / (squared * squared);
             }
             return std.math.pow(T, u, self.neg_inv_exponent_minus_one);
         }
