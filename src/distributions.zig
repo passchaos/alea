@@ -5996,16 +5996,6 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
                 return;
             }
-            if (self.cdf_width > 0) {
-                const width: usize = self.cdf_width;
-                for (dest) |*item| {
-                    item.* = if (width > 128)
-                        vectorBinomialFromCdfBinary(VectorType, rng, self.cdf[0..width])
-                    else
-                        vectorBinomialFromCdf(VectorType, rng, self.cdf[0..width]);
-                }
-                return;
-            }
             if (self.fillInverseCdf(rng, dest)) return;
             for (dest) |*item| item.* = self.sample(rng);
         }
@@ -6017,16 +6007,6 @@ pub fn VectorBinomial(comptime VectorType: type) type {
             }
             if (self.sampler.p == 1) {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
-                return;
-            }
-            if (self.cdf_width > 0) {
-                const width: usize = self.cdf_width;
-                for (dest) |*item| {
-                    item.* = if (width > 128)
-                        vectorBinomialFromCdfBinary(VectorType, source, self.cdf[0..width])
-                    else
-                        vectorBinomialFromCdf(VectorType, source, self.cdf[0..width]);
-                }
                 return;
             }
             if (self.fillInverseCdf(source, dest)) return;
@@ -23485,9 +23465,18 @@ pub fn gamma(rng: Rng, comptime T: type, shape: T, scale: T) T {
         const z = Rng.standardNormalFastFrom(rng, T);
         return (scale * 0.5) * z * z;
     }
-    const sampler = Gamma(T).init(shape, scale) catch unreachable;
-    return sampler.sample(rng);
+    if (shape < 1) {
+        const boosted_d = (shape + 1) - @as(T, 1.0 / 3.0);
+        const boosted_c = @as(T, 1.0) / @sqrt(9 * boosted_d);
+        return (scale * gammaMarsagliaFrom(rng, T, boosted_d, boosted_c)) *
+            std.math.pow(T, Rng.floatFrom(rng, T), 1 / shape);
+    }
+    if (shape == 1) return scale * Rng.standardExponentialFastFrom(rng, T);
+    const d = shape - @as(T, 1.0 / 3.0);
+    const c = @as(T, 1.0) / @sqrt(9 * d);
+    return scale * gammaMarsagliaFrom(rng, T, d, c);
 }
+
 
 pub fn gammaChecked(rng: Rng, comptime T: type, shape: T, scale: T) Error!T {
     const dist = try Gamma(T).init(shape, scale);
@@ -23732,6 +23721,21 @@ pub fn VectorGamma(comptime VectorType: type) type {
             }
         }
     };
+}
+
+/// Marsaglia-Tsang core used by the reusable `Gamma` sampler; returns `d * v`
+/// so the free `gamma` function matches the sampler's association order.
+fn gammaMarsagliaFrom(source: anytype, comptime T: type, d: T, c: T) T {
+    while (true) {
+        const x = Rng.normalFastFrom(source, T, 0, 1);
+        const v_base = 1 + c * x;
+        if (v_base <= 0) continue;
+
+        const v = v_base * v_base * v_base;
+        const u = Rng.floatFrom(source, T);
+        if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
+        if (@log(u) < 0.5 * x * x + d * (1 - v + @log(v))) return d * v;
+    }
 }
 
 pub fn Gamma(comptime T: type) type {
