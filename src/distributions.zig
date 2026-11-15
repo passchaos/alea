@@ -7214,9 +7214,21 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
         const Self = @This();
 
         sampler: Hypergeometric,
+        /// Cached inverse-transform CDF table (support width <= 32).
+        cdf: [hypergeometric_cdf_max]f64 = undefined,
+        cdf_width: u16 = 0,
 
         pub fn init(population: u64, successes: u64, draws: u64) Error!Self {
-            return .{ .sampler = try Hypergeometric.init(population, successes, draws) };
+            var self: Self = .{ .sampler = try Hypergeometric.init(population, successes, draws) };
+            switch (self.sampler.method) {
+                .inverse_transform => {
+                    if (hypergeometricCdfTable(&self.sampler.inverse_transform, &self.cdf)) |width| {
+                        self.cdf_width = @intCast(width);
+                    }
+                },
+                else => {},
+            }
+            return self;
         }
 
         pub fn populationValue(self: Self) u64 {
@@ -7261,9 +7273,8 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
                     return out;
                 },
                 .inverse_transform => {
-                    var table: [hypergeometric_cdf_max]f64 = undefined;
-                    if (hypergeometricCdfTable(&self.sampler.inverse_transform, &table)) |width| {
-                        return vectorHypergeometricFromCdf(VectorType, source, &self.sampler.inverse_transform, table[0..width]);
+                    if (self.cdf_width > 0) {
+                        return vectorHypergeometricFromCdf(VectorType, source, &self.sampler.inverse_transform, self.cdf[0..self.cdf_width]);
                     }
                     var out: VectorType = undefined;
                     inline for (0..info.len) |lane| out[lane] = self.sampler.inverse_transform.sampleFrom(source);
@@ -7292,9 +7303,8 @@ pub fn VectorHypergeometric(comptime VectorType: type) type {
                     }
                 },
                 .inverse_transform => {
-                    var table: [hypergeometric_cdf_max]f64 = undefined;
-                    if (hypergeometricCdfTable(&self.sampler.inverse_transform, &table)) |width| {
-                        for (dest) |*item| item.* = vectorHypergeometricFromCdf(VectorType, source, &self.sampler.inverse_transform, table[0..width]);
+                    if (self.cdf_width > 0) {
+                        for (dest) |*item| item.* = vectorHypergeometricFromCdf(VectorType, source, &self.sampler.inverse_transform, self.cdf[0..self.cdf_width]);
                         return;
                     }
                     for (dest) |*item| {
@@ -22236,46 +22246,52 @@ pub fn VectorPoisson(comptime VectorType: type) type {
         const Self = @This();
 
         sampler: Poisson,
+        /// Cached small-lambda CDF table for the product method.
+        cdf: [64]f64 = undefined,
+        cdf_width: u16 = 0,
 
         pub const max_lambda = Poisson.max_lambda;
         pub const MAX_LAMBDA = Poisson.MAX_LAMBDA;
 
         pub fn init(lambda: f64) Error!Self {
-            return .{ .sampler = try Poisson.init(lambda) };
+            var self: Self = .{ .sampler = try Poisson.init(lambda) };
+            switch (self.sampler.method) {
+                .product => |threshold| self.cdf_width = @intCast(poissonCdfTableSmall(-@log(threshold), &self.cdf)),
+                else => {},
+            }
+            return self;
         }
 
-        pub fn lambdaValue(self: Self) f64 {
+        pub fn lambdaValue(self: *const Self) f64 {
             return self.sampler.lambdaValue();
         }
 
-        pub fn expectedValue(self: Self) f64 {
+        pub fn expectedValue(self: *const Self) f64 {
             return self.sampler.expectedValue();
         }
 
-        pub fn varianceValue(self: Self) f64 {
+        pub fn varianceValue(self: *const Self) f64 {
             return self.sampler.varianceValue();
         }
 
-        pub fn minValue(self: Self) u64 {
+        pub fn minValue(self: *const Self) u64 {
             _ = self;
             return 0;
         }
 
-        pub fn maxValue(self: Self) ?u64 {
+        pub fn maxValue(self: *const Self) ?u64 {
             return self.sampler.maxValue();
         }
 
-        pub fn sample(self: Self, rng: Rng) VectorType {
+        pub fn sample(self: *const Self, rng: Rng) VectorType {
             return self.sampleFrom(rng);
         }
 
-        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+        pub fn sampleFrom(self: *const Self, source: anytype) VectorType {
             switch (self.sampler.method) {
                 .zero => return @splat(0),
                 .product => |threshold| {
-                    var cdf: [64]f64 = undefined;
-                    const width = poissonCdfTableSmall(-@log(threshold), &cdf);
-                    return vectorPoissonFromCdf(VectorType, source, threshold, cdf[0..width]);
+                    return vectorPoissonFromCdf(VectorType, source, threshold, self.cdf[0..self.cdf_width]);
                 },
                 .ahrens_dieter => {
                     var out: VectorType = undefined;
@@ -22285,13 +22301,11 @@ pub fn VectorPoisson(comptime VectorType: type) type {
             }
         }
 
-        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+        pub fn fill(self: *const Self, rng: Rng, dest: []VectorType) void {
             switch (self.sampler.method) {
                 .zero => @memset(dest, @as(VectorType, @splat(0))),
                 .product => |threshold| {
-                    var cdf: [64]f64 = undefined;
-                    const width = poissonCdfTableSmall(-@log(threshold), &cdf);
-                    for (dest) |*item| item.* = vectorPoissonFromCdf(VectorType, rng, threshold, cdf[0..width]);
+                    for (dest) |*item| item.* = vectorPoissonFromCdf(VectorType, rng, threshold, self.cdf[0..self.cdf_width]);
                 },
                 .ahrens_dieter => |method| {
                     for (dest) |*item| {
@@ -22303,13 +22317,11 @@ pub fn VectorPoisson(comptime VectorType: type) type {
             }
         }
 
-        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+        pub fn fillFrom(self: *const Self, source: anytype, dest: []VectorType) void {
             switch (self.sampler.method) {
                 .zero => @memset(dest, @as(VectorType, @splat(0))),
                 .product => |threshold| {
-                    var cdf: [64]f64 = undefined;
-                    const width = poissonCdfTableSmall(-@log(threshold), &cdf);
-                    for (dest) |*item| item.* = vectorPoissonFromCdf(VectorType, source, threshold, cdf[0..width]);
+                    for (dest) |*item| item.* = vectorPoissonFromCdf(VectorType, source, threshold, self.cdf[0..self.cdf_width]);
                 },
                 .ahrens_dieter => |method| {
                     for (dest) |*item| {
