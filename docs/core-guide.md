@@ -655,7 +655,10 @@ runtime float type, and explicit f32 arguments keep f32.
   `1 − (1 + ξ(x−μ)/σ)^(−1/ξ)` with `expm1`/`log1p` tails and bounded support
   for `ξ < 0`, the generalized extreme value distribution uses
   `exp(−(1+ξ(x−μ)/σ)^(−1/ξ))` (Gumbel limit at `ξ = 0`) with one `Exp(1)`
-  inverse-CDF draw (`−log p` below `p = 0.5` and `−log1p(p−1)` above), the
+  inverse-CDF draw (`−log p` below `p = 0.5` and `−log1p(p−1)` above) using
+  `exp(−ξ·ln E) − 1` in the scalar sampler and `expm1(−ξ·ln E)` in the
+  per-lane vector path (the system `exp` is faster per scalar call, while the
+  inlined pure-Zig `expm1` pipelines better across vector lanes), the
   Cauchy and small-integer Student-t lower tails use `atan(1/|z|)` and
   `0.5·I_x` forms instead of `0.5 ±` cancellations, the beta quantile
   bisects with a relative tolerance, inverse-gamma inverts the upper gamma

@@ -16792,7 +16792,7 @@ pub const GeneralizedExtremeValueError = Error;
 fn generalizedExtremeValuePointFrom(source: anytype, comptime T: type, mu: T, sigma: T, xi: T) T {
     const e = Rng.standardExponentialFastFrom(source, T);
     if (xi == 0) return mu - sigma * @log(e);
-    return mu + sigma * std.math.expm1(-xi * @log(e)) / xi;
+    return mu + sigma * (@exp(-xi * @log(e)) - 1) / xi;
 }
 
 fn fillGeneralizedExtremeValuePointsFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, xi: T) void {
@@ -16807,7 +16807,12 @@ fn fillGeneralizedExtremeValuePointsFrom(source: anytype, comptime T: type, dest
 /// `GeneralizedPareto`; absent from local Rust `rand_distr`.
 ///
 /// Sampling inverts the CDF with one `Exp(1)` draw:
-/// `x = μ + σ·expm1(−ξ·ln E)/ξ` for `ξ ≠ 0` and `x = μ − σ·ln E` for `ξ = 0`.
+/// `x = μ + σ·(e^{−ξ·ln E} − 1)/ξ` for `ξ ≠ 0` and `x = μ − σ·ln E` for
+/// `ξ = 0`. The scalar path uses `exp(t) − 1` rather than `expm1(t)` because
+/// the system `exp` is measurably faster than the pure-Zig musl `expm1`; the
+/// cancellation only affects `|t| ≪ 1`, where the absolute error is bounded by
+/// one ulp of the deviation (about `1e-15` for the standard parameters). The
+/// quantile keeps `expm1` because it is not a throughput path.
 pub fn GeneralizedExtremeValue(comptime T: type) type {
     comptime requireFloat(T);
     return struct {
@@ -17081,6 +17086,8 @@ pub fn VectorGeneralizedExtremeValue(comptime VectorType: type) type {
 
 /// Apply the GEV inverse CDF to a vector of `Exp(1)` draws:
 /// `x = μ + σ·expm1(−ξ·ln E)/ξ` for `ξ ≠ 0` and `x = μ − σ·ln E` for `ξ = 0`.
+/// The per-lane `expm1` (pure Zig, inlined into each lane) pipelines better
+/// than per-lane system `exp` calls here, so the vector path keeps it.
 fn generalizedExtremeValueFromExponentialVector(comptime VectorType: type, e: VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), xi: vectorChild(VectorType)) VectorType {
     const L = vectorInfo(VectorType).len;
     const mu_v: VectorType = @splat(mu);

@@ -110,6 +110,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Scalar-per-lane `VectorVonMisesFisher` (per-lane scalar S² vMF draws) | `compare/results/s4-m1586-scalar-per-lane-vector-vmf.md` |
 | Vector Kent uniform-circle angle branch for `a < 1.5` | `compare/results/s4-m1587-vector-kent-uniform-angle.md` |
 | Scalar Kent `log I₀` series for `a <= 1.5` (acceptance accuracy `3.3e-8` -> `1.2e-11`) | `compare/results/s4-m1604-scalar-kent-bessel-series.md` |
+| Scalar GEV sampling `exp(−ξ·ln E) − 1` (vector lanes keep `expm1`) | `compare/results/s4-m1615-gev-benchmark-rows.md` |
 | Bingham proposal scales and `@log` acceptance | `compare/results/s4-m1360-bingham-precomputed-scales.md`, `compare/results/s4-m1373-bingham-log-ratio.md` |
 | Student-t recurrence table and vectorized copula CDF | `compare/results/s4-m1367-student-t-recurrence-table.md`, `compare/results/s4-m1371-vectorized-copula-cdf.md` |
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |
