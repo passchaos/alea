@@ -232,6 +232,7 @@ pub fn main(init: std.process.Init) !void {
     try benchFillExponentialNativeF32(io, stdout, "alea fillExponentialNativeF32", bytes / 64);
     try benchFillExponentialNativeF32Scalar(io, stdout, "alea fillExponentialNativeF32 scalar direct", bytes / 64);
     try benchPoisson(io, stdout, "alea poisson", bytes / 64);
+    try benchPoissonLambda(io, stdout, "alea poisson small", bytes / 64, 4);
     try benchPoissonTopLevelFastDirect(io, stdout, "alea poisson top-level fast direct", bytes / 64);
     try benchPoissonTopLevelScalar(io, stdout, "alea poisson top-level scalar direct", bytes / 64);
     try benchPoissonFastDirect(io, stdout, "alea poisson fast direct", bytes / 64);
@@ -4892,6 +4893,10 @@ fn benchNegativeBinomialFair(io: std.Io, stdout: *std.Io.Writer, name: []const u
 }
 
 fn benchPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    return benchPoissonLambda(io, stdout, name, count, 20);
+}
+
+fn benchPoissonLambda(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, lambda: f64) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
     var best_million_per_s: f64 = 0;
     var best_checksum: u64 = 0;
@@ -4902,7 +4907,7 @@ fn benchPoisson(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usi
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
         var checksum: u64 = 0;
-        while (i < count) : (i += 1) checksum +%= alea.distributions.poisson(rng, 20);
+        while (i < count) : (i += 1) checksum +%= alea.distributions.poisson(rng, lambda);
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
