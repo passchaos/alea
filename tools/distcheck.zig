@@ -2773,6 +2773,7 @@ fn checkLongRun(samples: usize) !void {
         var vector_poisson_hits = [_]usize{0} ** 3;
         var vector_binomial_large_hits = [_]usize{0} ** 3;
         var vector_binomial_extreme_hits: usize = 0;
+        var scalar_poisson_hits = [_]usize{0} ** 3;
         var bernoulli_hits: usize = 0;
         var i: usize = 0;
         while (i < samples) : (i += 1) {
@@ -2846,6 +2847,13 @@ fn checkLongRun(samples: usize) !void {
             for (vbe_buf) |vec| inline for (0..4) |lane| {
                 if (vec[lane] <= 127) vector_binomial_extreme_hits += 1;
             };
+            var sp_buf: [8]u64 = undefined;
+            alea.distributions.fillPoisson(rng, &sp_buf, 4);
+            for (sp_buf) |value| {
+                if (value <= 2) scalar_poisson_hits[0] += 1;
+                if (value <= 4) scalar_poisson_hits[1] += 1;
+                if (value <= 8) scalar_poisson_hits[2] += 1;
+            }
         }
         try expectEmpiricalCdf("long binomial cdf(4)", binomial_hits[0], samples, binomial.cdf(4));
         try expectEmpiricalCdf("long binomial cdf(6)", binomial_hits[1], samples, binomial.cdf(6));
@@ -2890,6 +2898,9 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long vector binomial(200,0.4) cdf(80)", vector_binomial_large_hits[1], samples * 8, binomial_large.cdf(80));
         try expectEmpiricalCdf("long vector binomial(200,0.4) cdf(84)", vector_binomial_large_hits[2], samples * 8, binomial_large.cdf(84));
         try expectEmpiricalCdf("long vector binomial(128,0.999) cdf(127)", vector_binomial_extreme_hits, samples * 8, binomial_extreme.cdf(127));
+        try expectEmpiricalCdf("long fillPoisson cdf(2)", scalar_poisson_hits[0], samples * 8, poisson4.cdf(2));
+        try expectEmpiricalCdf("long fillPoisson cdf(4)", scalar_poisson_hits[1], samples * 8, poisson4.cdf(4));
+        try expectEmpiricalCdf("long fillPoisson cdf(8)", scalar_poisson_hits[2], samples * 8, poisson4.cdf(8));
         try expectEmpiricalCdf("long bernoulli cdf(0)", bernoulli_hits, samples, bernoulli.cdf(0));
         const inv_n = 1 / @as(f64, @floatFromInt(samples));
         std.debug.print("long discrete cdf: binomial(4)={d:.6} poisson(5)={d:.6} hypergeometric(2)={d:.6} negative-binomial(3)={d:.6} geometric(2)={d:.6} zipf(2)={d:.6} zeta(1)={d:.6} bernoulli(0)={d:.6}\n", .{

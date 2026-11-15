@@ -22011,7 +22011,9 @@ pub const Poisson = struct {
         switch (self.method) {
             .zero => @memset(dest, 0),
             .product => |threshold| {
-                for (dest) |*item| item.* = poissonProduct(rng, threshold);
+                var table: [64]f64 = undefined;
+                const width = poissonCdfTableSmall(-@log(threshold), &table);
+                for (dest) |*item| item.* = poissonFromCdfTable(rng, threshold, table[0..width]);
             },
             .ahrens_dieter => |method| {
                 for (dest) |*item| item.* = method.sample(rng);
@@ -22023,7 +22025,9 @@ pub const Poisson = struct {
         switch (self.method) {
             .zero => @memset(dest, 0),
             .product => |threshold| {
-                for (dest) |*item| item.* = poissonProductFrom(source, threshold);
+                var table: [64]f64 = undefined;
+                const width = poissonCdfTableSmall(-@log(threshold), &table);
+                for (dest) |*item| item.* = poissonFromCdfTable(source, threshold, table[0..width]);
             },
             .ahrens_dieter => |method| {
                 for (dest) |*item| item.* = method.sampleFrom(source);
@@ -22424,6 +22428,21 @@ fn vectorPoissonFromCdf(
         if (!found[lane]) out[lane] = poissonProductFrom(source, threshold);
     }
     return out;
+}
+
+/// Scalar inverse-CDF draw from a small Poisson table. A uniform above the
+/// last stored cumulative value (about `1e-15` tail) falls back to the exact
+/// product method.
+fn poissonFromCdfTable(source: anytype, threshold: f64, cdf: []const f64) u64 {
+    const u = Rng.floatFrom(source, f64);
+    var lo: usize = 0;
+    var hi: usize = cdf.len;
+    while (lo < hi) {
+        const mid = lo + (hi - lo) / 2;
+        if (u > cdf[mid]) lo = mid + 1 else hi = mid;
+    }
+    if (lo == cdf.len) return poissonProductFrom(source, threshold);
+    return lo;
 }
 
 const PoissonAdParts = struct {

@@ -239,6 +239,8 @@ pub fn main(init: std.process.Init) !void {
     try benchPoissonWyhash(io, stdout, "alea poisson wyhash64 direct", bytes / 64);
     try benchPoissonCached(io, stdout, "alea poisson cached", bytes / 64);
     try benchFillPoisson(io, stdout, "alea fillPoisson", bytes / 64);
+    try benchFillPoissonLambda(io, stdout, "alea fillPoisson small", bytes / 64, 4);
+    try benchFillPoissonSmallCdf(io, stdout, "alea candidate fillPoisson small cdf", bytes / 64);
     try benchFillPoissonFastDirect(io, stdout, "alea fillPoisson fast direct", bytes / 64);
     try benchFillPoissonScalar(io, stdout, "alea fillPoisson scalar direct", bytes / 64);
     try benchGeometric(io, stdout, "alea geometric", bytes / 64);
@@ -5041,6 +5043,88 @@ fn benchPoissonCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
         }
     }
 
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillPoissonLambda(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize, lambda: f64) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa15a);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillPoisson(rng, out[0..n], lambda);
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillPoissonSmallCdf(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const lambda: f64 = 4;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: u64 = 0;
+    var out: [4096]u64 = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0xa15a);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: u64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            var cdf: [64]f64 = undefined;
+            var pmf: f64 = @exp(-lambda);
+            var acc: f64 = pmf;
+            cdf[0] = acc;
+            var k: usize = 0;
+            while (1 - acc > 1e-15 and k + 1 < cdf.len) {
+                k += 1;
+                pmf *= lambda / @as(f64, @floatFromInt(k));
+                acc += pmf;
+                cdf[k] = acc;
+            }
+            const width = k + 1;
+            for (out[0..n]) |*item| {
+                const u = alea.Rng.floatFrom(rng, f64);
+                var lo: usize = 0;
+                var hi: usize = width;
+                while (lo < hi) {
+                    const mid = lo + (hi - lo) / 2;
+                    if (u > cdf[mid]) lo = mid + 1 else hi = mid;
+                }
+                item.* = lo;
+            }
+            for (out[0..n]) |value| checksum +%= value;
+            remaining -= n;
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best_million_per_s, best_checksum });
 }
