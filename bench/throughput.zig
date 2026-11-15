@@ -463,6 +463,9 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorDistribution(alea.distributions.VectorLaplace(V4), io, stdout, "alea vector laplace f64x4", bytes / 32, alea.distributions.VectorLaplace(V4).init(0, 1) catch unreachable, 0x9a08);
     try benchVectorDistribution(alea.distributions.VectorKumaraswamy(V4), io, stdout, "alea vector kumaraswamy f64x4", bytes / 32, alea.distributions.VectorKumaraswamy(V4).init(2, 5) catch unreachable, 0x9a09);
     try benchVectorDistribution(alea.distributions.VectorPowerFunction(V4), io, stdout, "alea vector power-function f64x4", bytes / 32, alea.distributions.VectorPowerFunction(V4).init(-1, 2, 3) catch unreachable, 0x9a0a);
+    try benchVectorDistribution(alea.distributions.VectorCauchy(V4), io, stdout, "alea vector cauchy f64x4", bytes / 32, alea.distributions.VectorCauchy(V4).init(0, 1) catch unreachable, 0x9a0b);
+    try benchVectorDistribution(alea.distributions.VectorLogistic(V4), io, stdout, "alea vector logistic f64x4", bytes / 32, alea.distributions.VectorLogistic(V4).init(0, 1) catch unreachable, 0x9a0c);
+    try benchVectorDistribution(alea.distributions.VectorLogLogistic(V4), io, stdout, "alea vector log-logistic f64x4", bytes / 32, alea.distributions.VectorLogLogistic(V4).init(2, 3) catch unreachable, 0x9a0d);
     try benchSkewNormal(io, stdout, "alea skew-normal", bytes / 128);
     try benchSkewNormalFastDirect(io, stdout, "alea skew-normal fast direct", bytes / 128);
     try benchSkewNormalRaw(alea.FastPrng, io, stdout, "alea skew-normal raw fast direct", bytes / 128, 0x5ce9, 1);
