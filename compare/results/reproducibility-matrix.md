@@ -135,6 +135,7 @@ upgraded. Any change must be documented in the comparison/coverage notes.
 | Small-mean binomial waiting-time dispatch | `compare/results/s4-m1412-binomial-waiting-threshold.md` |
 | Multinomial lead-category ordering | `compare/results/s4-m1416-multinomial-lead-order.md` |
 | Stream-preserving speedups (identical checksums) | `compare/results/s4-m1414-one-log-hin-factorial.md`, `compare/results/s4-m1418-bingham-pade-squeeze.md`, `compare/results/s4-m1451-hin-binomial-fill-setup.md`, `compare/results/s4-m1453-negative-binomial-fill-rate.md` |
+| Vector Student-t per-lane `studentTFrom` (identical checksum) | `compare/results/s4-m1662-vector-student-t-per-lane.md` |
 | Packed dyadic `fillChance` probabilities | `compare/results/s4-m1420-dyadic-chance-fills.md`, `compare/results/s4-m1422-bernoulli-packed-fill.md`, `compare/results/s4-m1424-nibble-chance-fills.md`, `compare/results/s4-m1426-dyadic-bernoulli-dispatch.md`, `compare/results/s4-m1428-fillratio-packed-denominators.md`, `compare/results/s4-m1430-small-dyadic-chance.md`, `compare/results/s4-m1432-distcheck-dyadic-multinomial-gates.md` |
 | Cached binomial sampler and its small-mean inverse-CDF stream | `compare/results/s4-m1444-cached-binomial-sampler.md`, `compare/results/s4-m1447-cached-binomial-inversion.md` |
 | Huge-trial binomial sampler and huge-parameter binomial CDF | `compare/results/s4-m1458-huge-trial-binomial-exactness.md`, `compare/results/s4-m1460-huge-parameter-binomial-cdf.md` |

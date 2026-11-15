@@ -25944,13 +25944,13 @@ pub fn VectorStudentT(comptime VectorType: type) type {
 
         pub fn sample(self: Self, rng: Rng) VectorType {
             var out: VectorType = undefined;
-            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sample(rng);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = studentTFrom(rng, Child, self.sampler.dofValue());
             return out;
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             var out: VectorType = undefined;
-            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
+            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = studentTFrom(source, Child, self.sampler.dofValue());
             return out;
         }
 
