@@ -66968,6 +66968,20 @@ test "noncentral F CDF and quantile match central and the sampler" {
     try std.testing.expect(noncentralFCdf(@as(f32, 1), @as(f32, 5), @as(f32, 10), @as(f32, 4)) > 0.1);
 }
 
+test "noncentral family extreme-tail round-trips" {
+    // Exact mixture paths stay accurate deep into both tails.
+    inline for ([_]f64{ 1.0e-12, 1.0e-8, 1.0 - 1.0e-8 }) |p| {
+        try std.testing.expectApproxEqRel(p, noncentralChiSquaredCdf(noncentralChiSquaredQuantile(p, 3, 4), 3, 4), 1.0e-9);
+        try std.testing.expectApproxEqRel(p, noncentralFCdf(noncentralFQuantile(p, 5, 10, 4), 5, 10, 4), 1.0e-9);
+        try std.testing.expectApproxEqRel(p, noncentralChiCdf(noncentralChiQuantile(p, 3, 4), 3, 4), 1.0e-9);
+    }
+    // The huge-lambda Patnaik fallback is a two-moment approximation, so its
+    // extreme-tail round-trip is gated at `1e-3` relative.
+    inline for ([_]f64{ 1.0e-8, 0.5, 1.0 - 1.0e-8 }) |p| {
+        try std.testing.expectApproxEqRel(p, noncentralChiSquaredCdf(noncentralChiSquaredQuantile(p, 3, 3.0e5), 3, 3.0e5), 1.0e-3);
+    }
+}
+
 test "noncentral chi-squared large-lambda Patnaik fallback matches the sampler" {
     const alea = @import("root.zig");
     var engine = alea.DefaultPrng.init(0x126b);

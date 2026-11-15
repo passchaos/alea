@@ -7100,5 +7100,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1568-noncentral-t-complement-series.md`, and
 `compare/results/s4-m1569-validate-all-refresh.md`, and
 `compare/results/s4-m1570-noncentral-t-lower-tail-split.md`, and
-`compare/results/s4-m1571-validate-all-refresh.md`.
+`compare/results/s4-m1571-validate-all-refresh.md`, and
+`compare/results/s4-m1572-noncentral-family-tail-roundtrips.md`.
 
