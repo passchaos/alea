@@ -402,6 +402,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4 direct", lanes / 128, 0xd444, fillDistZetaF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorZeta.fill f64x4", lanes / 128, 0xd444, fillDistZetaSamplerF64);
     try benchVectorF64x4(io, stdout, "alea candidate fillVectorZeta dense f64x4", lanes / 128, 0xd445, fillDistZetaDenseF64);
+    try benchVectorF64x4(io, stdout, "alea candidate fillVectorZipf dense f64x4 n=10 s=1.5", lanes / 128, 0xd447, fillDistZipfDenseF64);
     try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4", lanes / 8, 0xd454, fillDistUnitCircleF64);
     try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4 direct", lanes / 8, 0xd454, fillDistUnitCircleF64Direct);
     try benchUnit2F64x4(io, stdout, "alea distributions.VectorUnitCircle.fill f64x4", lanes / 8, 0xd454, fillDistUnitCircleSamplerF64);
@@ -1971,6 +1972,55 @@ fn fillDistZetaDenseF64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4
         var out: V = undefined;
         inline for (0..4) |lane| {
             out[lane] = if (accept[lane] or std.math.isInf(x[lane])) x[lane] else zetaDenseScalarFrom(engine);
+        }
+        item.* = out;
+    }
+}
+
+fn zipfDenseScalarFrom(engine: *alea.ScalarPrng) f64 {
+    const s: f64 = 1.5;
+    const t: f64 = 2.3676087043558105;
+    while (true) {
+        const u = alea.Rng.floatFrom(engine, f64);
+        const pt = u * t;
+        const inv_b = if (pt <= 1) pt else blk: {
+            const base = pt * (1 - s) + s;
+            break :blk 1 / (base * base);
+        };
+        const x = @floor(inv_b + 1);
+        var threshold: f64 = 0;
+        if (x > 1) threshold = s * @log(x / inv_b);
+        if (alea.Rng.standardExponentialFrom(engine, f64) >= threshold) return x;
+    }
+}
+
+/// Dense Zipf candidate: one vector inverse-CDF + acceptance attempt with
+/// vector log/exp, then scalar continuation for rejected lanes.
+fn fillDistZipfDenseF64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    const V = @Vector(4, f64);
+    const U = @Vector(4, u64);
+    const scale: V = @splat(0x1.0p-53);
+    const one: V = @splat(1.0);
+    const zero: V = @splat(0.0);
+    const s: V = @splat(1.5);
+    const t: V = @splat(2.3676087043558105);
+    for (dest) |*item| {
+        var words_u: U = undefined;
+        inline for (0..4) |lane| words_u[lane] = engine.next();
+        const u = @as(V, @floatFromInt(words_u >> @splat(11))) * scale;
+        const pt = u * t;
+        const base = pt * (one - s) + s;
+        const inv_recip = one / (base * base);
+        const inv_b = @select(f64, pt <= one, pt, inv_recip);
+        const x = @floor(inv_b + one);
+        const threshold = @select(f64, x > one, s * @log(x / inv_b), zero);
+        var words_v: U = undefined;
+        inline for (0..4) |lane| words_v[lane] = engine.next();
+        const v = @as(V, @floatFromInt(words_v >> @splat(11))) * scale;
+        const accept = v <= @exp(-threshold);
+        var out: V = undefined;
+        inline for (0..4) |lane| {
+            out[lane] = if (accept[lane]) x[lane] else zipfDenseScalarFrom(engine);
         }
         item.* = out;
     }
