@@ -22403,6 +22403,16 @@ pub fn geometricFailuresFrom(source: anytype, p: f64) u64 {
     std.debug.assert(geometricProbabilityValid(p, true));
     if (p == 1) return 0;
     if (geometricFailuresSaturates(p)) return geometricFailureMax;
+    if (p == 0.5) {
+        // Leading zeros of a uniform word are geometric(1/2) failures; this
+        // matches `standardGeometric` and avoids the exponential draw.
+        var failures: u64 = 0;
+        while (true) {
+            const zeros = @clz(Rng.nextFrom(source));
+            failures += zeros;
+            if (zeros < 64) return failures;
+        }
+    }
     // `floor(E / −log(1−p))` with `E ~ Exp(1)` has tail `exp(−q·k) = (1−p)^k`,
     // which is exactly the geometric law of `floor(log(1−u) / log(1−p))`.
     // The ziggurat exponential replaces the log transform at a fraction of
