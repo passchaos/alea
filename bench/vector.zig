@@ -392,6 +392,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4", lanes / 128, 0xd444, fillDistZetaF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorZeta f64x4 direct", lanes / 128, 0xd444, fillDistZetaF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorZeta.fill f64x4", lanes / 128, 0xd444, fillDistZetaSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea candidate fillVectorZeta dense f64x4", lanes / 128, 0xd445, fillDistZetaDenseF64);
     try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4", lanes / 8, 0xd454, fillDistUnitCircleF64);
     try benchUnit2F64x4(io, stdout, "alea distributions.fillVectorUnitCircle f64x4 direct", lanes / 8, 0xd454, fillDistUnitCircleF64Direct);
     try benchUnit2F64x4(io, stdout, "alea distributions.VectorUnitCircle.fill f64x4", lanes / 8, 0xd454, fillDistUnitCircleSamplerF64);
@@ -1808,6 +1809,48 @@ fn fillDistZetaF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(
 fn fillDistZetaSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorZeta(@Vector(4, f64)).init(3) catch unreachable;
     sampler.fill(rng, dest);
+}
+
+/// Scalar rejection-inversion continuation for zeta(3), used by the dense
+/// candidate for lanes whose vector attempt rejects.
+fn zetaDenseScalarFrom(engine: *alea.ScalarPrng) f64 {
+    while (true) {
+        const u = alea.Rng.floatOpenClosedFrom(engine, f64);
+        const x = @floor(1 / @sqrt(u));
+        if (std.math.isInf(x)) return x;
+        const s = 1 + 1 / x;
+        const t = s * s;
+        const v = alea.Rng.floatFrom(engine, f64);
+        if (v * x * (t - 1) * 4 <= t * 3) return x;
+    }
+}
+
+/// Dense zeta(3) candidate: one f64x4 inverse-CDF attempt with vector math,
+/// then scalar continuation only for rejected lanes. Changes the stream shape
+/// versus per-lane scalar sampling.
+fn fillDistZetaDenseF64(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    const V = @Vector(4, f64);
+    const U = @Vector(4, u64);
+    const scale: V = @splat(0x1.0p-53);
+    const one: V = @splat(1.0);
+    const b: V = @splat(4.0);
+    for (dest) |*item| {
+        var words_u: U = undefined;
+        inline for (0..4) |lane| words_u[lane] = engine.next();
+        const u = @mulAdd(V, @as(V, @floatFromInt(words_u >> @splat(11))), scale, scale);
+        const x = @floor(one / @sqrt(u));
+        var words_v: U = undefined;
+        inline for (0..4) |lane| words_v[lane] = engine.next();
+        const v = @as(V, @floatFromInt(words_v >> @splat(11))) * scale;
+        const shifted = one + one / x;
+        const t = shifted * shifted;
+        const accept = v * x * (t - one) * b <= t * (b - one);
+        var out: V = undefined;
+        inline for (0..4) |lane| {
+            out[lane] = if (accept[lane] or std.math.isInf(x[lane])) x[lane] else zetaDenseScalarFrom(engine);
+        }
+        item.* = out;
+    }
 }
 
 fn fillDistUnitCircleF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: [][2]@Vector(4, f64)) void {

@@ -32483,6 +32483,67 @@ pub fn fillVectorZetaCheckedFrom(source: anytype, comptime VectorType: type, des
     sampler.fillFrom(source, dest);
 }
 
+/// Dense zeta proposal for f64 vectors with a vectorizable inverse-CDF fast
+/// path (`exponent - 1` in {0.25, 0.5, 1, 2}): one full-lane inverse-CDF
+/// attempt with vector math, then the scalar rejection-inversion continuation
+/// for rejected lanes. This is a versioned stream shape versus per-lane scalar
+/// sampling; the proposal and acceptance test are the same kernel.
+fn vectorZetaDenseSupported(exponent_minus_one: f64) bool {
+    return exponent_minus_one == 0.25 or exponent_minus_one == 0.5 or
+        exponent_minus_one == 1 or exponent_minus_one == 2;
+}
+
+fn vectorZetaDenseFrom(
+    comptime VectorType: type,
+    source: anytype,
+    sampler: Zeta(vectorChild(VectorType)),
+    exponent_minus_one: f64,
+) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    const V = VectorType;
+    const U = @Vector(lanes, u64);
+    const one: V = @splat(1.0);
+    const scale: V = @splat(0x1.0p-53);
+    const b: V = @splat(@as(vectorChild(VectorType), sampler.b));
+
+    var words_u: U = undefined;
+    inline for (0..lanes) |lane| words_u[lane] = Rng.nextFrom(source);
+    const u = @mulAdd(V, @as(V, @floatFromInt(words_u >> @splat(11))), scale, scale);
+    const x = if (exponent_minus_one == 2)
+        @floor(one / @sqrt(u))
+    else if (exponent_minus_one == 1)
+        @floor(one / u)
+    else if (exponent_minus_one == 0.5)
+        @floor(one / (u * u))
+    else blk: {
+        const squared = u * u;
+        break :blk @floor(one / (squared * squared));
+    };
+
+    var words_v: U = undefined;
+    inline for (0..lanes) |lane| words_v[lane] = Rng.nextFrom(source);
+    const v = @as(V, @floatFromInt(words_v >> @splat(11))) * scale;
+    const shifted = one + one / x;
+    const t = if (exponent_minus_one == 2)
+        shifted * shifted
+    else if (exponent_minus_one == 1)
+        shifted
+    else if (exponent_minus_one == 0.5)
+        @sqrt(shifted)
+    else
+        @sqrt(@sqrt(shifted));
+    const accept = v * x * (t - one) * b <= t * (b - one);
+
+    var out: V = undefined;
+    inline for (0..lanes) |lane| {
+        out[lane] = if (accept[lane] or std.math.isInf(x[lane]))
+            x[lane]
+        else
+            sampler.nextSampleFrom(source);
+    }
+    return out;
+}
+
 pub fn VectorZeta(comptime VectorType: type) type {
     const Child = vectorChild(VectorType);
     requireFloat(Child);
@@ -32517,29 +32578,24 @@ pub fn VectorZeta(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.isDegenerate()) return @splat(1);
-            var out: VectorType = undefined;
-            inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
-            return out;
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.isDegenerate()) return @splat(1);
+            const exponent_minus_one = self.sampler.exponent_minus_one;
+            if (comptime vectorChild(VectorType) == f64) {
+                if (vectorZetaDenseSupported(exponent_minus_one)) {
+                    return vectorZetaDenseFrom(VectorType, source, self.sampler, exponent_minus_one);
+                }
+            }
             var out: VectorType = undefined;
             inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
             return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(1)));
-                return;
-            }
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(rng);
-                item.* = out;
-            }
+            self.fillFrom(rng, dest);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -32547,11 +32603,7 @@ pub fn VectorZeta(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(1)));
                 return;
             }
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..vectorInfo(VectorType).len) |lane| out[lane] = self.sampler.sampleFrom(source);
-                item.* = out;
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
 
         fn isDegenerate(self: Self) bool {

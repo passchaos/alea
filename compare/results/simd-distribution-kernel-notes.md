@@ -46,6 +46,22 @@ discovery. For example, `zig build -Doptimize=ReleaseFast -Dcpu=native
 ziggurat-probe -- 1048576 "f32x8 correct"` runs only the correct f32x8
 repair rows before a real `vectorbench` follow-up.
 
+## Adopted Dense Discrete Kernel
+
+The first dense candidate to clear the real-harness bar is the S4-M1675 vector
+zeta kernel, which is not a normal/exponential repair shape: one full-lane
+inverse-CDF attempt with f64 vector math (reciprocal/square-root/square, one
+floor, one multiply-compare), then the scalar rejection-inversion continuation
+only for rejected lanes. It covers `exponent - 1` in `{0.25, 0.5, 1, 2}` and
+raises the f64 vector rows from 128-158M to 212-349M lanes/s in
+`vectorbench -- 16777216 "Zeta"`, at or above the ~250M scalar `zeta` rate.
+The stream shape is versioned; the proposal and acceptance test are the same
+kernel, and a 400k-lane audit over exponents 1.25/1.5/2/3 shows max
+empirical-CDF error 0.00029-0.00060. The remaining dense targets
+(`fisher-f`, Bessel/Bingham directional rows, and the per-lane
+Poisson/hypergeometric/Zipf rows) still need candidates that satisfy the
+requirements below.
+
 ## Rejected Or Deferred Shapes
 
 - Vector Box-Muller normal kernels are too slow for default use.
