@@ -24474,8 +24474,7 @@ pub fn erlang(rng: Rng, comptime T: type, shape: u64, scale: T) T {
     comptime requireFloat(T);
     std.debug.assert(shape > 0 and scale >= 0 and std.math.isFinite(scale));
     if (scale == 0) return 0;
-    const sampler = Erlang(T).init(shape, scale) catch unreachable;
-    return sampler.sample(rng);
+    return gamma(rng, T, @as(T, @floatFromInt(shape)), scale);
 }
 
 pub fn erlangChecked(rng: Rng, comptime T: type, shape: u64, scale: T) Error!T {
