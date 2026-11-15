@@ -7215,5 +7215,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1683-validate-all-refresh.md`. and
 `compare/results/s4-m1684-vector-binomial-large-cdf-fill.md`. and
 `compare/results/s4-m1685-validate-all-refresh.md`. and
-`compare/results/s4-m1686-scalar-poisson-cdf-fill.md`.
+`compare/results/s4-m1686-scalar-poisson-cdf-fill.md`. and
+`compare/results/s4-m1687-validate-all-refresh.md`.
 
