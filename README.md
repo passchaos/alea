@@ -163,7 +163,8 @@ The current Linux-first roadmap is intentionally broad:
   cauchy, laplace, logistic, log-logistic, kumaraswamy, power-function,
   rayleigh, maxwell, pareto, weibull, gumbel, frechet, skew-normal, PERT,
   inverse Gaussian,
-  normal-inverse Gaussian, Zipf, Zeta, unit geometry samplers, dirichlet,
+  normal-inverse Gaussian, generalized Pareto, generalized extreme value,
+  Zipf, Zeta, unit geometry samplers, dirichlet,
   multinomial, von Mises, wrapped Cauchy, von Mises-Fisher,
   SIMD vector von Mises/von Mises-Fisher/Watson/Bingham/Kent,
   Kent, matrix von Mises-Fisher (matrix Langevin), matrix Fisher on
@@ -210,6 +211,10 @@ The current Linux-first roadmap is intentionally broad:
   `frechetQuantile`, `paretoCdf` / `paretoQuantile`, `powerFunctionCdf` /
   `powerFunctionQuantile`, `kumaraswamyCdf` / `kumaraswamyQuantile`,
   `arcsineCdf` / `arcsineQuantile`, `triangularCdf` / `triangularQuantile`,
+  `generalizedParetoCdf` / `generalizedParetoQuantile`,
+  `generalizedExtremeValueCdf` / `generalizedExtremeValueQuantile`,
+  `vonMisesCdf` / `vonMisesQuantile`,
+  `wrappedCauchyCdf` / `wrappedCauchyQuantile`,
   `Dirichlet(T).marginalCdf` / `marginalQuantile`, and
   `Multinomial.marginalCdf` / `marginalQuantile`, plus sampler-level
   `cdf(x)` / `quantile(p)` methods on the core and derived continuous and
