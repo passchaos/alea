@@ -1895,6 +1895,44 @@ fn checkBinnedChiSquare(comptime Model: type, comptime label: []const u8, rng: a
 /// kernel: outcome bins 0-4, 5-9, ..., 35-39, 40 use exact Binomial(40, 0.25)
 /// probabilities, since the continuous CDF-binning form is not equiprobable
 /// for discrete laws.
+/// Discrete pmf-binned chi-square gate for the vector binomial kernels with
+/// arbitrary `p`: outcomes are grouped into `bins` buckets of `width`
+/// consecutive values (the last bucket absorbs the tail) with exact
+/// `Binomial(trials, p)` probabilities.
+fn checkVectorBinomialPmfBins(rng: alea.Rng, trials: u64, p: f64, width: u64, bins: usize, vectors: usize) !void {
+    const nf: f64 = @floatFromInt(trials);
+    const ln_p = @log(p);
+    const ln_q = @log(1 - p);
+    var bin_prob = [_]f64{0} ** 8;
+    var k: u64 = 0;
+    while (k <= trials) : (k += 1) {
+        const kf: f64 = @floatFromInt(k);
+        const log_pmf = std.math.lgamma(f64, nf + 1) - std.math.lgamma(f64, kf + 1) -
+            std.math.lgamma(f64, nf - kf + 1) + kf * ln_p + (nf - kf) * ln_q;
+        const b = @min(k / width, bins - 1);
+        bin_prob[b] += @exp(log_pmf);
+    }
+    var counts = [_]usize{0} ** 8;
+    var i: usize = 0;
+    while (i < vectors) : (i += 1) {
+        const point = alea.distributions.vectorBinomial(rng, @Vector(4, u64), trials, p);
+        inline for (0..4) |lane| {
+            const b = @min(point[lane] / width, bins - 1);
+            counts[b] += 1;
+        }
+    }
+    const total: f64 = @floatFromInt(vectors * 4);
+    var stat: f64 = 0;
+    for (counts[0..bins], 0..) |c, b| {
+        const expected = bin_prob[b] * total;
+        const d = @as(f64, @floatFromInt(c)) - expected;
+        stat += d * d / expected;
+    }
+    const dof: f64 = @floatFromInt(bins - 1);
+    const bound = dof + 6 * @sqrt(2 * dof);
+    try expectFloatBetween("long vector binomial non-dyadic pmf chi-square", stat, 0, bound);
+}
+
 /// Discrete pmf-binned chi-square gate for the vectorized dyadic geometric
 /// kernel: trials 1..7 and 8+ use exact Geometric(0.25) probabilities.
 /// Discrete pmf-binned chi-square gate for the vector fair binomial kernel
@@ -2448,6 +2486,8 @@ fn checkLongRun(samples: usize) !void {
         try checkVectorBinomialBins(rng, vector_samples);
         try checkVectorGeometricBins(rng, vector_samples);
         try checkVectorBinomialFairBins(rng, vector_samples);
+        try checkVectorBinomialPmfBins(rng, 40, 0.4, 5, 8, vector_samples);
+        try checkVectorBinomialPmfBins(rng, 100, 0.4, 13, 8, vector_samples);
     }
 
     // Exact SO(3) matrix Fisher isotropic trace moment.
