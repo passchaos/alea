@@ -5757,18 +5757,19 @@ noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype
 /// Small-trial inverse-CDF binomial for u64 vectors with arbitrary `p`:
 /// one uniform per lane plus `trials` vector compares against the cached
 /// CDF values computed once per call.
-fn binomialCdfTable(trials: u64, p: f64, cdf: *[1024]f64) usize {
+fn binomialCdfTable(trials: u64, p: f64, cdf: []f64) usize {
     const q = 1 - p;
     var pmf = std.math.pow(f64, q, @as(f64, @floatFromInt(trials)));
     var acc = pmf;
     cdf[0] = acc;
     var k: u64 = 1;
-    while (k < trials) : (k += 1) {
+    const limit = @min(trials, cdf.len);
+    while (k < limit) : (k += 1) {
         pmf *= (@as(f64, @floatFromInt(trials - k + 1)) / @as(f64, @floatFromInt(k))) * (p / q);
         acc += pmf;
         cdf[@intCast(k)] = acc;
     }
-    return @intCast(trials);
+    return @intCast(limit);
 }
 
 fn vectorBinomialFromCdf(comptime VectorType: type, source: anytype, cdf: []const f64) VectorType {
@@ -5786,7 +5787,7 @@ fn vectorBinomialFromCdf(comptime VectorType: type, source: anytype, cdf: []cons
 
 fn vectorBinomialInverseCdfFrom(comptime VectorType: type, source: anytype, trials: u64, p: f64) VectorType {
     var cdf: [1024]f64 = undefined;
-    const width = binomialCdfTable(trials, p, &cdf);
+    const width = binomialCdfTable(trials, p, cdf[0..]);
     return vectorBinomialFromCdf(VectorType, source, cdf[0..width]);
 }
 
@@ -5863,6 +5864,9 @@ fn vectorBinomialDyadicFrom(comptime VectorType: type, source: anytype, trials: 
     return out;
 }
 
+/// Largest non-dyadic binomial support cached in the reusable vector sampler.
+const vector_binomial_cdf_max = 256;
+
 pub fn VectorBinomial(comptime VectorType: type) type {
     const info = vectorInfo(VectorType);
     if (info.child != u64) @compileError("VectorBinomial expects a u64 vector");
@@ -5871,43 +5875,66 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         const Self = @This();
 
         sampler: Binomial,
+        /// Cached cumulative table for non-dyadic supports up to
+        /// `vector_binomial_cdf_max`; `cdf_width == 0` means no cache.
+        cdf: [vector_binomial_cdf_max]f64 = undefined,
+        cdf_width: u16 = 0,
 
         pub fn init(trials: u64, p: f64) Error!Self {
-            return .{ .sampler = try Binomial.init(trials, p) };
+            var self: Self = .{ .sampler = try Binomial.init(trials, p) };
+            self.buildCdf();
+            return self;
         }
 
-        pub fn trialsValue(self: Self) u64 {
+        fn buildCdf(self: *Self) void {
+            const p = self.sampler.p;
+            if (p == 0.5 or self.sampler.trials == 0 or self.sampler.trials > vector_binomial_cdf_max) return;
+            const q = if (p > 0.5) 1.0 - p else p;
+            if (dyadicBinomialFields(q) != null) return;
+            if (std.math.pow(f64, 1 - p, @as(f64, @floatFromInt(self.sampler.trials))) == 0) return;
+            const width = binomialCdfTable(self.sampler.trials, p, self.cdf[0..]);
+            self.cdf_width = @intCast(width);
+        }
+
+        pub fn trialsValue(self: *const Self) u64 {
             return self.sampler.trialsValue();
         }
 
-        pub fn probabilityValue(self: Self) f64 {
+        pub fn probabilityValue(self: *const Self) f64 {
             return self.sampler.probabilityValue();
         }
 
-        pub fn expectedValue(self: Self) f64 {
+        pub fn expectedValue(self: *const Self) f64 {
             return self.sampler.expectedValue();
         }
 
-        pub fn varianceValue(self: Self) f64 {
+        pub fn varianceValue(self: *const Self) f64 {
             return self.sampler.varianceValue();
         }
 
-        pub fn minValue(self: Self) u64 {
+        pub fn minValue(self: *const Self) u64 {
             _ = self;
             return 0;
         }
 
-        pub fn maxValue(self: Self) u64 {
+        pub fn maxValue(self: *const Self) u64 {
             return self.sampler.maxValue();
         }
 
-        pub fn sample(self: Self, rng: Rng) VectorType {
+        pub fn sample(self: *const Self, rng: Rng) VectorType {
             return self.sampleFrom(rng);
         }
 
-        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+        pub fn sampleFrom(self: *const Self, source: anytype) VectorType {
             if (self.sampler.trials == 0 or self.sampler.p == 0) return @splat(0);
             if (self.sampler.p == 1) return @splat(self.sampler.trials);
+            if (self.cdf_width > 0) {
+                const width: usize = self.cdf_width;
+                return if (width > 128)
+                    vectorBinomialFromCdfBinary(VectorType, source, self.cdf[0..width])
+                else
+                    vectorBinomialFromCdf(VectorType, source, self.cdf[0..width]);
+            }
             if (self.sampler.p == 0.5) {
                 return vectorBinomialFairFrom(VectorType, source, self.sampler.trials);
             }
@@ -5940,7 +5967,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
             return out;
         }
 
-        fn fillInverseCdf(self: Self, source: anytype, dest: []VectorType) bool {
+        fn fillInverseCdf(self: *const Self, source: anytype, dest: []VectorType) bool {
             if (self.sampler.p == 0.5 or self.sampler.trials > 1024) return false;
             const complement = self.sampler.p > 0.5;
             const q = if (complement) 1.0 - self.sampler.p else self.sampler.p;
@@ -5950,7 +5977,7 @@ pub fn VectorBinomial(comptime VectorType: type) type {
             // per-lane sampler for extreme parameter combinations.
             if (std.math.pow(f64, 1 - self.sampler.p, @as(f64, @floatFromInt(self.sampler.trials))) == 0) return false;
             var cdf: [1024]f64 = undefined;
-            const width = binomialCdfTable(self.sampler.trials, self.sampler.p, &cdf);
+            const width = binomialCdfTable(self.sampler.trials, self.sampler.p, cdf[0..]);
             for (dest) |*item| {
                 item.* = if (width > 128)
                     vectorBinomialFromCdfBinary(VectorType, source, cdf[0..width])
@@ -5960,26 +5987,46 @@ pub fn VectorBinomial(comptime VectorType: type) type {
             return true;
         }
 
-        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+        pub fn fill(self: *const Self, rng: Rng, dest: []VectorType) void {
             if (self.sampler.trials == 0 or self.sampler.p == 0) {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
             if (self.sampler.p == 1) {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
+                return;
+            }
+            if (self.cdf_width > 0) {
+                const width: usize = self.cdf_width;
+                for (dest) |*item| {
+                    item.* = if (width > 128)
+                        vectorBinomialFromCdfBinary(VectorType, rng, self.cdf[0..width])
+                    else
+                        vectorBinomialFromCdf(VectorType, rng, self.cdf[0..width]);
+                }
                 return;
             }
             if (self.fillInverseCdf(rng, dest)) return;
             for (dest) |*item| item.* = self.sample(rng);
         }
 
-        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+        pub fn fillFrom(self: *const Self, source: anytype, dest: []VectorType) void {
             if (self.sampler.trials == 0 or self.sampler.p == 0) {
                 @memset(dest, @as(VectorType, @splat(0)));
                 return;
             }
             if (self.sampler.p == 1) {
                 @memset(dest, @as(VectorType, @splat(self.sampler.trials)));
+                return;
+            }
+            if (self.cdf_width > 0) {
+                const width: usize = self.cdf_width;
+                for (dest) |*item| {
+                    item.* = if (width > 128)
+                        vectorBinomialFromCdfBinary(VectorType, source, self.cdf[0..width])
+                    else
+                        vectorBinomialFromCdf(VectorType, source, self.cdf[0..width]);
+                }
                 return;
             }
             if (self.fillInverseCdf(source, dest)) return;
