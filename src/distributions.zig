@@ -28503,45 +28503,24 @@ pub fn VectorMaxwell(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(0);
-            const x = vectorNormal(rng, VectorType, 0, self.scaleValue());
-            const y = vectorNormal(rng, VectorType, 0, self.scaleValue());
-            const z = vectorNormal(rng, VectorType, 0, self.scaleValue());
-            return maxwellFromNormalVectors(x, y, z);
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(0);
-            const x = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
-            const y = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
-            const z = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
-            return maxwellFromNormalVectors(x, y, z);
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = self.sampler.sampleFrom(source);
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
-                return;
-            }
-            for (dest) |*item| {
-                const x = vectorNormal(rng, VectorType, 0, self.scaleValue());
-                const y = vectorNormal(rng, VectorType, 0, self.scaleValue());
-                const z = vectorNormal(rng, VectorType, 0, self.scaleValue());
-                item.* = maxwellFromNormalVectors(x, y, z);
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(0)));
-                return;
-            }
-            for (dest) |*item| {
-                const x = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
-                const y = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
-                const z = vectorNormalFrom(source, VectorType, 0, self.scaleValue());
-                item.* = maxwellFromNormalVectors(x, y, z);
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -29843,63 +29822,24 @@ pub fn VectorSkewNormal(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.locationValue());
-            const z1 = vectorStandardNormal(rng, VectorType);
-            if (self.shapeValue() == 0) {
-                const location_vec: VectorType = @splat(self.locationValue());
-                const scale_vec: VectorType = @splat(self.scaleValue());
-                return location_vec + scale_vec * z1;
-            }
-            const z2 = vectorStandardNormal(rng, VectorType);
-            return skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.locationValue());
-            const z1 = vectorStandardNormalFrom(source, VectorType);
-            if (self.shapeValue() == 0) {
-                const location_vec: VectorType = @splat(self.locationValue());
-                const scale_vec: VectorType = @splat(self.scaleValue());
-                return location_vec + scale_vec * z1;
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = self.sampler.sampleFrom(source);
             }
-            const z2 = vectorStandardNormalFrom(source, VectorType);
-            return skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
-                return;
-            }
-            const location_vec: VectorType = @splat(self.locationValue());
-            const scale_vec: VectorType = @splat(self.scaleValue());
-            if (self.shapeValue() == 0) {
-                for (dest) |*item| item.* = location_vec + scale_vec * vectorStandardNormal(rng, VectorType);
-                return;
-            }
-            for (dest) |*item| {
-                const z1 = vectorStandardNormal(rng, VectorType);
-                const z2 = vectorStandardNormal(rng, VectorType);
-                item.* = skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.locationValue())));
-                return;
-            }
-            const location_vec: VectorType = @splat(self.locationValue());
-            const scale_vec: VectorType = @splat(self.scaleValue());
-            if (self.shapeValue() == 0) {
-                for (dest) |*item| item.* = location_vec + scale_vec * vectorStandardNormalFrom(source, VectorType);
-                return;
-            }
-            for (dest) |*item| {
-                const z1 = vectorStandardNormalFrom(source, VectorType);
-                const z2 = vectorStandardNormalFrom(source, VectorType);
-                item.* = skewNormalFromStandardNormalVectors(VectorType, z1, z2, self.locationValue(), self.scaleValue(), self.shapeValue());
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -31564,45 +31504,24 @@ pub fn VectorInverseGaussian(comptime VectorType: type) type {
         }
 
         pub fn sample(self: Self, rng: Rng) VectorType {
-            if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const normal_vec = vectorStandardNormal(rng, VectorType);
-            const uniform_vec = Rng.vectorFrom(rng, VectorType);
-            return inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, self.meanValue(), self.shapeValue());
+            return self.sampleFrom(rng);
         }
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
-            const normal_vec = vectorStandardNormalFrom(source, VectorType);
-            const uniform_vec = Rng.vectorFrom(source, VectorType);
-            return inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, self.meanValue(), self.shapeValue());
+            var out: VectorType = undefined;
+            inline for (0..vectorInfo(VectorType).len) |lane| {
+                out[lane] = self.sampler.sampleFrom(source);
+            }
+            return out;
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            const mean = self.meanValue();
-            const shape = self.shapeValue();
-            for (dest) |*item| {
-                const normal_vec = vectorStandardNormal(rng, VectorType);
-                const uniform_vec = Rng.vectorFrom(rng, VectorType);
-                item.* = inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, mean, shape);
-            }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
-            if (self.sampler.isDegenerate()) {
-                @memset(dest, @as(VectorType, @splat(self.sampler.degenerateValue())));
-                return;
-            }
-            const mean = self.meanValue();
-            const shape = self.shapeValue();
-            for (dest) |*item| {
-                const normal_vec = vectorStandardNormalFrom(source, VectorType);
-                const uniform_vec = Rng.vectorFrom(source, VectorType);
-                item.* = inverseGaussianFromNormalVector(VectorType, normal_vec, uniform_vec, mean, shape);
-            }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
     };
 }
@@ -31860,8 +31779,13 @@ pub fn VectorNormalInverseGaussian(comptime VectorType: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.isDegenerate()) return @splat(self.sampler.degenerateValue());
+            // Keep the packed inverse-Gaussian composition rather than
+            // delegating to `VectorInverseGaussian`, whose per-lane scalar
+            // draws are faster for that sampler but slower when composed here.
             const inverse_mean = 1 / self.gammaValue();
-            const inv_gauss = vectorInverseGaussianFrom(source, VectorType, inverse_mean, 1);
+            const inverse_normal_vec = vectorStandardNormalFrom(source, VectorType);
+            const inverse_uniform_vec = Rng.vectorFrom(source, VectorType);
+            const inv_gauss = inverseGaussianFromNormalVector(VectorType, inverse_normal_vec, inverse_uniform_vec, inverse_mean, @as(Child, 1));
             const normal_vec = vectorStandardNormalFrom(source, VectorType);
             const beta_vec: VectorType = @splat(self.betaValue());
             return beta_vec * inv_gauss + @sqrt(inv_gauss) * normal_vec;
@@ -47432,15 +47356,14 @@ test "inverse-gaussian infinity semantics matches local rand_distr" {
         }
 
         fn consumeVector(source: anytype) void {
-            _ = vectorStandardNormalFrom(source, @Vector(4, f64));
-            _ = Rng.vectorFrom(source, @Vector(4, f64));
+            inline for (0..4) |_| {
+                _ = Rng.standardNormalFastFrom(source, f64);
+                _ = Rng.floatFrom(source, f64);
+            }
         }
 
         fn consumeVectorFill(source: anytype, len: usize) void {
-            for (0..len) |_| {
-                _ = vectorStandardNormalFrom(source, @Vector(4, f64));
-                _ = Rng.vectorFrom(source, @Vector(4, f64));
-            }
+            for (0..len) |_| consumeVector(source);
         }
     };
 

@@ -7152,5 +7152,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1620-scalar-per-lane-vector-exp1-families.md`, and
 `compare/results/s4-m1621-validate-all-refresh.md`, and
 `compare/results/s4-m1622-vector-cauchy-scalar-per-lane.md`, and
-`compare/results/s4-m1623-validate-all-refresh.md`.
+`compare/results/s4-m1623-validate-all-refresh.md`, and
+`compare/results/s4-m1624-vector-coverage-and-per-lane-continuation.md`.
 
