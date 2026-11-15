@@ -10253,10 +10253,9 @@ fn binomialFillWindowFrom(self: Binomial, source: anytype, dest: []u64) bool {
     if (dyadicBinomialFields(folded) != null) return false;
     const nf: f64 = @floatFromInt(self.trials);
     const mean = nf * folded;
-    // Only the inversion region: the binary search returns the same
-    // inverse-CDF index as the inversion walk, so the stream is preserved.
-    // The HIN region keeps its stream-preserving one-setup fill.
-    if (!(mean < binomial_hin_min_mean)) return false;
+    // The inversion region is stream-preserving (the binary search returns
+    // the same inverse-CDF index as the walk). The HIN region uses this
+    // windowed CDF as a versioned bulk-fill stream.
     const variance = mean * (1 - folded);
     if (!(variance > 0)) return false;
     const sigma = @sqrt(variance);
@@ -57407,7 +57406,15 @@ test "binomial fair path switches to HIN for huge trials" {
 test "cached binomial matches the plain sampler in shared regions" {
     const alea = @import("root.zig");
 
-    const Case = struct { trials: u64, p: f64, stream_matches: bool = true };
+    const Case = struct {
+        trials: u64,
+        p: f64,
+        stream_matches: bool = true,
+        /// The HIN-region fill uses the windowed CDF bulk stream, so the
+        /// fill output differs from the cached sampler even though the
+        /// per-sample streams match.
+        fill_matches: bool = true,
+    };
     const cases = [_]Case{
         .{ .trials = 0, .p = 0.25 },
         .{ .trials = 10, .p = 0 },
@@ -57417,10 +57424,10 @@ test "cached binomial matches the plain sampler in shared regions" {
         .{ .trials = 40, .p = 1.0 / 3.0 },
         // The small-mean region uses the exact inverse-CDF walk, so the
         // stream differs from `Binomial`'s waiting-time race.
-        .{ .trials = 1000, .p = 0.012, .stream_matches = false },
-        .{ .trials = 10_000, .p = 0.01 },
-        .{ .trials = 1000, .p = 0.9 },
-        .{ .trials = 100, .p = 0.7 },
+        .{ .trials = 1000, .p = 0.012, .stream_matches = false, .fill_matches = false },
+        .{ .trials = 10_000, .p = 0.01, .fill_matches = false },
+        .{ .trials = 1000, .p = 0.9, .fill_matches = false },
+        .{ .trials = 100, .p = 0.7, .fill_matches = false },
     };
 
     for (cases) |case| {
@@ -57445,13 +57452,15 @@ test "cached binomial matches the plain sampler in shared regions" {
                 try std.testing.expectEqual(expected, actual);
             }
 
-            var plain_fill_engine = alea.FastPrng.init(0xc0_2e);
-            var cached_fill_engine = alea.FastPrng.init(0xc0_2e);
-            var plain_values: [16]u64 = undefined;
-            var cached_values: [16]u64 = undefined;
-            plain.fillFrom(&plain_fill_engine, &plain_values);
-            cached.fillFrom(&cached_fill_engine, &cached_values);
-            try std.testing.expectEqualSlices(u64, &plain_values, &cached_values);
+            if (case.fill_matches) {
+                var plain_fill_engine = alea.FastPrng.init(0xc0_2e);
+                var cached_fill_engine = alea.FastPrng.init(0xc0_2e);
+                var plain_values: [16]u64 = undefined;
+                var cached_values: [16]u64 = undefined;
+                plain.fillFrom(&plain_fill_engine, &plain_values);
+                cached.fillFrom(&cached_fill_engine, &cached_values);
+                try std.testing.expectEqualSlices(u64, &plain_values, &cached_values);
+            }
 
             var plain_rng_engine = alea.FastPrng.init(0xc0_3f);
             var cached_rng_engine = alea.FastPrng.init(0xc0_3f);
@@ -57515,31 +57524,38 @@ test "cached binomial inversion region has plausible moments" {
     }
 }
 
-test "binomial HIN fill matches repeated sampling" {
+test "binomial HIN fill uses the windowed bulk stream" {
     const alea = @import("root.zig");
 
+    // The HIN-region fill uses the windowed CDF bulk stream; the facade and
+    // direct fills share it.
     var fill_engine = alea.FastPrng.init(0x4b1f);
-    var loop_engine = alea.FastPrng.init(0x4b1f);
+    var direct_fill_engine = alea.FastPrng.init(0x4b1f);
     var values: [16]u64 = undefined;
-    fillBinomial(Rng.init(&fill_engine), &values, 10_000, 0.01);
-    for (values) |value| {
-        try std.testing.expectEqual(binomial(Rng.init(&loop_engine), 10_000, 0.01), value);
-    }
-
-    var direct_fill_engine = alea.FastPrng.init(0x4b20);
-    var direct_loop_engine = alea.FastPrng.init(0x4b20);
     var direct_values: [16]u64 = undefined;
+    fillBinomial(Rng.init(&fill_engine), &values, 10_000, 0.01);
     fillBinomialFrom(&direct_fill_engine, &direct_values, 10_000, 0.01);
-    for (direct_values) |value| {
-        try std.testing.expectEqual(binomialFrom(&direct_loop_engine, 10_000, 0.01), value);
+    try std.testing.expectEqualSlices(u64, &values, &direct_values);
+    try std.testing.expectEqual(fill_engine.next(), direct_fill_engine.next());
+    for (values) |value| try std.testing.expect(value <= 10_000);
+
+    // `sample`/`sampleFrom` keep the HIN stream and still match each other.
+    var sample_engine = alea.FastPrng.init(0x4b20);
+    var direct_sample_engine = alea.FastPrng.init(0x4b20);
+    var i: usize = 0;
+    while (i < 16) : (i += 1) {
+        try std.testing.expectEqual(
+            binomial(Rng.init(&sample_engine), 10_000, 0.01),
+            binomialFrom(&direct_sample_engine, 10_000, 0.01),
+        );
     }
 
     var flip_fill_engine = alea.FastPrng.init(0x4b21);
-    var flip_loop_engine = alea.FastPrng.init(0x4b21);
+    var flip_direct_engine = alea.FastPrng.init(0x4b21);
     fillBinomial(Rng.init(&flip_fill_engine), &values, 1_000, 0.9);
-    for (values) |value| {
-        try std.testing.expectEqual(binomial(Rng.init(&flip_loop_engine), 1_000, 0.9), value);
-    }
+    fillBinomialFrom(&flip_direct_engine, &direct_values, 1_000, 0.9);
+    try std.testing.expectEqualSlices(u64, &values, &direct_values);
+    for (values) |value| try std.testing.expect(value <= 1_000);
 }
 
 test "binomial sampler has plausible moments" {

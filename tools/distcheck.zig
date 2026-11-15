@@ -2761,6 +2761,7 @@ fn checkLongRun(samples: usize) !void {
         const vector_binomial_extreme = try alea.distributions.VectorBinomial(@Vector(4, u64)).init(128, 0.999);
         const binomial_extreme = try alea.distributions.Binomial.init(128, 0.999);
         const binomial_inversion = try alea.distributions.Binomial.init(1000, 0.012);
+        const binomial_hin = try alea.distributions.Binomial.init(10_000, 0.01);
         const vector_zipf = try alea.distributions.VectorZipf(@Vector(4, f64)).init(10, 1.5);
         const vector_hypergeometric = try alea.distributions.VectorHypergeometric(@Vector(4, u64)).init(100, 30, 10);
         const zipf_fill_dist = try alea.distributions.Zipf(f64).init(10, 1.5);
@@ -2782,6 +2783,7 @@ fn checkLongRun(samples: usize) !void {
         var vector_binomial_extreme_hits: usize = 0;
         var scalar_poisson_hits = [_]usize{0} ** 3;
         var binomial_inversion_hits = [_]usize{0} ** 3;
+        var binomial_hin_hits = [_]usize{0} ** 3;
         var zipf_fill_hits = [_]usize{0} ** 3;
         var vector_zipf_hits = [_]usize{0} ** 3;
         var vector_hypergeometric_hits = [_]usize{0} ** 3;
@@ -2873,6 +2875,13 @@ fn checkLongRun(samples: usize) !void {
                 if (value <= 12) binomial_inversion_hits[1] += 1;
                 if (value <= 16) binomial_inversion_hits[2] += 1;
             }
+            var bh_buf: [8]u64 = undefined;
+            alea.distributions.fillBinomial(rng, &bh_buf, 10_000, 0.01);
+            for (bh_buf) |value| {
+                if (value <= 90) binomial_hin_hits[0] += 1;
+                if (value <= 100) binomial_hin_hits[1] += 1;
+                if (value <= 110) binomial_hin_hits[2] += 1;
+            }
             var zf_fill_buf: [8]f64 = undefined;
             alea.distributions.fillZipf(rng, f64, &zf_fill_buf, 10, 1.5);
             for (zf_fill_buf) |value| {
@@ -2951,6 +2960,9 @@ fn checkLongRun(samples: usize) !void {
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(8)", binomial_inversion_hits[0], samples * 8, binomial_inversion.cdf(8));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(12)", binomial_inversion_hits[1], samples * 8, binomial_inversion.cdf(12));
         try expectEmpiricalCdf("long fillBinomial(1000,0.012) cdf(16)", binomial_inversion_hits[2], samples * 8, binomial_inversion.cdf(16));
+        try expectEmpiricalCdf("long fillBinomial(10000,0.01) cdf(90)", binomial_hin_hits[0], samples * 8, binomial_hin.cdf(90));
+        try expectEmpiricalCdf("long fillBinomial(10000,0.01) cdf(100)", binomial_hin_hits[1], samples * 8, binomial_hin.cdf(100));
+        try expectEmpiricalCdf("long fillBinomial(10000,0.01) cdf(110)", binomial_hin_hits[2], samples * 8, binomial_hin.cdf(110));
         try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(2)", zipf_fill_hits[0], samples * 8, zipf_fill_dist.cdf(2));
         try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(4)", zipf_fill_hits[1], samples * 8, zipf_fill_dist.cdf(4));
         try expectEmpiricalCdf("long fillZipf(10,1.5) cdf(8)", zipf_fill_hits[2], samples * 8, zipf_fill_dist.cdf(8));
