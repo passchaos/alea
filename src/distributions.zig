@@ -5745,6 +5745,13 @@ pub fn fillVectorBinomialCheckedFrom(source: anytype, comptime VectorType: type,
     dist.fillFrom(source, dest);
 }
 
+/// Large-trial dyadic path, kept out of line so the small-trial kernel's
+/// codegen stays unchanged.
+noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype, trials: u64, fields: DyadicBinomialFields, complement: bool) VectorType {
+    const sampled = vectorBinomialDyadicFrom(VectorType, source, trials, fields.m, fields.k);
+    return if (complement) @as(VectorType, @splat(trials)) - sampled else sampled;
+}
+
 /// Packed dyadic binomial for u64 vectors: one word per lane per round with
 /// vector mask/popcount work, so a 40-trial sample costs two vector rounds.
 fn vectorBinomialDyadicFrom(comptime VectorType: type, source: anytype, trials: u64, m: u32, k: u64) VectorType {
@@ -5830,6 +5837,12 @@ pub fn VectorBinomial(comptime VectorType: type) type {
                 if (dyadicBinomialFields(q)) |fields| {
                     const sampled = vectorBinomialDyadicFrom(VectorType, source, self.sampler.trials, fields.m, fields.k);
                     return if (complement) @as(VectorType, @splat(self.sampler.trials)) - sampled else sampled;
+                }
+            } else {
+                const complement = self.sampler.p > 0.5;
+                const q = if (complement) 1.0 - self.sampler.p else self.sampler.p;
+                if (dyadicBinomialFields(q)) |fields| {
+                    return vectorBinomialDyadicLarge(VectorType, source, self.sampler.trials, fields, complement);
                 }
             }
             var out: VectorType = undefined;
