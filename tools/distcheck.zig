@@ -1888,6 +1888,38 @@ fn checkBinnedChiSquare(comptime Model: type, comptime label: []const u8, rng: a
     try expectFloatBetween(label ++ " chi-square", stat, 0, bound);
 }
 
+/// Vector variant of `checkBinnedChiSquare`: `Model.sample` returns a vector
+/// whose lanes are binned individually, so the vector samplers are held to the
+/// same 20-bin goodness-of-fit bound as their scalar counterparts.
+fn checkBinnedChiSquareVector(comptime Model: type, comptime VectorType: type, comptime label: []const u8, rng: alea.Rng, vectors: usize) !void {
+    const bins = 20;
+    const lanes = @typeInfo(VectorType).vector.len;
+    var counts = [_]usize{0} ** bins;
+    var i: usize = 0;
+    while (i < vectors) : (i += 1) {
+        const point = Model.sample(rng);
+        inline for (0..lanes) |lane| {
+            const u = Model.cdf(point[lane]);
+            var b: usize = 0;
+            if (u > 0) {
+                const scaled = u * bins;
+                b = if (scaled >= bins) bins - 1 else @intFromFloat(scaled);
+            }
+            counts[b] += 1;
+        }
+    }
+    const total = vectors * lanes;
+    const expected = @as(f64, @floatFromInt(total)) / bins;
+    var stat: f64 = 0;
+    for (counts) |c| {
+        const d = @as(f64, @floatFromInt(c)) - expected;
+        stat += d * d / expected;
+    }
+    const dof: f64 = bins - 1;
+    const bound = dof + 6 * @sqrt(2 * dof);
+    try expectFloatBetween(label ++ " chi-square", stat, 0, bound);
+}
+
 fn checkLongRun(samples: usize) !void {
     const allocator = std.heap.smp_allocator;
     const nf: f64 = @floatFromInt(samples);
@@ -2243,6 +2275,63 @@ fn checkLongRun(samples: usize) !void {
                 return alea.distributions.wrappedCauchyCdf(x, 0.4, 0.5);
             }
         }, "long wrapped cauchy binned", rng, binned_samples);
+    }
+
+    // Vector binned chi-square gates for the per-lane scalar-draw vector
+    // samplers (four lanes per vector, samples/16 vectors = samples/4 lanes).
+    {
+        var engine = alea.FastPrng.init(0x10e1);
+        const rng = alea.Rng.init(&engine);
+        const vector_samples = samples / 16;
+        const V = @Vector(4, f64);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorCauchy(r, V, 0, 1);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.cauchyCdf(x, 0, 1);
+            }
+        }, V, "long vector cauchy binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorPareto(r, V, 2, 3);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.paretoCdf(x, 2, 3);
+            }
+        }, V, "long vector pareto binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorGeneralizedExtremeValue(r, V, 1, 2, 0.3);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.generalizedExtremeValueCdf(x, 1, 2, 0.3);
+            }
+        }, V, "long vector gev binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorSkewNormal(r, V, 0, 1, 1);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.skewNormalCdf(x, 0, 1, 1);
+            }
+        }, V, "long vector skew-normal binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorInverseGaussian(r, V, 1, 2);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.inverseGaussianCdf(x, 1, 2);
+            }
+        }, V, "long vector inverse-gaussian binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorMaxwell(r, V, 2);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.maxwellCdf(x, 2);
+            }
+        }, V, "long vector maxwell binned", rng, vector_samples);
     }
 
     // Exact SO(3) matrix Fisher isotropic trace moment.
