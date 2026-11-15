@@ -2883,7 +2883,11 @@ fn noncentralTCdfSeriesF64(t: f64, dof: f64, mu: f64) f64 {
     }
 
     const inv_sqrt_2pi_f64: f64 = inv_sqrt_2pi;
+    // `A₀ = ½·I_x(½, ν/2)` and its complement `B₀ = ½·I_y(ν/2, ½)`. The
+    // second form keeps the upper tail when `x` rounds to one for huge `t`.
     const a0 = 0.5 * betaIncomplete(x, @as(f64, 0.5), nu / 2);
+    const y = if (log_y > -745) @exp(log_y) else 0;
+    const b0 = 0.5 * betaIncomplete(y, nu / 2, @as(f64, 0.5));
     var c_scale: f64 = 0;
     if (log_y > -745) c_scale = inv_sqrt_2pi_f64 * @exp((nu / 2) * log_y);
 
@@ -2893,29 +2897,45 @@ fn noncentralTCdfSeriesF64(t: f64, dof: f64, mu: f64) f64 {
     var g_prev: f64 = noncentralTGammaRatioHalfF64(nu) * sqrt_2x;
 
     var weight: f64 = @exp(-0.5 * mu * mu);
-    var sum: f64 = weight * a0;
+    // `sum_a` builds `F − Φ(−μ)`; `sum_b` builds the upper complement
+    // `1 − F`. Both use only positive terms, so whichever side is small
+    // keeps its relative accuracy instead of cancelling.
+    var sum_a: f64 = weight * a0;
+    var sum_b: f64 = weight * b0;
     var a_prev2: f64 = a0;
-    var a_prev: f64 = inv_sqrt_2pi_f64 - c_scale;
+    var b_prev2: f64 = b0;
+    var a_prev: f64 = inv_sqrt_2pi_f64 - c_scale; // A₁
+    var b_prev: f64 = c_scale; // B₁ = E[φ(W)]
     weight *= mu;
-    sum += weight * a_prev;
+    sum_a += weight * a_prev;
+    sum_b += weight * b_prev;
 
     const stop_floor = mu * mu + 10 * mu + 20;
     var j: usize = 2;
     while (j <= 5000) : (j += 1) {
         const jf: f64 = @floatFromInt(j);
-        const a_j = (jf - 1) * a_prev2 - c_scale * g_prev;
+        const c_j = c_scale * g_prev;
+        const a_j = (jf - 1) * a_prev2 - c_j;
+        const b_j = (jf - 1) * b_prev2 + c_j;
         weight *= mu / jf;
-        const term = weight * a_j;
-        sum += term;
+        const term_a = weight * a_j;
+        const term_b = weight * b_j;
+        sum_a += term_a;
+        sum_b += term_b;
         const g_j = g_prev2 * ((nu + jf - 2) / 2) * (2 * x);
         g_prev2 = g_prev;
         g_prev = g_j;
         a_prev2 = a_prev;
         a_prev = a_j;
-        if (jf > stop_floor and @abs(term) <= @abs(sum) * 1.0e-17) break;
+        b_prev2 = b_prev;
+        b_prev = b_j;
+        const scale = sum_a + sum_b;
+        if (jf > stop_floor and @abs(term_a) <= scale * 1.0e-17 and @abs(term_b) <= scale * 1.0e-17) break;
         if (weight == 0) break;
     }
-    return std.math.clamp(normCdfScalarF64(-mu) + sum, 0, 1);
+    // Use the smaller side: `1 − sum_b` near one, `Φ(−μ) + sum_a` near zero.
+    if (sum_b <= 0.5) return std.math.clamp(1 - sum_b, 0, 1);
+    return std.math.clamp(normCdfScalarF64(-mu) + sum_a, 0, 1);
 }
 
 /// Standardized chi-scale integrand for `dof >= 1`. With `u = α·e^{z/√α}`
@@ -2928,13 +2948,18 @@ const NoncentralTZIntegrand = struct {
     sqrt_alpha: f64,
     log_pref: f64,
     scale: f64,
+    /// When true the integrand is `Φ(μ − t·s)`, i.e. the upper-tail
+    /// complement `P(T > t)`, so `F = 1 − integral` keeps the small
+    /// complement accurate instead of subtracting two near-one values.
+    complement: bool,
 
     fn eval(self: NoncentralTZIntegrand, z: f64) f64 {
         const sqrt_alpha = self.sqrt_alpha;
         const log_weight = self.log_pref + sqrt_alpha * z - self.alpha * std.math.expm1(z / sqrt_alpha);
         if (log_weight < -745) return 0;
         const s = @exp(z / (2 * sqrt_alpha));
-        return @exp(log_weight) * normCdfScalarF64(self.t * s - self.mu) * self.scale;
+        const argument = if (self.complement) self.mu - self.t * s else self.t * s - self.mu;
+        return @exp(log_weight) * normCdfScalarF64(argument) * self.scale;
     }
 };
 
@@ -2947,12 +2972,14 @@ const NoncentralTSmallDofIntegrand = struct {
     mu: f64,
     log_c: f64,
     scale: f64,
+    complement: bool,
 
     fn eval(self: NoncentralTSmallDofIntegrand, r: f64) f64 {
         const s = if (r > 0) std.math.pow(f64, r, 1 / self.dof) else 0;
         const log_weight = self.log_c - self.dof * s * s / 2;
         if (log_weight < -745) return 0;
-        return @exp(log_weight) * normCdfScalarF64(self.t * s - self.mu) * self.scale;
+        const argument = if (self.complement) self.mu - self.t * s else self.t * s - self.mu;
+        return @exp(log_weight) * normCdfScalarF64(argument) * self.scale;
     }
 };
 
@@ -3000,8 +3027,11 @@ fn noncentralTCompositeSimpson(context: anytype, lower: f64, upper: f64) f64 {
 }
 
 fn noncentralTCdfIntegralF64(t: f64, dof: f64, mu: f64) f64 {
-    // For t < 0 the integrand is bounded by Φ(−μ); scale it out so the
-    // lower-tail probabilities keep relative accuracy.
+    // For `t > 0` and `mu > 0` the CDF approaches one; integrate the upper
+    // complement `P(T > t)` directly so the small tail keeps its relative
+    // accuracy. For `t < 0` the CDF itself is the small value and is scaled
+    // by `Φ(−μ)`.
+    const complement = t > 0 and mu > 0;
     var tail: f64 = 1;
     if (t < 0 and mu > 0) {
         tail = normCdfScalarF64(-mu);
@@ -3020,8 +3050,17 @@ fn noncentralTCdfIntegralF64(t: f64, dof: f64, mu: f64) f64 {
             .mu = mu,
             .log_c = log_c,
             .scale = scale,
+            .complement = complement,
         };
-        return std.math.clamp(noncentralTCompositeSimpson(f, 0, upper) * tail, 0, 1);
+        // The complement is negligible once `μ − t·s < −40`; restricting the
+        // range keeps the narrow transition near `s = μ/t` inside a small
+        // panel instead of a long smooth tail.
+        const split = if (complement)
+            @min(upper, std.math.pow(f64, (mu + 40.0) / t, dof))
+        else
+            upper;
+        const integral = noncentralTCompositeSimpson(f, 0, split);
+        return std.math.clamp(if (complement) 1 - integral else integral * tail, 0, 1);
     }
 
     const alpha = dof / 2;
@@ -3035,8 +3074,21 @@ fn noncentralTCdfIntegralF64(t: f64, dof: f64, mu: f64) f64 {
         .sqrt_alpha = sqrt_alpha,
         .log_pref = log_pref,
         .scale = scale,
+        .complement = complement,
     };
-    return std.math.clamp(noncentralTCompositeSimpson(f, z_lo, 8.0) * tail, 0, 1);
+    var z_hi: f64 = 8.0;
+    if (complement) {
+        const s_split = (mu + 40.0) / t;
+        const z_split = 2.0 * sqrt_alpha * @log(s_split);
+        if (z_split <= z_lo) {
+            // The whole significant region sits where the Gamma density is
+            // below `exp(-40)`, so the complement is negligible.
+            return 1;
+        }
+        z_hi = @min(z_hi, z_split);
+    }
+    const integral = noncentralTCompositeSimpson(f, z_lo, z_hi);
+    return std.math.clamp(if (complement) 1 - integral else integral * tail, 0, 1);
 }
 
 /// Noncentral t quantile for probability `p`. Deterministic geometric
@@ -66651,10 +66703,7 @@ test "noncentral t CDF is monotone across parameter regions" {
         }
 
         var previous_quantile: f64 = -std.math.inf(f64);
-        // The extreme upper tail (`1 - 1e-4`) is excluded: for `dof < 1` the
-        // complement is a narrow step in the chi scale and the adaptive budget
-        // can leave ~1e-5 absolute error near `F = 0.9999`.
-        inline for ([_]f64{ 1.0e-4, 0.01, 0.1, 0.5, 0.9, 0.99 }) |q| {
+        inline for ([_]f64{ 1.0e-4, 0.01, 0.1, 0.5, 0.9, 0.99, 1.0 - 1.0e-4 }) |q| {
             const value = noncentralTQuantile(q, dof, mu);
             try std.testing.expect(std.math.isFinite(value));
             try std.testing.expect(value >= previous_quantile);
