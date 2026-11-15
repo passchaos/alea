@@ -623,9 +623,15 @@ current blocker audit and the requirements for a successful next candidate:
   are the first dense candidates to clear the bar (vector binomial fair,
   dyadic small, and dyadic large trials plus vector geometric), and the
   S4-M1628/S4-M1631/S4-M1633 `exp2`/`log2` transforms lifted the log+exp
-  continuous rows; future work needs a dense kernel for the remaining
-  per-lane samplers (Poisson, hypergeometric, Zipf/Zeta, negative-binomial,
-  Bessel/Bingham directional) that meets `simd-distribution-kernel-notes.md`.
+  continuous rows. The S4-M1662 coverage sweep shows the remaining continuous
+  vector rows are at or above scalar per-sample throughput except
+  `vector fisher-f` (about 88 M samples/s against 114-129 M scalar) and the
+  directional Bessel/Bingham rows; `VectorStudentT` was lifted +52-56% by the
+  per-lane free function, while the same substitution for Maxwell and
+  normal-inverse-Gaussian was neutral. Future work needs a dense kernel for
+  the remaining per-lane samplers (Poisson, hypergeometric, Zipf/Zeta,
+  negative-binomial, FisherF, Bessel/Bingham directional) that meets
+  `simd-distribution-kernel-notes.md`.
 - Vector discrete samplers: the dyadic/fair space is closed for the current
   bar. `vector binomial` covers fair (S4-M1646, +125-145%) and dyadic
   small/large trials (S4-M1636/S4-M1640, +57-70x and ~7x) with pmf-binned 1e9
