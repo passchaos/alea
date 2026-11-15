@@ -488,6 +488,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorDistribution(alea.distributions.VectorPoisson(V4U), io, stdout, "alea vector poisson small f64x4", bytes / 32, alea.distributions.VectorPoisson(V4U).init(4) catch unreachable, 0x9a23);
     try benchVectorDistribution(alea.distributions.VectorGeometric(V4U), io, stdout, "alea vector geometric f64x4", bytes / 32, alea.distributions.VectorGeometric(V4U).init(0.25) catch unreachable, 0x9a18);
     try benchVectorDistribution(alea.distributions.VectorGeometricFailures(V4U), io, stdout, "alea vector geometric-failures f64x4", bytes / 32, alea.distributions.VectorGeometricFailures(V4U).init(0.25) catch unreachable, 0x9a1e);
+    try benchFillVectorGeometric(io, stdout, "alea fillVectorGeometric f64x4", bytes / 32);
     try benchVectorDistribution(alea.distributions.VectorHypergeometric(V4U), io, stdout, "alea vector hypergeometric f64x4", bytes / 32, alea.distributions.VectorHypergeometric(V4U).init(100, 30, 10) catch unreachable, 0x9a19);
     try benchVectorDistribution(alea.distributions.VectorGamma(V4), io, stdout, "alea vector gamma f64x4", bytes / 32, alea.distributions.VectorGamma(V4).init(2, 3) catch unreachable, 0x9a25);
     try benchVectorDistribution(alea.distributions.VectorBeta(V4), io, stdout, "alea vector beta f64x4", bytes / 32, alea.distributions.VectorBeta(V4).init(2, 5) catch unreachable, 0x9a26);
@@ -9986,6 +9987,39 @@ fn benchVectorGeneralizedExtremeValue(io: std.Io, stdout: *std.Io.Writer, name: 
         while (i < count) : (i += 1) {
             const point = dist.sample(rng);
             inline for (0..4) |lane| checksum += point[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillVectorGeometric(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const V = @Vector(4, u64);
+    var out: [1024]V = undefined;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x9b03);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillVectorGeometric(rng, V, out[0..n], 0.25);
+            for (out[0..n]) |vec| {
+                inline for (0..4) |lane| checksum += @floatFromInt(vec[lane]);
+            }
+            remaining -= n;
         }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /

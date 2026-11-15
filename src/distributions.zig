@@ -22781,13 +22781,13 @@ pub fn VectorGeometric(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| {
-                    out[lane] = geometricFrom(rng, self.sampler.p);
+            if (dyadicGeometricFields(self.sampler.p)) |fields| {
+                for (dest) |*item| {
+                    item.* = vectorGeometricDyadicFrom(VectorType, rng, fields.m, fields.k) + @as(VectorType, @splat(1));
                 }
-                item.* = out;
+                return;
             }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -22799,13 +22799,15 @@ pub fn VectorGeometric(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
-            const p = self.sampler.p;
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| out[lane] = geometricFrom(source, p);
-                item.* = out;
+            if (dyadicGeometricFields(self.sampler.p)) |fields| {
+                for (dest) |*item| {
+                    item.* = vectorGeometricDyadicFrom(VectorType, source, fields.m, fields.k) + @as(VectorType, @splat(1));
+                }
+                return;
             }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
+
     };
 }
 
@@ -22985,13 +22987,13 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| {
-                    out[lane] = geometricFailuresFrom(rng, self.sampler.p);
+            if (dyadicGeometricFields(self.sampler.p)) |fields| {
+                for (dest) |*item| {
+                    item.* = vectorGeometricDyadicFrom(VectorType, rng, fields.m, fields.k);
                 }
-                item.* = out;
+                return;
             }
+            for (dest) |*item| item.* = self.sample(rng);
         }
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
@@ -23003,13 +23005,15 @@ pub fn VectorGeometricFailures(comptime VectorType: type) type {
                 @memset(dest, @as(VectorType, @splat(geometricFailureMax)));
                 return;
             }
-            const p = self.sampler.p;
-            for (dest) |*item| {
-                var out: VectorType = undefined;
-                inline for (0..info.len) |lane| out[lane] = geometricFailuresFrom(source, p);
-                item.* = out;
+            if (dyadicGeometricFields(self.sampler.p)) |fields| {
+                for (dest) |*item| {
+                    item.* = vectorGeometricDyadicFrom(VectorType, source, fields.m, fields.k);
+                }
+                return;
             }
+            for (dest) |*item| item.* = self.sampleFrom(source);
         }
+
     };
 }
 
@@ -49838,11 +49842,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_vector_geometric: [3]@Vector(4, u64) = undefined;
     var scalar_vector_geometric: [3]@Vector(4, u64) = undefined;
     vector_geometric_sampler.fillFrom(&direct_vector_geometric_engine, &direct_vector_geometric);
-    for (&scalar_vector_geometric) |*vec| {
-        var out: @Vector(4, u64) = undefined;
-        inline for (0..4) |lane| out[lane] = geometricFrom(&scalar_vector_geometric_engine, 0.25);
-        vec.* = out;
-    }
+    for (&scalar_vector_geometric) |*vec| vec.* = vector_geometric_sampler.sampleFrom(&scalar_vector_geometric_engine);
     try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_geometric, &direct_vector_geometric);
     try std.testing.expectEqual(scalar_vector_geometric_engine.next(), direct_vector_geometric_engine.next());
 
@@ -49862,11 +49862,7 @@ test "distribution vector helpers preserve support and stream shape" {
     var direct_vector_failures: [3]@Vector(4, u64) = undefined;
     var scalar_vector_failures: [3]@Vector(4, u64) = undefined;
     vector_geometric_failures_sampler.fillFrom(&direct_vector_failures_engine, &direct_vector_failures);
-    for (&scalar_vector_failures) |*vec| {
-        var out: @Vector(4, u64) = undefined;
-        inline for (0..4) |lane| out[lane] = geometricFailuresFrom(&scalar_vector_failures_engine, 0.25);
-        vec.* = out;
-    }
+    for (&scalar_vector_failures) |*vec| vec.* = vector_geometric_failures_sampler.sampleFrom(&scalar_vector_failures_engine);
     try std.testing.expectEqualSlices(@Vector(4, u64), &scalar_vector_failures, &direct_vector_failures);
     try std.testing.expectEqual(scalar_vector_failures_engine.next(), direct_vector_failures_engine.next());
 
