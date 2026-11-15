@@ -1895,6 +1895,38 @@ fn checkBinnedChiSquare(comptime Model: type, comptime label: []const u8, rng: a
 /// kernel: outcome bins 0-4, 5-9, ..., 35-39, 40 use exact Binomial(40, 0.25)
 /// probabilities, since the continuous CDF-binning form is not equiprobable
 /// for discrete laws.
+/// Discrete pmf-binned chi-square gate for the vectorized dyadic geometric
+/// kernel: trials 1..7 and 8+ use exact Geometric(0.25) probabilities.
+fn checkVectorGeometricBins(rng: alea.Rng, vectors: usize) !void {
+    const p: f64 = 0.25;
+    const bins = 8;
+    var bin_prob = [_]f64{0} ** bins;
+    var k: usize = 1;
+    while (k <= 7) : (k += 1) {
+        bin_prob[k - 1] = p * std.math.pow(f64, 1 - p, @floatFromInt(k - 1));
+    }
+    bin_prob[bins - 1] = std.math.pow(f64, 1 - p, 7);
+    var counts = [_]usize{0} ** bins;
+    var i: usize = 0;
+    while (i < vectors) : (i += 1) {
+        const point = alea.distributions.vectorGeometric(rng, @Vector(4, u64), p);
+        inline for (0..4) |lane| {
+            const b = @min(point[lane] - 1, bins - 1);
+            counts[b] += 1;
+        }
+    }
+    const total: f64 = @floatFromInt(vectors * 4);
+    var stat: f64 = 0;
+    for (counts, 0..) |c, b| {
+        const expected = bin_prob[b] * total;
+        const d = @as(f64, @floatFromInt(c)) - expected;
+        stat += d * d / expected;
+    }
+    const dof: f64 = bins - 1;
+    const bound = dof + 6 * @sqrt(2 * dof);
+    try expectFloatBetween("long vector geometric pmf chi-square", stat, 0, bound);
+}
+
 fn checkVectorBinomialBins(rng: alea.Rng, vectors: usize) !void {
     const trials: u64 = 40;
     const p: f64 = 0.25;
@@ -2374,6 +2406,7 @@ fn checkLongRun(samples: usize) !void {
             }
         }, V, "long vector maxwell binned", rng, vector_samples);
         try checkVectorBinomialBins(rng, vector_samples);
+        try checkVectorGeometricBins(rng, vector_samples);
     }
 
     // Exact SO(3) matrix Fisher isotropic trace moment.
