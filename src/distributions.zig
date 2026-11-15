@@ -28892,7 +28892,7 @@ pub fn fillWeibullFrom(source: anytype, comptime T: type, dest: []T, scale: T, s
     }
 
     const inverse_shape = 1 / shape;
-    for (dest) |*item| item.* = scale * @exp(inverse_shape * @log(Rng.standardExponentialFastFrom(source, T)));
+    for (dest) |*item| item.* = scale * @exp2(inverse_shape * @log2(Rng.standardExponentialFastFrom(source, T)));
 }
 
 fn weibullParametersValid(comptime T: type, scale: T, shape: T) bool {
@@ -29390,7 +29390,7 @@ pub fn fillFrechetFrom(source: anytype, comptime T: type, dest: []T, location: T
         return;
     }
     const negative_inverse_shape = -1 / shape;
-    for (dest) |*item| item.* = location + scale * @exp(negative_inverse_shape * @log(Rng.standardExponentialFastFrom(source, T)));
+    for (dest) |*item| item.* = location + scale * @exp2(negative_inverse_shape * @log2(Rng.standardExponentialFastFrom(source, T)));
 }
 
 fn frechetParametersValid(comptime T: type, location: T, scale: T, shape: T) bool {
@@ -41531,13 +41531,13 @@ fn logLogisticFromOpenUniformsVector(comptime T: type, comptime VectorType: type
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const uniform_vec = loadVectorLanes(VectorType, dest, i);
-        const out = scale_vec * @exp(@log(uniform_vec / (one_vec - uniform_vec)) * inverse_shape_vec);
+        const out = scale_vec * @exp2(@log2(uniform_vec / (one_vec - uniform_vec)) * inverse_shape_vec);
         storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
         const u = dest[i];
-        dest[i] = scale * @exp(@log(u / (1 - u)) * inverse_shape);
+        dest[i] = scale * @exp2(@log2(u / (1 - u)) * inverse_shape);
     }
 }
 
@@ -41632,19 +41632,21 @@ fn frechetFromOpenClosedUniforms(comptime T: type, dest: []T, location: T, scale
 
 fn frechetFromOpenClosedUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, location: T, scale: T, negative_inverse_shape: T) void {
     const len = vectorInfo(VectorType).len;
+    const ln2: T = 0.6931471805599453;
     const location_vec: VectorType = @splat(location);
     const scale_vec: VectorType = @splat(scale);
-    const negative_inverse_shape_vec: VectorType = @splat(negative_inverse_shape);
+    const ln2_vec: VectorType = @splat(ln2);
+    const exponent_vec: VectorType = @splat(negative_inverse_shape * ln2);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const uniform_vec = loadVectorLanes(VectorType, dest, i);
-        const out = location_vec + scale_vec * @exp(@log(-@log(uniform_vec)) * negative_inverse_shape_vec);
+        const out = location_vec + scale_vec * @exp2(@log2(-@log2(uniform_vec) * ln2_vec) * exponent_vec);
         storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
-        dest[i] = location + scale * @exp(@log(-@log(dest[i])) * negative_inverse_shape);
+        dest[i] = location + scale * @exp2(@log2(-@log2(dest[i]) * ln2) * (negative_inverse_shape * ln2));
     }
 }
 
@@ -41738,18 +41740,20 @@ fn weibullFromOpenUniforms(comptime T: type, dest: []T, scale: T, inverse_shape:
 
 fn weibullFromOpenUniformsVector(comptime T: type, comptime VectorType: type, dest: []T, scale: T, inverse_shape: T) void {
     const len = vectorInfo(VectorType).len;
+    const ln2: T = 0.6931471805599453;
     const scale_vec: VectorType = @splat(scale);
-    const inverse_shape_vec: VectorType = @splat(inverse_shape);
+    const ln2_vec: VectorType = @splat(ln2);
+    const exponent_vec: VectorType = @splat(inverse_shape * ln2);
 
     var i: usize = 0;
     while (i + len <= dest.len) : (i += len) {
         const uniform_vec = loadVectorLanes(VectorType, dest, i);
-        const out = scale_vec * @exp(@log(-@log(uniform_vec)) * inverse_shape_vec);
+        const out = scale_vec * @exp2(@log2(-@log2(uniform_vec) * ln2_vec) * exponent_vec);
         storeVectorLanes(VectorType, dest, i, out);
     }
 
     while (i < dest.len) : (i += 1) {
-        dest[i] = scale * @exp(@log(-@log(dest[i])) * inverse_shape);
+        dest[i] = scale * @exp2(@log2(-@log2(dest[i]) * ln2) * (inverse_shape * ln2));
     }
 }
 
@@ -54083,7 +54087,7 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     var log_logistic_values = uniforms;
     var expected_log_logistic = uniforms;
     logLogisticFromOpenUniforms(f32, &log_logistic_values, 2.0, 1.0 / 3.0);
-    for (&expected_log_logistic) |*item| item.* = 2.0 * @exp(@log(item.* / (1 - item.*)) * (1.0 / 3.0));
+    for (&expected_log_logistic) |*item| item.* = 2.0 * @exp2(@log2(item.* / (1 - item.*)) * (1.0 / 3.0));
     try expectApproxEqualFloatSlices(f32, &expected_log_logistic, &log_logistic_values);
 
     var log_logistic_shape_one_values = uniforms;
@@ -54107,7 +54111,7 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     var frechet_values = uniforms;
     var expected_frechet = uniforms;
     frechetFromOpenClosedUniforms(f32, &frechet_values, 0.5, 2.0, -1.0 / 3.0);
-    for (&expected_frechet) |*item| item.* = 0.5 + 2.0 * @exp(@log(-@log(item.*)) * (-1.0 / 3.0));
+    for (&expected_frechet) |*item| item.* = 0.5 + 2.0 * @exp2(@log2(-@log2(item.*) * @as(f32, 0.6931472)) * (-1.0 / 3.0 * @as(f32, 0.6931472)));
     try expectApproxEqualFloatSlices(f32, &expected_frechet, &frechet_values);
 
     var frechet_shape_one_values = uniforms;
@@ -54134,7 +54138,7 @@ test "distribution vector lane helpers preserve scalar slice transforms" {
     var weibull_values = uniforms;
     var expected_weibull = uniforms;
     weibullFromOpenUniforms(f32, &weibull_values, 1.5, 2.0 / 3.0);
-    for (&expected_weibull) |*item| item.* = 1.5 * @exp(@log(-@log(item.*)) * (2.0 / 3.0));
+    for (&expected_weibull) |*item| item.* = 1.5 * @exp2(@log2(-@log2(item.*) * @as(f32, 0.6931472)) * (2.0 / 3.0 * @as(f32, 0.6931472)));
     try expectApproxEqualFloatSlices(f32, &expected_weibull, &weibull_values);
 
     var inverse_gaussian_values = [_]f32{
