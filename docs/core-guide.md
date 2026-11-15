@@ -669,7 +669,10 @@ runtime float type, and explicit f32 arguments keep f32.
   `shape = +∞` point masses), Nakagami delegates to the incomplete gamma, and
   the ExGaussian/inverse-Gaussian helpers use a stable `log Φ` tail expansion
   plus deterministic bisection quantiles, skew-normal uses Owen's T via
-  adaptive Simpson, PERT maps to the equivalent scaled Beta distribution
+  adaptive Simpson and switches to the Mills-ratio lower-tail expansion
+  `F = (1/π) Σ (−1)^k (2k−1)!! s^{−2k−1} J_k` for `z < 0`, `shape > 0`,
+  `shape·|z| ≥ 3.5` (where the `Φ − 2T` subtraction is below the quadrature
+  floor), PERT maps to the equivalent scaled Beta distribution
   (infinite shape follows the sampler's `rand_distr`-compatible NaN
   semantics), Rice uses the Marcum Q series `e^{−a²/2} Σ (a²/2)^k/k!
   Q(k+1, b²/2)` with a Gaussian tail fallback above `ν/σ > 200`, and Hoyt

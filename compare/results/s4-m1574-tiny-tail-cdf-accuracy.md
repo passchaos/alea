@@ -47,8 +47,10 @@ CDF/quantile pairs found four real accuracy gaps:
 ## Remaining documented limits
 
 - `SkewNormal` far-left tail: `Φ(x) − 2T(x, λ)` cancels both ~`1e-9` terms;
-  the true `F(-6) ≈ 8.5e-19` is below the cancellation floor, so quantiles
-  below ~`1e-9` are not meaningful.
+  the true `F(-6) ≈ 9.73e-19` is below the cancellation floor, so quantiles
+  below ~`1e-9` are not meaningful. Resolved by S4-M1590: the Mills-ratio
+  expansion covers `z < 0`, `shape > 0`, `shape·|z| >= 3.5` (see
+  `s4-m1590-skew-normal-mills-tail.md`).
 - Heavy-tailed families (`StudentT`, `Cauchy`, `Weibull`, `Pareto`,
   `Rayleigh`, `Rice`, `GPD`, `SICS`, `InverseGamma`) at `p = 1e-12`:
   round-trip relative error is about `2.2e-5`, i.e. an absolute error of

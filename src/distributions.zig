@@ -2324,6 +2324,58 @@ fn owenT(h: f64, a: f64) f64 {
     return sign * integral / (2 * std.math.pi);
 }
 
+/// Lower tail `F(−a; s) = 2∫_a^∞ φ(u)Φ(−s u) du` for `a > 0`, `s > 0` and
+/// `s·a >= 3.5`, where the direct `Φ(−a) − 2T(−a, s)` subtraction loses all
+/// precision. The Mills-ratio expansion gives
+///
+///   F = (1/π) Σ_{k≥0} (−1)^k (2k−1)!! s^{−2k−1} J_k,
+///   J_k = ∫_a^∞ e^{−βu²} u^{−2k−1} du,  β = (1+s²)/2,
+///   J_0 = ½E1(βa²),  J_k = (e^{−βa²}a^{−2k} − 2βJ_{k−1})/(2k).
+///
+/// Eight terms keep the relative error below ~2.5e-2 at the 3.5 switch
+/// point, below ~4e-4 for `s·a >= 4.5`, and below ~4e-5 for `s·a >= 5` (the
+/// direct form has a ~1e-8 absolute quadrature floor, so it is off by orders
+/// of magnitude in this regime). The E1 factor uses its own
+/// asymptotic series truncated at the smallest term.
+fn skewNormalLowerTailAsym(a: f64, s: f64) f64 {
+    const beta_coeff = 0.5 * (1 + s * s);
+    const x = beta_coeff * a * a;
+    if (!(x < std.math.inf(f64))) return 0;
+    const e_neg_x = @exp(-x);
+
+    var e1_sum: f64 = 0;
+    var e1_term = 1 / x;
+    var m: usize = 0;
+    var e1_best: f64 = std.math.inf(f64);
+    while (m < 200) : (m += 1) {
+        e1_sum += if (m % 2 == 0) e1_term else -e1_term;
+        const magnitude = @abs(e1_term);
+        if (magnitude < e1_best) e1_best = magnitude;
+        if (m > 5 and magnitude > e1_best) break;
+        e1_term *= @as(f64, @floatFromInt(m + 1)) / x;
+    }
+
+    var j_prev = 0.5 * e_neg_x * e1_sum;
+    var total = j_prev / s;
+    const a2_inv = 1 / (a * a);
+    const s_inv = 1 / s;
+    const s_inv2 = s_inv * s_inv;
+    var a_pow: f64 = 1;
+    var s_pow = s_inv;
+    var coeff: f64 = 1;
+    var k: usize = 1;
+    while (k <= 8) : (k += 1) {
+        const kf: f64 = @floatFromInt(k);
+        coeff = -coeff * (2 * kf - 1);
+        a_pow *= a2_inv;
+        s_pow *= s_inv2;
+        const j = (e_neg_x * a_pow - 2 * beta_coeff * j_prev) / (2 * kf);
+        total += coeff * s_pow * j;
+        j_prev = j;
+    }
+    return @max(0, total / std.math.pi);
+}
+
 /// Skew-normal CDF: `Φ(z) − 2·T(z, α)` with `z = (x − ξ)/ω`.
 /// `scale = 0` is the point mass at the location.
 pub fn skewNormalCdf(x: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(x, location, scale, shape)) {
@@ -2343,7 +2395,10 @@ fn skewNormalCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, s
     if (x_f == std.math.inf(f64)) return 1;
     if (x_f == -std.math.inf(f64)) return 0;
     const z = (x_f - location_f) / scale_f;
-    const cdf = normCdf(z) - 2 * owenT(z, shape_f);
+    const cdf = if (z < 0 and shape_f > 0 and shape_f * -z >= 3.5)
+        skewNormalLowerTailAsym(-z, shape_f)
+    else
+        normCdf(z) - 2 * owenT(z, shape_f);
     return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
 }
 
@@ -58591,6 +58646,34 @@ test "ExGaussian and InverseGaussian CDF and quantile helpers" {
     try std.testing.expectApproxEqAbs(inverseGaussianCdf(@as(f64, 2), @as(f64, 1), @as(f64, 2)), ig.cdf(2), 0);
 }
 
+test "skew-normal far-left tail uses the Mills expansion" {
+    // shape = 1 has the closed form F(z; 1) = Φ(z)²; the constants are
+    // Φ(−5)², Φ(−6)², and Φ(−7)² from the double-precision erfc reference.
+    const phi_neg_5_sq: f64 = 8.216912366081301e-14;
+    const phi_neg_6_sq: f64 = 9.733551813410374e-19;
+    const phi_neg_7_sq: f64 = 1.6379201474875318e-24;
+    try std.testing.expectApproxEqRel(phi_neg_6_sq, skewNormalCdf(@as(f64, -6), @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-5);
+    try std.testing.expectApproxEqRel(phi_neg_7_sq, skewNormalCdf(@as(f64, -7), @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-7);
+
+    // The tail decreases with shape and stays finite for extreme arguments.
+    const f0 = skewNormalCdf(@as(f64, -6), @as(f64, 0), @as(f64, 1), @as(f64, 0));
+    const f1 = skewNormalCdf(@as(f64, -6), @as(f64, 0), @as(f64, 1), @as(f64, 0.5));
+    const f2 = skewNormalCdf(@as(f64, -6), @as(f64, 0), @as(f64, 1), @as(f64, 1));
+    const f3 = skewNormalCdf(@as(f64, -6), @as(f64, 0), @as(f64, 1), @as(f64, 2));
+    try std.testing.expect(f0 > f1 and f1 > f2 and f2 > f3);
+    try std.testing.expect(f3 >= 0);
+    try std.testing.expectEqual(@as(f64, 0), skewNormalCdf(@as(f64, -400), @as(f64, 0), @as(f64, 1), @as(f64, 2)));
+
+    // The mid-tail stays usable even before the asymptotic switch.
+    try std.testing.expectApproxEqRel(phi_neg_5_sq, skewNormalCdf(@as(f64, -5), @as(f64, 0), @as(f64, 1), @as(f64, 1)), 1e-4);
+
+    // Quantiles in the resolved tail round-trip.
+    inline for ([_]f64{ 1e-9, 1e-12, 1e-15, 1e-18 }) |p| {
+        const q = skewNormalQuantile(p, @as(f64, 0), @as(f64, 1), @as(f64, 1));
+        try std.testing.expectApproxEqRel(p, skewNormalCdf(q, @as(f64, 0), @as(f64, 1), @as(f64, 1)), 5e-4);
+    }
+}
+
 test "SkewNormal and PERT CDF and quantile helpers" {
     // SkewNormal with shape=0 is the normal.
     try std.testing.expectApproxEqAbs(@as(f64, 0.5), skewNormalCdf(@as(f64, 0), @as(f64, 0), @as(f64, 1), @as(f64, 0)), 1e-15);
@@ -68220,3 +68303,4 @@ test "Wishart/InverseWishart (dynamic) sampleInto works with caller buffers" {
     wf.sampleInto(rng, &wbuf_f32);
     try std.testing.expect(wbuf_f32[0] > 0);
 }
+
