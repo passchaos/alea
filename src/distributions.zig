@@ -5752,6 +5752,26 @@ noinline fn vectorBinomialDyadicLarge(comptime VectorType: type, source: anytype
     return if (complement) @as(VectorType, @splat(trials)) - sampled else sampled;
 }
 
+/// Fair (p = 1/2) binomial for u64 vectors: every bit is a trial, so the
+/// successes of up to 64 trials are one word popcount per lane.
+fn vectorBinomialFairFrom(comptime VectorType: type, source: anytype, trials: u64) VectorType {
+    const lanes = vectorInfo(VectorType).len;
+    var out: VectorType = @splat(0);
+    var remaining = trials;
+    while (remaining > 0) {
+        var bits: VectorType = undefined;
+        inline for (0..lanes) |lane| bits[lane] = Rng.nextFrom(source);
+        const take = @min(remaining, 64);
+        if (take < 64) {
+            const limit: VectorType = @splat((@as(u64, 1) << @intCast(take)) - 1);
+            bits &= limit;
+        }
+        out += @as(VectorType, @intCast(@popCount(bits)));
+        remaining -= take;
+    }
+    return out;
+}
+
 /// Packed dyadic binomial for u64 vectors: one word per lane per round with
 /// vector mask/popcount work, so a 40-trial sample costs two vector rounds.
 fn vectorBinomialDyadicFrom(comptime VectorType: type, source: anytype, trials: u64, m: u32, k: u64) VectorType {
@@ -5831,6 +5851,9 @@ pub fn VectorBinomial(comptime VectorType: type) type {
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             if (self.sampler.trials == 0 or self.sampler.p == 0) return @splat(0);
             if (self.sampler.p == 1) return @splat(self.sampler.trials);
+            if (self.sampler.p == 0.5) {
+                return vectorBinomialFairFrom(VectorType, source, self.sampler.trials);
+            }
             if (self.sampler.trials <= 64) {
                 const complement = self.sampler.p > 0.5;
                 const q = if (complement) 1.0 - self.sampler.p else self.sampler.p;
