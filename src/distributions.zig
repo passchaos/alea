@@ -3991,6 +3991,7 @@ pub const TruncatedNormalError = Error;
 pub const VonMisesError = Error;
 pub const WrappedCauchyError = Error;
 pub const WrappedNormalError = Error;
+pub const WrappedSkewNormalError = Error;
 pub const NoncentralChiSquaredError = Error;
 pub const NoncentralTError = Error;
 pub const NoncentralFError = Error;
@@ -13029,6 +13030,368 @@ pub fn VectorWrappedNormal(comptime VectorType: type) type {
 
         pub fn sampleFrom(self: Self, source: anytype) VectorType {
             return wrappedNormalFrom(source, VectorType, @splat(self.sampler.mu), @splat(self.sampler.sigma));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| {
+                item.* = self.sampleFrom(source);
+            }
+        }
+    };
+}
+
+// -----------------------------------------------------------------------------
+// Wrapped Skew-Normal circular distribution
+//
+// The wrapped skew-normal wraps SN(mu, sigma^2, alpha) around the unit circle.
+// alpha = 0 is the wrapped normal; sigma = 0 is a point mass at the wrapped mu.
+// The CDF sums the skew-normal CDF over the 2*pi images and reuses the
+// Gauss-Legendre Owen T fast path. The quantile is safeguarded Newton on the
+// wrapped density.
+// -----------------------------------------------------------------------------
+
+pub fn WrappedSkewNormal(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        mu: T,
+        sigma: T,
+        alpha: T,
+
+        const Self = @This();
+
+        /// Create a Wrapped Skew-Normal with location `mu`, scale `sigma >= 0`,
+        /// and shape `alpha`.
+        pub fn new(mu: T, sigma: T, alpha: T) Rng.Error!Self {
+            if (!std.math.isFinite(mu)) return error.InvalidParameter;
+            if (!std.math.isFinite(sigma) or sigma < 0) return error.InvalidParameter;
+            if (!std.math.isFinite(alpha)) return error.InvalidParameter;
+            return Self{ .mu = mu, .sigma = sigma, .alpha = alpha };
+        }
+
+        /// Location parameter (radians).
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Scale of the underlying skew-normal.
+        pub fn scaleValue(self: Self) T {
+            return self.sigma;
+        }
+
+        /// Shape of the underlying skew-normal; 0 is the wrapped normal.
+        pub fn shapeValue(self: Self) T {
+            return self.alpha;
+        }
+
+        pub fn minValue(_: Self) T {
+            return -@as(T, @floatCast(std.math.pi));
+        }
+
+        pub fn maxValue(_: Self) T {
+            return @as(T, @floatCast(std.math.pi));
+        }
+
+        /// Circular CDF on `(-π, π]`; `cdf(-π) = 0`, `cdf(π) = 1`.
+        pub fn cdf(self: Self, x: T) T {
+            return wrappedSkewNormalCdfImpl(T, x, self.mu, self.sigma, self.alpha);
+        }
+
+        /// Inverse circular CDF; `quantile(0) = -π`, `quantile(1) = π`.
+        pub fn quantile(self: Self, p: T) T {
+            return wrappedSkewNormalQuantileImpl(T, p, self.mu, self.sigma, self.alpha);
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return wrappedSkewNormalFrom(rng, T, self.mu, self.sigma, self.alpha);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return wrappedSkewNormalFrom(source, T, self.mu, self.sigma, self.alpha);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            fillWrappedSkewNormalFrom(rng, T, dest, self.mu, self.sigma, self.alpha);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillWrappedSkewNormalFrom(source, T, dest, self.mu, self.sigma, self.alpha);
+        }
+    };
+}
+
+/// Standard Wrapped Skew-Normal (μ=0, σ=1, α=1).
+pub const StandardWrappedSkewNormal = struct {
+    pub fn locationValue(_: StandardWrappedSkewNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn scaleValue(_: StandardWrappedSkewNormal, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn shapeValue(_: StandardWrappedSkewNormal, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn minValue(_: StandardWrappedSkewNormal, comptime T: type) ?T {
+        return @as(T, @floatCast(-std.math.pi));
+    }
+
+    pub fn maxValue(_: StandardWrappedSkewNormal, comptime T: type) ?T {
+        return @as(T, @floatCast(std.math.pi));
+    }
+
+    pub fn sample(_: StandardWrappedSkewNormal, rng: Rng, comptime T: type) T {
+        return wrappedSkewNormalFrom(rng, T, zeroOf(T), oneOf(T), oneOf(T));
+    }
+
+    pub fn sampleFrom(_: StandardWrappedSkewNormal, source: anytype, comptime T: type) T {
+        return wrappedSkewNormalFrom(source, T, zeroOf(T), oneOf(T), oneOf(T));
+    }
+
+    pub fn fill(_: StandardWrappedSkewNormal, rng: Rng, comptime T: type, dest: []T) void {
+        fillWrappedSkewNormalFrom(rng, T, dest, zeroOf(T), oneOf(T), oneOf(T));
+    }
+
+    pub fn fillFrom(_: StandardWrappedSkewNormal, source: anytype, comptime T: type, dest: []T) void {
+        fillWrappedSkewNormalFrom(source, T, dest, zeroOf(T), oneOf(T), oneOf(T));
+    }
+};
+
+/// Wrapped Skew-Normal CDF on `(-π, π]`.
+pub fn wrappedSkewNormalCdf(x: anytype, mu: anytype, sigma: anytype, alpha: anytype) resolvedFloatType(@TypeOf(x, mu, sigma, alpha)) {
+    return wrappedSkewNormalCdfImpl(resolvedFloatType(@TypeOf(x, mu, sigma, alpha)), x, mu, sigma, alpha);
+}
+
+/// Upper tail `1 - F(z)` of the standardized skew-normal. For large `z` the
+/// direct `1 - CDF` loses the tail; the Mills-ratio `normUpperTailF64` keeps
+/// it. Used by the wrapped upper-tail sum near `pi`.
+fn skewNormalUpperTailZ(z: f64, alpha: f64) f64 {
+    if (z >= 0) {
+        // Q(1/2, z^2/2) = erfc(z/sqrt(2)); the incomplete-gamma continued
+        // fraction resolves the upper tail far below the A&S erf floor.
+        const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
+        return q + 2 * owenT(z, alpha);
+    }
+    return 1 - skewNormalCdfZ(z, alpha);
+}
+
+fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
+    const pi = std.math.pi;
+    const two_pi = 2 * pi;
+    const k_max = wrappedNormalImageCount(f64, sigma);
+    var sum: f64 = 0;
+    var k: i32 = -k_max;
+    if (x > 0 and alpha != 0) {
+        // Upper tail: `1 - P(theta > x)`, summed over the images on
+        // `(x, pi]`. This avoids the `~1` cancellation of the direct lower
+        // sum near the upper endpoint.
+        while (k <= k_max) : (k += 1) {
+            const shift = @as(f64, @floatFromInt(k)) * two_pi;
+            sum += skewNormalUpperTailZ((x - mu_w + shift) / sigma, alpha) -
+                skewNormalUpperTailZ((pi - mu_w + shift) / sigma, alpha);
+        }
+        return @min(@as(f64, 1), @max(@as(f64, 0), 1 - sum));
+    }
+    while (k <= k_max) : (k += 1) {
+        const shift = @as(f64, @floatFromInt(k)) * two_pi;
+        sum += skewNormalCdfZ((x - mu_w + shift) / sigma, alpha) -
+            skewNormalCdfZ((-pi - mu_w + shift) / sigma, alpha);
+    }
+    return @min(@as(f64, 1), @max(@as(f64, 0), sum));
+}
+
+fn wrappedSkewNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType, alpha: PeerType) PeerType {
+    const T = @TypeOf(x, mu, sigma, alpha);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or sigma < 0 or !std.math.isFinite(alpha) or std.math.isNan(x)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    if (x <= -pi) return 0;
+    if (x >= pi) return 1;
+    const mu_w = wrapAngleModulo(mu, pi, two_pi);
+    if (sigma == 0) return if (x < mu_w) 0 else 1;
+    if (sigma >= 10) return @min(@as(T, 1), @max(@as(T, 0), (x + pi) / two_pi));
+    const cdf = wrappedSkewNormalCdfF64(@floatCast(x), @floatCast(mu_w), @floatCast(sigma), @floatCast(alpha));
+    return @floatCast(cdf);
+}
+
+fn wrappedSkewNormalPdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
+    const pi = std.math.pi;
+    const two_pi = 2 * pi;
+    const k_max = wrappedNormalImageCount(f64, sigma);
+    var sum: f64 = 0;
+    var k: i32 = -k_max;
+    while (k <= k_max) : (k += 1) {
+        const shift = @as(f64, @floatFromInt(k)) * two_pi;
+        sum += skewNormalPdfZ((x - mu_w + shift) / sigma, alpha);
+    }
+    return sum / sigma;
+}
+
+/// Inverse wrapped Skew-Normal CDF; `quantile(0) = -π`, `quantile(1) = π`.
+pub fn wrappedSkewNormalQuantile(p: anytype, mu: anytype, sigma: anytype, alpha: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, alpha)) {
+    return wrappedSkewNormalQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma, alpha)), p, mu, sigma, alpha);
+}
+
+fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType, alpha: PeerType) PeerType {
+    const T = @TypeOf(p, mu, sigma, alpha);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or sigma < 0 or !std.math.isFinite(alpha) or !(p >= 0 and p <= 1)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    if (p == 0) return -pi;
+    if (p == 1) return pi;
+    const mu_w = wrapAngleModulo(mu, pi, two_pi);
+    if (sigma == 0) return mu_w;
+    if (sigma >= 10) return -pi + two_pi * p;
+
+    const p_f: f64 = @floatCast(p);
+    const mu_f: f64 = @floatCast(mu_w);
+    const sigma_f: f64 = @floatCast(sigma);
+    const alpha_f: f64 = @floatCast(alpha);
+    const pi_f: f64 = @floatCast(std.math.pi);
+    const two_pi_f = 2 * pi_f;
+    const guess = if (sigma_f <= 2)
+        wrapAngleModulo(mu_f + sigma_f * probit(p_f), pi_f, two_pi_f)
+    else
+        -pi_f + two_pi_f * p_f;
+    var lo: f64 = -pi_f;
+    var hi: f64 = pi_f;
+    var x: f64 = @min(@max(guess, lo), hi);
+    const tol: f64 = 1e-12;
+    for (0..40) |_| {
+        const f = wrappedSkewNormalCdfF64(x, mu_f, sigma_f, alpha_f);
+        if (f < p_f) lo = x else hi = x;
+        if (f == p_f or hi - lo <= tol) break;
+        const d = wrappedSkewNormalPdfF64(x, mu_f, sigma_f, alpha_f);
+        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == x) break;
+        x = next;
+    }
+    return @floatCast(x);
+}
+
+/// Wrapped Skew-Normal sampling: draw the skew-normal and wrap it.
+pub fn wrappedSkewNormal(rng: Rng, comptime T: type, mu: T, sigma: T, alpha: T) T {
+    return wrappedSkewNormalFrom(rng, T, mu, sigma, alpha);
+}
+
+pub fn wrappedSkewNormalFrom(source: anytype, comptime T: type, mu: T, sigma: T, alpha: T) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => blk: {
+            const pi_val: T = @floatCast(std.math.pi);
+            const two_pi: T = 2 * pi_val;
+            if (sigma == 0) break :blk wrapAngleModulo(mu, pi_val, two_pi);
+            break :blk wrapAngleModulo(skewNormalFrom(source, T, mu, sigma, alpha), pi_val, two_pi);
+        },
+        .vector => blk: {
+            const Child = vectorChild(T);
+            const lanes = vectorInfo(T).len;
+            var out: T = undefined;
+            inline for (0..lanes) |lane| {
+                out[lane] = wrappedSkewNormalFrom(source, Child, mu[lane], sigma[lane], alpha[lane]);
+            }
+            break :blk out;
+        },
+        else => unreachable,
+    };
+}
+
+pub fn wrappedSkewNormalChecked(rng: Rng, comptime T: type, mu: T, sigma: T, alpha: T) Error!T {
+    return wrappedSkewNormalCheckedFrom(rng, T, mu, sigma, alpha);
+}
+
+pub fn wrappedSkewNormalCheckedFrom(source: anytype, comptime T: type, mu: T, sigma: T, alpha: T) Error!T {
+    const dist = try WrappedSkewNormal(T).new(mu, sigma, alpha);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillWrappedSkewNormal(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T, alpha: T) void {
+    fillWrappedSkewNormalFrom(rng, T, dest, mu, sigma, alpha);
+}
+
+pub fn fillWrappedSkewNormalFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, alpha: T) void {
+    for (dest) |*item| {
+        item.* = wrappedSkewNormalFrom(source, T, mu, sigma, alpha);
+    }
+}
+
+pub fn fillWrappedSkewNormalChecked(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T, alpha: T) Error!void {
+    return fillWrappedSkewNormalCheckedFrom(rng, T, dest, mu, sigma, alpha);
+}
+
+pub fn fillWrappedSkewNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T, alpha: T) Error!void {
+    if (dest.len == 0) return;
+    const dist = try WrappedSkewNormal(T).new(mu, sigma, alpha);
+    dist.fillFrom(source, dest);
+}
+
+pub fn vectorWrappedSkewNormal(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) VectorType {
+    return vectorWrappedSkewNormalFrom(rng, VectorType, mu, sigma, alpha);
+}
+
+pub fn vectorWrappedSkewNormalFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) VectorType {
+    const Child = vectorChild(VectorType);
+    const pi_vec: VectorType = @splat(@as(Child, @floatCast(std.math.pi)));
+    const two_pi: VectorType = @as(VectorType, @splat(@as(Child, 2))) * pi_vec;
+    if (sigma == 0) return wrapAngleModulo(@as(VectorType, @splat(mu)), pi_vec, two_pi);
+    const raw = vectorSkewNormalFrom(source, VectorType, mu, sigma, alpha);
+    return wrapAngleModulo(raw, pi_vec, two_pi);
+}
+
+pub fn vectorWrappedSkewNormalChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) Error!VectorType {
+    return vectorWrappedSkewNormalCheckedFrom(rng, VectorType, mu, sigma, alpha);
+}
+
+pub fn vectorWrappedSkewNormalCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) Error!VectorType {
+    const dist = try VectorWrappedSkewNormal(VectorType).new(mu, sigma, alpha);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorWrappedSkewNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) void {
+    fillVectorWrappedSkewNormalFrom(rng, VectorType, dest, mu, sigma, alpha);
+}
+
+pub fn fillVectorWrappedSkewNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) void {
+    const dist = VectorWrappedSkewNormal(VectorType).new(mu, sigma, alpha) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorWrappedSkewNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) Error!void {
+    return fillVectorWrappedSkewNormalCheckedFrom(rng, VectorType, dest, mu, sigma, alpha);
+}
+
+pub fn fillVectorWrappedSkewNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType), alpha: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorWrappedSkewNormal(VectorType).new(mu, sigma, alpha);
+    dist.fillFrom(source, dest);
+}
+
+/// SIMD-vectorized Wrapped Skew-Normal distribution.
+pub fn VectorWrappedSkewNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: WrappedSkewNormal(Child),
+
+        pub fn new(mu: Child, sigma: Child, alpha: Child) Error!Self {
+            return Self{ .sampler = try WrappedSkewNormal(Child).new(mu, sigma, alpha) };
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorWrappedSkewNormalFrom(source, VectorType, self.sampler.mu, self.sampler.sigma, self.sampler.alpha);
         }
 
         pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
@@ -66190,6 +66553,157 @@ test "WrappedNormal vector wrapping covers out-of-range lanes" {
             try std.testing.expect(std.math.isFinite(vec[lane]));
             try std.testing.expect(vec[lane] > -pi_f64 and vec[lane] <= pi_f64);
         }
+    }
+}
+
+test "WrappedSkewNormal constructor validates parameters" {
+    try std.testing.expectError(error.InvalidParameter, WrappedSkewNormal(f64).new(0, -0.1, 1));
+    try std.testing.expectError(error.InvalidParameter, WrappedSkewNormal(f64).new(0, std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, WrappedSkewNormal(f64).new(0, 1, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, WrappedSkewNormal(f64).new(std.math.nan(f64), 1, 1));
+
+    const dist = try WrappedSkewNormal(f64).new(0.5, 2.0, -1.5);
+    try std.testing.expectEqual(@as(f64, 0.5), dist.locationValue());
+    try std.testing.expectEqual(@as(f64, 2.0), dist.scaleValue());
+    try std.testing.expectEqual(@as(f64, -1.5), dist.shapeValue());
+}
+
+test "WrappedSkewNormal alpha=0 matches WrappedNormal" {
+    const wn = try WrappedNormal(f64).new(0.4, 1.0);
+    const wsn = try WrappedSkewNormal(f64).new(0.4, 1.0, 0);
+    inline for ([_]f64{ -3.0, -2.0, -0.5, 0.0, 0.5, 2.0, 3.0 }) |x| {
+        try std.testing.expectApproxEqAbs(wn.cdf(x), wsn.cdf(x), 1e-12);
+    }
+    inline for ([_]f64{ 1e-4, 0.1, 0.5, 0.9, 1 - 1e-4 }) |p| {
+        try std.testing.expectApproxEqAbs(wn.quantile(p), wsn.quantile(p), 1e-10);
+    }
+}
+
+test "WrappedSkewNormal CDF and quantile are inverses" {
+    inline for ([_]f64{ 0.5, 1.0, 3.0 }) |sigma| {
+        inline for ([_]f64{ -2.0, -1.0, 0.5, 2.0 }) |alpha| {
+            const dist = try WrappedSkewNormal(f64).new(0.4, sigma, alpha);
+            try std.testing.expectEqual(@as(f64, 0), dist.cdf(-std.math.pi));
+            try std.testing.expectEqual(@as(f64, 1), dist.cdf(std.math.pi));
+
+            var prev: f64 = -1;
+            var i: usize = 0;
+            while (i <= 1_000) : (i += 1) {
+                const theta = -std.math.pi + 2 * std.math.pi * @as(f64, @floatFromInt(i)) / 1_000;
+                const f = dist.cdf(theta);
+                try std.testing.expect(f >= prev - 1e-10);
+                try std.testing.expect(f >= 0 and f <= 1);
+                prev = f;
+            }
+
+            inline for ([_]f64{ 1e-4, 0.01, 0.1, 0.5, 0.9, 0.99, 1 - 1e-4 }) |p| {
+                try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-9);
+            }
+        }
+    }
+
+    const f32_dist = try WrappedSkewNormal(f32).new(0, 1, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(f32_dist.quantile(0.5)), 1e-4);
+}
+
+test "WrappedSkewNormal sigma=0 point mass and large sigma uniform" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c31);
+    const rng = Rng.init(&engine);
+
+    const point = try WrappedSkewNormal(f64).new(0.7, 0, 2);
+    try std.testing.expectEqual(@as(f64, 0), point.cdf(0.0));
+    try std.testing.expectEqual(@as(f64, 1), point.cdf(1.0));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7), point.quantile(0.3), 1e-15);
+    for (0..100) |_| {
+        try std.testing.expectApproxEqAbs(@as(f64, 0.7), point.sample(rng), 1e-12);
+    }
+
+    const wide = try WrappedSkewNormal(f64).new(0, 50, 2);
+    try std.testing.expectApproxEqAbs((0.5 + std.math.pi) / (2 * std.math.pi), wide.cdf(0.5), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), wide.cdf(wide.quantile(0.25)), 1e-12);
+}
+
+test "WrappedSkewNormal samples are bounded and skewed" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c32);
+    const rng = Rng.init(&engine);
+
+    const dist = try WrappedSkewNormal(f64).new(0, 1, 2);
+    const n = 20_000;
+    var sum_sin: f64 = 0;
+    var sum_cos: f64 = 0;
+    for (0..n) |_| {
+        const x = dist.sample(rng);
+        try std.testing.expect(x > -std.math.pi and x <= std.math.pi);
+        sum_sin += @sin(x);
+        sum_cos += @cos(x);
+    }
+    const mean_sin = sum_sin / @as(f64, @floatFromInt(n));
+    const mean_cos = sum_cos / @as(f64, @floatFromInt(n));
+    try std.testing.expect(mean_sin > 0.05);
+    try std.testing.expect(@sqrt(mean_sin * mean_sin + mean_cos * mean_cos) > 0.5);
+}
+
+test "WrappedSkewNormal vector sampling produces valid circular values" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c33);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f32);
+    const dist = StandardWrappedSkewNormal{};
+    var buf: [64]V = undefined;
+    dist.fill(rng, V, &buf);
+    const pi_f32: f32 = @floatCast(std.math.pi);
+    for (buf) |vec| {
+        inline for (0..4) |lane| {
+            try std.testing.expect(std.math.isFinite(vec[lane]));
+            try std.testing.expect(vec[lane] > -pi_f32 and vec[lane] <= pi_f32);
+        }
+    }
+
+    const point = alea.distributions.vectorWrappedSkewNormal(rng, V, 0.5, 1.0, 2.0);
+    inline for (0..4) |lane| {
+        try std.testing.expect(std.math.isFinite(point[lane]));
+        try std.testing.expect(point[lane] > -pi_f32 and point[lane] <= pi_f32);
+    }
+}
+
+test "WrappedSkewNormal checked helpers reject invalid parameters" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c34);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, wrappedSkewNormalChecked(rng, f64, 0, -1, 1));
+    const x = try wrappedSkewNormalChecked(rng, f64, 0, 1, 1);
+    try std.testing.expect(x > -std.math.pi and x <= std.math.pi);
+
+    var buf: [8]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillWrappedSkewNormalChecked(rng, f64, &buf, 0, 1, std.math.inf(f64)));
+
+    const V = @Vector(4, f32);
+    try std.testing.expectError(error.InvalidParameter, vectorWrappedSkewNormalChecked(rng, V, 0, 1, std.math.nan(f32)));
+}
+
+test "StandardWrappedSkewNormal unit struct has correct parameters" {
+    const dist = StandardWrappedSkewNormal{};
+    try std.testing.expectEqual(@as(f64, 0), dist.locationValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), dist.scaleValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), dist.shapeValue(f64));
+    try std.testing.expectApproxEqAbs(-std.math.pi, dist.minValue(f64).?, 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi, dist.maxValue(f64).?, 1e-12);
+
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c35);
+    const rng = Rng.init(&engine);
+    const x = dist.sample(rng, f64);
+    try std.testing.expect(x > -std.math.pi and x <= std.math.pi);
+
+    var buf: [64]f64 = undefined;
+    dist.fill(rng, f64, &buf);
+    for (buf) |v| {
+        try std.testing.expect(v > -std.math.pi and v <= std.math.pi);
+        try std.testing.expect(std.math.isFinite(v));
     }
 }
 

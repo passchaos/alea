@@ -2457,6 +2457,14 @@ fn checkLongRun(samples: usize) !void {
                 return alea.distributions.wrappedNormalCdf(x, 0.4, 1.0);
             }
         }, "long wrapped normal binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.wrappedSkewNormal(r, f64, 0.4, 1.0, 2.0);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.wrappedSkewNormalCdf(x, 0.4, 1.0, 2.0);
+            }
+        }, "long wrapped skew-normal binned", rng, binned_samples);
     }
 
     // Vector binned chi-square gates for the per-lane scalar-draw vector
@@ -2522,6 +2530,14 @@ fn checkLongRun(samples: usize) !void {
                 return alea.distributions.wrappedNormalCdf(x, 0.4, 1.0);
             }
         }, V, "long vector wrapped normal binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorWrappedSkewNormal(r, V, 0.4, 1.0, 2.0);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.wrappedSkewNormalCdf(x, 0.4, 1.0, 2.0);
+            }
+        }, V, "long vector wrapped skew-normal binned", rng, vector_samples);
         try checkVectorBinomialBins(rng, vector_samples, 0.0625, "long vector binomial dyadic pmf chi-square p=0.0625");
         try checkVectorBinomialBins(rng, vector_samples, 0.125, "long vector binomial dyadic pmf chi-square p=0.125");
         try checkVectorBinomialBins(rng, vector_samples, 0.25, "long vector binomial dyadic pmf chi-square p=0.25");

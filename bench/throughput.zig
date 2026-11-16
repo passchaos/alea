@@ -589,6 +589,10 @@ pub fn main(init: std.process.Init) !void {
     try benchWrappedNormal(io, stdout, "alea wrapped normal", bytes / 8);
     try benchVectorWrappedNormal(io, stdout, "alea vector wrapped normal f64x4", bytes / 32);
     try benchWrappedNormalQuantile(io, stdout, "alea wrapped normal quantile", bytes / 1024);
+    try benchWrappedSkewNormal(io, stdout, "alea wrapped skew-normal", bytes / 8);
+    try benchVectorWrappedSkewNormal(io, stdout, "alea vector wrapped skew-normal f64x4", bytes / 32);
+    try benchQuantileModel(QuantileProbeWrappedSkewNormal, io, stdout, "alea wrapped skew-normal quantile", bytes / 4096);
+    try benchCdfModel(CdfProbeWrappedSkewNormal, io, stdout, "alea wrapped skew-normal cdf", bytes / 4096);
     try benchVonMisesFisher(io, stdout, "alea von mises-fisher 3d", bytes / 64);
     try benchVectorVonMisesFisher(io, stdout, "alea vector von mises-fisher f64x4 3d", bytes / 64);
     try benchVectorWatson(io, stdout, "alea vector watson f64x4 3d", bytes / 64);
@@ -12396,6 +12400,17 @@ const CdfProbeSkewNormal = struct {
     }
 };
 
+const CdfProbeWrappedSkewNormal = struct {
+    fn cdf(x: f64) f64 {
+        return alea.distributions.wrappedSkewNormalCdf(x, 0.4, 1.0, 2.0);
+    }
+};
+const QuantileProbeWrappedSkewNormal = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.wrappedSkewNormalQuantile(p, 0.4, 1.0, 2.0);
+    }
+};
+
 const QuantileProbePert = struct {
     fn quantile(p: f64) f64 {
         return alea.distributions.pertQuantile(p, 0, 0.5, 1, 4);
@@ -12550,6 +12565,62 @@ fn benchVectorWrappedNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8
     var trial: usize = 0;
     while (trial < trials) : (trial += 1) {
         var engine = alea.FastPrng.init(0x5f51);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| checksum +%= @bitCast(point[lane]);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchWrappedSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const dist = alea.distributions.WrappedSkewNormal(f64).new(0.4, 1.0, 2.0) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5f60);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: u64 = 0;
+        while (i < count) : (i += 1) {
+            checksum +%= @bitCast(dist.sample(rng));
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchVectorWrappedSkewNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const V = @Vector(4, f64);
+    const dist = alea.distributions.VectorWrappedSkewNormal(V).new(0.4, 1.0, 2.0) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: u64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.FastPrng.init(0x5f61);
         const rng = alea.Rng.init(&engine);
         const start = std.Io.Clock.awake.now(io).nanoseconds;
         var i: usize = 0;
