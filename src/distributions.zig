@@ -3761,6 +3761,7 @@ pub const ZipfError = Error;
 pub const TruncatedNormalError = Error;
 pub const VonMisesError = Error;
 pub const WrappedCauchyError = Error;
+pub const WrappedNormalError = Error;
 pub const NoncentralChiSquaredError = Error;
 pub const NoncentralTError = Error;
 pub const NoncentralFError = Error;
@@ -12362,6 +12363,397 @@ inline fn wrapAngleGeneric(theta: anytype, pi_val: anytype, two_pi: anytype) @Ty
         t = t + @select(Child, too_small, two_pi, zero_vec);
     }
     return t;
+}
+
+// -----------------------------------------------------------------------------
+// Wrapped Normal circular distribution
+//
+// The wrapped normal is obtained by wrapping N(mu, sigma^2) around the unit
+// circle. It is the maximum-entropy circular law for a fixed mean resultant
+// length rho = exp(-sigma^2 / 2), making it the circular analogue of the normal
+// distribution and the smooth-tail counterpart to Wrapped Cauchy.
+//
+// Sampling draws one standard normal and wraps `mu + sigma * z`. The CDF is
+// the infinite sum of normal-CDF differences over the 2*pi images; the sum is
+// truncated where the remaining terms are below f64 resolution. For
+// `sigma >= 10` the wrap error is below 1e-21 and the uniform limit is used.
+// -----------------------------------------------------------------------------
+
+/// Wrapped Normal circular distribution on (-π, π].
+///
+/// Parameters:
+///   mu    - mean direction (radians); any finite value, wrapped to (-π, π]
+///   sigma - standard deviation of the underlying normal, `sigma >= 0`
+///           `sigma = 0` is the point mass at `mu`; large `sigma` approaches
+///           the uniform distribution on (-π, π]
+///
+/// Mean resultant length: `rho = exp(-sigma² / 2)`.
+/// Circular variance: `1 - rho`.
+pub fn WrappedNormal(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        mu: T,
+        sigma: T,
+
+        const Self = @This();
+
+        /// Create a new Wrapped Normal distribution with mean direction `mu`
+        /// (radians) and underlying standard deviation `sigma >= 0`.
+        pub fn new(mu: T, sigma: T) Rng.Error!Self {
+            if (!std.math.isFinite(mu)) return error.InvalidParameter;
+            if (!std.math.isFinite(sigma) or sigma < 0) return error.InvalidParameter;
+            return Self{ .mu = mu, .sigma = sigma };
+        }
+
+        /// Mean direction (location parameter) in radians.
+        pub fn locationValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Standard deviation of the underlying normal.
+        pub fn scaleValue(self: Self) T {
+            return self.sigma;
+        }
+
+        /// Mean resultant length `rho = exp(-sigma² / 2)` in (0, 1].
+        pub fn concentrationValue(self: Self) T {
+            return @exp(-0.5 * self.sigma * self.sigma);
+        }
+
+        /// Circular mean = μ.
+        pub fn expectedValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Circular variance = 1 - exp(-sigma² / 2).
+        pub fn varianceValue(self: Self) T {
+            return 1 - self.concentrationValue();
+        }
+
+        /// Median direction = μ (symmetric).
+        pub fn medianValue(self: Self) T {
+            return self.mu;
+        }
+
+        /// Mode direction = μ.
+        pub fn modeValue(self: Self) T {
+            return self.mu;
+        }
+
+        pub fn minValue(_: Self) T {
+            return -@as(T, @floatCast(std.math.pi));
+        }
+
+        pub fn maxValue(_: Self) T {
+            return @as(T, @floatCast(std.math.pi));
+        }
+
+        /// Circular CDF on `(-π, π]`; `cdf(-π) = 0`, `cdf(π) = 1`.
+        pub fn cdf(self: Self, x: T) T {
+            return wrappedNormalCdfImpl(T, x, self.mu, self.sigma);
+        }
+
+        /// Inverse circular CDF; `quantile(0) = -π`, `quantile(1) = π`.
+        pub fn quantile(self: Self, p: T) T {
+            return wrappedNormalQuantileImpl(T, p, self.mu, self.sigma);
+        }
+
+        pub fn sample(self: Self, rng: Rng) T {
+            return wrappedNormalFrom(rng, T, self.mu, self.sigma);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) T {
+            return wrappedNormalFrom(source, T, self.mu, self.sigma);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []T) void {
+            fillWrappedNormalFrom(rng, T, dest, self.mu, self.sigma);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []T) void {
+            fillWrappedNormalFrom(source, T, dest, self.mu, self.sigma);
+        }
+    };
+}
+
+/// Standard Wrapped Normal distribution (μ=0, σ=1, ρ=exp(-1/2)).
+pub const StandardWrappedNormal = struct {
+    const standard_rho: comptime_float = 0.6065306597126334;
+    const standard_variance: comptime_float = 0.3934693402873666;
+
+    pub fn locationValue(_: StandardWrappedNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn scaleValue(_: StandardWrappedNormal, comptime T: type) T {
+        return oneOf(T);
+    }
+
+    pub fn concentrationValue(_: StandardWrappedNormal, comptime T: type) T {
+        return splatOrScalar(T, standard_rho);
+    }
+
+    pub fn expectedValue(_: StandardWrappedNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn varianceValue(_: StandardWrappedNormal, comptime T: type) T {
+        return splatOrScalar(T, standard_variance);
+    }
+
+    pub fn medianValue(_: StandardWrappedNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn modeValue(_: StandardWrappedNormal, comptime T: type) T {
+        return zeroOf(T);
+    }
+
+    pub fn minValue(_: StandardWrappedNormal, comptime T: type) ?T {
+        return @as(T, @floatCast(-std.math.pi));
+    }
+
+    pub fn maxValue(_: StandardWrappedNormal, comptime T: type) ?T {
+        return @as(T, @floatCast(std.math.pi));
+    }
+
+    pub fn sample(_: StandardWrappedNormal, rng: Rng, comptime T: type) T {
+        return wrappedNormalFrom(rng, T, zeroOf(T), oneOf(T));
+    }
+
+    pub fn sampleFrom(_: StandardWrappedNormal, source: anytype, comptime T: type) T {
+        return wrappedNormalFrom(source, T, zeroOf(T), oneOf(T));
+    }
+
+    pub fn fill(_: StandardWrappedNormal, rng: Rng, comptime T: type, dest: []T) void {
+        fillWrappedNormalFrom(rng, T, dest, zeroOf(T), oneOf(T));
+    }
+
+    pub fn fillFrom(_: StandardWrappedNormal, source: anytype, comptime T: type, dest: []T) void {
+        fillWrappedNormalFrom(source, T, dest, zeroOf(T), oneOf(T));
+    }
+};
+
+/// Wrapped Normal CDF on the circle, represented on `(-π, π]`:
+/// `F(x) = ∫_{-π}^{x} f(t) dt`, so `F(-π) = 0` and `F(π) = 1`.
+/// `sigma = 0` is the point mass at `mu`; `sigma >= 10` uses the uniform limit.
+pub fn wrappedNormalCdf(x: anytype, mu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(x, mu, sigma)) {
+    return wrappedNormalCdfImpl(resolvedFloatType(@TypeOf(x, mu, sigma)), x, mu, sigma);
+}
+fn wrappedNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType) PeerType {
+    const T = @TypeOf(x, mu, sigma);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or sigma < 0 or std.math.isNan(x)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    if (x <= -pi) return 0;
+    if (x >= pi) return 1;
+    const mu_w = wrapAngleModulo(mu, pi, two_pi);
+    if (sigma == 0) return if (x < mu_w) 0 else 1;
+    if (sigma >= 10) return @min(@as(T, 1), @max(@as(T, 0), (x + pi) / two_pi));
+
+    // Sum the 2*pi images that can contribute at this precision. Six standard
+    // deviations on either side of the interval cover all non-negligible mass;
+    // for sigma < 10 this needs at most 25 terms.
+    const sigma_f64: f64 = @floatCast(sigma);
+    const k_max: i32 = @intFromFloat(@ceil((6 * sigma_f64 + 2 * std.math.pi) / (2 * std.math.pi)) + 1);
+    var sum: T = 0;
+    var k: i32 = -k_max;
+    while (k <= k_max) : (k += 1) {
+        const shift: T = @as(T, @floatFromInt(k)) * two_pi;
+        sum += normCdf((x - mu_w + shift) / sigma) - normCdf((-pi - mu_w + shift) / sigma);
+    }
+    return @min(@as(T, 1), @max(@as(T, 0), sum));
+}
+
+/// Inverse wrapped Normal CDF: `p = 0 → -π`, `p = 1 → π`; `sigma = 0` returns
+/// the point mass at `mu`. Uses bisection on the CDF (no closed form exists).
+pub fn wrappedNormalQuantile(p: anytype, mu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(p, mu, sigma)) {
+    return wrappedNormalQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma)), p, mu, sigma);
+}
+fn wrappedNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType) PeerType {
+    const T = @TypeOf(p, mu, sigma);
+    comptime requireFloat(T);
+    if (!std.math.isFinite(mu) or !std.math.isFinite(sigma) or sigma < 0 or !(p >= 0 and p <= 1)) return std.math.nan(T);
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    if (p == 0) return -pi;
+    if (p == 1) return pi;
+    const mu_w = wrapAngleModulo(mu, pi, two_pi);
+    if (sigma == 0) return mu_w;
+    if (sigma >= 10) return -pi + two_pi * p;
+    var lo: T = -pi;
+    var hi: T = pi;
+    const iterations: usize = if (T == f32) 40 else 70;
+    for (0..iterations) |_| {
+        const mid = 0.5 * (lo + hi);
+        if (wrappedNormalCdfImpl(T, mid, mu_w, sigma) < p) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return 0.5 * (lo + hi);
+}
+
+// Wrap to (-pi, pi] with a modulo reduction so large sigma draws do not walk
+// the circle one period at a time. Component-wise for SIMD vectors.
+inline fn wrapAngleModulo(theta: anytype, pi_val: anytype, two_pi: anytype) @TypeOf(theta) {
+    const T = @TypeOf(theta);
+    if (@typeInfo(T) == .float) {
+        var t = theta - two_pi * @floor((theta + pi_val) / two_pi);
+        if (t > pi_val) t -= two_pi;
+        if (t <= -pi_val) t += two_pi;
+        return t;
+    }
+    const Child = vectorChild(T);
+    const zero: T = @splat(@as(Child, 0));
+    var t = theta - two_pi * @floor((theta + pi_val) / two_pi);
+    t = t - @select(Child, t > pi_val, two_pi, zero);
+    t = t + @select(Child, t <= -pi_val, two_pi, zero);
+    return t;
+}
+
+// Vector wrap fast path: for raw angles within [-3*pi, 3*pi], the two-pass
+// branchless wrap is much cheaper than the modulo reduction (which lowers to
+// per-lane floor/divide). Larger draws fall back to the modulo form.
+inline fn wrapAngleVectorFast(raw: anytype, pi_val: anytype, two_pi: anytype) @TypeOf(raw) {
+    const T = @TypeOf(raw);
+    const Child = vectorChild(T);
+    const bound: T = @splat(@as(Child, 3 * std.math.pi));
+    if (@reduce(.And, @abs(raw) <= bound)) return wrapAngleGeneric(raw, pi_val, two_pi);
+    return wrapAngleModulo(raw, pi_val, two_pi);
+}
+
+/// Wrapped Normal sampling: draw one standard normal and wrap `mu + sigma*z`.
+pub fn wrappedNormal(rng: Rng, comptime T: type, mu: T, sigma: T) T {
+    return wrappedNormalFrom(rng, T, mu, sigma);
+}
+
+pub inline fn wrappedNormalFrom(source: anytype, comptime T: type, mu: T, sigma: T) T {
+    requireFloatOrFloatVector(T);
+    return switch (@typeInfo(T)) {
+        .float => blk: {
+            const pi_val: T = @floatCast(std.math.pi);
+            const two_pi: T = 2 * pi_val;
+            if (sigma == 0) break :blk wrapAngleModulo(mu, pi_val, two_pi);
+            const z = Rng.standardNormalFastFrom(source, T);
+            break :blk wrapAngleModulo(mu + sigma * z, pi_val, two_pi);
+        },
+        .vector => blk: {
+            const Child = vectorChild(T);
+            const pi_vec: T = @splat(@as(Child, @floatCast(std.math.pi)));
+            const two_pi: T = @as(T, @splat(@as(Child, 2))) * pi_vec;
+            const zero_vec: T = @splat(@as(Child, 0));
+            const raw = if (@reduce(.And, sigma == zero_vec))
+                mu
+            else
+                mu + sigma * Rng.vectorStandardNormalFrom(source, T);
+            // Common case: every lane already lands in (-pi, pi]. Adding zero
+            // normalizes -0.0 exactly like the branchless wrap does.
+            if (@reduce(.And, @abs(raw) <= pi_vec)) break :blk raw + zero_vec;
+            break :blk wrapAngleVectorFast(raw, pi_vec, two_pi);
+        },
+        else => unreachable,
+    };
+}
+
+pub fn wrappedNormalChecked(rng: Rng, comptime T: type, mu: T, sigma: T) Error!T {
+    return wrappedNormalCheckedFrom(rng, T, mu, sigma);
+}
+
+pub fn wrappedNormalCheckedFrom(source: anytype, comptime T: type, mu: T, sigma: T) Error!T {
+    const dist = try WrappedNormal(T).new(mu, sigma);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillWrappedNormal(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T) void {
+    fillWrappedNormalFrom(rng, T, dest, mu, sigma);
+}
+
+pub fn fillWrappedNormalFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T) void {
+    for (dest) |*item| {
+        item.* = wrappedNormalFrom(source, T, mu, sigma);
+    }
+}
+
+pub fn fillWrappedNormalChecked(rng: Rng, comptime T: type, dest: []T, mu: T, sigma: T) Error!void {
+    return fillWrappedNormalCheckedFrom(rng, T, dest, mu, sigma);
+}
+
+pub fn fillWrappedNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, mu: T, sigma: T) Error!void {
+    if (dest.len == 0) return;
+    const dist = try WrappedNormal(T).new(mu, sigma);
+    dist.fillFrom(source, dest);
+}
+
+pub fn vectorWrappedNormal(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) VectorType {
+    return vectorWrappedNormalFrom(rng, VectorType, mu, sigma);
+}
+
+pub fn vectorWrappedNormalFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) VectorType {
+    return wrappedNormalFrom(source, VectorType, @splat(mu), @splat(sigma));
+}
+
+pub fn vectorWrappedNormalChecked(rng: Rng, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) Error!VectorType {
+    return vectorWrappedNormalCheckedFrom(rng, VectorType, mu, sigma);
+}
+
+pub fn vectorWrappedNormalCheckedFrom(source: anytype, comptime VectorType: type, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) Error!VectorType {
+    const dist = try VectorWrappedNormal(VectorType).new(mu, sigma);
+    return dist.sampleFrom(source);
+}
+
+pub fn fillVectorWrappedNormal(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) void {
+    fillVectorWrappedNormalFrom(rng, VectorType, dest, mu, sigma);
+}
+
+pub fn fillVectorWrappedNormalFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) void {
+    const dist = VectorWrappedNormal(VectorType).new(mu, sigma) catch unreachable;
+    dist.fillFrom(source, dest);
+}
+
+pub fn fillVectorWrappedNormalChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) Error!void {
+    return fillVectorWrappedNormalCheckedFrom(rng, VectorType, dest, mu, sigma);
+}
+
+pub fn fillVectorWrappedNormalCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mu: vectorChild(VectorType), sigma: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    const dist = try VectorWrappedNormal(VectorType).new(mu, sigma);
+    dist.fillFrom(source, dest);
+}
+
+/// SIMD-vectorized Wrapped Normal distribution. Each vector draws one
+/// standard-normal vector and wraps `mu + sigma*z` lane-by-lane.
+pub fn VectorWrappedNormal(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+    return struct {
+        const Self = @This();
+        sampler: WrappedNormal(Child),
+
+        pub fn new(mu: Child, sigma: Child) Error!Self {
+            return Self{ .sampler = try WrappedNormal(Child).new(mu, sigma) };
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return self.sampleFrom(rng);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return wrappedNormalFrom(source, VectorType, @splat(self.sampler.mu), @splat(self.sampler.sigma));
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            self.fillFrom(rng, dest);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            for (dest) |*item| {
+                item.* = self.sampleFrom(source);
+            }
+        }
+    };
 }
 
 // -----------------------------------------------------------------------------
@@ -65238,6 +65630,239 @@ test "WrappedCauchy vector sampling produces valid circular values" {
             try std.testing.expect(v > -pi_f32);
             try std.testing.expect(v <= pi_f32);
         }
+    }
+}
+
+test "WrappedNormal constructor validates parameters" {
+    try std.testing.expectError(error.InvalidParameter, WrappedNormal(f64).new(0, -0.1));
+    try std.testing.expectError(error.InvalidParameter, WrappedNormal(f64).new(0, std.math.inf(f64)));
+    try std.testing.expectError(error.InvalidParameter, WrappedNormal(f64).new(0, std.math.nan(f64)));
+    try std.testing.expectError(error.InvalidParameter, WrappedNormal(f64).new(std.math.inf(f64), 1));
+    try std.testing.expectError(error.InvalidParameter, WrappedNormal(f64).new(std.math.nan(f64), 1));
+
+    const wn = try WrappedNormal(f64).new(0.5, 2.0);
+    try std.testing.expectEqual(@as(f64, 0.5), wn.locationValue());
+    try std.testing.expectEqual(@as(f64, 2.0), wn.scaleValue());
+    try std.testing.expectApproxEqAbs(@exp(-2.0), wn.concentrationValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(1 - @exp(-2.0), wn.varianceValue(), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0.5), wn.expectedValue());
+    try std.testing.expectEqual(@as(f64, 0.5), wn.medianValue());
+    try std.testing.expectEqual(@as(f64, 0.5), wn.modeValue());
+}
+
+test "WrappedNormal CDF and quantile are inverses" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5c21);
+    const rng = Rng.init(&engine);
+
+    inline for ([_]f64{ 0.2, 0.5, 1.0, 3.0, 9.9 }) |sigma| {
+        const dist = try WrappedNormal(f64).new(0.4, sigma);
+        try std.testing.expectEqual(@as(f64, 0), dist.cdf(-std.math.pi));
+        try std.testing.expectEqual(@as(f64, 1), dist.cdf(std.math.pi));
+
+        var prev: f64 = -1;
+        var i: usize = 0;
+        while (i <= 2_000) : (i += 1) {
+            const theta = -std.math.pi + 2 * std.math.pi * @as(f64, @floatFromInt(i)) / 2_000;
+            const f = dist.cdf(theta);
+            try std.testing.expect(f >= prev - 1e-12);
+            try std.testing.expect(f >= 0 and f <= 1);
+            prev = f;
+        }
+
+        inline for ([_]f64{ 1e-4, 0.01, 0.1, 0.5, 0.9, 0.99, 1 - 1e-4 }) |p| {
+            try std.testing.expectApproxEqAbs(p, dist.cdf(dist.quantile(p)), 1e-9);
+        }
+
+        const samples = 40_000;
+        var below: usize = 0;
+        for (0..samples) |_| {
+            if (dist.sample(rng) <= 0.0) below += 1;
+        }
+        const empirical = @as(f64, @floatFromInt(below)) / samples;
+        try std.testing.expectApproxEqAbs(dist.cdf(0.0), empirical, 0.01);
+    }
+
+    // f32 and invalid-parameter paths.
+    const f32_dist = try WrappedNormal(f32).new(0, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(0), 1e-6);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_dist.cdf(f32_dist.quantile(0.5)), 1e-5);
+    try std.testing.expect(std.math.isNan(wrappedNormalCdf(@as(f64, 0), @as(f64, 0), @as(f64, -1))));
+    try std.testing.expect(std.math.isNan(wrappedNormalQuantile(@as(f64, 1.5), @as(f64, 0), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(wrappedNormalCdf(@as(f64, std.math.nan(f64)), @as(f64, 0), @as(f64, 1))));
+    try std.testing.expect(std.math.isNan(wrappedNormalCdf(@as(f64, 0), @as(f64, std.math.inf(f64)), @as(f64, 1))));
+}
+
+test "WrappedNormal CDF wraps the location parameter" {
+    const a = try WrappedNormal(f64).new(0.4, 1.0);
+    const b = try WrappedNormal(f64).new(0.4 + 2 * std.math.pi, 1.0);
+    inline for ([_]f64{ -2.0, -0.5, 0.0, 1.0, 3.0 }) |x| {
+        try std.testing.expectApproxEqAbs(a.cdf(x), b.cdf(x), 1e-14);
+    }
+}
+
+test "WrappedNormal samples stay within (-pi, pi] bounds" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x5679_1234);
+    const rng = Rng.init(&engine);
+
+    const dist = try WrappedNormal(f64).new(1.0, 2.0);
+    var buf: [4096]f64 = undefined;
+    dist.fill(rng, &buf);
+    for (buf) |val| {
+        try std.testing.expect(std.math.isFinite(val));
+        try std.testing.expect(val > -std.math.pi);
+        try std.testing.expect(val <= std.math.pi);
+    }
+}
+
+test "WrappedNormal sigma=0 produces a point mass at mu" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xfeed_f00e);
+    const rng = Rng.init(&engine);
+
+    const dist = try WrappedNormal(f64).new(0.7, 0);
+    try std.testing.expectApproxEqAbs(@as(f64, 1.0), dist.concentrationValue(), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0), dist.varianceValue(), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0), dist.cdf(0.0));
+    try std.testing.expectEqual(@as(f64, 1), dist.cdf(1.0));
+    try std.testing.expectApproxEqAbs(@as(f64, 0.7), dist.quantile(0.3), 1e-15);
+    try std.testing.expectApproxEqAbs(-std.math.pi, dist.quantile(0), 0);
+    try std.testing.expectApproxEqAbs(std.math.pi, dist.quantile(1), 0);
+    for (0..100) |_| {
+        try std.testing.expectApproxEqAbs(@as(f64, 0.7), dist.sample(rng), 1e-12);
+    }
+
+    // A large location is wrapped into (-pi, pi].
+    const wrapped = try WrappedNormal(f64).new(10.0, 0);
+    const expected = 10.0 - 4 * std.math.pi;
+    for (0..10) |_| {
+        try std.testing.expectApproxEqAbs(expected, wrapped.sample(rng), 1e-12);
+    }
+    try std.testing.expectApproxEqAbs(expected, wrapped.quantile(0.5), 1e-12);
+}
+
+test "WrappedNormal large sigma approaches uniform" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xdead_beef);
+    const rng = Rng.init(&engine);
+
+    const dist = try WrappedNormal(f64).new(0, 50);
+    try std.testing.expectApproxEqAbs((0.5 + std.math.pi) / (2 * std.math.pi), dist.cdf(0.5), 1e-15);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.25), dist.cdf(dist.quantile(0.25)), 1e-12);
+    try std.testing.expectApproxEqAbs(2 * std.math.pi * 0.25 - std.math.pi, dist.quantile(0.25), 1e-12);
+
+    const n = 20_000;
+    var sum_sin: f64 = 0;
+    var sum_cos: f64 = 0;
+    for (0..n) |_| {
+        const x = dist.sample(rng);
+        try std.testing.expect(x > -std.math.pi and x <= std.math.pi);
+        sum_sin += @sin(x);
+        sum_cos += @cos(x);
+    }
+    const mean_sin = sum_sin / @as(f64, @floatFromInt(n));
+    const mean_cos = sum_cos / @as(f64, @floatFromInt(n));
+    const r_len = @sqrt(mean_sin * mean_sin + mean_cos * mean_cos);
+    try std.testing.expect(r_len < 0.05);
+}
+
+test "WrappedNormal samples concentrate around mu for small sigma" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xcafe_babe);
+    const rng = Rng.init(&engine);
+
+    const mu: f64 = -0.8;
+    const sigma: f64 = 0.3;
+    const dist = try WrappedNormal(f64).new(mu, sigma);
+    try std.testing.expectApproxEqAbs(@exp(-0.5 * sigma * sigma), dist.concentrationValue(), 1e-15);
+
+    const n = 5_000;
+    var sum_sin: f64 = 0;
+    var sum_cos: f64 = 0;
+    for (0..n) |_| {
+        const x = dist.sample(rng);
+        sum_sin += @sin(x);
+        sum_cos += @cos(x);
+    }
+    const mean_sin = sum_sin / @as(f64, @floatFromInt(n));
+    const mean_cos = sum_cos / @as(f64, @floatFromInt(n));
+    const mean_angle = std.math.atan2(mean_sin, mean_cos);
+    const diff = @abs(wrapAngle(mean_angle - mu, @as(f64, @floatCast(std.math.pi)), 2 * @as(f64, @floatCast(std.math.pi))));
+    try std.testing.expect(diff < 0.1);
+    const r_len = @sqrt(mean_sin * mean_sin + mean_cos * mean_cos);
+    try std.testing.expect(r_len > 0.9);
+}
+
+test "StandardWrappedNormal unit struct has correct parameters" {
+    const dist = StandardWrappedNormal{};
+    try std.testing.expectEqual(@as(f64, 0), dist.locationValue(f64));
+    try std.testing.expectEqual(@as(f64, 1), dist.scaleValue(f64));
+    try std.testing.expectApproxEqAbs(@exp(-0.5), dist.concentrationValue(f64), 1e-15);
+    try std.testing.expectApproxEqAbs(1 - @exp(-0.5), dist.varianceValue(f64), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0), dist.expectedValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.medianValue(f64));
+    try std.testing.expectEqual(@as(f64, 0), dist.modeValue(f64));
+    try std.testing.expectApproxEqAbs(-std.math.pi, dist.minValue(f64).?, 1e-12);
+    try std.testing.expectApproxEqAbs(std.math.pi, dist.maxValue(f64).?, 1e-12);
+
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0xabc_def1);
+    const rng = Rng.init(&engine);
+    const x = dist.sample(rng, f64);
+    try std.testing.expect(x > -std.math.pi and x <= std.math.pi);
+
+    var buf: [64]f64 = undefined;
+    dist.fill(rng, f64, &buf);
+    for (buf) |val| {
+        try std.testing.expect(val > -std.math.pi and val <= std.math.pi);
+        try std.testing.expect(std.math.isFinite(val));
+    }
+}
+
+test "WrappedNormal vector sampling produces valid circular values" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1337_c0df);
+    const rng = Rng.init(&engine);
+
+    const dist = StandardWrappedNormal{};
+    const Vec4 = @Vector(4, f32);
+    var buf: [32]Vec4 = undefined;
+    dist.fill(rng, Vec4, &buf);
+    const pi_f32: f32 = @floatCast(std.math.pi);
+    for (buf) |vec| {
+        inline for (0..4) |lane| {
+            const v = vec[lane];
+            try std.testing.expect(std.math.isFinite(v));
+            try std.testing.expect(v > -pi_f32);
+            try std.testing.expect(v <= pi_f32);
+        }
+    }
+
+    const point = alea.distributions.vectorWrappedNormal(rng, Vec4, 0.5, 1.0);
+    inline for (0..4) |lane| {
+        try std.testing.expect(std.math.isFinite(point[lane]));
+        try std.testing.expect(point[lane] > -pi_f32 and point[lane] <= pi_f32);
+    }
+}
+
+test "WrappedNormal checked helpers reject invalid parameters" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x0bad_f00d);
+    const rng = Rng.init(&engine);
+
+    try std.testing.expectError(error.InvalidParameter, wrappedNormalChecked(rng, f64, 0, -1));
+    const x = try wrappedNormalChecked(rng, f64, 0, 1);
+    try std.testing.expect(x > -std.math.pi and x <= std.math.pi);
+
+    var buf: [8]f64 = undefined;
+    try std.testing.expectError(error.InvalidParameter, fillWrappedNormalChecked(rng, f64, &buf, 0, -1));
+
+    const V = @Vector(4, f32);
+    try std.testing.expectError(error.InvalidParameter, vectorWrappedNormalChecked(rng, V, 0, -1));
+    const v = try vectorWrappedNormalChecked(rng, V, 0, 1);
+    inline for (0..4) |lane| {
+        try std.testing.expect(std.math.isFinite(v[lane]));
     }
 }
 

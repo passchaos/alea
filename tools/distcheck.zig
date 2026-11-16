@@ -1922,13 +1922,38 @@ fn checkVectorBinomialPmfBins(rng: alea.Rng, trials: u64, p: f64, width: u64, bi
         }
     }
     const total: f64 = @floatFromInt(vectors * 4);
+    // Merge adjacent buckets until every expected count is at least 5
+    // (Cochran's rule). The non-dyadic binomial tails can have expected
+    // counts far below one; without merging, a single tail sample dominates
+    // the chi-square statistic.
+    var merged_counts = [_]usize{0} ** 8;
+    var merged_prob = [_]f64{0} ** 8;
+    var merged_len: usize = 0;
+    var acc_count: usize = 0;
+    var acc_prob: f64 = 0;
+    for (0..bins) |b| {
+        acc_count += counts[b];
+        acc_prob += bin_prob[b];
+        if (acc_prob * total >= 5.0 or b == bins - 1) {
+            merged_counts[merged_len] = acc_count;
+            merged_prob[merged_len] = acc_prob;
+            merged_len += 1;
+            acc_count = 0;
+            acc_prob = 0;
+        }
+    }
+    if (merged_len > 1 and merged_prob[merged_len - 1] * total < 5.0) {
+        merged_counts[merged_len - 2] += merged_counts[merged_len - 1];
+        merged_prob[merged_len - 2] += merged_prob[merged_len - 1];
+        merged_len -= 1;
+    }
     var stat: f64 = 0;
-    for (counts[0..bins], 0..) |c, b| {
-        const expected = bin_prob[b] * total;
+    for (merged_counts[0..merged_len], merged_prob[0..merged_len]) |c, prob| {
+        const expected = prob * total;
         const d = @as(f64, @floatFromInt(c)) - expected;
         stat += d * d / expected;
     }
-    const dof: f64 = @floatFromInt(bins - 1);
+    const dof: f64 = @floatFromInt(merged_len - 1);
     const bound = dof + 6 * @sqrt(2 * dof);
     try expectFloatBetween("long vector binomial non-dyadic pmf chi-square", stat, 0, bound);
 }
@@ -2424,6 +2449,14 @@ fn checkLongRun(samples: usize) !void {
                 return alea.distributions.wrappedCauchyCdf(x, 0.4, 0.5);
             }
         }, "long wrapped cauchy binned", rng, binned_samples);
+        try checkBinnedChiSquare(struct {
+            fn sample(r: alea.Rng) f64 {
+                return alea.distributions.wrappedNormal(r, f64, 0.4, 1.0);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.wrappedNormalCdf(x, 0.4, 1.0);
+            }
+        }, "long wrapped normal binned", rng, binned_samples);
     }
 
     // Vector binned chi-square gates for the per-lane scalar-draw vector
@@ -2481,6 +2514,14 @@ fn checkLongRun(samples: usize) !void {
                 return alea.distributions.maxwellCdf(x, 2);
             }
         }, V, "long vector maxwell binned", rng, vector_samples);
+        try checkBinnedChiSquareVector(struct {
+            fn sample(r: alea.Rng) V {
+                return alea.distributions.vectorWrappedNormal(r, V, 0.4, 1.0);
+            }
+            fn cdf(x: f64) f64 {
+                return alea.distributions.wrappedNormalCdf(x, 0.4, 1.0);
+            }
+        }, V, "long vector wrapped normal binned", rng, vector_samples);
         try checkVectorBinomialBins(rng, vector_samples, 0.0625, "long vector binomial dyadic pmf chi-square p=0.0625");
         try checkVectorBinomialBins(rng, vector_samples, 0.125, "long vector binomial dyadic pmf chi-square p=0.125");
         try checkVectorBinomialBins(rng, vector_samples, 0.25, "long vector binomial dyadic pmf chi-square p=0.25");
