@@ -576,6 +576,7 @@ pub fn main(init: std.process.Init) !void {
     try benchQuantileModel(QuantileProbeInverseGaussian, io, stdout, "alea inverse-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeSkewNormal, io, stdout, "alea skew-normal quantile", bytes / 4096);
     try benchCdfModel(CdfProbeSkewNormal, io, stdout, "alea skew-normal cdf", bytes / 4096);
+    try benchCdfModel(CdfProbeRice, io, stdout, "alea rice cdf", bytes / 4096);
     try benchQuantileModel(QuantileProbeRice, io, stdout, "alea rice quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeHoyt, io, stdout, "alea hoyt quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbePert, io, stdout, "alea pert quantile", bytes / 4096);
@@ -12382,6 +12383,12 @@ fn benchCdfModel(comptime Model: type, io: std.Io, stdout: *std.Io.Writer, name:
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.3} M cdf/s checksum={d:.3}\n", .{ name, best, best_checksum });
 }
+
+const CdfProbeRice = struct {
+    fn cdf(x: f64) f64 {
+        return alea.distributions.riceCdf(x, 1, 1);
+    }
+};
 
 const CdfProbeSkewNormal = struct {
     fn cdf(x: f64) f64 {

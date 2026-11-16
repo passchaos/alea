@@ -2749,6 +2749,7 @@ fn marcumQ1(a: f64, b: f64) f64 {
 fn marcumP1(a: f64, b: f64) f64 {
     if (b == 0) return 0;
     if (a == 0) return -std.math.expm1(-0.5 * b * b);
+    if (0.5 * a * a <= 12.5 and 0.5 * b * b <= 12.5) return marcumP1Recurrence(a, b);
     const half_a2 = 0.5 * a * a;
     const y = 0.5 * b * b;
     const log_base = @log(half_a2);
@@ -2770,6 +2771,35 @@ fn marcumP1(a: f64, b: f64) f64 {
         const kf: f64 = @floatFromInt(k);
         if (kf > peak and term <= sum * eps) break;
         log_coeff += log_base - @log(@as(f64, @floatFromInt(k + 1)));
+    }
+    return @min(@as(f64, 1), @max(@as(f64, 0), sum));
+}
+
+/// Marcum P1 via the recurrence `P(k+2, y) = P(k+1, y) - y^(k+1)e^-y/(k+1)!`
+/// for the incomplete-gamma terms. Valid for moderate `a` and `y`; the
+/// log-scaled series above remains the fallback for large parameters.
+fn marcumP1Recurrence(a: f64, b: f64) f64 {
+    if (b == 0) return 0;
+    if (a == 0) return -std.math.expm1(-0.5 * b * b);
+    const half_a2 = 0.5 * a * a;
+    const y = 0.5 * b * b;
+    const exp_neg_y = @exp(-y);
+    var p_gamma = -std.math.expm1(-y);
+    var gamma_pdf = y * exp_neg_y;
+    var poisson_weight = @exp(-half_a2);
+    var sum = poisson_weight * p_gamma;
+    const peak = half_a2 + 10 * @sqrt(half_a2 + 1) + 10;
+    const eps = 64 * std.math.floatEps(f64);
+    var k: usize = 1;
+    while (k < 2_000_000) : (k += 1) {
+        p_gamma = @max(0, p_gamma - gamma_pdf);
+        poisson_weight *= half_a2 / @as(f64, @floatFromInt(k));
+        const term = poisson_weight * p_gamma;
+        sum += term;
+        gamma_pdf *= y / @as(f64, @floatFromInt(k + 1));
+        const kf: f64 = @floatFromInt(k);
+        if (kf > peak and term <= sum * eps) break;
+        if (poisson_weight == 0) break;
     }
     return @min(@as(f64, 1), @max(@as(f64, 0), sum));
 }
@@ -60284,6 +60314,14 @@ test "SkewNormal and PERT CDF and quantile helpers" {
     const pert_dist = try Pert(f64).init(0, 0.5, 1, 4);
     try std.testing.expectApproxEqAbs(pertCdf(@as(f64, 0.25), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), pert_dist.cdf(0.25), 0);
     try std.testing.expectApproxEqAbs(pertQuantile(@as(f64, 0.5), @as(f64, 0), @as(f64, 0.5), @as(f64, 1), @as(f64, 4)), pert_dist.quantile(0.5), 0);
+}
+
+test "marcumP1 recurrence matches the log-scaled series" {
+    inline for ([_]f64{ 0.1, 0.5, 1, 2, 5 }) |a| {
+        inline for ([_]f64{ 0.1, 0.5, 1, 2, 3, 4, 5 }) |b| {
+            try std.testing.expectApproxEqAbs(marcumP1(a, b), marcumP1Recurrence(a, b), 1e-12);
+        }
+    }
 }
 
 test "Rice CDF and quantile helpers match Marcum Q values" {
