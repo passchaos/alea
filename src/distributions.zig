@@ -959,6 +959,16 @@ fn gammaUpperQuantileImpl(comptime T: type, q: T, shape: T) T {
     return (lo + hi) / 2;
 }
 
+/// Gamma density used by the safeguarded-Newton quantile.
+fn gammaPdfImpl(comptime T: type, x: T, shape: T, scale: T) T {
+    if (x <= 0) return 0;
+    const log_density = (shape - 1) * @log(x) - x / scale -
+        std.math.lgamma(T, shape) - shape * @log(scale);
+    if (!(log_density < 700)) return std.math.inf(T);
+    if (log_density < -745) return 0;
+    return @exp(log_density);
+}
+
 fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scale: PeerType) PeerType {
     const T = @TypeOf(p, shape, scale);
     comptime requireFloat(T);
@@ -997,14 +1007,25 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         return (lo + hi) / 2;
     }
 
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (gammaCdf(mid, shape, scale) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+    // Wilson-Hilferty start for the regular shape range; the mean is a
+    // safer fallback for tiny shapes where the normal approximation fails.
+    const guess = if (shape >= 0.3) blk: {
+        const z = probit(p);
+        const t = 1 - 1 / (9 * shape) + z / (3 * @sqrt(shape));
+        break :blk if (t > 0) shape * t * t * t * scale else shape * scale;
+    } else shape * scale;
+    var x: T = @min(@max(guess, lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = gammaCdf(x, shape, scale);
+        if (f < p) lo = x else hi = x;
+        if (f == p) return x;
+        if (hi - lo <= 64 * std.math.floatEps(T) * @max(hi, std.math.floatMin(T))) break;
+        const d = gammaPdfImpl(T, x, shape, scale);
+        var next: T = if (d > 0 and std.math.isFinite(d)) x - (f - p) / d else (lo + hi) / 2;
+        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        if (next == x) break;
+        x = next;
     }
     if (lo == 0 and p > 0) {
         // The quantile is below the linear bisection resolution
@@ -1023,7 +1044,7 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         }
         return @exp((log_lo + log_hi) / 2);
     }
-    return (lo + hi) / 2;
+    return x;
 }
 
 /// Chi-squared cumulative distribution function.
