@@ -62,9 +62,13 @@ shape: a per-call inverse-CDF table plus a branchless vector search, with the
 exact product method retained for the truncated tail and for
 `sample`/`sampleFrom`. It lifts the lambda-4 fill rows from 66-81M to 130-134M
 lanes/s and the lambda-11 rows from 46-56M to 81M. The remaining dense targets
-(`fisher-f`, Bessel/Bingham directional rows, and the per-lane
-hypergeometric/Zipf rows) still need candidates that satisfy the requirements
-below.
+(Bessel/Bingham directional rows and the per-lane hypergeometric/Zipf rows)
+still need candidates that satisfy the requirements below. `vector fisher-f` is
+not one of them: S4-M1736 aligns the harness engines and measures 151-156M
+lanes/s with `ScalarPrng` against 149-154M scalar direct, so the vector lanes
+are at scalar parity and the earlier ~88M-vs-114-129M gap was engine/harness
+drift; the real-harness direct row is 133.6M lanes/s, within ~10-12% of scalar
+direct, while the facade/sampler rows pay the `Rng` wrapper.
 
 ## Rejected Or Deferred Shapes
 

@@ -499,6 +499,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorDistribution(alea.distributions.VectorChiSquared(V4), io, stdout, "alea vector chi-squared f64x4", bytes / 32, alea.distributions.VectorChiSquared(V4).init(4) catch unreachable, 0x9a27);
     try benchVectorDistribution(alea.distributions.VectorStudentT(V4), io, stdout, "alea vector student-t f64x4", bytes / 32, alea.distributions.VectorStudentT(V4).init(10) catch unreachable, 0x9a28);
     try benchVectorDistribution(alea.distributions.VectorFisherF(V4), io, stdout, "alea vector fisher-f f64x4", bytes / 32, alea.distributions.VectorFisherF(V4).init(5, 20) catch unreachable, 0x9a29);
+    try benchVectorFisherFScalarPrng(io, stdout, "alea vector fisher-f f64x4 scalar-prng", bytes / 32);
     try benchVectorDistribution(alea.distributions.VectorErlang(V4), io, stdout, "alea vector erlang f64x4", bytes / 32, alea.distributions.VectorErlang(V4).init(3, 2) catch unreachable, 0x9a2a);
     try benchVectorDistribution(alea.distributions.VectorNegativeBinomial(V4U), io, stdout, "alea vector negative-binomial f64x4", bytes / 32, alea.distributions.VectorNegativeBinomial(V4U).init(5, 0.4) catch unreachable, 0x9a1a);
     try benchVectorDistribution(alea.distributions.VectorNegativeBinomial(V4U), io, stdout, "alea vector negative-binomial dyadic f64x4", bytes / 32, alea.distributions.VectorNegativeBinomial(V4U).init(5, 0.25) catch unreachable, 0x9a1f);
@@ -7277,6 +7278,35 @@ fn benchFisherFCached(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
 
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchVectorFisherFScalarPrng(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const V = @Vector(4, f64);
+    const dist = alea.distributions.VectorFisherF(V).init(5, 20) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = alea.ScalarPrng.init(0x9a29);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) {
+            const point = dist.sample(rng);
+            inline for (0..4) |lane| checksum += point[lane];
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best) {
+            best = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best, best_checksum });
 }
 
 fn benchFillFisherF(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {

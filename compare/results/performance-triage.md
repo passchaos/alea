@@ -591,6 +591,7 @@ Four-normal unit ball projection | Checked whether four standard normals project
 | Vector Maxwell/NIG free-function probes (rejected) | After the student-t win, tried the same per-lane free-function substitution in `VectorMaxwell` (`maxwellFrom`) and `VectorNormalInverseGaussian` (`normalInverseGaussianFrom`, replacing the packed composition). | Both rows were unchanged within the run-to-run band: maxwell 39.0-39.8M vs the 36.2-39.7M baseline, NIG 41.0M vs 39.2-41.6M, with unchanged checksums. The reusable sampler and the packed composition are already as fast as the free functions for these two. | Rejected and reverted; both keep their current paths. |
 | Vector FisherF sampler-per-lane probe (rejected) | The `vector fisher-f` row runs about 88M samples/s against 114-129M for the scalar rows. Tried calling the reusable `FisherF.sampleFrom` once per lane (the S4-M1662 student-t pattern) instead of the inlined numerator/denominator composition. | The row dropped from 22.0 to 14.2-14.4M vectors/s (-35%) with an unchanged checksum: the inlined two-gamma composition schedules better than the per-lane sampler call. | Rejected and reverted; `VectorFisherF` keeps the inlined numerator/denominator path. The FisherF per-sample gap stays recorded as future work. |
 | Vector FisherF hoisted gamma probe (rejected) | After the S4-M1731 cycle, tried hoisting the cached `Gamma` fields and calling the inline `gammaMarsagliaFrom` kernel through a `*const Gamma` helper in `VectorFisherF`, and changing the sampler receivers to `*const Self` to avoid per-vector struct copies. | Bracketed A/B (three 16M-vector runs each): baseline 21.7-21.8M vectors/s, candidate 21.6-21.7M, unchanged checksum `2330907.961`. The two Marsaglia rejection kernels dominate; sampler copies and dispatch are not the bottleneck. | Rejected and reverted; `VectorFisherF` keeps the cached `Gamma.sampleFrom` composition. Closing the remaining per-lane gap needs a dense gamma kernel. |
+| Vector FisherF engine-normalized baseline | The recorded `vector fisher-f` gap compared the FastPrng generic vector harness with the ScalarPrng scalar rows. Added a ScalarPrng vector row to align the engine. | `alea vector fisher-f f64x4 scalar-prng` 37.8-39.1M vectors/s (151-156M lanes/s) versus the FastPrng row 20.8-22.3M (83-89M lanes/s); scalar direct 149-154M samples/s. In `vectorbench` (ScalarPrng), the direct row is 133.6M lanes/s (within ~10-12% of scalar direct) while the facade/sampler rows are 74.5-74.9M because each vector pays eight `Rng` wrapper draws. | Adopted as S4-M1736 evidence; no library change. The earlier ~88M-vs-114-129M comparison mixed facade/direct and engine choices; the remaining pressure is wrapper/engine overhead, not the two-gamma kernel, so a dense gamma kernel is not indicated by this row. |
 | Vector binomial hoisted-CDF fill | `VectorBinomial.fill`/`fillFrom` rebuilt the inverse-CDF table per vector. Refactored the kernel into `binomialCdfTable` + `vectorBinomialFromCdf` and build the table once per fill call. | `alea fillVectorBinomial non-dyadic f64x4` (40, 0.4) reaches 81.4-82.5M vectors/s against 22.6-23.2M for the per-vector `sampleFrom` fill (~3.5x); the fill is stream-equivalent to repeated sample (fill-vs-loop tests pass). | Adopted as S4-M1664 and recorded as a stream-preserving speedup in `reproducibility-matrix.md`. Recorded in `compare/results/s4-m1664-vector-binomial-hoisted-cdf-fill.md`. |
 | Vector hypergeometric inverse-CDF probe (rejected) | Tried the same one-uniform-per-lane inverse-CDF kernel on `VectorHypergeometric(100, 30, 10)` (support 0..10), building the CDF per call from `hypergeometricLogPmf` plus the ratio recurrence. | The row dropped from 17.6-18.7M to 5.7-5.8M vectors/s: the reusable sampler already carries a precomputed inverse-transform CDF, so rebuilding the table per vector costs more than the per-lane search. | Rejected and reverted; the row returns to 18.2-18.7M. Future hypergeometric work needs a cached CDF table in the sampler, not a per-call rebuild. |
 | Vector Poisson small-lambda inverse-CDF probe (rejected) | Tried the one-uniform-per-lane inverse-CDF kernel on the `.product` Poisson methods (lambda < 12), building the CDF from `p0 = exp(-lambda)` with a 64-entry cutoff. Added `alea vector poisson small f64x4` (4) coverage. | The small row moved 14.4-14.9 -> 17.7-18.0M vectors/s (+19-25%) and the lambda=20 Ahrens-Dieter row was unchanged; the per-call CDF build roughly matches the per-lane product cost, so the gain is marginal. | Rejected and reverted; the product method stays. The new small-lambda row stays as coverage (14.4-14.9M). |
@@ -657,15 +658,18 @@ current blocker audit and the requirements for a successful next candidate:
   are the first dense candidates to clear the bar (vector binomial fair,
   dyadic small, and dyadic large trials plus vector geometric), and the
   S4-M1628/S4-M1631/S4-M1633 `exp2`/`log2` transforms lifted the log+exp
-  continuous rows. The S4-M1662 coverage sweep shows the remaining continuous
-  vector rows are at or above scalar per-sample throughput except
-  `vector fisher-f` (about 88 M samples/s against 114-129 M scalar) and the
-  directional Bessel/Bingham rows; `VectorStudentT` was lifted +52-56% by the
-  per-lane free function, while the same substitution for Maxwell and
-  normal-inverse-Gaussian was neutral. Future work needs a dense kernel for
-  the remaining per-lane samplers (Poisson, hypergeometric, Zipf/Zeta,
-  negative-binomial, FisherF, Bessel/Bingham directional) that meets
-  `simd-distribution-kernel-notes.md`.
+  continuous rows. The S4-M1662 coverage sweep showed the remaining continuous
+  vector rows at or above scalar per-sample throughput except `vector
+  fisher-f` and the directional Bessel/Bingham rows; S4-M1736 aligns the
+  FisherF harness engines and measures 37.8-39.1M vectors/s (151-156M lanes/s)
+  with `ScalarPrng` against 149-154M scalar direct, and the real-harness
+  direct row is 133.6M lanes/s (within ~10-12% of scalar direct), so the
+  earlier ~88M-vs-114-129M comparison mixed facade/direct and engine choices;
+  the vector direct lanes are at scalar parity. `VectorStudentT` was lifted +52-56% by the per-lane free function,
+  while the same substitution for Maxwell and normal-inverse-Gaussian was
+  neutral. Future work needs a dense kernel for the remaining per-lane
+  samplers (Poisson, hypergeometric, Zipf/Zeta, negative-binomial,
+  Bessel/Bingham directional) that meets `simd-distribution-kernel-notes.md`.
 - Vector discrete samplers: the dyadic/fair space is closed for the current
   bar. `vector binomial` covers fair (S4-M1646, +125-145%) and dyadic
   small/large trials (S4-M1636/S4-M1640, +57-70x and ~7x) with pmf-binned 1e9
