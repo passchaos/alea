@@ -780,24 +780,11 @@ fn fisherFQuantileImpl(comptime PeerType: type, p: PeerType, d1: PeerType, d2: P
     if (p == 0) return 0;
     if (p == 1) return std.math.inf(T);
 
-    var hi: T = 1;
-    var expansion: usize = 0;
-    while (fisherFCdf(hi, d1, d2) < p and expansion < 1024) : (expansion += 1) {
-        hi *= 2;
-        if (!std.math.isFinite(hi)) return std.math.inf(T);
-    }
-
-    var lo: T = 0;
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (fisherFCdf(mid, d1, d2) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    return (lo + hi) / 2;
+    // If X ~ F(d1, d2), then Y = d1·X/(d1·X + d2) ~ Beta(d1/2, d2/2).
+    // Inverting the beta quantile avoids the Fisher CDF bisection.
+    const y = betaQuantile(p, d1 / 2, d2 / 2);
+    if (!(y < 1)) return std.math.inf(T);
+    return d2 * y / (d1 * (1 - y));
 }
 
 /// Inverse Student-t CDF: returns t such that `studentTCdf(t, ν) = p`.

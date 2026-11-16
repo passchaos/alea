@@ -577,6 +577,12 @@ pub fn main(init: std.process.Init) !void {
     try benchQuantileModel(QuantileProbeSkewNormal, io, stdout, "alea skew-normal quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeRice, io, stdout, "alea rice quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeHoyt, io, stdout, "alea hoyt quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbePert, io, stdout, "alea pert quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeBeta, io, stdout, "alea beta quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeGamma, io, stdout, "alea gamma quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeStudentT, io, stdout, "alea student-t quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeFisherF, io, stdout, "alea fisher-f quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeChiSquared, io, stdout, "alea chi-squared quantile", bytes / 4096);
     try benchVectorVonMises(io, stdout, "alea vector von mises f64x4", bytes / 32);
     try benchWrappedNormal(io, stdout, "alea wrapped normal", bytes / 8);
     try benchVectorWrappedNormal(io, stdout, "alea vector wrapped normal f64x4", bytes / 32);
@@ -12351,6 +12357,37 @@ const QuantileProbeRice = struct {
         return alea.distributions.riceQuantile(p, 1, 1);
     }
 };
+const QuantileProbePert = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.pertQuantile(p, 0, 0.5, 1, 4);
+    }
+};
+const QuantileProbeBeta = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.betaQuantile(p, 2, 3);
+    }
+};
+const QuantileProbeGamma = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.gammaQuantile(p, 2, 3);
+    }
+};
+const QuantileProbeStudentT = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.studentTQuantile(p, 5);
+    }
+};
+const QuantileProbeFisherF = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.fisherFQuantile(p, 5, 20);
+    }
+};
+const QuantileProbeChiSquared = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.chiSquaredQuantile(p, 5);
+    }
+};
+
 const QuantileProbeHoyt = struct {
     fn quantile(p: f64) f64 {
         return alea.distributions.hoytQuantile(p, 0.5, 1);
