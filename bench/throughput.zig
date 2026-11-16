@@ -575,6 +575,7 @@ pub fn main(init: std.process.Init) !void {
     try benchQuantileModel(QuantileProbeExGaussian, io, stdout, "alea ex-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeInverseGaussian, io, stdout, "alea inverse-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeSkewNormal, io, stdout, "alea skew-normal quantile", bytes / 4096);
+    try benchCdfModel(CdfProbeSkewNormal, io, stdout, "alea skew-normal cdf", bytes / 4096);
     try benchQuantileModel(QuantileProbeRice, io, stdout, "alea rice quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeHoyt, io, stdout, "alea hoyt quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbePert, io, stdout, "alea pert quantile", bytes / 4096);
@@ -12357,6 +12358,37 @@ const QuantileProbeRice = struct {
         return alea.distributions.riceQuantile(p, 1, 1);
     }
 };
+fn benchCdfModel(comptime Model: type, io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) {
+            const x = -4 + 8 * (@as(f64, @floatFromInt(i % 1000)) + 0.5) / 1000.0;
+            checksum += Model.cdf(x);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (per_s > best) {
+            best = per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.3} M cdf/s checksum={d:.3}\n", .{ name, best, best_checksum });
+}
+
+const CdfProbeSkewNormal = struct {
+    fn cdf(x: f64) f64 {
+        return alea.distributions.skewNormalCdf(x, 0, 1, 1);
+    }
+};
+
 const QuantileProbePert = struct {
     fn quantile(p: f64) f64 {
         return alea.distributions.pertQuantile(p, 0, 0.5, 1, 4);

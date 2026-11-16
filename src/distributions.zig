@@ -2453,12 +2453,52 @@ fn owenTAdaptive(h2: f64, a: f64, b: f64, fa: f64, fm: f64, fb: f64, whole: f64,
         owenTAdaptive(h2, m, b, fm, frm, fb, right, tol / 2, depth - 1);
 }
 
-/// Owen's T function `T(h, a)` via adaptive Simpson in the `t = tan θ`
-/// representation. `T(h, ±∞)` uses the closed form `±½(1 − Φ(|h|))`.
+// 24-point Gauss-Legendre nodes/weights (positive half) for the Owen T
+// integral on [0, atan(|a|)].
+const owen_gl_nodes = [12]f64{
+    0.99518721999702131, 0.97472855597130947, 0.93827455200273280,
+    0.88641552700440107, 0.82000198597390295, 0.74012419157855436,
+    0.64809365193697555, 0.54542147138883956, 0.43379350762604518,
+    0.31504267969616340, 0.19111886747361631, 0.06405689286260563,
+};
+const owen_gl_weights = [12]f64{
+    0.012341229799987334, 0.028531388628933809, 0.044277438817419676,
+    0.059298584915436658, 0.073346481411080272, 0.086190161531953219,
+    0.097618652104113912, 0.10744427011596562, 0.11550566805372554,
+    0.12167047292780338, 0.12583745634682839, 0.12793819534675224,
+};
+
+/// Fixed 24-point Gauss-Legendre quadrature for the smooth Owen T integrand.
+/// Validated against the adaptive Simpson path below to below 1e-12 for
+/// `|h| <= 3`, `|a| <= 6`.
+fn owenTGaussLegendre(h2: f64, b: f64) f64 {
+    var sum: f64 = 0;
+    inline for (0..12) |i| {
+        const x = owen_gl_nodes[i];
+        const w = owen_gl_weights[i];
+        sum += w * (owenTIntegrand(h2, 0.5 * b * (1 - x)) +
+            owenTIntegrand(h2, 0.5 * b * (1 + x)));
+    }
+    return 0.5 * b * sum;
+}
+
+/// Owen's T function `T(h, a)`. The smooth central range uses the fixed
+/// Gauss-Legendre rule; larger `|h|` or `|a|` keeps the adaptive Simpson
+/// path. `T(h, ±∞)` uses the closed form `±½(1 − Φ(|h|))`.
 fn owenT(h: f64, a: f64) f64 {
     if (a == 0 or std.math.isNan(h)) return 0;
     const sign: f64 = if (a < 0) -1 else 1;
     if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
+    if (@abs(h) <= 3 and @abs(a) <= 6) {
+        const b = std.math.atan(@abs(a));
+        return sign * owenTGaussLegendre(0.5 * h * h, b) / (2 * std.math.pi);
+    }
+    return owenTSlow(h, a);
+}
+
+/// Adaptive Simpson fallback for Owen's T in the `t = tan θ` representation.
+fn owenTSlow(h: f64, a: f64) f64 {
+    const sign: f64 = if (a < 0) -1 else 1;
     const b = std.math.atan(@abs(a));
     const h2 = 0.5 * h * h;
     const fa = owenTIntegrand(h2, 0);
@@ -2467,6 +2507,14 @@ fn owenT(h: f64, a: f64) f64 {
     const whole = owenTSimpson(fa, fm, fb, 0, b);
     const integral = owenTAdaptive(h2, 0, b, fa, fm, fb, whole, 1e-12, 24);
     return sign * integral / (2 * std.math.pi);
+}
+
+test "Owen T Gauss-Legendre matches adaptive Simpson" {
+    inline for ([_]f64{ 0.0, 0.1, 0.5, 1.0, 2.0, 3.0 }) |h| {
+        inline for ([_]f64{ 0.1, 0.5, 1.0, 2.0, 5.0, 6.0 }) |a| {
+            try std.testing.expectApproxEqAbs(owenTSlow(h, a), owenT(h, a), 1e-12);
+        }
+    }
 }
 
 /// Lower tail `F(−a; s) = 2∫_a^∞ φ(u)Φ(−s u) du` for `a > 0`, `s > 0` and
