@@ -703,6 +703,20 @@ current blocker audit and the requirements for a successful next candidate:
   (S4-M1550), and the remaining binomial pressure is `Rng` facade overhead
   and the small-mean inverse-CDF layout problem, not a missing central
   algorithm.
+- Quantile throughput: the S4-M1737..M1749 Newton sweep lifted the diagnostic
+  quantiles: wrapped normal 0.068 -> 0.78-0.81M/s, von Mises 0.063 ->
+  0.75-0.78M/s, skew-normal 0.005 -> 0.056-0.062M/s, Rice 0.018 ->
+  0.21-0.23M/s, Hoyt 0.043 -> 0.54-0.62M/s, beta 0.575 -> 3.1-3.5M/s, gamma
+  0.298 -> 3.9-4.2M/s, chi-squared 0.191 -> 1.8-1.9M/s, PERT 0.355 ->
+  1.6-1.7M/s, StudentT 0.194 -> 0.73-0.75M/s, FisherF 0.112 -> 1.0M/s,
+  ExGaussian 0.269 -> 2.6M/s, and InverseGaussian 0.247 -> 3.0M/s. The
+  remaining slow diagnostic rows are skew-normal (Owen's T CDF) and Rice
+  (Marcum Q CDF); their Newton iterations are already CDF-call limited. The
+  evidence is `compare/results/s4-m1737-wrapped-normal-newton-quantile.md`,
+  `s4-m1739-von-mises-newton-quantile.md`, `s4-m1741-quantile-newton-sweep.md`,
+  `s4-m1743-fisher-f-beta-quantile.md`, `s4-m1745-beta-newton-quantile.md`,
+  `s4-m1747-gamma-chi-squared-newton-quantile.md`, and
+  `s4-m1749-exgaussian-inverse-gaussian-newton-quantile.md`.
 - Platform runners: QEMU, Wine, and Wasmtime are not installed on the current
   host, so second-platform execution beyond the Node WASI suite and the six
   crosscheck compile targets stays blocked until infrastructure exists.
