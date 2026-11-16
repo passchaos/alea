@@ -11518,11 +11518,17 @@ fn vonMisesCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, kappa: Pe
 }
 
 /// Inverse von Mises CDF: `p = 0 → μ − π`, `p = 1 → μ + π`. Uses
-/// deterministic bisection on the relative CDF (64 iterations reach the f64
-/// resolution of the `2π` interval).
+/// safeguarded Newton on the relative CDF with a bisection fallback.
 pub fn vonMisesQuantile(p: anytype, mu: anytype, kappa: anytype) resolvedFloatType(@TypeOf(p, mu, kappa)) {
     return vonMisesQuantileImpl(resolvedFloatType(@TypeOf(p, mu, kappa)), p, mu, kappa);
 }
+/// Relative von Mises density `exp(κ cos(d)) / (2π I₀(κ))` on `(-π, π]`.
+/// Used by the safeguarded-Newton quantile.
+fn vonMisesRelativePdf(comptime T: type, d: T, kappa: T) T {
+    const log_norm = @log(2 * @as(T, @floatCast(std.math.pi))) + logBesselI0(kappa);
+    return @exp(kappa * @cos(d) - log_norm);
+}
+
 fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kappa: PeerType) PeerType {
     const T = @TypeOf(p, mu, kappa);
     comptime requireFloat(T);
@@ -11531,14 +11537,31 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
     if (p == 0) return mu - pi;
     if (p == 1) return mu + pi;
     if (kappa == 0) return mu + 2 * pi * p - pi;
+
+    // Safeguarded Newton on the relative CDF. The concentrated limit is
+    // approximately N(0, 1/kappa), while small kappa starts from the uniform
+    // quantile. The bracket keeps d in (-pi, pi] and falls back to bisection
+    // when the density is too small or Newton leaves it.
+    const guess = if (kappa >= 1)
+        probit(p) / @sqrt(kappa)
+    else
+        2 * pi * p - pi;
     var lo: T = -pi;
     var hi: T = pi;
-    var iteration: usize = 0;
-    while (iteration < 64) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (vonMisesRelativeCdf(T, mid, kappa) < p) lo = mid else hi = mid;
+    var d: T = @min(@max(guess, -pi), pi);
+    const tol: T = if (T == f32) 1e-5 else 1e-12;
+    const max_iters: usize = if (T == f32) 20 else 40;
+    for (0..max_iters) |_| {
+        const f = vonMisesRelativeCdf(T, d, kappa);
+        if (f < p) lo = d else hi = d;
+        if (f == p or hi - lo <= tol) break;
+        const density = vonMisesRelativePdf(T, d, kappa);
+        var next: T = if (density > 0) d - (f - p) / density else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == d) break;
+        d = next;
     }
-    return mu + (lo + hi) / 2;
+    return mu + d;
 }
 
 pub fn VonMises(comptime T: type) type {
