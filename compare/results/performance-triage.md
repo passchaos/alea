@@ -709,14 +709,20 @@ current blocker audit and the requirements for a successful next candidate:
   2.33M/s (S4-M1754 Marcum recurrence), Hoyt 0.043 -> 0.54-0.62M/s, beta 0.575 -> 3.1-3.5M/s, gamma
   0.298 -> 3.9-4.2M/s, chi-squared 0.191 -> 1.8-1.9M/s, PERT 0.355 ->
   1.6-1.7M/s, StudentT 0.194 -> 0.73-0.75M/s, FisherF 0.112 -> 1.0M/s,
-  ExGaussian 0.269 -> 2.6M/s, and InverseGaussian 0.247 -> 3.0M/s. The
+  ExGaussian 0.269 -> 2.6M/s, InverseGaussian 0.247 -> 3.0M/s, and wrapped
+  skew-normal 0.091M quantiles/s (0.731M cdf/s). The
   slowest remaining diagnostic quantiles are now around 0.6-0.8M/s (Hoyt,
   StudentT, von Mises, wrapped normal), all CDF/transcendental limited. The
   evidence is `compare/results/s4-m1737-wrapped-normal-newton-quantile.md`,
   `s4-m1739-von-mises-newton-quantile.md`, `s4-m1741-quantile-newton-sweep.md`,
   `s4-m1743-fisher-f-beta-quantile.md`, `s4-m1745-beta-newton-quantile.md`,
   `s4-m1747-gamma-chi-squared-newton-quantile.md`, and
-  `s4-m1749-exgaussian-inverse-gaussian-newton-quantile.md`.
+  `s4-m1749-exgaussian-inverse-gaussian-newton-quantile.md`; the wrapped
+  skew-normal is recorded in
+  `s4-m1758-wrapped-skew-normal-circular-distribution.md`.
+- Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
+  (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
+  wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.
 - Platform runners: QEMU, Wine, and Wasmtime are not installed on the current
   host, so second-platform execution beyond the Node WASI suite and the six
   crosscheck compile targets stays blocked until infrastructure exists.
