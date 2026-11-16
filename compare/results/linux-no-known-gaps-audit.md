@@ -7284,4 +7284,5 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1752-owen-t-gauss-legendre.md`. and
 `compare/results/s4-m1753-validate-all-refresh.md`. and
 `compare/results/s4-m1754-marcum-p1-recurrence.md`. and
-`compare/results/s4-m1755-validate-all-refresh.md`.
+`compare/results/s4-m1755-validate-all-refresh.md`. and
+`compare/results/s4-m1756-1e7-long-run-refresh.md`.
