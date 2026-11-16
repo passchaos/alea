@@ -710,6 +710,17 @@ fn betaCdfImpl(comptime PeerType: type, x: PeerType, alpha: PeerType, beta_param
 pub fn betaQuantile(p: anytype, alpha: anytype, beta_param: anytype) resolvedFloatType(@TypeOf(p, alpha, beta_param)) {
     return betaQuantileImpl(resolvedFloatType(@TypeOf(p, alpha, beta_param)), p, alpha, beta_param);
 }
+/// Beta density used by the safeguarded-Newton quantile.
+fn betaPdfImpl(comptime T: type, x: T, alpha: T, beta_param: T) T {
+    if (!(x > 0 and x < 1)) return 0;
+    const log_beta = std.math.lgamma(T, alpha) + std.math.lgamma(T, beta_param) -
+        std.math.lgamma(T, alpha + beta_param);
+    const log_density = (alpha - 1) * @log(x) + (beta_param - 1) * @log(1 - x) - log_beta;
+    if (!(log_density < 700)) return std.math.inf(T);
+    if (log_density < -745) return 0;
+    return @exp(log_density);
+}
+
 fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
     const T = @TypeOf(p, alpha, beta_param);
     comptime requireFloat(T);
@@ -720,15 +731,25 @@ fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_
 
     var lo: T = 0;
     var hi: T = 1;
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (betaIncomplete(mid, alpha, beta_param) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+    // Stable mean for huge shapes; the mode is not used because the
+    // boundary cases alpha <= 1 or beta <= 1 are better served by the mean.
+    const sum = alpha + beta_param;
+    const mean = if (std.math.isFinite(sum))
+        alpha / sum
+    else
+        1 / (1 + beta_param / alpha);
+    var x: T = @min(@max(mean, 0), 1);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = betaIncomplete(x, alpha, beta_param);
+        if (f < p) lo = x else hi = x;
+        if (f == p) return x;
         if (hi - lo <= 64 * std.math.floatEps(T) * @max(hi, std.math.floatMin(T))) break;
+        const d = betaPdfImpl(T, x, alpha, beta_param);
+        var next: T = if (d > 0 and std.math.isFinite(d)) x - (f - p) / d else (lo + hi) / 2;
+        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        if (next == x) break;
+        x = next;
     }
     if (lo == 0 and p > 0) {
         // The quantile is below the linear bisection resolution (~1e-14):
@@ -747,7 +768,7 @@ fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_
         }
         return @exp((log_lo + log_hi) / 2);
     }
-    return (lo + hi) / 2;
+    return x;
 }
 
 /// Fisher F cumulative distribution function with numerator/denominator
