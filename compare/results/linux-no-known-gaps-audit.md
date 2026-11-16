@@ -7261,5 +7261,6 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1729-fillbeta-inline-beta.md`. and
 `compare/results/s4-m1730-validate-all-refresh.md`. and
 `compare/results/s4-m1731-wrapped-normal-circular-distribution.md`. and
-`compare/results/s4-m1732-vector-binomial-gate-low-count-merge.md`.
+`compare/results/s4-m1732-vector-binomial-gate-low-count-merge.md`. and
+`compare/results/s4-m1733-validate-all-refresh.md`.
 
