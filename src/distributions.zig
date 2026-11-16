@@ -12540,6 +12540,28 @@ pub const StandardWrappedNormal = struct {
 pub fn wrappedNormalCdf(x: anytype, mu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(x, mu, sigma)) {
     return wrappedNormalCdfImpl(resolvedFloatType(@TypeOf(x, mu, sigma)), x, mu, sigma);
 }
+/// Number of 2*pi images needed on each side of the interval so the omitted
+/// normal mass is below f64 resolution for `sigma < 10`.
+fn wrappedNormalImageCount(comptime T: type, sigma: T) i32 {
+    const sigma_f64: f64 = @floatCast(sigma);
+    return @intFromFloat(@ceil((6 * sigma_f64 + 2 * std.math.pi) / (2 * std.math.pi)) + 1);
+}
+
+/// Wrapped Normal density on `(-π, π]`: the sum of the normal densities over
+/// the 2*pi images. Used by the safeguarded-Newton quantile.
+fn wrappedNormalPdfImpl(comptime T: type, x: T, mu_w: T, sigma: T) T {
+    const pi: T = @floatCast(std.math.pi);
+    const two_pi: T = 2 * pi;
+    const k_max = wrappedNormalImageCount(T, sigma);
+    var sum: T = 0;
+    var k: i32 = -k_max;
+    while (k <= k_max) : (k += 1) {
+        const shift: T = @as(T, @floatFromInt(k)) * two_pi;
+        sum += normPdf((x - mu_w + shift) / sigma);
+    }
+    return sum / sigma;
+}
+
 fn wrappedNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType) PeerType {
     const T = @TypeOf(x, mu, sigma);
     comptime requireFloat(T);
@@ -12555,8 +12577,7 @@ fn wrappedNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigm
     // Sum the 2*pi images that can contribute at this precision. Six standard
     // deviations on either side of the interval cover all non-negligible mass;
     // for sigma < 10 this needs at most 25 terms.
-    const sigma_f64: f64 = @floatCast(sigma);
-    const k_max: i32 = @intFromFloat(@ceil((6 * sigma_f64 + 2 * std.math.pi) / (2 * std.math.pi)) + 1);
+    const k_max = wrappedNormalImageCount(T, sigma);
     var sum: T = 0;
     var k: i32 = -k_max;
     while (k <= k_max) : (k += 1) {
@@ -12567,7 +12588,8 @@ fn wrappedNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigm
 }
 
 /// Inverse wrapped Normal CDF: `p = 0 → -π`, `p = 1 → π`; `sigma = 0` returns
-/// the point mass at `mu`. Uses bisection on the CDF (no closed form exists).
+/// the point mass at `mu`. Uses safeguarded Newton on the CDF (no closed form
+/// exists).
 pub fn wrappedNormalQuantile(p: anytype, mu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(p, mu, sigma)) {
     return wrappedNormalQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma)), p, mu, sigma);
 }
@@ -12582,18 +12604,31 @@ fn wrappedNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType,
     const mu_w = wrapAngleModulo(mu, pi, two_pi);
     if (sigma == 0) return mu_w;
     if (sigma >= 10) return -pi + two_pi * p;
+
+    // Safeguarded Newton on F(x) = p. The normal quantile is a good start for
+    // concentrated distributions; the uniform quantile is better once the wrap
+    // dominates. The bracket keeps the iteration inside (-pi, pi] and falls
+    // back to bisection when the density is too small or Newton leaves it.
+    const guess = if (sigma <= 2)
+        wrapAngleModulo(mu_w + sigma * probit(p), pi, two_pi)
+    else
+        -pi + two_pi * p;
     var lo: T = -pi;
     var hi: T = pi;
-    const iterations: usize = if (T == f32) 40 else 70;
-    for (0..iterations) |_| {
-        const mid = 0.5 * (lo + hi);
-        if (wrappedNormalCdfImpl(T, mid, mu_w, sigma) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+    var x: T = @min(@max(guess, -pi), pi);
+    const tol: T = if (T == f32) 1e-5 else 1e-12;
+    const max_iters: usize = if (T == f32) 20 else 40;
+    for (0..max_iters) |_| {
+        const f = wrappedNormalCdfImpl(T, x, mu_w, sigma);
+        if (f < p) lo = x else hi = x;
+        if (f == p or hi - lo <= tol) break;
+        const d = wrappedNormalPdfImpl(T, x, mu_w, sigma);
+        var next: T = if (d > 0) x - (f - p) / d else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == x) break;
+        x = next;
     }
-    return 0.5 * (lo + hi);
+    return x;
 }
 
 // Wrap to (-pi, pi] with a modulo reduction so large sigma draws do not walk

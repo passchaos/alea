@@ -40,9 +40,10 @@ Sampling draws one standard normal and wraps `mu + sigma * z`:
 The CDF on `(-π, π]` sums the `2π` images of the normal CDF:
 `Σ_k [Φ((x - mu + 2πk)/σ) - Φ((-π - mu + 2πk)/σ)]`, with `k` covering six
 standard deviations on either side. For `sigma >= 10` the wrap error is below
-`1e-21` and the uniform limit `(x + π)/(2π)` is used. The quantile uses
+`1e-21` and the uniform limit `(x + π)/(2π)` is used. The initial quantile used
 bisection on the CDF (70 iterations for f64, 40 for f32) because no closed form
-exists.
+exists; S4-M1737 replaces it with a safeguarded Newton iteration
+(0.068 -> 0.778M quantiles/s, same outputs).
 
 ## Measurements
 

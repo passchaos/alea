@@ -574,6 +574,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorVonMises(io, stdout, "alea vector von mises f64x4", bytes / 32);
     try benchWrappedNormal(io, stdout, "alea wrapped normal", bytes / 8);
     try benchVectorWrappedNormal(io, stdout, "alea vector wrapped normal f64x4", bytes / 32);
+    try benchWrappedNormalQuantile(io, stdout, "alea wrapped normal quantile", bytes / 1024);
     try benchVonMisesFisher(io, stdout, "alea von mises-fisher 3d", bytes / 64);
     try benchVectorVonMisesFisher(io, stdout, "alea vector von mises-fisher f64x4 3d", bytes / 64);
     try benchVectorWatson(io, stdout, "alea vector watson f64x4 3d", bytes / 64);
@@ -12353,6 +12354,32 @@ fn benchWrappedNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, coun
     }
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M samples/s checksum={}\n", .{ name, best, best_checksum });
+}
+
+fn benchWrappedNormalQuantile(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const dist = alea.distributions.WrappedNormal(f64).new(0.4, 1.0) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) {
+            const p = (@as(f64, @floatFromInt(i % 1000)) + 0.5) / 1000.0;
+            checksum += dist.quantile(p);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (per_s > best) {
+            best = per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.3} M quantiles/s checksum={d:.3}\n", .{ name, best, best_checksum });
 }
 
 fn benchVectorWrappedNormal(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
