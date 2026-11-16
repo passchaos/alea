@@ -65866,6 +65866,38 @@ test "WrappedNormal checked helpers reject invalid parameters" {
     }
 }
 
+test "WrappedNormal vector wrapping covers out-of-range lanes" {
+    const alea = @import("root.zig");
+    var engine = alea.DefaultPrng.init(0x1337_c0e0);
+    const rng = Rng.init(&engine);
+
+    const V = @Vector(4, f64);
+    const pi_f64: f64 = @floatCast(std.math.pi);
+
+    // sigma = 3 puts many lanes outside (-pi, pi] but inside 3*pi, exercising
+    // the branchless two-pass wrap.
+    const near = try VectorWrappedNormal(V).new(0.4, 3.0);
+    var near_buf: [64]V = undefined;
+    near.fill(rng, &near_buf);
+    for (near_buf) |vec| {
+        inline for (0..4) |lane| {
+            try std.testing.expect(std.math.isFinite(vec[lane]));
+            try std.testing.expect(vec[lane] > -pi_f64 and vec[lane] <= pi_f64);
+        }
+    }
+
+    // sigma = 50 produces raw draws beyond 3*pi, exercising the modulo wrap.
+    const far = try VectorWrappedNormal(V).new(0.4, 50.0);
+    var far_buf: [64]V = undefined;
+    far.fill(rng, &far_buf);
+    for (far_buf) |vec| {
+        inline for (0..4) |lane| {
+            try std.testing.expect(std.math.isFinite(vec[lane]));
+            try std.testing.expect(vec[lane] > -pi_f64 and vec[lane] <= pi_f64);
+        }
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Tests for public standard normal helpers: normPdf, normCdf, probit
 // -----------------------------------------------------------------------------
