@@ -2281,6 +2281,23 @@ fn exGaussianCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: 
 pub fn exGaussianQuantile(p: anytype, mu: anytype, sigma: anytype, tau: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, tau)) {
     return exGaussianQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma, tau)), p, mu, sigma, tau);
 }
+/// Exponentially modified Gaussian density used by the safeguarded-Newton
+/// quantile. Uses the same `normLogCdf` form as the CDF for stability.
+fn exGaussianPdfF64(x: f64, mu: f64, sigma: f64, tau: f64) f64 {
+    if (sigma == 0) {
+        if (x < mu) return 0;
+        return (1 / tau) * @exp(-(x - mu) / tau);
+    }
+    const z = (x - mu) / sigma;
+    const sigma_over_tau = sigma / tau;
+    const w = z - sigma_over_tau;
+    const exponent = 0.5 * sigma_over_tau * sigma_over_tau - (x - mu) / tau;
+    const log_density = exponent + normLogCdf(w) - @log(tau);
+    if (log_density < -745) return 0;
+    if (!(log_density < 700)) return std.math.inf(f64);
+    return @exp(log_density);
+}
+
 fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType, tau: PeerType) PeerType {
     const T = @TypeOf(p, mu, sigma, tau);
     comptime requireFloat(T);
@@ -2305,16 +2322,24 @@ fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, si
         hi += spread;
         if (!std.math.isFinite(hi)) return std.math.inf(T);
     }
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (exGaussianCdf(@as(f64, mid), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+    const p_f: f64 = @floatCast(p);
+    const mu_f: f64 = @floatCast(mu);
+    const sigma_f: f64 = @floatCast(sigma);
+    const tau_f: f64 = @floatCast(tau);
+    var x: f64 = @min(@max(mu_f + spread * probit(p_f), lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = exGaussianCdf(x, mu_f, sigma_f, tau_f);
+        if (f < p_f) lo = x else hi = x;
+        if (f == p_f) return @floatCast(x);
+        if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
+        const d = exGaussianPdfF64(x, mu_f, sigma_f, tau_f);
+        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else (lo + hi) / 2;
+        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        if (next == x) break;
+        x = next;
     }
-    return @floatCast((lo + hi) / 2);
+    return @floatCast(x);
 }
 
 /// Inverse-Gaussian CDF:
@@ -2353,6 +2378,17 @@ fn inverseGaussianCdfImpl(comptime PeerType: type, x: PeerType, mean: PeerType, 
 pub fn inverseGaussianQuantile(p: anytype, mean: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, mean, shape)) {
     return inverseGaussianQuantileImpl(resolvedFloatType(@TypeOf(p, mean, shape)), p, mean, shape);
 }
+/// Inverse-Gaussian density used by the safeguarded-Newton quantile.
+fn inverseGaussianPdfF64(x: f64, mean: f64, shape: f64) f64 {
+    if (x <= 0) return 0;
+    const mean2 = mean * mean;
+    const log_density = 0.5 * @log(shape / (2 * std.math.pi)) - 1.5 * @log(x) -
+        shape * (x - mean) * (x - mean) / (2 * mean2 * x);
+    if (log_density < -745) return 0;
+    if (!(log_density < 700)) return std.math.inf(f64);
+    return @exp(log_density);
+}
+
 fn inverseGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerType, shape: PeerType) PeerType {
     const T = @TypeOf(p, mean, shape);
     comptime requireFloat(T);
@@ -2364,23 +2400,31 @@ fn inverseGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerT
     if (mean == 0) return 0;
     if (mean == std.math.inf(T)) return std.math.inf(T);
     if (shape == std.math.inf(T)) return mean;
+    const p_f: f64 = @floatCast(p);
+    const mean_f: f64 = @floatCast(mean);
+    const shape_f: f64 = @floatCast(shape);
     var lo: f64 = 0;
-    var hi: f64 = mean;
+    var hi: f64 = mean_f;
     var expansion: usize = 0;
-    while (inverseGaussianCdf(@as(f64, hi), @as(f64, mean), @as(f64, shape)) < p and expansion < 1024) : (expansion += 1) {
+    while (inverseGaussianCdf(hi, mean_f, shape_f) < p_f and expansion < 1024) : (expansion += 1) {
         if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
         hi *= 2;
     }
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (inverseGaussianCdf(@as(f64, mid), @as(f64, mean), @as(f64, shape)) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+    const sd = @sqrt(mean_f * mean_f * mean_f / shape_f);
+    var x: f64 = @min(@max(mean_f + sd * probit(p_f), lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = inverseGaussianCdf(x, mean_f, shape_f);
+        if (f < p_f) lo = x else hi = x;
+        if (f == p_f) return @floatCast(x);
+        if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
+        const d = inverseGaussianPdfF64(x, mean_f, shape_f);
+        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else (lo + hi) / 2;
+        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        if (next == x) break;
+        x = next;
     }
-    return @floatCast((lo + hi) / 2);
+    return @floatCast(x);
 }
 
 /// Owen's T integrand in the `t = tan θ` form: `exp(−h²/(2cos²θ))`.
