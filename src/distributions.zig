@@ -2448,6 +2448,23 @@ fn skewNormalLowerTailAsym(a: f64, s: f64) f64 {
     return @max(0, total / std.math.pi);
 }
 
+/// Skew-normal CDF in standardized coordinates `z = (x − ξ)/ω`:
+/// `Φ(z) − 2·T(z, α)` normally, and the Mills-ratio lower-tail expansion for
+/// `z < 0`, `α > 0`, `α·|z| >= 3.5`.
+fn skewNormalCdfZ(z: f64, alpha: f64) f64 {
+    const cdf = if (z < 0 and alpha > 0 and alpha * -z >= 3.5)
+        skewNormalLowerTailAsym(-z, alpha)
+    else
+        normCdf(z) - 2 * owenT(z, alpha);
+    return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
+}
+
+/// Standardized skew-normal density `2·φ(z)·Φ(αz)`. Used by the
+/// safeguarded-Newton quantile.
+fn skewNormalPdfZ(z: f64, alpha: f64) f64 {
+    return 2 * normPdf(z) * normCdf(alpha * z);
+}
+
 /// Skew-normal CDF with `z = (x − ξ)/ω`: `Φ(z) − 2·T(z, α)` normally, and
 /// the Mills-ratio lower-tail expansion for `z < 0`, `α > 0`,
 /// `α·|z| >= 3.5`. `scale = 0` is the point mass at the location.
@@ -2468,15 +2485,11 @@ fn skewNormalCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, s
     if (x_f == std.math.inf(f64)) return 1;
     if (x_f == -std.math.inf(f64)) return 0;
     const z = (x_f - location_f) / scale_f;
-    const cdf = if (z < 0 and shape_f > 0 and shape_f * -z >= 3.5)
-        skewNormalLowerTailAsym(-z, shape_f)
-    else
-        normCdf(z) - 2 * owenT(z, shape_f);
-    return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
+    return @floatCast(skewNormalCdfZ(z, shape_f));
 }
 
-/// Skew-normal quantile via deterministic bisection. `p = 0 → −∞`,
-/// `p = 1 → +∞`.
+/// Skew-normal quantile via safeguarded Newton on the standardized CDF.
+/// `p = 0 → −∞`, `p = 1 → +∞`.
 pub fn skewNormalQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, location, scale, shape)) {
     return skewNormalQuantileImpl(resolvedFloatType(@TypeOf(p, location, scale, shape)), p, location, scale, shape);
 }
@@ -2491,28 +2504,32 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     if (p == 1) return std.math.inf(T);
     const location_f: f64 = @floatCast(location);
     const scale_f: f64 = @floatCast(scale);
-    var lo: f64 = location_f - 40 * scale_f;
-    var hi: f64 = location_f + 40 * scale_f;
+    const shape_f: f64 = @floatCast(shape);
+    const p_f: f64 = @floatCast(p);
+
+    // Safeguarded Newton in standardized coordinates. The normal quantile is
+    // the shape=0 exact solution and a good start for moderate skew; the
+    // bracket expands only for probabilities beyond the ±40 initial range.
+    var lo: f64 = -40;
+    var hi: f64 = 40;
     var expansion: usize = 0;
-    while (skewNormalCdf(@as(f64, lo), location_f, scale_f, @as(f64, @floatCast(shape))) > p and expansion < 64) : (expansion += 1) {
-        lo -= scale_f;
-        if (!std.math.isFinite(lo)) return -std.math.inf(T);
-    }
+    while (skewNormalCdfZ(lo, shape_f) > p_f and expansion < 64) : (expansion += 1) lo -= 1;
     expansion = 0;
-    while (skewNormalCdf(@as(f64, hi), location_f, scale_f, @as(f64, @floatCast(shape))) < p and expansion < 64) : (expansion += 1) {
-        hi += scale_f;
-        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    while (skewNormalCdfZ(hi, shape_f) < p_f and expansion < 64) : (expansion += 1) hi += 1;
+    var z: f64 = @min(@max(probit(p_f), lo), hi);
+    const tol: f64 = 1e-12;
+    const max_iters: usize = 40;
+    for (0..max_iters) |_| {
+        const f = skewNormalCdfZ(z, shape_f);
+        if (f < p_f) lo = z else hi = z;
+        if (f == p_f or hi - lo <= tol) break;
+        const d = skewNormalPdfZ(z, shape_f);
+        var next: f64 = if (d > 0) z - (f - p_f) / d else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == z) break;
+        z = next;
     }
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (skewNormalCdf(@as(f64, mid), location_f, scale_f, @as(f64, @floatCast(shape))) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    return @floatCast((lo + hi) / 2);
+    return @floatCast(location_f + scale_f * z);
 }
 
 /// Validated PERT parameters (mirrors `Pert.init`).
@@ -2674,7 +2691,28 @@ fn riceCdfImpl(comptime PeerType: type, x: PeerType, nu: PeerType, sigma: PeerTy
     return @floatCast(marcumP1(a, x_f / sigma_f));
 }
 
-/// Rice quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
+/// Rice density used by the safeguarded-Newton quantile. For the
+/// large-noncentrality Gaussian fallback it uses the same mean/variance as
+/// `riceCdf`.
+fn ricePdfImpl(x: f64, nu: f64, sigma: f64) f64 {
+    if (x <= 0) return 0;
+    const sigma2 = sigma * sigma;
+    const a = nu / sigma;
+    if (a > 200) {
+        const mean = riceMeanForCdf(nu, sigma);
+        const variance = 2 * sigma2 + nu * nu - mean * mean;
+        const sd = @sqrt(@max(@as(f64, 0), variance));
+        if (sd == 0) return 0;
+        return normPdf((x - mean) / sd) / sd;
+    }
+    const log_density = @log(x) - @log(sigma2) -
+        (x * x + nu * nu) / (2 * sigma2) + logBesselI0(x * nu / sigma2);
+    if (log_density < -745.0) return 0;
+    return @exp(log_density);
+}
+
+/// Rice quantile via safeguarded Newton on the CDF. `p = 0 → 0`,
+/// `p = 1 → +∞`.
 pub fn riceQuantile(p: anytype, nu: anytype, sigma: anytype) resolvedFloatType(@TypeOf(p, nu, sigma)) {
     return riceQuantileImpl(resolvedFloatType(@TypeOf(p, nu, sigma)), p, nu, sigma);
 }
@@ -2686,26 +2724,44 @@ fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: P
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     const nu_f: f64 = @floatCast(nu);
     const sigma_f: f64 = @floatCast(sigma);
+    const p_f: f64 = @floatCast(p);
     if (sigma_f == 0) return nu;
-    if (p == 0) return 0;
-    if (p == 1) return std.math.inf(T);
+    if (p_f == 0) return 0;
+    if (p_f == 1) return std.math.inf(T);
     var lo: f64 = 0;
     var hi: f64 = @max(sigma_f, nu_f) + sigma_f;
     var expansion: usize = 0;
-    while (riceCdf(@as(f64, hi), nu_f, sigma_f) < p and expansion < 1024) : (expansion += 1) {
+    while (riceCdf(@as(f64, hi), nu_f, sigma_f) < p_f and expansion < 1024) : (expansion += 1) {
         if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
         hi *= 2;
     }
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (riceCdf(@as(f64, mid), nu_f, sigma_f) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+
+    // Normal/Rayleigh starts cover the concentrated and zero-noncentrality
+    // limits; the bracket fallback handles the rest.
+    const a = nu_f / sigma_f;
+    const guess = if (a > 200) blk: {
+        const mean = riceMeanForCdf(nu_f, sigma_f);
+        const variance = 2 * sigma_f * sigma_f + nu_f * nu_f - mean * mean;
+        const sd = @sqrt(@max(@as(f64, 0), variance));
+        if (sd == 0) break :blk mean;
+        break :blk mean + sd * probit(p_f);
+    } else if (nu_f == 0)
+        sigma_f * @sqrt(-2 * @log(1 - p_f))
+    else
+        nu_f + sigma_f * probit(p_f);
+    var x: f64 = @min(@max(guess, lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = riceCdf(@as(f64, x), nu_f, sigma_f);
+        if (f < p_f) lo = x else hi = x;
+        if (f == p_f or hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
+        const d = ricePdfImpl(x, nu_f, sigma_f);
+        var next: f64 = if (d > 0) x - (f - p_f) / d else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == x) break;
+        x = next;
     }
-    return @floatCast((lo + hi) / 2);
+    return @floatCast(x);
 }
 
 /// Hoyt (Nakagami-q) CDF via the exact series
@@ -2757,7 +2813,22 @@ fn hoytCdfImpl(comptime PeerType: type, x: PeerType, q_param: PeerType, omega: P
     return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), prefactor * sum)));
 }
 
-/// Hoyt quantile via deterministic bisection. `p = 0 → 0`, `p = 1 → +∞`.
+/// Hoyt density `2a x · (2q/(1+q²)) · exp(−a x²) · I₀(r a x²)` with
+/// `a = (1+q²)²/(4q²Ω)` and `r = (1−q²)/(1+q²)`. Used by the
+/// safeguarded-Newton quantile.
+fn hoytPdfImpl(x: f64, q: f64, omega: f64) f64 {
+    if (x <= 0) return 0;
+    const q2 = q * q;
+    const r = (1 - q2) / (1 + q2);
+    const a = (1 + q2) * (1 + q2) / (4 * q2 * omega);
+    const log_density = @log(2 * a * x) + @log(2 * q / (1 + q2)) -
+        a * x * x + logBesselI0(r * a * x * x);
+    if (log_density < -745.0) return 0;
+    return @exp(log_density);
+}
+
+/// Hoyt quantile via safeguarded Newton on the CDF. `p = 0 → 0`,
+/// `p = 1 → +∞`.
 pub fn hoytQuantile(p: anytype, q_param: anytype, omega: anytype) resolvedFloatType(@TypeOf(p, q_param, omega)) {
     return hoytQuantileImpl(resolvedFloatType(@TypeOf(p, q_param, omega)), p, q_param, omega);
 }
@@ -2769,26 +2840,33 @@ fn hoytQuantileImpl(comptime PeerType: type, p: PeerType, q_param: PeerType, ome
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     const q_f: f64 = @floatCast(q_param);
     const omega_f: f64 = @floatCast(omega);
+    const p_f: f64 = @floatCast(p);
     if (omega_f == 0) return 0;
-    if (p == 0) return 0;
-    if (p == 1) return std.math.inf(T);
+    if (p_f == 0) return 0;
+    if (p_f == 1) return std.math.inf(T);
     var lo: f64 = 0;
     var hi: f64 = @sqrt(omega_f);
     var expansion: usize = 0;
-    while (hoytCdf(@as(f64, hi), q_f, omega_f) < p and expansion < 1024) : (expansion += 1) {
+    while (hoytCdf(@as(f64, hi), q_f, omega_f) < p_f and expansion < 1024) : (expansion += 1) {
         if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
         hi *= 2;
     }
-    var iteration: usize = 0;
-    while (iteration < 100) : (iteration += 1) {
-        const mid = (lo + hi) / 2;
-        if (hoytCdf(@as(f64, mid), q_f, omega_f) < p) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
+
+    // Rayleigh start; exact at q = 1 and a good bracket seed otherwise.
+    const guess = @sqrt(-omega_f * @log(1 - p_f));
+    var x: f64 = @min(@max(guess, lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = hoytCdf(@as(f64, x), q_f, omega_f);
+        if (f < p_f) lo = x else hi = x;
+        if (f == p_f or hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
+        const d = hoytPdfImpl(x, q_f, omega_f);
+        var next: f64 = if (d > 0) x - (f - p_f) / d else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == x) break;
+        x = next;
     }
-    return @floatCast((lo + hi) / 2);
+    return @floatCast(x);
 }
 
 /// Sum a Poisson(mean) mixture around its mode. `context.term(j)` returns the
