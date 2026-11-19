@@ -728,9 +728,12 @@ current blocker audit and the requirements for a successful next candidate:
   4.327M -> 4.996M. The S4-M1765 integer-shape recurrences lift Hoyt
   0.728M -> 4.521M quantiles/s (CDF 4.146M -> 82.674M cdf/s), FisherF
   1.051M -> 13.596M, beta 3.588M -> 20.097M, and PERT 1.712M -> 20.399M with
-  unchanged checksums. The slowest remaining diagnostic quantiles are now
-  wrapped skew-normal 0.272M, von Mises 0.967M, and skew-normal 1.031M, all
-  CDF/transcendental limited. The
+  unchanged checksums. The S4-M1766 von Mises cache lifts that quantile
+  0.967M -> 1.568M with an unchanged checksum by hoisting the Bessel ratios
+  and density normalization and walking the series sine/cosine with a
+  resynced angle recurrence. The slowest remaining diagnostic quantiles are
+  now wrapped skew-normal 0.272M and skew-normal 1.031M, both
+  Owen-T/transcendental limited. The
   evidence is `compare/results/s4-m1737-wrapped-normal-newton-quantile.md`,
   `s4-m1739-von-mises-newton-quantile.md`, `s4-m1741-quantile-newton-sweep.md`,
   `s4-m1743-fisher-f-beta-quantile.md`, `s4-m1745-beta-newton-quantile.md`,
@@ -741,7 +744,8 @@ current blocker audit and the requirements for a successful next candidate:
   `s4-m1762-wrapped-skew-normal-quantile.md` and
   `s4-m1763-quantile-newton-fast-paths.md` and
   `s4-m1764-student-t-integer-quantile.md` and
-  `s4-m1765-integer-shape-recurrences.md`.
+  `s4-m1765-integer-shape-recurrences.md` and
+  `s4-m1766-von-mises-quantile-cache.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
   (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
   wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.

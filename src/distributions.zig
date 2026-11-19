@@ -11897,6 +11897,109 @@ pub const StandardLogistic = struct {
 /// asymptotic `Φ(y) − (y³+3y)φ(y)/(24κ)`, `y = √κ·d`, is used; its remaining
 /// tail error is `O((y⁴/κ)²)` (about `5e-4` at `κ = 1e4`, `p ≈ 1e-12`, and
 /// below `1e-8` for `κ >= 1e6`).
+/// Per-parameter von Mises Fourier–Bessel state for repeated CDF/density
+/// evaluations with the same `kappa` (the safeguarded-Newton quantile). The
+/// backward Bessel ratio recurrence and the density normalization depend only
+/// on `kappa`, so they are computed once instead of per iteration. Only used
+/// for `kappa <= 1e4` with at most `max_terms` series terms; other parameters
+/// keep the direct path.
+const VonMisesCdfCache = struct {
+    const max_terms = 128;
+
+    kappa: f64,
+    k_sum: usize,
+    coeffs: [max_terms + 1]f64,
+    delta_scale: f64,
+    pdf_log_norm: f64,
+    tail_limit: f64,
+    tail_prefactor: f64,
+
+    fn init(kappa: f64) ?VonMisesCdfCache {
+        if (!(kappa > 0 and kappa <= 1.0e4)) return null;
+        const kf = kappa;
+        const k_total: usize = @max(64, @as(usize, @intFromFloat(@ceil(kf + 10 * @sqrt(kf) + 40))));
+        const k_sum: usize = @min(k_total, @max(64, @as(usize, @intFromFloat(@ceil(8.5 * @sqrt(kf) + 40)))));
+        if (k_sum > max_terms) return null;
+
+        var raw: [max_terms + 1]f64 = undefined;
+        var ratio: f64 = 1;
+        var rho: f64 = 0;
+        var k: usize = k_total;
+        while (k >= 1) : (k -= 1) {
+            const k_d: f64 = @floatFromInt(k);
+            if (k <= k_sum) raw[k] = ratio;
+            rho = 1 / (2 * k_d / kf + rho);
+            ratio /= rho;
+            if (ratio > 1.0e100) {
+                const inv = 1 / ratio;
+                var j: usize = k;
+                while (j <= k_sum) : (j += 1) raw[j] *= inv;
+                ratio = 1;
+            }
+        }
+
+        var cache: VonMisesCdfCache = .{
+            .kappa = kappa,
+            .k_sum = k_sum,
+            .coeffs = undefined,
+            .delta_scale = 1.0 / (2 * std.math.pi),
+            .pdf_log_norm = @log(2.0 * std.math.pi) + logBesselI0(kappa),
+            .tail_limit = @min(1e-3, 0.1 / @sqrt(kappa)),
+            .tail_prefactor = undefined,
+        };
+        const inv = 1 / (ratio * std.math.pi);
+        var i: usize = 1;
+        while (i <= k_sum) : (i += 1) cache.coeffs[i] = raw[i] * inv;
+        const bessel_scaled = @exp(logBesselI0(kappa) - kappa);
+        cache.tail_prefactor = @exp(-2 * kappa) / (2 * std.math.pi * bessel_scaled);
+        return cache;
+    }
+
+    fn cdf(self: *const VonMisesCdfCache, d: f64) f64 {
+        const pi = std.math.pi;
+        if (d <= -pi) return 0;
+        if (d >= pi) return 1;
+        const delta = d + pi;
+        if (delta < self.tail_limit) {
+            const q = self.kappa * delta * delta;
+            const series = delta * (1 + q / 6 + q * q / 40 + q * q * q / 336 + q * q * q * q / 3456);
+            const f = self.tail_prefactor * series;
+            return @min(@as(f64, 1), @max(@as(f64, 0), f));
+        }
+        var sum: f64 = 0;
+        // Walk `sin(k·d)`/`cos(k·d)` downward with the angle-addition
+        // recurrence, resyncing every 16 steps so the drift stays near the
+        // f64 noise floor. The quantile contract is far looser than the
+        // public CDF, which keeps the direct `@sin` path.
+        const cos_d = @cos(d);
+        const sin_d = @sin(d);
+        var k: usize = self.k_sum;
+        var sin_k = @sin(@as(f64, @floatFromInt(k)) * d);
+        var cos_k = @cos(@as(f64, @floatFromInt(k)) * d);
+        var block: usize = 0;
+        while (k >= 1) : (k -= 1) {
+            const k_d: f64 = @floatFromInt(k);
+            sum += self.coeffs[k] * sin_k / k_d;
+            const sin_next = sin_k * cos_d - cos_k * sin_d;
+            cos_k = cos_k * cos_d + sin_k * sin_d;
+            sin_k = sin_next;
+            block += 1;
+            if (block == 16 and k > 1) {
+                block = 0;
+                const next_k: f64 = @floatFromInt(k - 1);
+                sin_k = @sin(next_k * d);
+                cos_k = @cos(next_k * d);
+            }
+        }
+        const f = delta * self.delta_scale + sum;
+        return @min(@as(f64, 1), @max(@as(f64, 0), f));
+    }
+
+    fn pdf(self: *const VonMisesCdfCache, d: f64) f64 {
+        return @exp(self.kappa * @cos(d) - self.pdf_log_norm);
+    }
+};
+
 fn vonMisesRelativeCdf(comptime T: type, d: T, kappa: T) T {
     const pi: T = @floatCast(std.math.pi);
     if (d <= -pi) return 0;
@@ -11995,12 +12098,20 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
     var d: T = @min(@max(guess, -pi), pi);
     const tol: T = if (T == f32) 1e-5 else 1e-12;
     const max_iters: usize = if (T == f32) 20 else 40;
+    var cache: VonMisesCdfCache = undefined;
+    var use_cache = false;
+    if (T == f64) {
+        if (VonMisesCdfCache.init(@floatCast(kappa))) |value| {
+            cache = value;
+            use_cache = true;
+        }
+    }
     for (0..max_iters) |_| {
-        const f = vonMisesRelativeCdf(T, d, kappa);
+        const f: T = if (use_cache) @floatCast(cache.cdf(@floatCast(d))) else vonMisesRelativeCdf(T, d, kappa);
         const f_err = f - p;
         if (f < p) lo = d else hi = d;
         if (f_err == 0 or hi - lo <= tol) break;
-        const density = vonMisesRelativePdf(T, d, kappa);
+        const density: T = if (use_cache) @floatCast(cache.pdf(@floatCast(d))) else vonMisesRelativePdf(T, d, kappa);
         // The Newton correction is `|f-p| / density`; below the x tolerance
         // the quantile already meets its accuracy contract.
         if (density > 0 and @abs(f_err) <= density * tol) break;
@@ -66739,6 +66850,15 @@ test "VonMises CDF and quantile are exact inverses" {
     try std.testing.expect(std.math.isNan(vonMisesCdf(@as(f64, 0), @as(f64, 0), @as(f64, -1))));
     try std.testing.expect(std.math.isNan(vonMisesQuantile(@as(f64, 1.5), @as(f64, 0), @as(f64, 1))));
     try std.testing.expect(std.math.isNan(vonMisesCdf(@as(f64, std.math.inf(f64)), @as(f64, 0), @as(f64, 1))));
+}
+
+test "vonMisesQuantile cached and fallback paths match the public CDF" {
+    inline for ([_]f64{ 0.5, 1, 2, 20, 100, 200 }) |kappa| {
+        inline for ([_]f64{ 0.01, 0.1, 0.5, 0.9, 0.99 }) |p| {
+            const q = vonMisesQuantile(p, 0, kappa);
+            try std.testing.expectApproxEqAbs(p, vonMisesCdf(q, 0, kappa), 1e-10);
+        }
+    }
 }
 
 test "VonMises samples stay within (-pi, pi] bounds relative to mu" {

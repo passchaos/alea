@@ -603,6 +603,7 @@ pub fn main(init: std.process.Init) !void {
     try benchWrappedSkewNormal(io, stdout, "alea wrapped skew-normal", bytes / 8);
     try benchVectorWrappedSkewNormal(io, stdout, "alea vector wrapped skew-normal f64x4", bytes / 32);
     try benchQuantileModel(QuantileProbeWrappedSkewNormal, io, stdout, "alea wrapped skew-normal quantile", bytes / 4096);
+    try benchCdfModel(CdfProbeVonMises, io, stdout, "alea von mises cdf", bytes / 4096);
     try benchCdfModel(CdfProbeFisherF, io, stdout, "alea fisher-f cdf", bytes / 4096);
     try benchCdfModel(CdfProbeHoyt, io, stdout, "alea hoyt cdf", bytes / 4096);
     try benchCdfModel(CdfProbeWrappedSkewNormal, io, stdout, "alea wrapped skew-normal cdf", bytes / 4096);
@@ -12491,6 +12492,11 @@ const CdfProbeSkewNormal = struct {
     }
 };
 
+const CdfProbeVonMises = struct {
+    fn cdf(x: f64) f64 {
+        return alea.distributions.vonMisesCdf(x, 0.5, 5);
+    }
+};
 const CdfProbeFisherF = struct {
     fn cdf(x: f64) f64 {
         return alea.distributions.fisherFCdf(x, 5, 20);
