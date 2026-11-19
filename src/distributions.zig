@@ -2642,10 +2642,14 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     const max_iters: usize = 40;
     for (0..max_iters) |_| {
         const f = skewNormalCdfZ(z, shape_f);
+        const f_err = f - p_f;
         if (f < p_f) lo = z else hi = z;
-        if (f == p_f or hi - lo <= tol) break;
+        if (f_err == 0 or hi - lo <= tol) break;
         const d = skewNormalPdfZ(z, shape_f);
-        var next: f64 = if (d > 0) z - (f - p_f) / d else 0.5 * (lo + hi);
+        // The Newton correction is `|f-p| / d`; below the x tolerance the
+        // quantile already meets its accuracy contract.
+        if (d > 0 and @abs(f_err) <= d * tol) break;
+        var next: f64 = if (d > 0) z - f_err / d else 0.5 * (lo + hi);
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == z) break;
         z = next;
@@ -2904,10 +2908,14 @@ fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: P
     const max_iters: usize = 60;
     for (0..max_iters) |_| {
         const f = riceCdf(@as(f64, x), nu_f, sigma_f);
+        const f_err = f - p_f;
         if (f < p_f) lo = x else hi = x;
-        if (f == p_f or hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
+        if (f_err == 0 or hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
         const d = ricePdfImpl(x, nu_f, sigma_f);
-        var next: f64 = if (d > 0) x - (f - p_f) / d else 0.5 * (lo + hi);
+        // The Newton correction is `|f-p| / d`; below the x tolerance the
+        // quantile already meets its accuracy contract.
+        if (d > 0 and @abs(f_err) <= d * 1e-12 * @max(@as(f64, 1), @abs(x))) break;
+        var next: f64 = if (d > 0) x - f_err / d else 0.5 * (lo + hi);
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == x) break;
         x = next;
@@ -3009,10 +3017,14 @@ fn hoytQuantileImpl(comptime PeerType: type, p: PeerType, q_param: PeerType, ome
     const max_iters: usize = 60;
     for (0..max_iters) |_| {
         const f = hoytCdf(@as(f64, x), q_f, omega_f);
+        const f_err = f - p_f;
         if (f < p_f) lo = x else hi = x;
-        if (f == p_f or hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
+        if (f_err == 0 or hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
         const d = hoytPdfImpl(x, q_f, omega_f);
-        var next: f64 = if (d > 0) x - (f - p_f) / d else 0.5 * (lo + hi);
+        // The Newton correction is `|f-p| / d`; below the x tolerance the
+        // quantile already meets its accuracy contract.
+        if (d > 0 and @abs(f_err) <= d * 1e-12 * @max(@as(f64, 1), @abs(x))) break;
+        var next: f64 = if (d > 0) x - f_err / d else 0.5 * (lo + hi);
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == x) break;
         x = next;
@@ -11783,10 +11795,14 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
     const max_iters: usize = if (T == f32) 20 else 40;
     for (0..max_iters) |_| {
         const f = vonMisesRelativeCdf(T, d, kappa);
+        const f_err = f - p;
         if (f < p) lo = d else hi = d;
-        if (f == p or hi - lo <= tol) break;
+        if (f_err == 0 or hi - lo <= tol) break;
         const density = vonMisesRelativePdf(T, d, kappa);
-        var next: T = if (density > 0) d - (f - p) / density else 0.5 * (lo + hi);
+        // The Newton correction is `|f-p| / density`; below the x tolerance
+        // the quantile already meets its accuracy contract.
+        if (density > 0 and @abs(f_err) <= density * tol) break;
+        var next: T = if (density > 0) d - f_err / density else 0.5 * (lo + hi);
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == d) break;
         d = next;
@@ -12800,19 +12816,81 @@ fn wrappedNormalImageCount(comptime T: type, sigma: T) i32 {
     return @intFromFloat(@ceil((6 * sigma_f64 + 2 * std.math.pi) / (2 * std.math.pi)) + 1);
 }
 
-/// Wrapped Normal density on `(-π, π]`: the sum of the normal densities over
-/// the 2*pi images. Used by the safeguarded-Newton quantile.
-fn wrappedNormalPdfImpl(comptime T: type, x: T, mu_w: T, sigma: T) T {
-    const pi: T = @floatCast(std.math.pi);
-    const two_pi: T = 2 * pi;
-    const k_max = wrappedNormalImageCount(T, sigma);
-    var sum: T = 0;
-    var k: i32 = -k_max;
-    while (k <= k_max) : (k += 1) {
-        const shift: T = @as(T, @floatFromInt(k)) * two_pi;
-        sum += normPdf((x - mu_w + shift) / sigma);
-    }
-    return sum / sigma;
+/// Per-parameter wrapped normal CDF state. The endpoint image terms depend
+/// only on `(mu_w, sigma)`; repeated CDF evaluations with the same parameters
+/// (the safeguarded-Newton quantile) reuse them and skip images where the
+/// point and the endpoint are both deep in the same saturated normal tail.
+fn WrappedNormalCdfCache(comptime T: type) type {
+    return struct {
+        const Self = @This();
+        const max_images = 32;
+
+        mu_w: T,
+        sigma: T,
+        k_max: i32,
+        endpoint_terms: [max_images]T = undefined,
+        has_terms: bool = false,
+
+        fn init(mu_w: T, sigma: T) Self {
+            return .{
+                .mu_w = mu_w,
+                .sigma = sigma,
+                .k_max = wrappedNormalImageCount(T, sigma),
+            };
+        }
+
+        fn ensureTerms(self: *Self) void {
+            if (self.has_terms) return;
+            self.has_terms = true;
+            const pi: T = @floatCast(std.math.pi);
+            const two_pi: T = 2 * pi;
+            var k: i32 = -self.k_max;
+            var i: usize = 0;
+            while (k <= self.k_max) : (k += 1) {
+                const shift: T = @as(T, @floatFromInt(k)) * two_pi;
+                self.endpoint_terms[i] = normCdf((-pi - self.mu_w + shift) / self.sigma);
+                i += 1;
+            }
+        }
+
+        const Eval = struct {
+            cdf: T,
+            pdf: T,
+        };
+
+        fn eval(self: *Self, x: T, comptime need_pdf: bool) Eval {
+            self.ensureTerms();
+            const pi: T = @floatCast(std.math.pi);
+            const two_pi: T = 2 * pi;
+            var sum: T = 0;
+            var pdf_sum: T = 0;
+            var k: i32 = -self.k_max;
+            var i: usize = 0;
+            while (k <= self.k_max) : (k += 1) {
+                const shift: T = @as(T, @floatFromInt(k)) * two_pi;
+                const z = (x - self.mu_w + shift) / self.sigma;
+                // |z| >= 9 leaves < 1e-18 of probability or density.
+                if (need_pdf and z < 9 and z > -9) pdf_sum += normPdf(z);
+                const z_end = (-pi - self.mu_w + shift) / self.sigma;
+                // Both terms saturate in the same tail: the per-image
+                // difference is zero at this precision.
+                if ((z >= 9 and z_end >= 9) or (z <= -9 and z_end <= -9)) {
+                    i += 1;
+                    continue;
+                }
+                sum += normCdf(z) - self.endpoint_terms[i];
+                i += 1;
+            }
+            return .{
+                .cdf = @min(@as(T, 1), @max(@as(T, 0), sum)),
+                .pdf = if (need_pdf) pdf_sum / self.sigma else 0,
+            };
+        }
+
+        fn cdf(self: *Self, x: T) T {
+            return self.eval(x, false).cdf;
+        }
+    };
 }
 
 fn wrappedNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: PeerType) PeerType {
@@ -12827,17 +12905,8 @@ fn wrappedNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigm
     if (sigma == 0) return if (x < mu_w) 0 else 1;
     if (sigma >= 10) return @min(@as(T, 1), @max(@as(T, 0), (x + pi) / two_pi));
 
-    // Sum the 2*pi images that can contribute at this precision. Six standard
-    // deviations on either side of the interval cover all non-negligible mass;
-    // for sigma < 10 this needs at most 25 terms.
-    const k_max = wrappedNormalImageCount(T, sigma);
-    var sum: T = 0;
-    var k: i32 = -k_max;
-    while (k <= k_max) : (k += 1) {
-        const shift: T = @as(T, @floatFromInt(k)) * two_pi;
-        sum += normCdf((x - mu_w + shift) / sigma) - normCdf((-pi - mu_w + shift) / sigma);
-    }
-    return @min(@as(T, 1), @max(@as(T, 0), sum));
+    var cache = WrappedNormalCdfCache(T).init(mu_w, sigma);
+    return cache.cdf(x);
 }
 
 /// Inverse wrapped Normal CDF: `p = 0 → -π`, `p = 1 → π`; `sigma = 0` returns
@@ -12866,17 +12935,23 @@ fn wrappedNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType,
         wrapAngleModulo(mu_w + sigma * probit(p), pi, two_pi)
     else
         -pi + two_pi * p;
+    var cache = WrappedNormalCdfCache(T).init(mu_w, sigma);
     var lo: T = -pi;
     var hi: T = pi;
     var x: T = @min(@max(guess, -pi), pi);
     const tol: T = if (T == f32) 1e-5 else 1e-12;
     const max_iters: usize = if (T == f32) 20 else 40;
     for (0..max_iters) |_| {
-        const f = wrappedNormalCdfImpl(T, x, mu_w, sigma);
+        const evaluated = cache.eval(x, true);
+        const f = evaluated.cdf;
+        const d = evaluated.pdf;
+        const f_err = f - p;
         if (f < p) lo = x else hi = x;
-        if (f == p or hi - lo <= tol) break;
-        const d = wrappedNormalPdfImpl(T, x, mu_w, sigma);
-        var next: T = if (d > 0) x - (f - p) / d else 0.5 * (lo + hi);
+        if (f_err == 0 or hi - lo <= tol) break;
+        // The Newton correction is `|f-p| / d`; below the x tolerance the
+        // quantile already meets its accuracy contract.
+        if (d > 0 and @abs(f_err) <= d * tol) break;
+        var next: T = if (d > 0) x - f_err / d else 0.5 * (lo + hi);
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == x) break;
         x = next;

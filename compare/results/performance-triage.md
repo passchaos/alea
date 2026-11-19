@@ -716,11 +716,14 @@ current blocker audit and the requirements for a successful next candidate:
   1.6-1.7M/s, StudentT 0.194 -> 0.73-0.75M/s, FisherF 0.112 -> 1.0M/s,
   ExGaussian 0.269 -> 2.6M/s, InverseGaussian 0.247 -> 3.0M/s, and wrapped
   skew-normal 0.091M quantiles/s (0.731M cdf/s) before the S4-M1762 image fast
-  path, which lifts it to 0.254M quantiles/s and 1.326M cdf/s at the same
-  1GiB-equivalent count with unchanged checksums. The
-  slowest remaining diagnostic quantiles are now around 0.25-0.8M/s (wrapped
-  skew-normal, Hoyt, StudentT, von Mises, wrapped normal), all CDF/transcendental
-  limited. The
+  path, which lifts it to 0.269M quantiles/s and 1.326M cdf/s at the same
+  1GiB-equivalent count with unchanged checksums. The S4-M1763 wrapped normal
+  cache lifts the wrapped normal quantile 0.821M -> 3.777M quantiles/s (4.6x),
+  and the shared Newton-correction early exit lifts von Mises 0.791M ->
+  0.979M, Hoyt 0.641M -> 0.775M, Rice 2.358M -> 2.769M, and skew-normal
+  0.891M -> 1.037M with unchanged checksums. The slowest remaining diagnostic
+  quantiles are now wrapped skew-normal 0.269M, Hoyt 0.775M, StudentT 0.780M,
+  and von Mises 0.979M, all CDF/transcendental limited. The
   evidence is `compare/results/s4-m1737-wrapped-normal-newton-quantile.md`,
   `s4-m1739-von-mises-newton-quantile.md`, `s4-m1741-quantile-newton-sweep.md`,
   `s4-m1743-fisher-f-beta-quantile.md`, `s4-m1745-beta-newton-quantile.md`,
@@ -728,7 +731,8 @@ current blocker audit and the requirements for a successful next candidate:
   `s4-m1749-exgaussian-inverse-gaussian-newton-quantile.md`; the wrapped
   skew-normal is recorded in
   `s4-m1758-wrapped-skew-normal-circular-distribution.md` and
-  `s4-m1762-wrapped-skew-normal-quantile.md`.
+  `s4-m1762-wrapped-skew-normal-quantile.md` and
+  `s4-m1763-quantile-newton-fast-paths.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
   (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
   wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.
