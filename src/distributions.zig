@@ -21882,11 +21882,15 @@ pub fn logNormalCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: 
     return dist.sampleFrom(source);
 }
 
-pub fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+pub inline fn logNormalFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
-    if (stddev == 0) return @exp(mean);
-    if (mean == 0) return @exp(stddev * Rng.standardNormalFastFrom(source, T));
-    return @exp(mean + stddev * Rng.standardNormalFastFrom(source, T));
+    // Versioned transform: the inlined 1-ULP exponential replaces the
+    // out-of-line `@exp` call. This is a deliberate output-mapping change
+    // recorded in the reproducibility matrix; the same kernel backs the
+    // `LogNormalFastExp` profile.
+    if (stddev == 0) return fastExpFloat(T, mean);
+    if (mean == 0) return fastExpFloat(T, stddev * Rng.standardNormalFastFrom(source, T));
+    return fastExpFloat(T, mean + stddev * Rng.standardNormalFastFrom(source, T));
 }
 
 pub fn fillLogNormal(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
@@ -21897,7 +21901,7 @@ pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, 
     comptime requireFloat(T);
     std.debug.assert(std.math.isFinite(stddev));
     if (stddev == 0) {
-        @memset(dest, @exp(mean));
+        @memset(dest, fastExpFloat(T, mean));
         return;
     }
     if (mean == 0 and stddev != 1) {
@@ -21907,11 +21911,11 @@ pub fn fillLogNormalFrom(source: anytype, comptime T: type, dest: []T, mean: T, 
             Rng.fillNormalFrom(source, T, dest, 0, 1);
         }
         scaleInPlace(T, dest, stddev);
-        expInPlace(T, dest);
+        fastExpInPlace(T, dest);
         return;
     }
     Rng.fillNormalFrom(source, T, dest, mean, stddev);
-    expInPlace(T, dest);
+    fastExpInPlace(T, dest);
 }
 
 pub fn fillLogNormalChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
@@ -21937,10 +21941,10 @@ pub fn logNormalFastExpCheckedFrom(source: anytype, comptime T: type, mean: T, s
     return dist.sampleFrom(source);
 }
 
-/// Log-normal sample using the inlined `fastExp` kernel instead of the system
-/// `@exp` call. Same normal draw shape as `logNormalFrom`, but the transform
-/// mapping is a separate versioned profile with <= 1 ULP observed drift.
-pub fn logNormalFastExpFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+/// Log-normal sample through the same inlined `fastExp` kernel as the exact
+/// default (kept as an explicit profile name; the default uses this mapping
+/// since the S4-M1773 versioned change).
+pub inline fn logNormalFastExpFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
     comptime requireFloat(T);
     if (stddev == 0) return @exp(mean);
     if (mean == 0) return fastExpFloat(T, stddev * Rng.standardNormalFastFrom(source, T));
@@ -22193,9 +22197,9 @@ pub fn vectorLogNormal(rng: Rng, comptime VectorType: type, mean: vectorChild(Ve
 }
 
 pub fn vectorLogNormalFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
-    if (stddev == 0) return @splat(@exp(mean));
+    if (stddev == 0) return @splat(fastExpFloat(vectorChild(VectorType), mean));
     const normal_vec = vectorNormalFrom(source, VectorType, mean, stddev);
-    return @exp(normal_vec);
+    return fastExpVector(VectorType, normal_vec);
 }
 
 pub fn vectorLogNormalChecked(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
@@ -22519,16 +22523,16 @@ pub fn LogNormal(comptime T: type) type {
             return Self.initMeanCv(mean, coefficient_of_variation);
         }
 
-        pub fn sample(self: *Self, rng: Rng) T {
+        pub inline fn sample(self: *Self, rng: Rng) T {
             return logNormal(rng, T, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
-        pub fn sampleFrom(self: *Self, source: anytype) T {
+        pub inline fn sampleFrom(self: *Self, source: anytype) T {
             return logNormalFrom(source, T, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
 
         pub fn fromZScore(self: Self, z_score: T) T {
-            return @exp(self.normal_sampler.fromZScore(z_score));
+            return fastExpFloat(T, self.normal_sampler.fromZScore(z_score));
         }
 
         /// Log-normal CDF at `x`.
@@ -22812,7 +22816,7 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn sample(self: *Self, rng: Rng) T {
-            if (self.log_stddev == 0) return @exp(self.log_mean);
+            if (self.log_stddev == 0) return fastExpFloat(T, self.log_mean);
             if (self.index == buffer_len) {
                 fillLogNormal(rng, T, self.buffer[0..], self.log_mean, self.log_stddev);
                 self.index = 0;
@@ -22823,7 +22827,7 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
         }
 
         pub fn sampleFrom(self: *Self, source: anytype) T {
-            if (self.log_stddev == 0) return @exp(self.log_mean);
+            if (self.log_stddev == 0) return fastExpFloat(T, self.log_mean);
             if (self.index == buffer_len) {
                 fillLogNormalFrom(source, T, self.buffer[0..], self.log_mean, self.log_stddev);
                 self.index = 0;
@@ -22835,7 +22839,7 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
 
         pub fn fill(self: *Self, rng: Rng, dest: []T) void {
             if (self.log_stddev == 0) {
-                @memset(dest, @exp(self.log_mean));
+                @memset(dest, fastExpFloat(T, self.log_mean));
                 return;
             }
             var written: usize = 0;
@@ -22860,7 +22864,7 @@ pub fn BufferedLogNormal(comptime T: type, comptime buffer_len: usize) type {
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
             if (self.log_stddev == 0) {
-                @memset(dest, @exp(self.log_mean));
+                @memset(dest, fastExpFloat(T, self.log_mean));
                 return;
             }
             var written: usize = 0;
@@ -43562,7 +43566,7 @@ const fast_exp32_p1: f32 = 1.6666625440e-1;
 const fast_exp32_p2: f32 = -2.7667332906e-3;
 const fast_exp32_slow_bits: u32 = 0x42ae_ac50;
 
-fn fastExp32(x: f32) f32 {
+inline fn fastExp32(x: f32) f32 {
     const abs_bits = @as(u32, @bitCast(x)) & 0x7fff_ffff;
     if (abs_bits >= fast_exp32_slow_bits) return @exp(x);
 
@@ -43578,7 +43582,7 @@ fn fastExp32(x: f32) f32 {
     return y * @as(f32, @bitCast(@as(u32, @intCast(k + 127)) << 23));
 }
 
-fn fastExp64(x: f64) f64 {
+inline fn fastExp64(x: f64) f64 {
     const abs_bits = @as(u64, @bitCast(x)) & 0x7fff_ffff_ffff_ffff;
     if (abs_bits >= fast_exp_slow_bits) return @exp(x);
 
@@ -43594,7 +43598,7 @@ fn fastExp64(x: f64) f64 {
     return y * @as(f64, @bitCast((@as(u64, @intCast(k + 1023)) << 52)));
 }
 
-fn fastExpFloat(comptime T: type, x: T) T {
+inline fn fastExpFloat(comptime T: type, x: T) T {
     comptime requireFloat(T);
     return switch (T) {
         f64 => fastExp64(x),

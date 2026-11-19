@@ -48,7 +48,7 @@ pub fn main(init: std.process.Init) !void {
         try stdout.print("libc-backed LogNormalDlsymExp/LogNormalLibmvec profiles are unavailable on this target.\n", .{});
     }
 
-    try stdout.print("\nUse exact LogNormal for stable @exp output; use named Native/Exp2/FastExp/libc profiles only when their output-mapping and platform contracts are acceptable.\n", .{});
+    try stdout.print("\nExact LogNormal now uses the inlined exponential mapping (S4-M1773); named Native/Exp2/libc profiles keep their separate output-mapping and platform contracts.\n", .{});
     try stdout.flush();
 }
 

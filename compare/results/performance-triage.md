@@ -218,7 +218,7 @@ project does not repeat unproductive work.
 | Alphanumeric strings | `rand alphanumeric`: about 840M chars/s | `alea alphanumeric`: about 949M chars/s | Closed for current local Rust evidence |
 | Power-of-two integer ranges | Lemire multiply-high rejects nothing when the bound is a power of two, so `x >> (bits - log2(bound))` is an exact replacement | `Rng.uintLessThanFrom` now takes a power-of-two branch that preserves the accepted value and consumes exactly one draw. Focused same-host rows: direct 1645.8M -> 1972.3M samples/s (about 20% faster); facade 1068.8M -> 1067.3M, within noise because the type-erased indirect call dominates. A focused test compares the fast path against the Lemire mapping and verifies identical engine state. | Adopted for direct-source and non-erased callers; no stream-shape change. |
 | Comptime-specialized `RngOf` view | Type-erased `Rng` facade overhead remains visible in distribution-heavy rows such as Poisson and Gamma | Added `RngOf(Engine)`, a comptime-specialized view that forwards common hot-path operations to the existing `*From` helpers. Focused normal row: `RngOf` 923.7M vs direct 922.9M samples/s with identical checksum, while `Rng` remains available for heterogeneous/type-erased storage. | Adopted as an opt-in hot-path view; no change to existing `Rng` behavior. |
-| LogNormal inlined fast-exp profile | Exact `LogNormal(T)` keeps the system `@exp` call (123.3M facade / 135.8M scalar direct f64 at 128MiB), while local Rust `rand_distr 0.6.0` reaches 236.2M because its `LogNormal` resolves `exp` through the pure-Rust `libm` crate, which inlines into the sampling loop; the vector single-vector `@exp` path is only 26.1M vectors/s (104M lanes/s) | Added `LogNormalFastExp(T)` / `VectorLogNormalFastExp(V)` plus scalar/vector/checked/fill helpers backed by branchless fdlibm/musl-style f64/f32 kernels (<= 1 ULP observed drift). Same-host 128MiB rows: f64 342.9M facade / 334.0M FastPrng direct / 375.6M ScalarPrng direct, stddev=1 377.5M, f64 fills 331-341M, f32 fills 454-475M; `vectorbench -- 16777216` f64x4 334.1M / f32x8 478.6M lanes/s versus 162.6M / 386.9M default. | Adopted as an explicit versioned opt-in profile; exact `LogNormal(T)` output mapping is unchanged. Evidence: `compare/results/s4-m1761-lognormal-fast-exp.md`. |
+| LogNormal inlined exponential default | The exact `LogNormal(T)` default used the out-of-line system `@exp` call (123.3M facade / 135.8M scalar direct f64 at 128MiB) and trailed local Rust `rand_distr 0.6.0` at 236.2M, whose `LogNormal` inlines the pure-Rust `libm` exponential; the vector single-vector `@exp` path was only 26.0M vectors/s | S4-M1773 makes the S4-M1761 inlined branchless f64/f32 kernel the exact default transform (also `fromZScore`, buffered degenerate paths, and vector `LogNormal`), marks the `logNormalFrom`/sampler methods `inline`, and keeps `LogNormalFastExp` as an explicit profile name. Same-host 128MiB rows: 345.5M facade / 283.6-328.1M FastPrng direct / 334.8-379.1M ScalarPrng direct f64, stddev=1 364.6M, f32 471.7M, and 61.8M f64x4 vector vectors/s. | Adopted as a deliberate versioned output-mapping change recorded in `reproducibility-matrix.md`; the default now exceeds local Rust on every LogNormal row. Evidence: `compare/results/s4-m1773-lognormal-inlined-exp-default.md`. |
 | Wrapped skew-normal image fast path | The wrapped skew-normal quantile was the slowest harness row (0.085M quantiles/s, 0.647M cdf/s at a 1GiB-equivalent count) because each CDF evaluation recomputed the fixed endpoint term per `2*pi` image and Newton kept bisecting through the CDF noise floor | Added a lazy per-branch `WrappedSkewNormalCdfCache`, skipped images where the point and endpoint both saturate beyond `|z| >= 9` (below `1e-18` mass, bit-identical), fused the CDF/density image pass, started Newton from the skew-normal quantile, and stopped when the correction is below the `1e-12` x tolerance. Same-host 1GiB rows: 0.254M quantiles/s (2.99x) and 1.326M cdf/s (2.05x) with unchanged checksums. | Adopted as a stream-preserving optimization; evidence: `compare/results/s4-m1762-wrapped-skew-normal-quantile.md`. |
 
 | Owen T inlined exponential (rejected) | After the LogNormal fast-exp kernel landed, tried replacing the libm `@exp` in `owenTIntegrand` with the inlined `fastExp64` kernel to cut the 24-node Gauss-Legendre cost | Skew-normal CDF fell from 3.10M to 2.47M cdf/s (-20%), wrapped skew-normal CDF from 1.39M to 1.12M (-19%), and the wrapped skew-normal quantile from 0.272M to 0.227M (-17%) with unchanged checksums. | Rejected and reverted; the out-of-line libm exp pipelines better inside the quadrature loop than the inlined kernel. |
@@ -648,18 +648,15 @@ Continue performance triage on the remaining focused watch items only when a
 new concrete hypothesis is available. `s4-m4-remaining-gaps.md` summarizes the
 current blocker audit and the requirements for a successful next candidate:
 
-- LogNormal: wrapper dispatch, normal generation, Rust algorithm shape,
-  `std.math.exp`, optimized float mode, `exp2`, f32 vector width, noinline,
-  out-of-place exact/noalias transforms, staging chunk size, widened f64 `exp`
-  for f32, general-purpose `expm1 + 1`, branchy hybrid `expm1`, and stddev=1
-  branch specialization have all been ruled out as exact defaults.
-  `LogNormalApproxF32`, `LogNormalExp2F32`, and `LogNormalNativeExp2F32` now provide explicit bounded f32
-  opt-in approximation paths; `LogNormalFastExp` now provides the inlined
-  branchless f64/f32 exponential profile (1.42-1.59x local Rust on the standard
-  row and 3.2x on stddev=1), so future exact-default work needs a sound
-  exact-`exp` transform/codegen improvement or a deliberate versioned output
-  change. See `lognormal-transform-notes.md` and
-  `compare/results/s4-m1761-lognormal-fast-exp.md`.
+- LogNormal: the inlined branchless exponential is now the exact default
+  (S4-M1773 deliberate versioned mapping change), lifting the default to
+  345.5M facade / 334.8M ScalarPrng direct f64 and 364.6M stddev=1 at 128MiB
+  versus local Rust 236.2M / 116.2M. `LogNormalApproxF32`,
+  `LogNormalExp2F32`, and `LogNormalNativeExp2F32` remain explicit bounded f32
+  approximation paths, and `LogNormalFastExp` remains as a profile name for
+  the default mapping. See `lognormal-transform-notes.md`,
+  `compare/results/s4-m1761-lognormal-fast-exp.md`, and
+  `compare/results/s4-m1773-lognormal-inlined-exp-default.md`.
 - OpenClosed f64: exact endpoint-grid bulk fill now exceeds local Rust evidence
   after the `@mulAdd` raw-word conversion; keep `openclosed-endpoint-notes.md`
   for regression history and future portability checks.

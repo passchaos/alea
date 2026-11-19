@@ -348,14 +348,14 @@ required. Run `zig build run-lognormal-profiles` for a small executable example
 showing exact, buffered, native-f32, exp2, native-exp2, inlined fast-exp, and
 platform libc-backed LogNormal profiles when available.
 
-`LogNormalFastExp(T)`, `VectorLogNormalFastExp(V)`, and the
-`logNormalFastExp*` / `fillLogNormalFastExp*` / `vectorLogNormalFastExp*` /
-`fillVectorLogNormalFastExp*` helpers are the inlined-exponential throughput
-profile. They keep the same normal draw stream as exact `LogNormal(T)` but
-replace the out-of-line system `@exp` call with a branchless fdlibm/musl-style
-kernel that stays within 1 ULP of `@exp` on the local evidence grid. The output
-mapping is a separate versioned profile: use exact `LogNormal(T)` when the
-current `@exp` bit mapping is part of a saved stream.
+Exact `LogNormal(T)` now uses the inlined branchless fdlibm/musl-style
+exponential kernel (S4-M1773 versioned output-mapping change); it stays within
+1 ULP of the previous `@exp` mapping on the local evidence grid and is
+platform-independent. `LogNormalFastExp(T)`, `VectorLogNormalFastExp(V)`, and
+the `logNormalFastExp*` / `fillLogNormalFastExp*` / `vectorLogNormalFastExp*` /
+`fillVectorLogNormalFastExp*` helpers remain as explicit profile names for the
+same mapping. Use `LogNormal` when the previous `@exp` bit mapping is part of a
+saved stream and the versioned change is not acceptable.
 
 For throughput-first vector normal/exponential workloads, Alea exposes explicit
 profile names instead of silently changing the exact/default vector APIs. Use

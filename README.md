@@ -135,7 +135,7 @@ The current Linux-first roadmap is intentionally broad:
   `newInclusive`, backend discovery aliases `UniformInt` / `UniformFloat` /
   `UniformUsize`, `tryFromRange` / `tryFromRangeInclusive`, `UniformError` with `NonFinite` float-range diagnostics, and one-shot `sampleSingle` / `sampleSingleInclusive` aliases,
   `UniformDuration` for reusable `std.Io.Duration` ranges, Bernoulli with Rust-discoverable `new` / `fromRatio` / `p()` aliases and `BernoulliError` discovery, non-uniform distribution, opt-in bounded f32
-  LogNormal approximation, inlined fast-exp LogNormal throughput profile, and alias-table samplers with a Rust-discoverable
+  LogNormal approximation, the inlined-exponential LogNormal default/profile, and alias-table samplers with a Rust-discoverable
   `WeightedIndex` alias plus `weighted.WeightedIndex` / `weighted.Error`
   namespace discovery for local Rust `rand::distr::weighted::*`,
   Rust-discoverable new aliases, Rust-discoverable updateWeights, ordered updateMany, and single-weight updateAt, numChoices, positiveCount, compact `u32` index
@@ -354,8 +354,8 @@ the public API reference, `docs/examples.md` for runnable examples,
 `compare/results/README.md` is the evidence index for the checked-in reports.
 Current hard performance gaps and rejected optimization attempts are tracked in
 `compare/results/performance-triage.md`; LogNormal transform tradeoffs,
-including the opt-in bounded f32 approximation and the inlined fast-exp
-throughput profile, are summarized in
+including the S4-M1773 inlined-exponential default and the opt-in bounded f32
+approximation, are summarized in
 `compare/results/lognormal-transform-notes.md`, and exact
 `(0, 1]` f64 endpoint-grid constraints are summarized in
 `compare/results/openclosed-endpoint-notes.md`.

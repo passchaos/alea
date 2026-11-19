@@ -381,6 +381,26 @@ snapshot bits. Max observed drift is 1 ULP over 260M f64 points and 1 ULP over
 the f32 grid. See `s4-m1761-lognormal-fast-exp.md` for throughput tables and
 rejected shapes (branchy musl split, f32 polynomial, f32-through-f64 promotion).
 
+## S4-M1773: Inlined Exponential Becomes the Default
+
+The `LogNormalFastExp` profile's kernel is now the exact `LogNormal(T)` default
+transform, as a deliberate versioned output-mapping change. Measured on the
+local host (`ReleaseFast -Dcpu=native`, 128MiB rows):
+
+| Row | Previous `@exp` default | Inlined default | Local Rust |
+| --- | --- | --- | --- |
+| `log-normal` f64 facade | 123.3M | 345.5M | 236.2M |
+| `log-normal` f64 ScalarPrng direct | 135.8M | 334.8M | - |
+| `log-normal` f64 stddev=1 direct | 130.1M | 364.6M | 116.2M |
+| `log-normal` f32 direct | 456.6M | 471.7M | 248.7M |
+| `vector log-normal f64x4` | 26.0M vectors/s | 61.8M vectors/s | - |
+
+The mapping is also platform-independent (the kernel is pure Zig), unlike the
+previous libm-dependent `@exp` output. `LogNormalFastExp` remains as an
+explicit profile name for the same mapping; `fromZScore`, `BufferedLogNormal`
+degenerate paths, and vector `LogNormal` follow the same kernel. The bounded
+f32 approximation profiles are unchanged.
+
 ## Requirements For A Future Default Change
 
 A future LogNormal transform change should satisfy at least one of:
