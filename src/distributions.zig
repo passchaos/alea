@@ -1145,10 +1145,9 @@ fn gammaUpperQuantileImpl(comptime T: type, q: T, shape: T) T {
 }
 
 /// Gamma density used by the safeguarded-Newton quantile.
-fn gammaPdfImpl(comptime T: type, x: T, shape: T, scale: T) T {
+fn gammaPdfWithLogNorm(comptime T: type, x: T, shape: T, scale: T, log_norm: T) T {
     if (x <= 0) return 0;
-    const log_density = (shape - 1) * @log(x) - x / scale -
-        std.math.lgamma(T, shape) - shape * @log(scale);
+    const log_density = (shape - 1) * @log(x) - x / scale - log_norm;
     if (!(log_density < 700)) return std.math.inf(T);
     if (log_density < -745) return 0;
     return @exp(log_density);
@@ -1162,6 +1161,8 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
     if (p == 0) return 0;
     if (p == 1) return std.math.inf(T);
 
+    // The gamma log normalization is constant across Newton iterations.
+    const log_norm = std.math.lgamma(T, shape) + shape * @log(scale);
     var lo: T = 0;
     var hi = scale * @max(@as(T, 1), shape);
     var expansion: usize = 0;
@@ -1206,7 +1207,7 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         if (f < p) lo = x else hi = x;
         if (f == p) return x;
         if (hi - lo <= 64 * std.math.floatEps(T) * @max(hi, std.math.floatMin(T))) break;
-        const d = gammaPdfImpl(T, x, shape, scale);
+        const d = gammaPdfWithLogNorm(T, x, shape, scale, log_norm);
         // The Newton correction is `|f-p| / d`; below the x tolerance the
         // quantile already meets its accuracy contract, and returning here
         // skips the tiny-quantile log-space refinement.
