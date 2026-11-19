@@ -13184,24 +13184,29 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
     const pi = std.math.pi;
     const two_pi = 2 * pi;
     const k_max = wrappedNormalImageCount(f64, sigma);
+    const upper = x > 0 and alpha != 0;
+    const endpoint: f64 = if (upper) pi else -pi;
     var sum: f64 = 0;
     var k: i32 = -k_max;
-    if (x > 0 and alpha != 0) {
-        // Upper tail: `1 - P(theta > x)`, summed over the images on
-        // `(x, pi]`. This avoids the `~1` cancellation of the direct lower
-        // sum near the upper endpoint.
-        while (k <= k_max) : (k += 1) {
-            const shift = @as(f64, @floatFromInt(k)) * two_pi;
-            sum += skewNormalUpperTailZ((x - mu_w + shift) / sigma, alpha) -
-                skewNormalUpperTailZ((pi - mu_w + shift) / sigma, alpha);
-        }
-        return @min(@as(f64, 1), @max(@as(f64, 0), 1 - sum));
-    }
+    // Upper tail: `1 - P(theta > x)`, summed over the images on `(x, pi]`.
+    // This avoids the `~1` cancellation of the direct lower sum near the
+    // upper endpoint.
     while (k <= k_max) : (k += 1) {
         const shift = @as(f64, @floatFromInt(k)) * two_pi;
-        sum += skewNormalCdfZ((x - mu_w + shift) / sigma, alpha) -
-            skewNormalCdfZ((-pi - mu_w + shift) / sigma, alpha);
+        const z = (x - mu_w + shift) / sigma;
+        const z_end = (endpoint - mu_w + shift) / sigma;
+        // Both terms saturate in the same tail: their difference is zero in
+        // f64 and the pair can be skipped (|z| >= 9 leaves < 1e-18).
+        if ((z >= 9 and z_end >= 9) or (z <= -9 and z_end <= -9)) continue;
+        sum += (if (upper)
+            skewNormalUpperTailZ(z, alpha)
+        else
+            skewNormalCdfZ(z, alpha)) - (if (upper)
+            skewNormalUpperTailZ(z_end, alpha)
+        else
+            skewNormalCdfZ(z_end, alpha));
     }
+    if (upper) return @min(@as(f64, 1), @max(@as(f64, 0), 1 - sum));
     return @min(@as(f64, 1), @max(@as(f64, 0), sum));
 }
 
@@ -13220,18 +13225,111 @@ fn wrappedSkewNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, 
     return @floatCast(cdf);
 }
 
-fn wrappedSkewNormalPdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
-    const pi = std.math.pi;
-    const two_pi = 2 * pi;
-    const k_max = wrappedNormalImageCount(f64, sigma);
-    var sum: f64 = 0;
-    var k: i32 = -k_max;
-    while (k <= k_max) : (k += 1) {
-        const shift = @as(f64, @floatFromInt(k)) * two_pi;
-        sum += skewNormalPdfZ((x - mu_w + shift) / sigma, alpha);
+/// Per-parameter wrapped skew-normal CDF state. The endpoint image sums
+/// (`F(-pi)` and `Q(pi)` over every `2*pi` image) depend only on
+/// `(mu_w, sigma, alpha)`, so repeated CDF evaluations with the same
+/// parameters -- as in the safeguarded-Newton quantile -- can hoist them
+/// instead of recomputing both endpoint terms per image.
+const WrappedSkewNormalCdfCache = struct {
+    const max_images = 32;
+
+    mu_w: f64,
+    sigma: f64,
+    alpha: f64,
+    k_max: i32,
+    lower_terms: [max_images]f64 = undefined,
+    upper_terms: [max_images]f64 = undefined,
+    has_lower: bool = false,
+    has_upper: bool = false,
+
+    fn init(mu_w: f64, sigma: f64, alpha: f64) WrappedSkewNormalCdfCache {
+        return .{
+            .mu_w = mu_w,
+            .sigma = sigma,
+            .alpha = alpha,
+            .k_max = wrappedNormalImageCount(f64, sigma),
+        };
     }
-    return sum / sigma;
-}
+
+    /// Compute the endpoint image terms for one branch on first use. A single
+    /// quantile call only evaluates the branch that contains its root, so
+    /// precomputing both would double the setup cost for no benefit.
+    fn ensureTerms(self: *WrappedSkewNormalCdfCache, upper: bool) void {
+        if (upper) {
+            if (self.has_upper) return;
+            self.has_upper = true;
+            const pi = std.math.pi;
+            const two_pi = 2 * pi;
+            var k: i32 = -self.k_max;
+            var i: usize = 0;
+            while (k <= self.k_max) : (k += 1) {
+                const shift = @as(f64, @floatFromInt(k)) * two_pi;
+                self.upper_terms[i] = skewNormalUpperTailZ((pi - self.mu_w + shift) / self.sigma, self.alpha);
+                i += 1;
+            }
+            return;
+        }
+        if (self.has_lower) return;
+        self.has_lower = true;
+        const pi = std.math.pi;
+        const two_pi = 2 * pi;
+        var k: i32 = -self.k_max;
+        var i: usize = 0;
+        while (k <= self.k_max) : (k += 1) {
+            const shift = @as(f64, @floatFromInt(k)) * two_pi;
+            self.lower_terms[i] = skewNormalCdfZ((-pi - self.mu_w + shift) / self.sigma, self.alpha);
+            i += 1;
+        }
+    }
+
+    const Eval = struct {
+        cdf: f64,
+        pdf: f64,
+    };
+
+    /// Evaluate the wrapped CDF and (optionally) density in one image pass.
+    /// The quantile needs both, so sharing the image loop and the `z`
+    /// computation avoids a second pass over the same images.
+    fn eval(self: *WrappedSkewNormalCdfCache, x: f64, comptime need_pdf: bool) Eval {
+        const pi: f64 = std.math.pi;
+        const two_pi = 2 * pi;
+        const upper = x > 0 and self.alpha != 0;
+        self.ensureTerms(upper);
+        var sum: f64 = 0;
+        var pdf_sum: f64 = 0;
+        var k: i32 = -self.k_max;
+        var i: usize = 0;
+        while (k <= self.k_max) : (k += 1) {
+            const shift = @as(f64, @floatFromInt(k)) * two_pi;
+            const z = (x - self.mu_w + shift) / self.sigma;
+            // |z| >= 9 leaves < 1e-18 of probability or density; those images
+            // contribute nothing at f64 resolution.
+            if (need_pdf and z < 9 and z > -9) pdf_sum += skewNormalPdfZ(z, self.alpha);
+            // When the evaluation point and the endpoint are both deep in the
+            // same saturated tail, the per-image difference is zero in f64,
+            // so both tail evaluations can be skipped.
+            const z_end = ((if (upper) pi else -pi) - self.mu_w + shift) / self.sigma;
+            if ((z >= 9 and z_end >= 9) or (z <= -9 and z_end <= -9)) {
+                i += 1;
+                continue;
+            }
+            sum += (if (upper)
+                skewNormalUpperTailZ(z, self.alpha)
+            else
+                skewNormalCdfZ(z, self.alpha)) - (if (upper) self.upper_terms[i] else self.lower_terms[i]);
+            i += 1;
+        }
+        const cdf_value = if (upper)
+            @min(@as(f64, 1), @max(@as(f64, 0), 1 - sum))
+        else
+            @min(@as(f64, 1), @max(@as(f64, 0), sum));
+        return .{ .cdf = cdf_value, .pdf = if (need_pdf) pdf_sum / self.sigma else 0 };
+    }
+
+    fn cdf(self: *WrappedSkewNormalCdfCache, x: f64) f64 {
+        return self.eval(x, false).cdf;
+    }
+};
 
 /// Inverse wrapped Skew-Normal CDF; `quantile(0) = -π`, `quantile(1) = π`.
 pub fn wrappedSkewNormalQuantile(p: anytype, mu: anytype, sigma: anytype, alpha: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, alpha)) {
@@ -13256,8 +13354,14 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     const alpha_f: f64 = @floatCast(alpha);
     const pi_f: f64 = @floatCast(std.math.pi);
     const two_pi_f = 2 * pi_f;
+    var cache = WrappedSkewNormalCdfCache.init(mu_f, sigma_f, alpha_f);
     const guess = if (sigma_f <= 2)
-        wrapAngleModulo(mu_f + sigma_f * probit(p_f), pi_f, two_pi_f)
+        if (alpha_f == 0)
+            wrapAngleModulo(mu_f + sigma_f * probit(p_f), pi_f, two_pi_f)
+        else
+            // The skew-normal quantile is already an excellent circular start
+            // for moderate scale; wrapping keeps it inside the bracket.
+            wrapAngleModulo(skewNormalQuantileImpl(f64, p_f, @floatCast(mu), sigma_f, alpha_f), pi_f, two_pi_f)
     else
         -pi_f + two_pi_f * p_f;
     var lo: f64 = -pi_f;
@@ -13265,11 +13369,17 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     var x: f64 = @min(@max(guess, lo), hi);
     const tol: f64 = 1e-12;
     for (0..40) |_| {
-        const f = wrappedSkewNormalCdfF64(x, mu_f, sigma_f, alpha_f);
+        const evaluated = cache.eval(x, true);
+        const f = evaluated.cdf;
+        const d = evaluated.pdf;
+        const f_err = f - p_f;
         if (f < p_f) lo = x else hi = x;
-        if (f == p_f or hi - lo <= tol) break;
-        const d = wrappedSkewNormalPdfF64(x, mu_f, sigma_f, alpha_f);
-        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else 0.5 * (lo + hi);
+        if (f_err == 0 or hi - lo <= tol) break;
+        // The Newton correction is `|f-p| / d`; once it falls below the x
+        // tolerance the quantile already meets the 1e-12 contract, so the
+        // remaining bracket bisection cannot improve it.
+        if (d > 0 and std.math.isFinite(d) and @abs(f_err) <= d * tol) break;
+        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - f_err / d else 0.5 * (lo + hi);
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == x) break;
         x = next;
@@ -71536,3 +71646,4 @@ test "vector geometric dyadic multi-word lanes stay exact" {
     try std.testing.expectApproxEqAbs(p, rate, 0.01);
     try std.testing.expectApproxEqAbs(1 / p, mean, 0.2);
 }
+

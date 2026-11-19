@@ -219,6 +219,7 @@ project does not repeat unproductive work.
 | Power-of-two integer ranges | Lemire multiply-high rejects nothing when the bound is a power of two, so `x >> (bits - log2(bound))` is an exact replacement | `Rng.uintLessThanFrom` now takes a power-of-two branch that preserves the accepted value and consumes exactly one draw. Focused same-host rows: direct 1645.8M -> 1972.3M samples/s (about 20% faster); facade 1068.8M -> 1067.3M, within noise because the type-erased indirect call dominates. A focused test compares the fast path against the Lemire mapping and verifies identical engine state. | Adopted for direct-source and non-erased callers; no stream-shape change. |
 | Comptime-specialized `RngOf` view | Type-erased `Rng` facade overhead remains visible in distribution-heavy rows such as Poisson and Gamma | Added `RngOf(Engine)`, a comptime-specialized view that forwards common hot-path operations to the existing `*From` helpers. Focused normal row: `RngOf` 923.7M vs direct 922.9M samples/s with identical checksum, while `Rng` remains available for heterogeneous/type-erased storage. | Adopted as an opt-in hot-path view; no change to existing `Rng` behavior. |
 | LogNormal inlined fast-exp profile | Exact `LogNormal(T)` keeps the system `@exp` call (123.3M facade / 135.8M scalar direct f64 at 128MiB), while local Rust `rand_distr 0.6.0` reaches 236.2M because its `LogNormal` resolves `exp` through the pure-Rust `libm` crate, which inlines into the sampling loop; the vector single-vector `@exp` path is only 26.1M vectors/s (104M lanes/s) | Added `LogNormalFastExp(T)` / `VectorLogNormalFastExp(V)` plus scalar/vector/checked/fill helpers backed by branchless fdlibm/musl-style f64/f32 kernels (<= 1 ULP observed drift). Same-host 128MiB rows: f64 342.9M facade / 334.0M FastPrng direct / 375.6M ScalarPrng direct, stddev=1 377.5M, f64 fills 331-341M, f32 fills 454-475M; `vectorbench -- 16777216` f64x4 334.1M / f32x8 478.6M lanes/s versus 162.6M / 386.9M default. | Adopted as an explicit versioned opt-in profile; exact `LogNormal(T)` output mapping is unchanged. Evidence: `compare/results/s4-m1761-lognormal-fast-exp.md`. |
+| Wrapped skew-normal image fast path | The wrapped skew-normal quantile was the slowest harness row (0.085M quantiles/s, 0.647M cdf/s at a 1GiB-equivalent count) because each CDF evaluation recomputed the fixed endpoint term per `2*pi` image and Newton kept bisecting through the CDF noise floor | Added a lazy per-branch `WrappedSkewNormalCdfCache`, skipped images where the point and endpoint both saturate beyond `|z| >= 9` (below `1e-18` mass, bit-identical), fused the CDF/density image pass, started Newton from the skew-normal quantile, and stopped when the correction is below the `1e-12` x tolerance. Same-host 1GiB rows: 0.254M quantiles/s (2.99x) and 1.326M cdf/s (2.05x) with unchanged checksums. | Adopted as a stream-preserving optimization; evidence: `compare/results/s4-m1762-wrapped-skew-normal-quantile.md`. |
 
 ## Rejected Or Deferred Attempts
 
@@ -714,16 +715,20 @@ current blocker audit and the requirements for a successful next candidate:
   0.298 -> 3.9-4.2M/s, chi-squared 0.191 -> 1.8-1.9M/s, PERT 0.355 ->
   1.6-1.7M/s, StudentT 0.194 -> 0.73-0.75M/s, FisherF 0.112 -> 1.0M/s,
   ExGaussian 0.269 -> 2.6M/s, InverseGaussian 0.247 -> 3.0M/s, and wrapped
-  skew-normal 0.091M quantiles/s (0.731M cdf/s). The
-  slowest remaining diagnostic quantiles are now around 0.6-0.8M/s (Hoyt,
-  StudentT, von Mises, wrapped normal), all CDF/transcendental limited. The
+  skew-normal 0.091M quantiles/s (0.731M cdf/s) before the S4-M1762 image fast
+  path, which lifts it to 0.254M quantiles/s and 1.326M cdf/s at the same
+  1GiB-equivalent count with unchanged checksums. The
+  slowest remaining diagnostic quantiles are now around 0.25-0.8M/s (wrapped
+  skew-normal, Hoyt, StudentT, von Mises, wrapped normal), all CDF/transcendental
+  limited. The
   evidence is `compare/results/s4-m1737-wrapped-normal-newton-quantile.md`,
   `s4-m1739-von-mises-newton-quantile.md`, `s4-m1741-quantile-newton-sweep.md`,
   `s4-m1743-fisher-f-beta-quantile.md`, `s4-m1745-beta-newton-quantile.md`,
   `s4-m1747-gamma-chi-squared-newton-quantile.md`, and
   `s4-m1749-exgaussian-inverse-gaussian-newton-quantile.md`; the wrapped
   skew-normal is recorded in
-  `s4-m1758-wrapped-skew-normal-circular-distribution.md`.
+  `s4-m1758-wrapped-skew-normal-circular-distribution.md` and
+  `s4-m1762-wrapped-skew-normal-quantile.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
   (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
   wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.
