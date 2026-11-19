@@ -13694,10 +13694,12 @@ const WrappedSkewNormalCdfCache = struct {
             // contribute nothing at f64 resolution.
             if (need_pdf and z < 9 and z > -9) pdf_sum += skewNormalPdfZ(z, self.alpha);
             // When the evaluation point and the endpoint are both deep in the
-            // same saturated tail, the per-image difference is zero in f64,
-            // so both tail evaluations can be skipped.
+            // same saturated tail, the per-image difference is below 4e-11,
+            // which is far inside the quantile's 1e-9 round-trip contract, so
+            // both tail evaluations (including the slow Owen T path) can be
+            // skipped. The public CDF keeps its tighter 9-sigma threshold.
             const z_end = ((if (upper) pi else -pi) - self.mu_w + shift) / self.sigma;
-            if ((z >= 9 and z_end >= 9) or (z <= -9 and z_end <= -9)) {
+            if ((z >= 6.5 and z_end >= 6.5) or (z <= -6.5 and z_end <= -6.5)) {
                 i += 1;
                 continue;
             }
