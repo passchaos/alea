@@ -2659,6 +2659,25 @@ const owen_gl_weights = [12]f64{
     0.12167047292780338, 0.12583745634682839, 0.12793819534675224,
 };
 
+/// Owen's T far tail for `|h| >= 3`, `|a| <= 6`, `|h·a| >= 6`. The identity
+/// `T(h,∞) = Q(h)/2` gives a closed form minus the small `t > a` tail:
+/// `T(h,a) = Q(h)/2 - e^{-h²(1+a²)/2}/(2π·h²·a·(1+a²))·(1 - 1/λ + 3/λ² - 15/λ³)`
+/// with `λ = (h·a)²`. Validated against the adaptive Simpson path.
+fn owenTFarTail(h_abs: f64, a_abs: f64) f64 {
+    const h2 = h_abs * h_abs;
+    const q = if (h_abs >= 6)
+        normUpperTailF64(h_abs)
+    else
+        0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * h2);
+    const ha = h_abs * a_abs;
+    const lam = ha * ha;
+    const inv_lam = 1 / lam;
+    const tail_factor = 1 - inv_lam * (1 - inv_lam * (3 - inv_lam * 15));
+    const tail = @exp(-0.5 * h2 * (1 + a_abs * a_abs)) /
+        (2 * std.math.pi * h2 * a_abs * (1 + a_abs * a_abs)) * tail_factor;
+    return 0.5 * q - tail;
+}
+
 /// Fixed 24-point Gauss-Legendre quadrature for the smooth Owen T integrand.
 /// Validated against the adaptive Simpson path below to below 1e-12 for
 /// `|h| <= 3`, `|a| <= 6`.
@@ -2684,6 +2703,9 @@ fn owenT(h: f64, a: f64) f64 {
         const b = std.math.atan(@abs(a));
         return sign * owenTGaussLegendre(0.5 * h * h, b) / (2 * std.math.pi);
     }
+    if (@abs(a) <= 6 and @abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
+        return sign * owenTFarTail(@abs(h), @abs(a));
+    }
     return owenTSlow(h, a);
 }
 
@@ -2704,6 +2726,13 @@ test "Owen T Gauss-Legendre matches adaptive Simpson" {
     inline for ([_]f64{ 0.0, 0.1, 0.5, 1.0, 2.0, 3.0 }) |h| {
         inline for ([_]f64{ 0.1, 0.5, 1.0, 2.0, 5.0, 6.0 }) |a| {
             try std.testing.expectApproxEqAbs(owenTSlow(h, a), owenT(h, a), 1e-12);
+        }
+    }
+    // Far-tail Gauss-Hermite rule.
+    inline for ([_]f64{ 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0 }) |h| {
+        inline for ([_]f64{ 0.5, 1.0, 2.0, 4.0, 6.0 }) |a| {
+            const expected = owenTSlow(h, a);
+            try std.testing.expectApproxEqAbs(expected, owenT(h, a), @max(1e-13, @abs(expected) * 1e-9));
         }
     }
 }

@@ -736,9 +736,10 @@ current blocker audit and the requirements for a successful next candidate:
   0.967M -> 1.568M with an unchanged checksum by hoisting the Bessel ratios
   and density normalization and walking the series sine/cosine with a
   resynced angle recurrence. The slowest remaining diagnostic quantiles are
-  now wrapped skew-normal 0.286M (S4-M1768 tightened the quantile-only image
-  skip to `|z| >= 6.5` so the slow Owen T far-tail images are avoided) and
-  skew-normal 1.031M, both Owen-T/transcendental limited. S4-M1769 hoisted the
+  now wrapped skew-normal 0.342M (S4-M1768 tightened the quantile-only image
+  skip and S4-M1771 replaced the far-tail adaptive Simpson with a closed-form
+  `T(h,∞) = Q(h)/2` minus tail rule, lifting the wrapped CDF 2.11x and the
+  quantile 1.20x) and skew-normal 1.016M, both Owen-T/transcendental limited. S4-M1769 hoisted the
   constant gamma density normalization out of the Newton loop, lifting
   chi-squared 2.693M -> 3.226M quantiles/s (the equivalent beta hoist was
   rejected after a 24% generic-path regression). The
@@ -755,7 +756,8 @@ current blocker audit and the requirements for a successful next candidate:
   `s4-m1765-integer-shape-recurrences.md` and
   `s4-m1766-von-mises-quantile-cache.md` and
   `s4-m1768-1e7-long-run-refresh.md` and
-  `s4-m1769-gamma-quantile-density-hoist.md`.
+  `s4-m1769-gamma-quantile-density-hoist.md` and
+  `s4-m1771-owen-t-far-tail.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
   (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
   wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.
