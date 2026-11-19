@@ -225,6 +225,9 @@ project does not repeat unproductive work.
 | Skew-normal Mills far tail (rejected) | Tried `normUpperTailF64` instead of the incomplete-gamma continued fraction for `skewNormalUpperTailZ` when `z >= 6` | Skew-normal CDF 3.07M, wrapped skew-normal CDF 1.33M, and wrapped skew-normal quantile 0.261M — neutral or slightly worse than the current path. `std.math.erfc` is not available in Zig 0.16, so the erfc-based replacement was not viable. | Rejected and reverted. |
 | Vector PERT per-lane free function (rejected) | Tried routing `vectorPertFrom` through the per-lane scalar `pertFrom` instead of constructing `VectorPert` | 16.1M -> 16.5M vectors/s (+2.5%) but a different checksum, because the reusable `Pert` sampler and the free `pertFrom` use different beta paths. | Rejected; the 2.5% gain does not justify changing the sampling stream. |
 
+| Skew-normal upper-tail Mills replacement (rejected) | After the Owen T far-tail win, tried replacing `Q(1/2, z²/2)` in `skewNormalUpperTailZ` with `normUpperTailF64(z)` for all `z` | Wrapped skew-normal CDF 2.70M -> 3.05M cdf/s (+13%), but the quantile collapsed from 0.342M to 0.115M quantiles/s and the checksums changed because the Mills series is inaccurate below `z = 6`, so Newton failed to converge. | Rejected and reverted; keep the incomplete-gamma `Q` for `z < 6`. |
+| Skew-normal quantile tolerance loosening (neutral) | Tried relaxing the skew-normal quantile bracket tolerance from `1e-12` to `1e-9` (the CDF itself is only ~1e-7 accurate) | 1.016M -> 1.025M quantiles/s with unchanged checksums — within noise. | Reverted to keep the documented `1e-12` tolerance. |
+
 ## Rejected Or Deferred Attempts
 
 | Attempt | Result | Decision |
