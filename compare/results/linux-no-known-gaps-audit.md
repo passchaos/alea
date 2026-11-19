@@ -7303,7 +7303,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1771-owen-t-far-tail.md`. and
 `compare/results/s4-m1772-validate-all-refresh.md`. and
 `compare/results/s4-m1773-lognormal-inlined-exp-default.md`. and
-`compare/results/s4-m1774-no-known-gaps-refresh.md`.
+`compare/results/s4-m1774-no-known-gaps-refresh.md`. and
+`compare/results/s4-m1775-vector-beta-free-routing.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7332,5 +7333,6 @@ The only sub-1.0 rows are parity/noise (`alphanumeric` 0.98x, weighted trees
 0.96-0.98x) or engine-profile artifacts. No comparable core workload requires a
 new algorithm; the remaining performance work is Alea-only surface (quantiles,
 vector-directional samplers). Evidence:
-`compare/results/s4-m1774-no-known-gaps-refresh.md`.
+`compare/results/s4-m1774-no-known-gaps-refresh.md`. and
+`compare/results/s4-m1775-vector-beta-free-routing.md`.
 

@@ -26759,8 +26759,10 @@ pub fn vectorBeta(rng: Rng, comptime VectorType: type, alpha: vectorChild(Vector
 }
 
 pub fn vectorBetaFrom(source: anytype, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) VectorType {
-    const sampler = VectorBeta(VectorType).init(alpha, beta_param) catch unreachable;
-    return sampler.sampleFrom(source);
+    const info = vectorInfo(VectorType);
+    var out: VectorType = undefined;
+    inline for (0..info.len) |lane| out[lane] = betaFrom(source, info.child, alpha, beta_param);
+    return out;
 }
 
 pub fn vectorBetaChecked(rng: Rng, comptime VectorType: type, alpha: vectorChild(VectorType), beta_param: vectorChild(VectorType)) Error!VectorType {
