@@ -592,6 +592,7 @@ pub fn main(init: std.process.Init) !void {
     try benchQuantileModel(QuantileProbePert, io, stdout, "alea pert quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeBeta, io, stdout, "alea beta quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeGamma, io, stdout, "alea gamma quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeBetaStudent, io, stdout, "alea beta (2.5,0.5) quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeStudentT, io, stdout, "alea student-t quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeFisherF, io, stdout, "alea fisher-f quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeChiSquared, io, stdout, "alea chi-squared quantile", bytes / 4096);
@@ -12512,6 +12513,11 @@ const QuantileProbeBeta = struct {
 const QuantileProbeGamma = struct {
     fn quantile(p: f64) f64 {
         return alea.distributions.gammaQuantile(p, 2, 3);
+    }
+};
+const QuantileProbeBetaStudent = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.betaQuantile(2 * @min(p, 1 - p), 2.5, 0.5);
     }
 };
 const QuantileProbeStudentT = struct {

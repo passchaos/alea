@@ -7292,4 +7292,5 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1760-1e7-long-run-refresh.md`. and
 `compare/results/s4-m1761-lognormal-fast-exp.md`. and
 `compare/results/s4-m1762-wrapped-skew-normal-quantile.md`. and
-`compare/results/s4-m1763-quantile-newton-fast-paths.md`.
+`compare/results/s4-m1763-quantile-newton-fast-paths.md`. and
+`compare/results/s4-m1764-student-t-integer-quantile.md`.

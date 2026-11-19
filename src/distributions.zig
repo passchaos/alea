@@ -583,6 +583,20 @@ const student_t_inv_ab_even = blk: {
     break :blk table;
 };
 
+/// `Γ((ν+1)/2) / (√(νπ) · Γ(ν/2))` for integer `ν` in `[1, 64]`, used by the
+/// small-integer Student-t quantile density.
+const student_t_pdf_const = blk: {
+    @setEvalBranchQuota(200_000);
+    var table: [65]f64 = undefined;
+    table[0] = 0;
+    var nu: usize = 1;
+    while (nu <= 64) : (nu += 1) {
+        const nu_f: f64 = @floatFromInt(nu);
+        table[nu] = @exp(std.math.lgamma(f64, (nu_f + 1) / 2) - 0.5 * @log(nu_f * std.math.pi) - std.math.lgamma(f64, nu_f / 2));
+    }
+    break :blk table;
+};
+
 /// Closed-form Student-t CDF for small integer degrees of freedom. The
 /// regularized incomplete beta `I_x(ν/2, 1/2)` is built from the exact
 /// `ν = 1` or `ν = 2` base case with the recurrence
@@ -629,6 +643,61 @@ fn studentTCdfSmallInteger(t: anytype, nu: anytype) ?@TypeOf(t, nu) {
     // For t < 0 the lower tail is `0.5·ib` directly; the previous
     // `1 − (1 − 0.5·ib)` form cancelled the tail away.
     return if (t >= 0) 1 - 0.5 * ib else 0.5 * ib;
+}
+
+/// Inverse Student-t CDF for integer `ν` in `[1, 64]` using the exact
+/// small-integer CDF recurrence plus the analytic density. This avoids the
+/// generic incomplete-beta inversion, whose continued fraction is much slower
+/// for the `(ν/2, 1/2)` parameter pair. Returns null for other `ν`.
+fn studentTQuantileSmallIntegerF64(p: f64, nu: f64) ?f64 {
+    if (!(nu == @floor(nu)) or nu < 1 or nu > 64) return null;
+    if (p == 0) return -std.math.inf(f64);
+    if (p == 1) return std.math.inf(f64);
+    if (p == 0.5) return 0;
+
+    const negative = p < 0.5;
+    const q = if (negative) 1 - p else p; // upper-tail target for |t|
+    const nu_i: usize = @intFromFloat(nu);
+
+    // Cornish-Fisher start from the normal quantile; the tail asymptotic
+    // `P(T > t) ≈ c·ν^((ν-1)/2)·t^-ν` takes over for very small tail mass.
+    const z = probit(q);
+    const z2 = z * z;
+    var guess = z + (z2 * z + z) / (4 * nu) + (5 * z2 * z2 * z + 16 * z2 * z + 3 * z) / (96 * nu * nu);
+    const tail_mass = 1 - q;
+    const pdf_c = student_t_pdf_const[nu_i];
+    if (tail_mass < 1e-4) {
+        const asym = @exp((@log(pdf_c) + 0.5 * (nu - 1) * @log(nu) - @log(tail_mass)) / nu);
+        if (asym > 0 and std.math.isFinite(asym)) guess = asym;
+    }
+    if (!(guess > 0) or !std.math.isFinite(guess)) guess = 1;
+
+    var lo: f64 = 0;
+    var hi: f64 = @max(2 * guess, 1);
+    var expansion: usize = 0;
+    while (studentTCdfSmallInteger(hi, nu).? < q and expansion < 1024) : (expansion += 1) {
+        if (hi > std.math.floatMax(f64) / 2) return if (negative) -std.math.inf(f64) else std.math.inf(f64);
+        hi *= 2;
+    }
+
+    var t = @min(@max(guess, lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const f = studentTCdfSmallInteger(t, nu).?;
+        const f_err = f - q;
+        if (f < q) lo = t else hi = t;
+        const tol = 1e-12 * @max(@as(f64, 1), @abs(t));
+        if (f_err == 0 or hi - lo <= tol) break;
+        const pdf = pdf_c * @exp(-0.5 * (nu + 1) * std.math.log1p(t * t / nu));
+        // The Newton correction is `|f-p| / pdf`; below the x tolerance the
+        // quantile already meets its accuracy contract.
+        if (pdf > 0 and @abs(f_err) <= pdf * tol) break;
+        var next: f64 = if (pdf > 0) t - f_err / pdf else 0.5 * (lo + hi);
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        if (next == t) break;
+        t = next;
+    }
+    return if (negative) -t else t;
 }
 
 /// Vectorized integer-degree Student-t CDF for four lanes. Uses the same
@@ -823,6 +892,9 @@ fn studentTQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType) Peer
     if (p == 1) return std.math.inf(T);
     if (p == 0.5) return 0;
     if (nu > 1e6) return probit(p);
+    if (T == f64) {
+        if (studentTQuantileSmallIntegerF64(@floatCast(p), @floatCast(nu))) |value| return @floatCast(value);
+    }
     if (p > 0.5) return -studentTQuantile(@as(T, 1 - p), nu);
 
     const x = betaQuantile(@as(T, 2 * p), @as(T, nu / 2), @as(T, 0.5));
@@ -1022,6 +1094,11 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         if (f == p) return x;
         if (hi - lo <= 64 * std.math.floatEps(T) * @max(hi, std.math.floatMin(T))) break;
         const d = gammaPdfImpl(T, x, shape, scale);
+        // The Newton correction is `|f-p| / d`; below the x tolerance the
+        // quantile already meets its accuracy contract, and returning here
+        // skips the tiny-quantile log-space refinement.
+        if (d > 0 and std.math.isFinite(d) and
+            @abs(f - p) <= d * 64 * std.math.floatEps(T) * @max(x, std.math.floatMin(T))) return x;
         var next: T = if (d > 0 and std.math.isFinite(d)) x - (f - p) / d else (lo + hi) / 2;
         if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
         if (next == x) break;
@@ -71721,4 +71798,5 @@ test "vector geometric dyadic multi-word lanes stay exact" {
     try std.testing.expectApproxEqAbs(p, rate, 0.01);
     try std.testing.expectApproxEqAbs(1 / p, mean, 0.2);
 }
+
 
