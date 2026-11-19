@@ -797,6 +797,17 @@ fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_
     if (!(p >= 0 and p <= 1)) return std.math.nan(T);
     if (p == 0) return 0;
     if (p == 1) return 1;
+    if (T == f64) {
+        // Small integer shapes admit the exact beta CDF recurrence, which is
+        // much cheaper than the generic continued fraction.
+        if (beta_param == @floor(beta_param) and beta_param >= 1 and beta_param <= 64 and alpha >= 1) {
+            return @floatCast(betaQuantileIntegerB(@floatCast(p), @floatCast(alpha), @intFromFloat(beta_param)).?);
+        }
+        if (alpha == @floor(alpha) and alpha >= 1 and alpha <= 64 and beta_param >= 1) {
+            const u = betaQuantileIntegerB(@floatCast(1 - p), @floatCast(beta_param), @intFromFloat(alpha)).?;
+            return @floatCast(1 - u);
+        }
+    }
 
     var lo: T = 0;
     var hi: T = 1;
@@ -840,6 +851,93 @@ fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_
     return x;
 }
 
+/// `x^a` for half-integer `a = a2/2` with `a2 <= 128`, avoiding a `pow` call.
+fn powHalfInteger(x: f64, a2: usize) f64 {
+    var result: f64 = 1;
+    var n = a2 / 2;
+    while (n > 0) : (n -= 1) result *= x;
+    if (a2 % 2 == 1) result *= @sqrt(x);
+    return result;
+}
+
+const BetaCdfInt = struct {
+    cdf: f64,
+    pdf: f64,
+};
+
+/// `I_x(a, b)` and the beta density for integer `b` in `[1, 64]`, using the
+/// recurrence `I_x(a, b+1) = I_x(a, b) + x^a(1-x)^b / (b·B(a,b))` from the
+/// closed form `I_x(a, 1) = x^a`. The running term at `b` also gives the
+/// density as `term · b / (x(1-x))`, so the quantile needs no logs or lgamma.
+fn betaCdfIntegerBWithPdf(x: f64, a: f64, b: usize) BetaCdfInt {
+    if (!(x > 0)) return .{ .cdf = 0, .pdf = 0 };
+    if (!(x < 1)) return .{ .cdf = 1, .pdf = 0 };
+    const doubled = 2 * a;
+    const a2: usize = if (doubled >= 2 and doubled <= 128 and doubled == @floor(doubled))
+        @intFromFloat(doubled)
+    else
+        0;
+    const xa = if (a2 > 0) powHalfInteger(x, a2) else std.math.pow(f64, x, a);
+    var ib = xa; // I_x(a, 1)
+    var term = a * xa * (1 - x); // b = 1 term
+    var b_cur: usize = 1;
+    while (b_cur < b) : (b_cur += 1) {
+        ib += term;
+        term *= (1 - x) * (a + @as(f64, @floatFromInt(b_cur))) / @as(f64, @floatFromInt(b_cur + 1));
+    }
+    const bf: f64 = @floatFromInt(b);
+    const pdf = term * bf / (x * (1 - x));
+    return .{ .cdf = @min(@as(f64, 1), @max(@as(f64, 0), ib)), .pdf = pdf };
+}
+
+/// Even-denominator Fisher F CDF fast path. Returns null when neither degree
+/// of freedom gives an integer second beta parameter in `[1, 64]`.
+fn fisherFCdfEvenDof(y: f64, d1: f64, d2: f64) ?f64 {
+    const half1 = d1 / 2;
+    const half2 = d2 / 2;
+    if (half2 == @floor(half2) and half2 >= 1 and half2 <= 64) {
+        return betaCdfIntegerBWithPdf(y, half1, @intFromFloat(half2)).cdf;
+    }
+    if (half1 == @floor(half1) and half1 >= 1 and half1 <= 64) {
+        return 1 - betaCdfIntegerBWithPdf(1 - y, half2, @intFromFloat(half1)).cdf;
+    }
+    return null;
+}
+
+/// Solve `I_y(a, b) = p` for `y` with integer `b` in `[1, 64]` by safeguarded
+/// Newton on the recurrence CDF/density. Returns null for other `b`.
+fn betaQuantileIntegerB(p: f64, a: f64, b: usize) ?f64 {
+    if (!(p >= 0 and p <= 1)) return null;
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+    const bf: f64 = @floatFromInt(b);
+    var lo: f64 = 0;
+    var hi: f64 = 1;
+    var y = @min(@max(a / (a + bf), lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const evaluated = betaCdfIntegerBWithPdf(y, a, b);
+        const f = evaluated.cdf;
+        const f_err = f - p;
+        if (f < p) lo = y else hi = y;
+        if (f_err == 0) return y;
+        if (hi - lo <= 64 * std.math.floatEps(f64) * @max(hi, std.math.floatMin(f64))) break;
+        // The Newton correction is `|f-p| / pdf`; below the x tolerance the
+        // quantile already meets its accuracy contract.
+        const tol = 64 * std.math.floatEps(f64) * @max(y, std.math.floatMin(f64));
+        if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf) and
+            @abs(f_err) <= evaluated.pdf * tol) return y;
+        var next: f64 = if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf))
+            y - f_err / evaluated.pdf
+        else
+            (lo + hi) / 2;
+        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        if (next == y) break;
+        y = next;
+    }
+    return y;
+}
+
 /// Fisher F cumulative distribution function with numerator/denominator
 /// degrees of freedom d1, d2 > 0:
 ///   F(x) = I_{d1·x/(d1·x+d2)}(d1/2, d2/2).
@@ -854,6 +952,9 @@ fn fisherFCdfImpl(comptime PeerType: type, x: PeerType, d1: PeerType, d2: PeerTy
     if (x <= 0) return 0;
     if (x == std.math.inf(T)) return 1;
     const y = d1 / (d1 + d2 / x);
+    if (T == f64) {
+        if (fisherFCdfEvenDof(@floatCast(y), @floatCast(d1), @floatCast(d2))) |value| return @floatCast(value);
+    }
     return betaIncomplete(y, d1 / 2, d2 / 2);
 }
 
@@ -872,7 +973,19 @@ fn fisherFQuantileImpl(comptime PeerType: type, p: PeerType, d1: PeerType, d2: P
 
     // If X ~ F(d1, d2), then Y = d1·X/(d1·X + d2) ~ Beta(d1/2, d2/2).
     // Inverting the beta quantile avoids the Fisher CDF bisection.
-    const y = betaQuantile(p, d1 / 2, d2 / 2);
+    const half1 = d1 / 2;
+    const half2 = d2 / 2;
+    var y: T = undefined;
+    if (T == f64 and half2 == @floor(half2) and half2 >= 1 and half2 <= 64 and half1 >= 1) {
+        y = @floatCast(betaQuantileIntegerB(@floatCast(p), @floatCast(half1), @intFromFloat(half2)).?);
+    } else if (T == f64 and half1 == @floor(half1) and half1 >= 1 and half1 <= 64 and half2 >= 1) {
+        // I_y(d1/2, d2/2) = 1 - I_{1-y}(d2/2, d1/2); solve the integer-second
+        // parameter form for u = 1-y.
+        const u = betaQuantileIntegerB(@floatCast(1 - p), @floatCast(half2), @intFromFloat(half1)).?;
+        y = @as(T, @floatCast(1 - u));
+    } else {
+        y = betaQuantile(p, half1, half2);
+    }
     if (!(y < 1)) return std.math.inf(T);
     return d2 * y / (d1 * (1 - y));
 }
@@ -3036,13 +3149,25 @@ fn hoytCdfImpl(comptime PeerType: type, x: PeerType, q_param: PeerType, omega: P
     const prefactor = 2 * q_f / (1 + q2);
     const eps = 64 * std.math.floatEps(f64);
     const min_n = 0.5 * ay + 10;
+    // All series terms use `P(2n+1, ay)` at the same `ay`, so advance the
+    // integer-shape incomplete gamma with the Poisson recurrence
+    // `P(k+1, y) = P(k, y) - e^-y·y^k/k!` instead of evaluating a fresh
+    // incomplete gamma (and lgamma) per term.
+    const exp_neg_y = @exp(-ay);
+    var p_gamma = -std.math.expm1(-ay); // P(1, ay)
+    var pdf_term = exp_neg_y * ay; // e^-y·y^1/1!
     var c: f64 = 1;
-    var sum = gammaIncompleteP(@as(f64, 1), ay);
+    var sum = p_gamma;
     var n: usize = 1;
     while (n <= 1_000_000) : (n += 1) {
         const nf: f64 = @floatFromInt(n);
+        // P(2n-1) -> P(2n+1): subtract the k = 2n-1 and k = 2n pdf terms.
+        p_gamma -= pdf_term;
+        pdf_term *= ay / (2 * nf);
+        p_gamma -= pdf_term;
+        pdf_term *= ay / (2 * nf + 1);
         c *= r2 * (2 * nf - 1) / (2 * nf);
-        const term = c * gammaIncompleteP(2 * nf + 1, ay);
+        const term = c * p_gamma;
         sum += term;
         if (nf > min_n and term <= sum * eps) break;
     }

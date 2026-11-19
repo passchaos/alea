@@ -725,8 +725,11 @@ current blocker audit and the requirements for a successful next candidate:
   path lifts StudentT 0.778M -> 10.250M quantiles/s (13.2x) by using the exact
   small-integer CDF recurrence instead of the beta inversion, and the gamma
   Newton-correction exit lifts chi-squared 1.884M -> 2.693M and gamma
-  4.327M -> 4.996M. The slowest remaining diagnostic quantiles are now wrapped
-  skew-normal 0.271M, Hoyt 0.765M, von Mises 0.978M, and FisherF 1.051M, all
+  4.327M -> 4.996M. The S4-M1765 integer-shape recurrences lift Hoyt
+  0.728M -> 4.521M quantiles/s (CDF 4.146M -> 82.674M cdf/s), FisherF
+  1.051M -> 13.596M, beta 3.588M -> 20.097M, and PERT 1.712M -> 20.399M with
+  unchanged checksums. The slowest remaining diagnostic quantiles are now
+  wrapped skew-normal 0.272M, von Mises 0.967M, and skew-normal 1.031M, all
   CDF/transcendental limited. The
   evidence is `compare/results/s4-m1737-wrapped-normal-newton-quantile.md`,
   `s4-m1739-von-mises-newton-quantile.md`, `s4-m1741-quantile-newton-sweep.md`,
@@ -737,7 +740,8 @@ current blocker audit and the requirements for a successful next candidate:
   `s4-m1758-wrapped-skew-normal-circular-distribution.md` and
   `s4-m1762-wrapped-skew-normal-quantile.md` and
   `s4-m1763-quantile-newton-fast-paths.md` and
-  `s4-m1764-student-t-integer-quantile.md`.
+  `s4-m1764-student-t-integer-quantile.md` and
+  `s4-m1765-integer-shape-recurrences.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
   (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
   wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.
