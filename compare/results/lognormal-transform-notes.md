@@ -363,6 +363,24 @@ Fresh local evidence:
   and reinforces keeping exact LogNormal on `@exp` plus the existing opt-in f32
   approximation.
 
+## Inlined Exponential Profile (S4-M1761)
+
+The local macOS comparison showed that Rust's `rand_distr 0.6.0` LogNormal
+resolves `exp` through `num-traits`' pure-Rust `libm` crate, which inlines into
+the sampling loop, while Zig's `@exp` lowers to an out-of-line libSystem call.
+A branchless fdlibm/musl-style kernel (two-step Cody-Waite reduction plus the
+degree-5 rational approximation, with a cold guard for overflow, underflow,
+subnormals, NaN, and infinity) inlines in Zig and reaches 375.6M f64
+samples/s versus 135.8M for the exact default and 236.2M for local Rust on the
+same host. The f32 kernel uses the degree-2 float form.
+
+This is shipped as the explicit `LogNormalFastExp` opt-in profile, not as a
+default change: the exact default keeps the `@exp` output mapping, and the
+fast-exp mapping is versioned in `reproducibility-matrix.md` with checked
+snapshot bits. Max observed drift is 1 ULP over 260M f64 points and 1 ULP over
+the f32 grid. See `s4-m1761-lognormal-fast-exp.md` for throughput tables and
+rejected shapes (branchy musl split, f32 polynomial, f32-through-f64 promotion).
+
 ## Requirements For A Future Default Change
 
 A future LogNormal transform change should satisfy at least one of:

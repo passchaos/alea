@@ -366,6 +366,16 @@ pub fn main(init: std.process.Init) !void {
     try benchLogNormalRaw(alea.ScalarPrng, io, stdout, "alea log-normal raw scalar direct", bytes / 128, 0x1061);
     try benchLogNormalF32Scalar(io, stdout, "alea log-normal f32 scalar direct", bytes / 128);
     try benchLogNormalRawF32(alea.ScalarPrng, io, stdout, "alea log-normal f32 raw scalar direct", bytes / 128, 0x1061);
+    try benchLogNormalFastExpProfile(f64, alea.FastPrng, true, io, stdout, "alea log-normal fast-exp facade", bytes / 128, 0x1060, 0.25);
+    try benchLogNormalFastExpProfile(f64, alea.FastPrng, false, io, stdout, "alea log-normal fast-exp fast direct", bytes / 128, 0x1060, 0.25);
+    try benchLogNormalFastExpProfile(f64, alea.ScalarPrng, false, io, stdout, "alea log-normal fast-exp scalar direct", bytes / 128, 0x1061, 0.25);
+    try benchLogNormalFastExpProfile(f64, alea.ScalarPrng, false, io, stdout, "alea log-normal fast-exp stddev=1 scalar direct", bytes / 128, 0x1069, 1);
+    try benchLogNormalFastExpProfile(f32, alea.ScalarPrng, false, io, stdout, "alea log-normal fast-exp f32 scalar direct", bytes / 128, 0x1066, 0.25);
+    try benchFillLogNormalFastExpProfile(f64, alea.FastPrng, io, stdout, "alea fillLogNormal fast-exp f64 fast direct", bytes / 128, 0x1062, 0.25);
+    try benchFillLogNormalFastExpProfile(f64, alea.ScalarPrng, io, stdout, "alea fillLogNormal fast-exp f64 scalar direct", bytes / 128, 0x1063, 0.25);
+    try benchFillLogNormalFastExpProfile(f64, alea.ScalarPrng, io, stdout, "alea fillLogNormal fast-exp stddev=1 scalar direct", bytes / 128, 0x106a, 1);
+    try benchFillLogNormalFastExpProfile(f32, alea.FastPrng, io, stdout, "alea fillLogNormal fast-exp f32 fast direct", bytes / 128, 0x1066, 0.25);
+    try benchFillLogNormalFastExpProfile(f32, alea.ScalarPrng, io, stdout, "alea fillLogNormal fast-exp f32 scalar direct", bytes / 128, 0x1067, 0.25);
     try benchBufferedLogNormal(f64, alea.FastPrng, io, stdout, "alea BufferedLogNormal f64 fast direct", bytes / 128, 0x1060, 0.25);
     try benchBufferedLogNormal(f64, alea.ScalarPrng, io, stdout, "alea BufferedLogNormal f64 scalar direct", bytes / 128, 0x1061, 0.25);
     try benchBufferedLogNormal(f32, alea.FastPrng, io, stdout, "alea BufferedLogNormal f32 fast direct", bytes / 128, 0x1066, 0.25);
@@ -8597,6 +8607,84 @@ fn benchLogNormalRawF32(
         var i: usize = 0;
         var checksum: f32 = 0;
         while (i < count) : (i += 1) checksum += alea.distributions.logNormalFrom(&engine, f32, 0, 0.25);
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchLogNormalFastExpProfile(
+    comptime T: type,
+    comptime Source: type,
+    comptime use_facade: bool,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    seed: u64,
+    stddev: T,
+) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var dist = alea.distributions.LogNormalFastExp(T).init(0, stddev) catch unreachable;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const rng = alea.Rng.init(&engine);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var i: usize = 0;
+        var checksum: f64 = 0;
+        while (i < count) : (i += 1) {
+            const value = if (use_facade) dist.sample(rng) else dist.sampleFrom(&engine);
+            checksum += @floatCast(value);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (million_per_s > best_million_per_s) {
+            best_million_per_s = million_per_s;
+            best_checksum = checksum;
+        }
+    }
+
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M samples/s checksum={d:.3}\n", .{ name, best_million_per_s, best_checksum });
+}
+
+fn benchFillLogNormalFastExpProfile(
+    comptime T: type,
+    comptime Source: type,
+    io: std.Io,
+    stdout: *std.Io.Writer,
+    name: []const u8,
+    count: usize,
+    seed: u64,
+    stddev: T,
+) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    var best_million_per_s: f64 = 0;
+    var best_checksum: f64 = 0;
+    var out: [1024]T = undefined;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        var engine = Source.init(seed);
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var remaining = count;
+        var checksum: f64 = 0;
+        while (remaining > 0) {
+            const n = @min(remaining, out.len);
+            alea.distributions.fillLogNormalFastExpFrom(&engine, T, out[0..n], 0, stddev);
+            for (out[0..n]) |value| checksum += @floatCast(value);
+            remaining -= n;
+        }
         const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
         const million_per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
             (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);

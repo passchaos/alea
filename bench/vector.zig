@@ -310,6 +310,12 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4", lanes / 16, 0xd194, fillDistLogNormalF64);
     try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormal f64x4 direct", lanes / 16, 0xd194, fillDistLogNormalF64Direct);
     try benchVectorF64x4(io, stdout, "alea distributions.VectorLogNormal.fill f64x4", lanes / 16, 0xd194, fillDistLogNormalSamplerF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormalFastExp f64x4", lanes / 16, 0xd1a0, fillDistLogNormalFastExpF64);
+    try benchVectorF64x4(io, stdout, "alea distributions.fillVectorLogNormalFastExp f64x4 direct", lanes / 16, 0xd1a0, fillDistLogNormalFastExpF64Direct);
+    try benchVectorF64x4(io, stdout, "alea distributions.VectorLogNormalFastExp.fill f64x4", lanes / 16, 0xd1a0, fillDistLogNormalFastExpSamplerF64);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormalFastExp f32x8", lanes / 16, 0xd1a1, fillDistLogNormalFastExpF32);
+    try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormalFastExp f32x8 direct", lanes / 16, 0xd1a1, fillDistLogNormalFastExpF32Direct);
+    try benchVectorF32x8(io, stdout, "alea distributions.VectorLogNormalFastExp.fill f32x8", lanes / 16, 0xd1a1, fillDistLogNormalFastExpSamplerF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormal f32x8", lanes / 16, 0xd193, fillDistLogNormalF32);
     try benchVectorF32x8(io, stdout, "alea distributions.fillVectorLogNormal f32x8 direct", lanes / 16, 0xd193, fillDistLogNormalF32Direct);
     try benchVectorF32x8(io, stdout, "alea distributions.VectorLogNormal.fill f32x8", lanes / 16, 0xd193, fillDistLogNormalSamplerF32);
@@ -1600,6 +1606,32 @@ fn fillDistLogNormalF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Ve
 
 fn fillDistLogNormalSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
     const sampler = alea.distributions.VectorLogNormal(@Vector(4, f64)).init(0, 0.25) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistLogNormalFastExpF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorLogNormalFastExp(rng, @Vector(4, f64), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalFastExpF64Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(4, f64)) void {
+    alea.distributions.fillVectorLogNormalFastExpFrom(engine, @Vector(4, f64), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalFastExpSamplerF64(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(4, f64)) void {
+    const sampler = alea.distributions.VectorLogNormalFastExp(@Vector(4, f64)).init(0, 0.25) catch unreachable;
+    sampler.fill(rng, dest);
+}
+
+fn fillDistLogNormalFastExpF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorLogNormalFastExp(rng, @Vector(8, f32), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalFastExpF32Direct(engine: *alea.ScalarPrng, _: alea.Rng, dest: []@Vector(8, f32)) void {
+    alea.distributions.fillVectorLogNormalFastExpFrom(engine, @Vector(8, f32), dest, 0, 0.25);
+}
+
+fn fillDistLogNormalFastExpSamplerF32(_: *alea.ScalarPrng, rng: alea.Rng, dest: []@Vector(8, f32)) void {
+    const sampler = alea.distributions.VectorLogNormalFastExp(@Vector(8, f32)).init(0, 0.25) catch unreachable;
     sampler.fill(rng, dest);
 }
 

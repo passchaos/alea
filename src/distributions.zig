@@ -21394,6 +21394,64 @@ pub fn fillLogNormalCheckedFrom(source: anytype, comptime T: type, dest: []T, me
     dist.fillFrom(source, dest);
 }
 
+pub fn logNormalFastExp(rng: Rng, comptime T: type, mean: T, stddev: T) T {
+    return logNormalFastExpFrom(rng, T, mean, stddev);
+}
+
+pub fn logNormalFastExpChecked(rng: Rng, comptime T: type, mean: T, stddev: T) Error!T {
+    return logNormalFastExpCheckedFrom(rng, T, mean, stddev);
+}
+
+pub fn logNormalFastExpCheckedFrom(source: anytype, comptime T: type, mean: T, stddev: T) Error!T {
+    var dist = try LogNormalFastExp(T).init(mean, stddev);
+    return dist.sampleFrom(source);
+}
+
+/// Log-normal sample using the inlined `fastExp` kernel instead of the system
+/// `@exp` call. Same normal draw shape as `logNormalFrom`, but the transform
+/// mapping is a separate versioned profile with <= 1 ULP observed drift.
+pub fn logNormalFastExpFrom(source: anytype, comptime T: type, mean: T, stddev: T) T {
+    comptime requireFloat(T);
+    if (stddev == 0) return @exp(mean);
+    if (mean == 0) return fastExpFloat(T, stddev * Rng.standardNormalFastFrom(source, T));
+    return fastExpFloat(T, mean + stddev * Rng.standardNormalFastFrom(source, T));
+}
+
+pub fn fillLogNormalFastExp(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    fillLogNormalFastExpFrom(rng, T, dest, mean, stddev);
+}
+
+pub fn fillLogNormalFastExpFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) void {
+    comptime requireFloat(T);
+    std.debug.assert(std.math.isFinite(stddev));
+    if (stddev == 0) {
+        @memset(dest, @exp(mean));
+        return;
+    }
+    if (mean == 0 and stddev != 1) {
+        if (T == f32 and comptime @TypeOf(source) != Rng) {
+            fillStandardNormalFrom(source, T, dest);
+        } else {
+            Rng.fillNormalFrom(source, T, dest, 0, 1);
+        }
+        scaleInPlace(T, dest, stddev);
+        fastExpInPlace(T, dest);
+        return;
+    }
+    Rng.fillNormalFrom(source, T, dest, mean, stddev);
+    fastExpInPlace(T, dest);
+}
+
+pub fn fillLogNormalFastExpChecked(rng: Rng, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    return fillLogNormalFastExpCheckedFrom(rng, T, dest, mean, stddev);
+}
+
+pub fn fillLogNormalFastExpCheckedFrom(source: anytype, comptime T: type, dest: []T, mean: T, stddev: T) Error!void {
+    if (dest.len == 0) return;
+    var dist = try LogNormalFastExp(T).init(mean, stddev);
+    dist.fillFrom(source, dest);
+}
+
 pub fn logNormalNativeF32(rng: Rng, mean: f32, stddev: f32) f32 {
     return logNormalNativeF32From(rng, mean, stddev);
 }
@@ -21646,6 +21704,54 @@ pub fn fillVectorLogNormalCheckedFrom(source: anytype, comptime VectorType: type
     if (dest.len == 0) return;
     _ = try VectorLogNormal(VectorType).init(mean, stddev);
     fillVectorLogNormalFrom(source, VectorType, dest, mean, stddev);
+}
+
+pub fn vectorLogNormalFastExp(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    return vectorLogNormalFastExpFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalFastExpFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) VectorType {
+    if (stddev == 0) return @splat(@exp(mean));
+    const normal_vec = vectorNormalFrom(source, VectorType, mean, stddev);
+    return fastExpVector(VectorType, normal_vec);
+}
+
+pub fn vectorLogNormalFastExpChecked(rng: Rng, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    return vectorLogNormalFastExpCheckedFrom(rng, VectorType, mean, stddev);
+}
+
+pub fn vectorLogNormalFastExpCheckedFrom(source: anytype, comptime VectorType: type, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!VectorType {
+    _ = try VectorLogNormalFastExp(VectorType).init(mean, stddev);
+    return vectorLogNormalFastExpFrom(source, VectorType, mean, stddev);
+}
+
+pub fn fillVectorLogNormalFastExp(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    fillVectorLogNormalFastExpFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalFastExpFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) void {
+    const info = vectorInfo(VectorType);
+    if (stddev == 0) {
+        @memset(dest, @as(VectorType, @splat(@exp(mean))));
+        return;
+    }
+    if (info.child == f32 or info.child == f64) {
+        const scalars = std.mem.bytesAsSlice(info.child, std.mem.sliceAsBytes(dest));
+        fillLogNormalFastExpFrom(source, info.child, scalars, mean, stddev);
+        return;
+    }
+    fillVectorNormalFrom(source, VectorType, dest, mean, stddev);
+    fastExpVectorSliceInPlace(VectorType, dest);
+}
+
+pub fn fillVectorLogNormalFastExpChecked(rng: Rng, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    return fillVectorLogNormalFastExpCheckedFrom(rng, VectorType, dest, mean, stddev);
+}
+
+pub fn fillVectorLogNormalFastExpCheckedFrom(source: anytype, comptime VectorType: type, dest: []VectorType, mean: vectorChild(VectorType), stddev: vectorChild(VectorType)) Error!void {
+    if (dest.len == 0) return;
+    _ = try VectorLogNormalFastExp(VectorType).init(mean, stddev);
+    fillVectorLogNormalFastExpFrom(source, VectorType, dest, mean, stddev);
 }
 
 const log_normal_approx_f32_max_abs_mean: f32 = 0.25;
@@ -21966,6 +22072,116 @@ pub fn LogNormal(comptime T: type) type {
 
         pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
             fillLogNormalFrom(source, T, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+    };
+}
+
+pub fn LogNormalFastExp(comptime T: type) type {
+    comptime requireFloat(T);
+
+    return struct {
+        const Self = @This();
+
+        normal_sampler: Normal(T),
+
+        pub fn init(mean: T, stddev: T) Error!Self {
+            return .{ .normal_sampler = try Normal(T).init(mean, stddev) };
+        }
+
+        pub fn new(mean: T, stddev: T) Error!Self {
+            return Self.init(mean, stddev);
+        }
+
+        pub fn initMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            const base = try LogNormal(T).initMeanCv(mean, coefficient_of_variation);
+            return .{ .normal_sampler = base.normal_sampler };
+        }
+
+        pub fn fromMeanCv(mean: T, coefficient_of_variation: T) Error!Self {
+            return Self.initMeanCv(mean, coefficient_of_variation);
+        }
+
+        pub fn sample(self: *Self, rng: Rng) T {
+            return logNormalFastExp(rng, T, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn sampleFrom(self: *Self, source: anytype) T {
+            return logNormalFastExpFrom(source, T, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn fromZScore(self: Self, z_score: T) T {
+            return fastExpFloat(T, self.normal_sampler.fromZScore(z_score));
+        }
+
+        pub fn cdf(self: Self, x: T) T {
+            return logNormalCdf(x, self.logMean(), self.logStddev());
+        }
+
+        pub fn quantile(self: Self, p: T) T {
+            return logNormalQuantile(p, self.logMean(), self.logStddev());
+        }
+
+        pub fn logMean(self: Self) T {
+            return self.normal_sampler.meanValue();
+        }
+
+        pub fn logMeanValue(self: Self) T {
+            return self.logMean();
+        }
+
+        pub fn logStddev(self: Self) T {
+            return self.normal_sampler.stddevValue();
+        }
+
+        pub fn logStddevValue(self: Self) T {
+            return self.logStddev();
+        }
+
+        pub fn linearMeanValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @exp(self.logMean() + 0.5 * sigma * sigma);
+        }
+
+        pub fn medianValue(self: Self) T {
+            return @exp(self.logMean());
+        }
+
+        pub fn modeValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @exp(self.logMean() - sigma * sigma);
+        }
+
+        pub fn expectedValue(self: Self) T {
+            return self.linearMeanValue();
+        }
+
+        pub fn varianceValue(self: Self) T {
+            const sigma = self.logStddev();
+            const mean = self.linearMeanValue();
+            return (@exp(sigma * sigma) - 1) * mean * mean;
+        }
+
+        pub fn minValue(self: Self) T {
+            if (self.logStddev() == 0) return self.linearMeanValue();
+            return 0;
+        }
+
+        pub fn maxValue(self: Self) ?T {
+            if (self.logStddev() == 0) return self.linearMeanValue();
+            return null;
+        }
+
+        pub fn coefficientOfVariationValue(self: Self) T {
+            const sigma = self.logStddev();
+            return @sqrt(@exp(sigma * sigma) - 1);
+        }
+
+        pub fn fill(self: *Self, rng: Rng, dest: []T) void {
+            fillLogNormalFastExp(rng, T, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn fillFrom(self: *Self, source: anytype, dest: []T) void {
+            fillLogNormalFastExpFrom(source, T, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
     };
 }
@@ -22647,6 +22863,45 @@ pub fn VectorLogNormal(comptime VectorType: type) type {
 
         pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
             fillVectorLogNormalFrom(source, VectorType, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+    };
+}
+
+pub fn VectorLogNormalFastExp(comptime VectorType: type) type {
+    const Child = vectorChild(VectorType);
+    requireFloat(Child);
+
+    return struct {
+        const Self = @This();
+
+        normal_sampler: VectorNormal(VectorType),
+
+        pub fn init(mean: Child, stddev: Child) Error!Self {
+            return .{ .normal_sampler = try VectorNormal(VectorType).init(mean, stddev) };
+        }
+
+        pub fn meanValue(self: Self) Child {
+            return self.normal_sampler.meanValue();
+        }
+
+        pub fn stddevValue(self: Self) Child {
+            return self.normal_sampler.stddevValue();
+        }
+
+        pub fn sample(self: Self, rng: Rng) VectorType {
+            return vectorLogNormalFastExp(rng, VectorType, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn sampleFrom(self: Self, source: anytype) VectorType {
+            return vectorLogNormalFastExpFrom(source, VectorType, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn fill(self: Self, rng: Rng, dest: []VectorType) void {
+            fillVectorLogNormalFastExp(rng, VectorType, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
+        }
+
+        pub fn fillFrom(self: Self, source: anytype, dest: []VectorType) void {
+            fillVectorLogNormalFastExpFrom(source, VectorType, dest, self.normal_sampler.mean, self.normal_sampler.stddev);
         }
     };
 }
@@ -42747,6 +43002,159 @@ fn expInPlace(comptime T: type, dest: []T) void {
     }
 }
 
+// Inlined exponential kernel for the explicit `LogNormalFastExp` profile.
+//
+// The constants are the classic fdlibm/musl `exp` coefficients: a degree-5
+// rational approximation of R(r) = r*(exp(r)+1)/(exp(r)-1) on
+// |r| <= 0.5*ln2 with max approximation error below 2^-59. Combined with the
+// two-step Cody-Waite reduction this keeps the observed error at <= 1 ULP
+// against the system `@exp`, while avoiding the out-of-line libm call so
+// distribution hot loops can pipeline several exponentials.
+const fast_exp_ln2_hi: f64 = 6.93147180369123816490e-01;
+const fast_exp_ln2_lo: f64 = 1.90821492927058770002e-10;
+const fast_exp_inv_ln2: f64 = 1.44269504088896338700e+00;
+const fast_exp_p1: f64 = 1.66666666666666019037e-01;
+const fast_exp_p2: f64 = -2.77777777770155933842e-03;
+const fast_exp_p3: f64 = 6.61375632143793436117e-05;
+const fast_exp_p4: f64 = -1.65339022054652515390e-06;
+const fast_exp_p5: f64 = 4.13813679705723846039e-08;
+// |x| >= 708.39...: overflow, underflow, subnormal results, NaN, or infinity.
+// Those lanes take the system `@exp`, which also keeps `@intFromFloat` inside
+// its defined range for the fast path.
+const fast_exp_slow_bits: u64 = 0x4086_232b_0000_0000;
+
+// The f32 kernel is the float32 fdlibm/musl form: a degree-2 rational
+// approximation on the same reduced range.
+const fast_exp32_ln2_hi: f32 = 6.9314575195e-01;
+const fast_exp32_ln2_lo: f32 = 1.4286067653e-06;
+const fast_exp32_inv_ln2: f32 = 1.4426950216e+00;
+const fast_exp32_p1: f32 = 1.6666625440e-1;
+const fast_exp32_p2: f32 = -2.7667332906e-3;
+const fast_exp32_slow_bits: u32 = 0x42ae_ac50;
+
+fn fastExp32(x: f32) f32 {
+    const abs_bits = @as(u32, @bitCast(x)) & 0x7fff_ffff;
+    if (abs_bits >= fast_exp32_slow_bits) return @exp(x);
+
+    const kf = @round(x * fast_exp32_inv_ln2);
+    const hi = @mulAdd(f32, -kf, fast_exp32_ln2_hi, x);
+    const lo = kf * fast_exp32_ln2_lo;
+    const r = hi - lo;
+    const rr = r * r;
+    const c = r - rr * (fast_exp32_p1 + rr * fast_exp32_p2);
+    const y = 1.0 + (r * c / (2.0 - c) - lo + hi);
+    const k: i32 = @intFromFloat(kf);
+    if (k == 0) return y;
+    return y * @as(f32, @bitCast(@as(u32, @intCast(k + 127)) << 23));
+}
+
+fn fastExp64(x: f64) f64 {
+    const abs_bits = @as(u64, @bitCast(x)) & 0x7fff_ffff_ffff_ffff;
+    if (abs_bits >= fast_exp_slow_bits) return @exp(x);
+
+    const kf = @round(x * fast_exp_inv_ln2);
+    const hi = @mulAdd(f64, -kf, fast_exp_ln2_hi, x);
+    const lo = kf * fast_exp_ln2_lo;
+    const r = hi - lo;
+    const rr = r * r;
+    const c = r - rr * (fast_exp_p1 + rr * (fast_exp_p2 + rr * (fast_exp_p3 + rr * (fast_exp_p4 + rr * fast_exp_p5))));
+    const y = 1.0 + (r * c / (2.0 - c) - lo + hi);
+    const k: i64 = @intFromFloat(kf);
+    if (k == 0) return y;
+    return y * @as(f64, @bitCast((@as(u64, @intCast(k + 1023)) << 52)));
+}
+
+fn fastExpFloat(comptime T: type, x: T) T {
+    comptime requireFloat(T);
+    return switch (T) {
+        f64 => fastExp64(x),
+        f32 => fastExp32(x),
+        else => @compileError("alea supports f32 and f64 floats"),
+    };
+}
+
+fn fastExpF64Vector(comptime VectorType: type, x: VectorType) VectorType {
+    const len = vectorInfo(VectorType).len;
+    const IntVector = @Vector(len, i64);
+    const BitsVector = @Vector(len, u64);
+    const slow_mask = (@as(BitsVector, @bitCast(x)) & @as(BitsVector, @splat(0x7fff_ffff_ffff_ffff))) >= @as(BitsVector, @splat(fast_exp_slow_bits));
+    const safe_x = @select(f64, slow_mask, @as(VectorType, @splat(0.0)), x);
+
+    const kf = @round(safe_x * @as(VectorType, @splat(fast_exp_inv_ln2)));
+    const hi = @mulAdd(VectorType, -kf, @as(VectorType, @splat(fast_exp_ln2_hi)), safe_x);
+    const lo = kf * @as(VectorType, @splat(fast_exp_ln2_lo));
+    const r = hi - lo;
+    const rr = r * r;
+    const c = r - rr * (@as(VectorType, @splat(fast_exp_p1)) +
+        rr * (@as(VectorType, @splat(fast_exp_p2)) +
+            rr * (@as(VectorType, @splat(fast_exp_p3)) +
+                rr * (@as(VectorType, @splat(fast_exp_p4)) + rr * @as(VectorType, @splat(fast_exp_p5))))));
+    const y = @as(VectorType, @splat(1.0)) + (r * c / (@as(VectorType, @splat(2.0)) - c) - lo + hi);
+    const k: IntVector = @intFromFloat(kf);
+    const scale: VectorType = @bitCast((@as(BitsVector, @intCast(k + @as(IntVector, @splat(1023))))) << @as(BitsVector, @splat(52)));
+    var out = y * scale;
+    inline for (0..len) |lane| {
+        if (slow_mask[lane]) out[lane] = @exp(x[lane]);
+    }
+    return out;
+}
+
+fn fastExpF32Vector(comptime VectorType: type, x: VectorType) VectorType {
+    const len = vectorInfo(VectorType).len;
+    const IntVector = @Vector(len, i32);
+    const BitsVector = @Vector(len, u32);
+    const slow_mask = (@as(BitsVector, @bitCast(x)) & @as(BitsVector, @splat(0x7fff_ffff))) >= @as(BitsVector, @splat(fast_exp32_slow_bits));
+    const safe_x = @select(f32, slow_mask, @as(VectorType, @splat(0.0)), x);
+
+    const kf = @round(safe_x * @as(VectorType, @splat(fast_exp32_inv_ln2)));
+    const hi = @mulAdd(VectorType, -kf, @as(VectorType, @splat(fast_exp32_ln2_hi)), safe_x);
+    const lo = kf * @as(VectorType, @splat(fast_exp32_ln2_lo));
+    const r = hi - lo;
+    const rr = r * r;
+    const c = r - rr * (@as(VectorType, @splat(fast_exp32_p1)) + rr * @as(VectorType, @splat(fast_exp32_p2)));
+    const y = @as(VectorType, @splat(1.0)) + (r * c / (@as(VectorType, @splat(2.0)) - c) - lo + hi);
+    const k: IntVector = @intFromFloat(kf);
+    const scale: VectorType = @bitCast((@as(BitsVector, @intCast(k + @as(IntVector, @splat(127))))) << @as(BitsVector, @splat(23)));
+    var out = y * scale;
+    inline for (0..len) |lane| {
+        if (slow_mask[lane]) out[lane] = @exp(x[lane]);
+    }
+    return out;
+}
+
+fn fastExpVector(comptime VectorType: type, x: VectorType) VectorType {
+    const info = vectorInfo(VectorType);
+    return switch (info.child) {
+        f64 => fastExpF64Vector(VectorType, x),
+        f32 => fastExpF32Vector(VectorType, x),
+        else => @compileError("fastExpVector supports f32 and f64 vectors"),
+    };
+}
+
+fn fastExpInPlace(comptime T: type, dest: []T) void {
+    comptime requireFloat(T);
+    switch (T) {
+        f32 => fastExpInPlaceVector(T, @Vector(8, f32), dest),
+        f64 => fastExpInPlaceVector(T, @Vector(4, f64), dest),
+        else => @compileError("alea supports f32 and f64 floats"),
+    }
+}
+
+fn fastExpInPlaceVector(comptime T: type, comptime VectorType: type, dest: []T) void {
+    const len = vectorInfo(VectorType).len;
+    var i: usize = 0;
+    while (i + len <= dest.len) : (i += len) {
+        var vec = loadVectorLanes(VectorType, dest, i);
+        vec = fastExpVector(VectorType, vec);
+        storeVectorLanes(VectorType, dest, i, vec);
+    }
+    while (i < dest.len) : (i += 1) dest[i] = fastExpFloat(T, dest[i]);
+}
+
+fn fastExpVectorSliceInPlace(comptime VectorType: type, dest: []VectorType) void {
+    for (dest) |*item| item.* = fastExpVector(VectorType, item.*);
+}
+
 fn scaleInPlace(comptime T: type, dest: []T, scale: T) void {
     comptime requireFloat(T);
     switch (T) {
@@ -56498,6 +56906,183 @@ test "native exp2 f32 log-normal has stable snapshots" {
     var vector_empty: [0]@Vector(8, f32) = .{};
     try fillVectorLogNormalNativeExp2F32CheckedFrom(&vector_empty_engine, @Vector(8, f32), &vector_empty, 0, 3);
     try std.testing.expectEqual(vector_empty_control.next(), vector_empty_engine.next());
+}
+
+test "fast exp kernel stays within two ulp of system exp" {
+    const ulpDiff = struct {
+        fn call(a: f64, b: f64) u64 {
+            const ia: i64 = @bitCast(a);
+            const ib: i64 = @bitCast(b);
+            const diff = if (ia > ib) ia - ib else ib - ia;
+            return @intCast(diff);
+        }
+    }.call;
+
+    var max_ulp: u64 = 0;
+    const grid_steps: usize = 1_000_000;
+    var i: usize = 0;
+    while (i <= grid_steps) : (i += 1) {
+        const x = -745.0 + (709.0 - -745.0) * (@as(f64, @floatFromInt(i)) / @as(f64, @floatFromInt(grid_steps)));
+        max_ulp = @max(max_ulp, ulpDiff(fastExp64(x), @exp(x)));
+    }
+
+    var engine = @import("root.zig").ScalarPrng.init(0x5eed);
+    for (0..100_000) |_| {
+        const z = @import("root.zig").Rng.standardNormalFastFrom(&engine, f64);
+        inline for (.{ 0.25, 1.0, 3.0 }) |sigma| {
+            const x = z * sigma;
+            max_ulp = @max(max_ulp, ulpDiff(fastExp64(x), @exp(x)));
+        }
+    }
+    try std.testing.expect(max_ulp <= 2);
+
+    try std.testing.expectEqual(@as(f64, 1), fastExp64(0));
+    try std.testing.expectEqual(@exp(@as(f64, 1)), fastExp64(1));
+    try std.testing.expectEqual(@as(f64, 0), fastExp64(-std.math.inf(f64)));
+    try std.testing.expect(std.math.isPositiveInf(fastExp64(std.math.inf(f64))));
+    try std.testing.expect(std.math.isNan(fastExp64(std.math.nan(f64))));
+    try std.testing.expect(std.math.isPositiveInf(fastExp64(710)));
+    try std.testing.expectEqual(@as(f64, 0), fastExp64(-746));
+
+    const V4 = @Vector(4, f64);
+    const lanes = fastExpVector(V4, V4{ -3.0, 0.0, 0.5, 2.0 });
+    try std.testing.expectEqual(fastExp64(-3.0), lanes[0]);
+    try std.testing.expectEqual(fastExp64(0.0), lanes[1]);
+    try std.testing.expectEqual(fastExp64(0.5), lanes[2]);
+    try std.testing.expectEqual(fastExp64(2.0), lanes[3]);
+    const slow_lanes = fastExpVector(V4, V4{ 710.0, -746.0, std.math.nan(f64), 1.0 });
+    try std.testing.expect(std.math.isPositiveInf(slow_lanes[0]));
+    try std.testing.expectEqual(@as(f64, 0), slow_lanes[1]);
+    try std.testing.expect(std.math.isNan(slow_lanes[2]));
+    try std.testing.expectEqual(fastExp64(1.0), slow_lanes[3]);
+
+    const f32UlpDiff = struct {
+        fn call(a: f32, b: f32) u32 {
+            const ia: i32 = @bitCast(a);
+            const ib: i32 = @bitCast(b);
+            const diff = if (ia > ib) ia - ib else ib - ia;
+            return @intCast(diff);
+        }
+    }.call;
+
+    var max_f32_ulp: u32 = 0;
+    const f32_steps: usize = 1_000_000;
+    i = 0;
+    while (i <= f32_steps) : (i += 1) {
+        const x = -103.0 + (88.0 - -103.0) * (@as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(f32_steps)));
+        max_f32_ulp = @max(max_f32_ulp, f32UlpDiff(fastExp32(x), @exp(x)));
+    }
+    var f32_engine = @import("root.zig").ScalarPrng.init(0x5eee);
+    for (0..100_000) |_| {
+        const z = @import("root.zig").Rng.standardNormalFastFrom(&f32_engine, f32);
+        inline for (.{ @as(f32, 0.25), @as(f32, 1.0), @as(f32, 3.0) }) |sigma| {
+            const x = z * sigma;
+            max_f32_ulp = @max(max_f32_ulp, f32UlpDiff(fastExp32(x), @exp(x)));
+        }
+    }
+    try std.testing.expect(max_f32_ulp <= 2);
+
+    try std.testing.expectEqual(@as(f32, 1), fastExp32(0));
+    try std.testing.expectEqual(@exp(@as(f32, 1)), fastExp32(1));
+    try std.testing.expectEqual(@as(f32, 0), fastExp32(-std.math.inf(f32)));
+    try std.testing.expect(std.math.isPositiveInf(fastExp32(std.math.inf(f32))));
+    try std.testing.expect(std.math.isNan(fastExp32(std.math.nan(f32))));
+    try std.testing.expect(std.math.isPositiveInf(fastExp32(89)));
+    try std.testing.expectEqual(@as(f32, 0), fastExp32(-104));
+
+    const V8 = @Vector(8, f32);
+    const f32_lanes = fastExpVector(V8, V8{ -3.0, 0.0, 0.5, 2.0, 89.0, -104.0, std.math.nan(f32), 1.0 });
+    try std.testing.expectEqual(fastExp32(-3.0), f32_lanes[0]);
+    try std.testing.expectEqual(fastExp32(0.0), f32_lanes[1]);
+    try std.testing.expectEqual(fastExp32(0.5), f32_lanes[2]);
+    try std.testing.expectEqual(fastExp32(2.0), f32_lanes[3]);
+    try std.testing.expect(std.math.isPositiveInf(f32_lanes[4]));
+    try std.testing.expectEqual(@as(f32, 0), f32_lanes[5]);
+    try std.testing.expect(std.math.isNan(f32_lanes[6]));
+    try std.testing.expectEqual(fastExp32(1.0), f32_lanes[7]);
+}
+
+test "log-normal fast-exp profile fill matches repeated samples" {
+    const alea = @import("root.zig");
+
+    inline for (.{ f64, f32 }) |T| {
+        inline for (.{ .{ @as(T, 0), @as(T, 0.25) }, .{ @as(T, 0), @as(T, 1) }, .{ @as(T, 0.5), @as(T, 0.75) } }) |params| {
+            var fill_engine = alea.ScalarPrng.init(0x32b0);
+            var fill_sampler = try LogNormalFastExp(T).init(params[0], params[1]);
+            var filled: [17]T = undefined;
+            fill_sampler.fillFrom(&fill_engine, &filled);
+
+            var sample_engine = alea.ScalarPrng.init(0x32b0);
+            var sample_sampler = try LogNormalFastExp(T).init(params[0], params[1]);
+            for (filled) |value| {
+                const sample = sample_sampler.sampleFrom(&sample_engine);
+                try std.testing.expectEqual(value, sample);
+            }
+            try std.testing.expectEqual(fill_engine.next(), sample_engine.next());
+        }
+    }
+
+    var fill_engine = alea.ScalarPrng.init(0x32b1);
+    var sample_engine = alea.ScalarPrng.init(0x32b1);
+    var vector_buf: [5]@Vector(4, f64) = undefined;
+    fillVectorLogNormalFastExpFrom(&fill_engine, @Vector(4, f64), &vector_buf, 0, 0.25);
+    var scalar_sampler = try LogNormalFastExp(f64).init(0, 0.25);
+    for (vector_buf) |vec| {
+        inline for (0..4) |lane| {
+            try std.testing.expectEqual(scalar_sampler.sampleFrom(&sample_engine), vec[lane]);
+        }
+    }
+    try std.testing.expectEqual(fill_engine.next(), sample_engine.next());
+}
+
+test "log-normal fast-exp profile has stable snapshots" {
+    const alea = @import("root.zig");
+
+    var sample_engine = alea.ScalarPrng.init(0x32c0);
+    var sampler = try LogNormalFastExp(f64).init(0, 0.25);
+    try std.testing.expectEqual(@as(f64, 0), sampler.logMeanValue());
+    try std.testing.expectEqual(@as(f64, 0.25), sampler.logStddevValue());
+    try std.testing.expectEqual(@as(f64, @exp(@as(f64, 0.5) * 0.25 * 0.25)), sampler.linearMeanValue());
+    try std.testing.expectEqual(@as(f64, 1), sampler.medianValue());
+    try std.testing.expectEqual(@as(?f64, null), sampler.maxValue());
+    const first = sampler.sampleFrom(&sample_engine);
+    const second = sampler.sampleFrom(&sample_engine);
+    try std.testing.expectEqual(@as(u64, 0x3fe60376dbd9f83e), @as(u64, @bitCast(first)));
+    try std.testing.expectEqual(@as(u64, 0x3ff07cbccb5e8f0f), @as(u64, @bitCast(second)));
+    try std.testing.expectEqual(@as(u64, 0x159d5235e2722b68), sample_engine.next());
+
+    var f32_engine = alea.ScalarPrng.init(0x32c1);
+    var f32_sampler = try LogNormalFastExp(f32).init(0.5, 0.75);
+    const f32_first = f32_sampler.sampleFrom(&f32_engine);
+    try std.testing.expectEqual(@as(u32, 0x3fbe07e4), @as(u32, @bitCast(f32_first)));
+    try std.testing.expectEqual(@as(u64, 0xf2dd59cbdfcc4ba4), f32_engine.next());
+
+    var fill_engine = alea.ScalarPrng.init(0x32c2);
+    var fill_sampler = try LogNormalFastExp(f64).init(0.5, 0.75);
+    var filled: [4]f64 = undefined;
+    fill_sampler.fillFrom(&fill_engine, &filled);
+    const expected_fill = [_]u64{
+        0x3fea5c990d52db4a,
+        0x3ff07ace74b36c34,
+        0x3fee2b072da86bc2,
+        0x3ff78bf86f9f7546,
+    };
+    inline for (expected_fill, 0..) |bits, i| {
+        try std.testing.expectEqual(bits, @as(u64, @bitCast(filled[i])));
+    }
+    try std.testing.expectEqual(@as(u64, 0xadcd0bf20d7ae2a3), fill_engine.next());
+
+    var z_sampler = try LogNormalFastExp(f64).init(0, 0.25);
+    try std.testing.expectEqual(@as(u64, 0x3ff48b5e3c3e8186), @as(u64, @bitCast(z_sampler.fromZScore(1.0))));
+
+    var degenerate_engine = alea.ScalarPrng.init(0x32c3);
+    var degenerate_control = alea.ScalarPrng.init(0x32c3);
+    var degenerate = try LogNormalFastExp(f32).init(0.5, 0);
+    try std.testing.expectEqual(@as(f32, @exp(@as(f32, 0.5))), degenerate.sampleFrom(&degenerate_engine));
+    try std.testing.expectEqual(degenerate_control.next(), degenerate_engine.next());
+    try std.testing.expectError(error.InvalidParameter, LogNormalFastExp(f32).init(0, std.math.inf(f32)));
+    try std.testing.expectError(error.InvalidParameter, logNormalFastExpCheckedFrom(&degenerate_engine, f64, 0, std.math.nan(f64)));
+    try std.testing.expectEqual(degenerate_control.next(), degenerate_engine.next());
 }
 
 test "buffered log-normal sampler has explicit refill stream contract" {

@@ -1179,6 +1179,14 @@ Single-shot helpers:
   `fillVectorNormalCheckedFrom`, `logNormal`, `logNormalFrom`,
   `logNormalChecked`, `logNormalCheckedFrom`, `fillLogNormal`,
   `fillLogNormalFrom`, `fillLogNormalChecked`, `fillLogNormalCheckedFrom`,
+  `logNormalFastExp`, `logNormalFastExpFrom`, `logNormalFastExpChecked`,
+  `logNormalFastExpCheckedFrom`, `fillLogNormalFastExp`,
+  `fillLogNormalFastExpFrom`, `fillLogNormalFastExpChecked`,
+  `fillLogNormalFastExpCheckedFrom`, `vectorLogNormalFastExp`,
+  `vectorLogNormalFastExpFrom`, `vectorLogNormalFastExpChecked`,
+  `vectorLogNormalFastExpCheckedFrom`, `fillVectorLogNormalFastExp`,
+  `fillVectorLogNormalFastExpFrom`, `fillVectorLogNormalFastExpChecked`,
+  `fillVectorLogNormalFastExpCheckedFrom`,
   `BufferedLogNormal`, `LogNormalLibmvec`, `LogNormalDlsymExp`,
   `logNormalNativeF32`, `logNormalNativeF32From`,
   `logNormalNativeF32Checked`, `logNormalNativeF32CheckedFrom`,
@@ -2368,6 +2376,30 @@ Reusable samplers:
 - `LogNormal(T).sampleFrom`
 - `LogNormal(T).fill`
 - `LogNormal(T).fillFrom`
+- `LogNormalFastExp(T)`
+- `LogNormalFastExp(T).init`
+- `LogNormalFastExp(T).new`
+- `LogNormalFastExp(T).initMeanCv`
+- `LogNormalFastExp(T).fromMeanCv`
+- `LogNormalFastExp(T).sample`
+- `LogNormalFastExp(T).sampleFrom`
+- `LogNormalFastExp(T).fromZScore`
+- `LogNormalFastExp(T).cdf`
+- `LogNormalFastExp(T).quantile`
+- `LogNormalFastExp(T).logMean`
+- `LogNormalFastExp(T).logMeanValue`
+- `LogNormalFastExp(T).logStddev`
+- `LogNormalFastExp(T).logStddevValue`
+- `LogNormalFastExp(T).linearMeanValue`
+- `LogNormalFastExp(T).medianValue`
+- `LogNormalFastExp(T).modeValue`
+- `LogNormalFastExp(T).expectedValue`
+- `LogNormalFastExp(T).varianceValue`
+- `LogNormalFastExp(T).minValue`
+- `LogNormalFastExp(T).maxValue`
+- `LogNormalFastExp(T).coefficientOfVariationValue`
+- `LogNormalFastExp(T).fill`
+- `LogNormalFastExp(T).fillFrom`
 - `BufferedLogNormal(T, buffer_len)`
 - `BufferedLogNormal(T, buffer_len).capacity`
 - `BufferedLogNormal(T, buffer_len).init`
@@ -2464,6 +2496,14 @@ Reusable samplers:
 - `VectorLogNormal(VectorType).sampleFrom`
 - `VectorLogNormal(VectorType).fill`
 - `VectorLogNormal(VectorType).fillFrom`
+- `VectorLogNormalFastExp(VectorType)`
+- `VectorLogNormalFastExp(VectorType).init`
+- `VectorLogNormalFastExp(VectorType).meanValue`
+- `VectorLogNormalFastExp(VectorType).stddevValue`
+- `VectorLogNormalFastExp(VectorType).sample`
+- `VectorLogNormalFastExp(VectorType).sampleFrom`
+- `VectorLogNormalFastExp(VectorType).fill`
+- `VectorLogNormalFastExp(VectorType).fillFrom`
 - `LogNormalApproxF32`
 - `LogNormalApproxF32.max_abs_mean`
 - `LogNormalApproxF32.max_stddev`

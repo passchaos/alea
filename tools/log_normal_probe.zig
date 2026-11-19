@@ -57,11 +57,17 @@ pub fn main(init: std.process.Init) !void {
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample mulAdd", 0x1061, sample_count, sampleMulAdd);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample std.math.exp", 0x1061, sample_count, sampleStdMathExp);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample libc exp", 0x1061, sample_count, sampleLibcExp);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample fast-exp-branchless", 0x1060, sample_count, sampleFastExpBranchless);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample fast-exp-branchless", 0x1061, sample_count, sampleFastExpBranchless);
+    try benchSample(alea.FastPrng, io, stdout, "fast sample stddev1 fast-exp-branchless", 0x1068, sample_count, sampleFastExpBranchlessStddev1);
+    try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 fast-exp-branchless", 0x1069, sample_count, sampleFastExpBranchlessStddev1);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 current", 0x1069, sample_count, sampleCurrentStddev1);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 direct exp", 0x1069, sample_count, sampleDirectExpStddev1);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 std.math.exp", 0x1069, sample_count, sampleStdMathExpStddev1);
     try benchSample(alea.ScalarPrng, io, stdout, "scalar sample stddev1 libc exp", 0x1069, sample_count, sampleLibcExpStddev1);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample current", 0x1066, sample_count, sampleCurrentF32);
+    try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample fast-exp-poly", 0x1066, sample_count, sampleFastExp32Poly);
+    try benchSampleF32(alea.ScalarPrng, io, stdout, "scalar f32 sample fast-exp-poly", 0x1066, sample_count, sampleFastExp32Poly);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample native-normal exp", 0x1066, sample_count, sampleNativeNormalExpF32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample native-normal expm1+1", 0x1066, sample_count, sampleNativeNormalExpm1F32);
     try benchSampleF32(alea.FastPrng, io, stdout, "fast f32 sample std.math.exp", 0x1066, sample_count, sampleStdMathExpF32);
@@ -768,6 +774,64 @@ fn normalOnlyFillF32(source: anytype, dest: []f32) void {
 
 fn sampleCurrent(source: anytype) f64 {
     return alea.distributions.logNormalFrom(source, f64, 0, 0.25);
+}
+
+const exp_ln2_hi: f64 = 6.93147180369123816490e-01;
+const exp_ln2_lo: f64 = 1.90821492927058770002e-10;
+const exp_inv_ln2: f64 = 1.44269504088896338700e+00;
+const exp_p1: f64 = 1.66666666666666019037e-01;
+const exp_p2: f64 = -2.77777777770155933842e-03;
+const exp_p3: f64 = 6.61375632143793436117e-05;
+const exp_p4: f64 = -1.65339022054652515390e-06;
+const exp_p5: f64 = 4.13813679705723846039e-08;
+
+/// Inlined musl-style exp for f64 (same algorithm family as Rust's `libm`
+/// crate), used to test whether avoiding the system `exp` call wins in
+/// distribution hot loops. This is the branchless shape adopted by the
+/// `LogNormalFastExp` profile.
+fn fastExpBranchless(x: f64) f64 {
+    const x_abs_bits = @as(u64, @bitCast(x)) & 0x7fff_ffff_ffff_ffff;
+    if (x_abs_bits >= 0x4086_232b_0000_0000) return @exp(x);
+    const kf = @round(x * exp_inv_ln2);
+    const hi = @mulAdd(f64, -kf, exp_ln2_hi, x);
+    const lo = kf * exp_ln2_lo;
+    const r = hi - lo;
+    const xx = r * r;
+    const c = r - xx * (exp_p1 + xx * (exp_p2 + xx * (exp_p3 + xx * (exp_p4 + xx * exp_p5))));
+    const y = 1.0 + (r * c / (2.0 - c) - lo + hi);
+    const k: i64 = @intFromFloat(kf);
+    if (k == 0) return y;
+    return y * @as(f64, @bitCast((@as(u64, @intCast(k + 1023)) << 52)));
+}
+
+fn sampleFastExpBranchless(source: anytype) f64 {
+    return fastExpBranchless(0.25 * alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+fn sampleFastExpBranchlessStddev1(source: anytype) f64 {
+    return fastExpBranchless(alea.Rng.standardNormalFastFrom(source, f64));
+}
+
+const exp32_ln2_hi: f32 = 6.9314575195e-01;
+const exp32_ln2_lo: f32 = 1.4286067653e-06;
+const exp32_inv_ln2: f32 = 1.4426950216e+00;
+
+fn fastExp32Poly(x: f32) f32 {
+    const abs_bits = @as(u32, @bitCast(x)) & 0x7fff_ffff;
+    if (abs_bits >= 0x42ae_ac50) return @exp(x);
+    const kf = @round(x * exp32_inv_ln2);
+    const hi = @mulAdd(f32, -kf, exp32_ln2_hi, x);
+    const lo = kf * exp32_ln2_lo;
+    const r = hi - lo;
+    const rr = r * r;
+    const y = 1.0 + r + rr * (0.5 + r * (1.0 / 6.0 + r * (1.0 / 24.0 + r * (1.0 / 120.0 + r * (1.0 / 720.0 + r * (1.0 / 5040.0))))));
+    const k: i32 = @intFromFloat(kf);
+    if (k == 0) return y;
+    return y * @as(f32, @bitCast(@as(u32, @intCast(k + 127)) << 23));
+}
+
+fn sampleFastExp32Poly(source: anytype) f32 {
+    return fastExp32Poly(0.25 * alea.Rng.standardNormalFastFrom(source, f32));
 }
 
 fn sampleStandardScale(source: anytype) f64 {

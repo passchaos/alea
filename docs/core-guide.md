@@ -313,7 +313,7 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `fillVectorUniform*`, `vectorUniformInclusive*`,
 `fillVectorUniformInclusive*`, `vectorStandardNormal*`,
 `fillVectorStandardNormal*`, `vectorNormal*`,
-`fillVectorNormal*`, `vectorLogNormal*`, `fillVectorLogNormal*`, `vectorLogNormalApproxF32*`, `fillVectorLogNormalApproxF32*`, `vectorHalfNormal*`, `fillVectorHalfNormal*`, `vectorGamma*`,
+`fillVectorNormal*`, `vectorLogNormal*`, `fillVectorLogNormal*`, `vectorLogNormalFastExp*`, `fillVectorLogNormalFastExp*`, `vectorLogNormalApproxF32*`, `fillVectorLogNormalApproxF32*`, `vectorHalfNormal*`, `fillVectorHalfNormal*`, `vectorGamma*`,
 `fillVectorGamma*`, `vectorChiSquared*`, `fillVectorChiSquared*`,
 `vectorChi*`, `fillVectorChi*`, `vectorErlang*`, `fillVectorErlang*`,
 `vectorBeta*`, `fillVectorBeta*`, `vectorFisherF*`, `fillVectorFisherF*`, `vectorStudentT*`,
@@ -323,7 +323,7 @@ same namespace with `vectorBernoulli*`, `fillVectorBernoulli*`,
 `fillVectorExponential*`; reusable vector samplers `VectorBernoulli`,
 `VectorBinomial`, `VectorBinomialPoissonApprox`, `VectorGeometric`, `VectorGeometricFailures`, `VectorStandardGeometric`,
 `VectorPoisson`, `VectorPoissonAhrensDieter`, `VectorUniform`, `VectorStandardNormal`, `VectorNormal`, `VectorLogNormal`,
-`VectorLogNormalApproxF32`, `VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`, `VectorBeta`,
+`VectorLogNormalFastExp`, `VectorLogNormalApproxF32`, `VectorHalfNormal`, `VectorGamma`, `VectorChiSquared`, `VectorChi`, `VectorErlang`, `VectorBeta`,
 `VectorFisherF`, `VectorStudentT`, `VectorTriangular`, `VectorArcsine`, `VectorCauchy`, `VectorLaplace`, `VectorLogistic`, `VectorLogLogistic`, `VectorKumaraswamy`, `VectorPowerFunction`, `VectorRayleigh`, `VectorMaxwell`, `VectorPareto`, `VectorWeibull`, `VectorGumbel`, `VectorFrechet`, `VectorSkewNormal`, `VectorPert`, `VectorInverseGaussian`, `VectorNormalInverseGaussian`, `VectorZipf`, `VectorZeta`, `VectorUnitCircle`, `VectorUnitDisc`, `VectorUnitSphere`, `VectorUnitBall`, `VectorStandardExponential`, and `VectorExponential`; strict interval samplers
 `Open01` and `OpenClosed01` also sample/fill float vector slices.
 Use `Rng.standardNormalFastFrom`, `Rng.normalFastFrom`,
@@ -345,8 +345,17 @@ are checked to `|mean| <= LogNormalApproxF32.max_abs_mean` and
 `stddev <= LogNormalApproxF32.max_stddev`; use exact `LogNormal(f32)` /
 `fillLogNormal` whenever bit-identical `@exp` output or wider parameters are
 required. Run `zig build run-lognormal-profiles` for a small executable example
-showing exact, buffered, native-f32, exp2, native-exp2, and platform libc-backed
-LogNormal profiles when available.
+showing exact, buffered, native-f32, exp2, native-exp2, inlined fast-exp, and
+platform libc-backed LogNormal profiles when available.
+
+`LogNormalFastExp(T)`, `VectorLogNormalFastExp(V)`, and the
+`logNormalFastExp*` / `fillLogNormalFastExp*` / `vectorLogNormalFastExp*` /
+`fillVectorLogNormalFastExp*` helpers are the inlined-exponential throughput
+profile. They keep the same normal draw stream as exact `LogNormal(T)` but
+replace the out-of-line system `@exp` call with a branchless fdlibm/musl-style
+kernel that stays within 1 ULP of `@exp` on the local evidence grid. The output
+mapping is a separate versioned profile: use exact `LogNormal(T)` when the
+current `@exp` bit mapping is part of a saved stream.
 
 For throughput-first vector normal/exponential workloads, Alea exposes explicit
 profile names instead of silently changing the exact/default vector APIs. Use

@@ -1167,6 +1167,20 @@ fn checkContinuous() !void {
             return dist.sample(r);
         }
     }.sample, 1.02, 1.04);
+    var fast_exp_log_normal_engine = alea.DefaultPrng.init(0xc0ff_ee4a);
+    const fast_exp_log_normal_rng = alea.Rng.init(&fast_exp_log_normal_engine);
+    try expectContinuousMean("log-normal-fast-exp", fast_exp_log_normal_rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return alea.distributions.logNormalFastExp(r, f64, 0, 0.25);
+        }
+    }.sample, 1.02, 1.04);
+    var fast_exp_log_normal_f32_engine = alea.DefaultPrng.init(0xc0ff_ee4b);
+    const fast_exp_log_normal_f32_rng = alea.Rng.init(&fast_exp_log_normal_f32_engine);
+    try expectContinuousMean("log-normal-fast-exp-f32", fast_exp_log_normal_f32_rng, 20_000, struct {
+        fn sample(r: alea.Rng) f64 {
+            return @floatCast(alea.distributions.logNormalFastExp(r, f32, 0, 0.25));
+        }
+    }.sample, 1.02, 1.04);
     if (builtin.link_libc) {
         var libmvec_log_normal_engine = alea.DefaultPrng.init(0xc0ff_ee48);
         const libmvec_log_normal_rng = alea.Rng.init(&libmvec_log_normal_engine);
