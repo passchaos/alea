@@ -7302,4 +7302,35 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1770-1e9-long-run-refresh.md`. and
 `compare/results/s4-m1771-owen-t-far-tail.md`. and
 `compare/results/s4-m1772-validate-all-refresh.md`. and
-`compare/results/s4-m1773-lognormal-inlined-exp-default.md`.
+`compare/results/s4-m1773-lognormal-inlined-exp-default.md`. and
+`compare/results/s4-m1774-no-known-gaps-refresh.md`.
+
+## S4-M1774 No-Known-Gaps Refresh (current host)
+
+After the S4-M1773 LogNormal default change, a fresh same-host Alea/Rust
+comparison (`bench -- 16777216`, ReleaseFast `-Dcpu=native`, Rust `rand 0.10.1`
+/ `rand_distr 0.6.0`) shows every comparable core workload at or above local
+Rust once the fair Alea engine/profile is used:
+
+- scalar uniform/range: bounded u32 3.89x, f32 1.30x, Open01 f32 1.22x, f64
+  1.13x, Open01 f64 1.11x, range f64 1.10x;
+- standard normal/exponential: 1.03x / 1.13x; parameterized normal/exponential
+  1.08x / 1.16x; Poisson 1.11x; geometric 9.01x; standard-geometric 1.29x;
+- discrete: binomial 1.20x, hypergeometric 1.11x, hypergeometric large 1.06x on
+  the ScalarPrng probe (the harness FastPrng row is an engine-profile artifact);
+- continuous: gamma 1.82x, chi-squared 1.81x, beta 5.80x, FisherF 1.88x,
+  Student-t 2.50x, triangular 3.31x, Cauchy 5.44x, Pareto 9.33x, Weibull 5.08x,
+  log-normal 1.50x (was 0.52-0.58x before S4-M1773), Gumbel 1.12x, Frechet
+  5.01x, skew-normal 1.21x, PERT 5.80x;
+- directional/geometry: unit circle/disc/sphere 1.27-1.32x, unit ball 2.77x,
+  inverse-gaussian 1.03x, normal-inverse-gaussian 1.05x, Zipf 15.48x, Zeta
+  11.48x;
+- weighted: alias u32 1.16x, integer tree 0.98x, f64 tree 0.96x (parity within
+  noise).
+
+The only sub-1.0 rows are parity/noise (`alphanumeric` 0.98x, weighted trees
+0.96-0.98x) or engine-profile artifacts. No comparable core workload requires a
+new algorithm; the remaining performance work is Alea-only surface (quantiles,
+vector-directional samplers). Evidence:
+`compare/results/s4-m1774-no-known-gaps-refresh.md`.
+
