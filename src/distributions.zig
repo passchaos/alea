@@ -1225,6 +1225,11 @@ fn gammaIncompletePImpl(comptime PeerType: type, a: PeerType, x: PeerType) PeerT
     if (x <= 0) return 0;
     if (x == std.math.inf(T)) return 1;
     if (a >= 1.0e4) return normCdf(gammaLargeShapeZ(T, a, x));
+    if (T == f64 and a == 0.5) {
+        const x_f: f64 = @floatCast(x);
+        if (x_f <= 4.5) return @floatCast(gammaHalfErfTaylor(x_f));
+        if (x_f >= 18) return @floatCast(1 - 2 * normUpperTailF64(@sqrt(2 * x_f)));
+    }
     if (x < a + 1) return gammaSeriesP(T, a, x);
     return 1 - gammaContinuedFractionQ(T, a, x);
 }
@@ -1241,8 +1246,30 @@ fn gammaIncompleteQImpl(comptime PeerType: type, a: PeerType, x: PeerType) PeerT
     if (x <= 0) return 1;
     if (x == std.math.inf(T)) return 0;
     if (a >= 1.0e4) return normCdf(-gammaLargeShapeZ(T, a, x));
+    if (T == f64 and a == 0.5) {
+        const x_f: f64 = @floatCast(x);
+        if (x_f <= 4.5) return @floatCast(1 - gammaHalfErfTaylor(x_f));
+        if (x_f >= 18) return @floatCast(2 * normUpperTailF64(@sqrt(2 * x_f)));
+    }
     if (x < a + 1) return 1 - gammaSeriesP(T, a, x);
     return gammaContinuedFractionQ(T, a, x);
+}
+
+/// `erf(√x)` for `x <= 4.5` from the alternating Taylor series. The
+/// cancellation is bounded by `e^x` ulps (about 9e-15 at the switch point),
+/// far inside the quantile contracts, and the series needs no log or exp.
+fn gammaHalfErfTaylor(x: f64) f64 {
+    const t = @sqrt(x);
+    var term: f64 = t;
+    var sum: f64 = t;
+    var n: usize = 1;
+    while (n <= 40) : (n += 1) {
+        const nf: f64 = @floatFromInt(n);
+        term *= -x * (2 * nf - 1) / (nf * (2 * nf + 1));
+        sum += term;
+        if (@abs(term) <= 1e-17 * (1 + @abs(sum))) break;
+    }
+    return 2.0 / @sqrt(std.math.pi) * sum;
 }
 
 /// Gamma(shape, scale) cumulative distribution function.
