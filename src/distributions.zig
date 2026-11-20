@@ -3324,10 +3324,13 @@ fn skewNormalPdfZ(z: f64, alpha: f64) f64 {
 fn skewNormalPdfPairZ(z: f64, alpha: f64) [2]f64 {
     const phi_z = normPdf(z);
     const az = alpha * z;
-    const Phi_az = normCdf(az);
+    const phi_az = normPdf(az);
+    // The density pair only steers the Halley step, so the phi-based
+    // rational CDF (1e-7) is plenty and saves an exponential.
+    const Phi_az = normCdfFromPdf(az, phi_az);
     return .{
         2 * phi_z * Phi_az,
-        2 * phi_z * (-z * Phi_az + alpha * normPdf(az)),
+        2 * phi_z * (-z * Phi_az + alpha * phi_az),
     };
 }
 
@@ -14354,6 +14357,19 @@ fn wrappedSkewNormalCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, 
 /// `(mu_w, sigma, alpha)`, so repeated CDF evaluations with the same
 /// parameters -- as in the safeguarded-Newton quantile -- can hoist them
 /// instead of recomputing both endpoint terms per image.
+/// `Φ(x)` from the already-computed `φ(x)` via the Abramowitz-Stegun
+/// 26.2.17 rational approximation (|error| < 7.5e-8), saving the exponential
+/// that `normCdf` needs. Used only for the wrapped quantile's Halley density
+/// terms, where the density accuracy only steers the step size.
+inline fn normCdfFromPdf(x: f64, phi_x: f64) f64 {
+    const ax = @abs(x);
+    if (ax >= 8) return if (x > 0) 1 else 0;
+    const t = 1 / (1 + 0.2316419 * ax);
+    const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    const q = phi_x * poly;
+    return if (x >= 0) 1 - q else q;
+}
+
 const WrappedSkewNormalCdfCache = struct {
     const max_images = 32;
 
@@ -14486,7 +14502,7 @@ const WrappedSkewNormalCdfCache = struct {
                 const phi_z = normPdf(z);
                 const az = self.alpha * z;
                 const phi_az = normPdf(az);
-                const Phi_az = normCdf(az);
+                const Phi_az = normCdfFromPdf(az, phi_az);
                 pdf_sum += 2 * phi_z * Phi_az;
                 pdf_deriv_sum += 2 * phi_z * (-z * Phi_az + self.alpha * phi_az);
             }

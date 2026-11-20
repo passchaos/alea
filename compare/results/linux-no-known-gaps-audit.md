@@ -7368,7 +7368,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1836-deep-tail-e1-skip.md`. and
 `compare/results/s4-m1837-wrapped-prestep-gate.md`. and
 `compare/results/s4-m1838-validate-all-refresh.md`. and
-`compare/results/s4-m1839-von-mises-shorter-series.md`.
+`compare/results/s4-m1839-von-mises-shorter-series.md`. and
+`compare/results/s4-m1840-density-cdf-from-pdf.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7462,5 +7463,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1836-deep-tail-e1-skip.md`. and
 `compare/results/s4-m1837-wrapped-prestep-gate.md`. and
 `compare/results/s4-m1838-validate-all-refresh.md`. and
-`compare/results/s4-m1839-von-mises-shorter-series.md`.
+`compare/results/s4-m1839-von-mises-shorter-series.md`. and
+`compare/results/s4-m1840-density-cdf-from-pdf.md`.
 
