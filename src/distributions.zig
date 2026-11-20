@@ -12487,8 +12487,11 @@ const VonMisesCdfCache = struct {
         while (k >= 1) : (k -= 1) {
             const k_d: f64 = @floatFromInt(k);
             if (k <= k_sum) raw[k] = ratio;
-            rho = 1 / (2 * k_d / kf + rho);
-            ratio /= rho;
+            // `rho = 1/(2k/κ + rho)` and `ratio /= rho`, so track
+            // `t = 1/rho` and use one division and one multiply per step.
+            const t = 2 * k_d / kf + rho;
+            ratio *= t;
+            rho = 1 / t;
             if (ratio > 1.0e100) {
                 const inv = 1 / ratio;
                 var j: usize = k;
@@ -12592,8 +12595,9 @@ fn vonMisesRelativeCdf(comptime T: type, d: T, kappa: T) T {
         while (k >= 1) : (k -= 1) {
             const k_d: f64 = @floatFromInt(k);
             if (k <= k_sum) sum += ratio * @sin(k_d * df) / k_d;
-            rho = 1 / (2 * k_d / kf + rho);
-            ratio /= rho;
+            const t = 2 * k_d / kf + rho;
+            ratio *= t;
+            rho = 1 / t;
             if (ratio > 1.0e100) {
                 sum /= ratio;
                 ratio = 1;
