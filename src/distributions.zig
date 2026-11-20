@@ -2806,6 +2806,19 @@ fn skewNormalPdfZ(z: f64, alpha: f64) f64 {
     return 2 * normPdf(z) * normCdf(alpha * z);
 }
 
+/// Density and density derivative of the standardized skew-normal in one
+/// pass. The quantile's Halley step needs both, and they share `φ(z)`,
+/// `Φ(αz)`, and `φ(αz)`.
+fn skewNormalPdfPairZ(z: f64, alpha: f64) [2]f64 {
+    const phi_z = normPdf(z);
+    const az = alpha * z;
+    const Phi_az = normCdf(az);
+    return .{
+        2 * phi_z * Phi_az,
+        2 * phi_z * (-z * Phi_az + alpha * normPdf(az)),
+    };
+}
+
 /// Skew-normal CDF with `z = (x − ξ)/ω`: `Φ(z) − 2·T(z, α)` normally, and
 /// the Mills-ratio lower-tail expansion for `z < 0`, `α > 0`,
 /// `α·|z| >= 3.5`. `scale = 0` is the point mass at the location.
@@ -2865,12 +2878,21 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
         const f_err = f - p_f;
         if (f < p_f) lo = z else hi = z;
         if (f_err == 0 or hi - lo <= tol) break;
-        const d = skewNormalPdfZ(z, shape_f);
-        // The Newton correction is `|f-p| / d`; below the x tolerance the
-        // quantile already meets its accuracy contract.
+        const pdf_pair = skewNormalPdfPairZ(z, shape_f);
+        const d = pdf_pair[0];
+        // The correction is `|f-p| / d`; below the x tolerance the quantile
+        // already meets its accuracy contract.
         if (d > 0 and @abs(f_err) <= d * tol) break;
-        var next: f64 = if (d > 0) z - f_err / d else 0.5 * (lo + hi);
-        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        var next: f64 = 0.5 * (lo + hi);
+        if (d > 0) {
+            // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic near
+            // the root; the density derivative shares its normal terms.
+            const denom = 2 * d * d - f_err * pdf_pair[1];
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = z - 2 * f_err * d / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (next == z) break;
         z = next;
     }
@@ -13710,6 +13732,7 @@ const WrappedSkewNormalCdfCache = struct {
     const Eval = struct {
         cdf: f64,
         pdf: f64,
+        pdf_deriv: f64,
     };
 
     /// Evaluate the wrapped CDF and (optionally) density in one image pass.
@@ -13722,6 +13745,7 @@ const WrappedSkewNormalCdfCache = struct {
         self.ensureTerms(upper);
         var sum: f64 = 0;
         var pdf_sum: f64 = 0;
+        var pdf_deriv_sum: f64 = 0;
         var k: i32 = -self.k_max;
         var i: usize = 0;
         while (k <= self.k_max) : (k += 1) {
@@ -13729,7 +13753,14 @@ const WrappedSkewNormalCdfCache = struct {
             const z = (x - self.mu_w + shift) / self.sigma;
             // |z| >= 9 leaves < 1e-18 of probability or density; those images
             // contribute nothing at f64 resolution.
-            if (need_pdf and z < 9 and z > -9) pdf_sum += skewNormalPdfZ(z, self.alpha);
+            if (need_pdf and z < 9 and z > -9) {
+                const phi_z = normPdf(z);
+                const az = self.alpha * z;
+                const phi_az = normPdf(az);
+                const Phi_az = normCdf(az);
+                pdf_sum += 2 * phi_z * Phi_az;
+                pdf_deriv_sum += 2 * phi_z * (-z * Phi_az + self.alpha * phi_az);
+            }
             // When the evaluation point and the endpoint are both deep in the
             // same saturated tail, the per-image difference is below 4e-11,
             // which is far inside the quantile's 1e-9 round-trip contract, so
@@ -13750,7 +13781,11 @@ const WrappedSkewNormalCdfCache = struct {
             @min(@as(f64, 1), @max(@as(f64, 0), 1 - sum))
         else
             @min(@as(f64, 1), @max(@as(f64, 0), sum));
-        return .{ .cdf = cdf_value, .pdf = if (need_pdf) pdf_sum / self.sigma else 0 };
+        return .{
+            .cdf = cdf_value,
+            .pdf = if (need_pdf) pdf_sum / self.sigma else 0,
+            .pdf_deriv = if (need_pdf) pdf_deriv_sum / (self.sigma * self.sigma) else 0,
+        };
     }
 
     fn cdf(self: *WrappedSkewNormalCdfCache, x: f64) f64 {
@@ -13799,15 +13834,25 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
         const evaluated = cache.eval(x, true);
         const f = evaluated.cdf;
         const d = evaluated.pdf;
+        const dd = evaluated.pdf_deriv;
         const f_err = f - p_f;
         if (f < p_f) lo = x else hi = x;
         if (f_err == 0 or hi - lo <= tol) break;
-        // The Newton correction is `|f-p| / d`; once it falls below the x
-        // tolerance the quantile already meets the 1e-12 contract, so the
-        // remaining bracket bisection cannot improve it.
+        // The correction is `|f-p| / d`; once it falls below the x tolerance
+        // the quantile already meets the 1e-12 contract, so the remaining
+        // bracket bisection cannot improve it.
         if (d > 0 and std.math.isFinite(d) and @abs(f_err) <= d * tol) break;
-        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - f_err / d else 0.5 * (lo + hi);
-        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
+        var next: f64 = 0.5 * (lo + hi);
+        if (d > 0 and std.math.isFinite(d)) {
+            // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic once
+            // the bracket is tight; the density derivative comes from the
+            // same image loop, so it costs only a few extra flops.
+            const denom = 2 * d * d - f_err * dd;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = x - 2 * f_err * d / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (next == x) break;
         x = next;
     }
