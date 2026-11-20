@@ -3158,7 +3158,7 @@ fn skewNormalUpperTailZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTa
     // 1 here, so the upper tail is exactly 1.
     if (alpha > 0 and alpha * -z >= 3.5) {
         const x = 0.5 * (1 + alpha * alpha) * z * z;
-        if (x > 69) return 1;
+        if (x > 36) return 1;
     }
     return 1 - skewNormalCdfZWithGlTable20(z, alpha, table);
 }
@@ -3327,7 +3327,7 @@ fn skewNormalUpperTailZWithGlTable(z: f64, alpha: f64, table: *const OwenTGlTabl
     // 1 here, so the upper tail is exactly 1.
     if (alpha > 0 and alpha * -z >= 3.5) {
         const x = 0.5 * (1 + alpha * alpha) * z * z;
-        if (x > 69) return 1;
+        if (x > 36) return 1;
     }
     return 1 - skewNormalCdfZWithGlTable(z, alpha, table);
 }
@@ -14313,7 +14313,7 @@ fn skewNormalUpperTailZ(z: f64, alpha: f64) f64 {
     // E1 series (about |z| terms) can be skipped. Bit-identical for f64.
     if (alpha > 0 and alpha * -z >= 3.5) {
         const x = 0.5 * (1 + alpha * alpha) * z * z;
-        if (x > 69) return 1;
+        if (x > 36) return 1;
     }
     return 1 - skewNormalCdfZ(z, alpha);
 }
