@@ -2614,8 +2614,13 @@ fn exGaussianCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, sigma: 
     const exponent = 0.5 * sigma_over_tau * sigma_over_tau - (x_f - mu_f) / tau_f;
     var term: f64 = 0;
     if (!std.math.isNan(exponent)) {
-        const log_term = exponent + normLogCdf(w);
-        if (!std.math.isNan(log_term)) term = @exp(log_term);
+        if (w > -10 and exponent < 700 and exponent > -745) {
+            // Direct form skips the log; `Φ(w)` is accurate there.
+            term = @exp(exponent) * normCdf(w);
+        } else {
+            const log_term = exponent + normLogCdf(w);
+            if (!std.math.isNan(log_term)) term = @exp(log_term);
+        }
     }
     const cdf = normCdf(z) - term;
     return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
@@ -2663,13 +2668,19 @@ fn exGaussianEvalF64(x: f64, mu: f64, sigma: f64, tau: f64) ExGaussianEval {
     const w = z - sigma_over_tau;
     const exponent = 0.5 * sigma_over_tau * sigma_over_tau - (x - mu) / tau;
     var term: f64 = 0;
-    if (!std.math.isNan(exponent)) {
+    var Phi_w: f64 = 0;
+    if (!std.math.isNan(exponent) and w > -10 and exponent < 700 and exponent > -745) {
+        // Direct form when the exponential is representable: it reuses the
+        // same `Φ(w)` that the density derivative needs and skips the log.
+        Phi_w = normCdf(w);
+        term = @exp(exponent) * Phi_w;
+    } else if (!std.math.isNan(exponent)) {
         const log_term = exponent + normLogCdf(w);
         if (!std.math.isNan(log_term)) term = @exp(log_term);
+        Phi_w = if (w > -10) normCdf(w) else @exp(normLogCdf(w));
     }
     const cdf = normCdf(z) - term;
     const pdf = term / tau;
-    const Phi_w = if (w > -10) normCdf(w) else @exp(normLogCdf(w));
     const pdf_deriv = if (Phi_w > 0 and std.math.isFinite(Phi_w))
         pdf * (-1 / tau + normPdf(w) / (sigma * Phi_w))
     else
