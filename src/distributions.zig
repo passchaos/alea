@@ -14099,6 +14099,11 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
     const k_max = wrappedNormalImageCount(f64, sigma);
     const upper = x > 0 and alpha != 0;
     const endpoint: f64 = if (upper) pi else -pi;
+    // The endpoint and point terms share one shape, so the Owen T
+    // Gauss-Legendre geometry is built once per call when the shape reaches
+    // the fixed rule.
+    const use_gl_table = alpha != 0 and @abs(alpha) <= 6;
+    const gl_table = if (use_gl_table) owenTGlTable(alpha) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     var sum: f64 = 0;
     var k: i32 = -k_max;
     // Upper tail: `1 - P(theta > x)`, summed over the images on `(x, pi]`.
@@ -14112,10 +14117,14 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
         // f64 and the pair can be skipped (|z| >= 9 leaves < 1e-18).
         if ((z >= 9 and z_end >= 9) or (z <= -9 and z_end <= -9)) continue;
         sum += (if (upper)
-            skewNormalUpperTailZ(z, alpha)
+            if (use_gl_table) skewNormalUpperTailZWithGlTable(z, alpha, &gl_table) else skewNormalUpperTailZ(z, alpha)
+        else if (use_gl_table)
+            skewNormalCdfZWithGlTable(z, alpha, &gl_table)
         else
             skewNormalCdfZ(z, alpha)) - (if (upper)
-            skewNormalUpperTailZ(z_end, alpha)
+            if (use_gl_table) skewNormalUpperTailZWithGlTable(z_end, alpha, &gl_table) else skewNormalUpperTailZ(z_end, alpha)
+        else if (use_gl_table)
+            skewNormalCdfZWithGlTable(z_end, alpha, &gl_table)
         else
             skewNormalCdfZ(z_end, alpha));
     }
