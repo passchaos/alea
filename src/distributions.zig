@@ -1246,8 +1246,38 @@ fn gammaIncompletePImpl(comptime PeerType: type, a: PeerType, x: PeerType) PeerT
         if (x_f <= 4.5) return @floatCast(gammaHalfErfTaylor(x_f));
         if (x_f >= 18) return @floatCast(1 - 2 * normUpperTailF64(@sqrt(2 * x_f)));
     }
+    if (T == f64) {
+        const a_f: f64 = @floatCast(a);
+        const x_f: f64 = @floatCast(x);
+        // The recurrence subtracts the tail terms from `erf(√x)`; restrict it
+        // to `a <= x <= 8` so the subtraction stays well conditioned and the
+        // erf Taylor's cancellation stays near `3e-13`.
+        if (x_f >= a_f and x_f <= 8) {
+            const doubled = 2 * a_f;
+            if (doubled == @floor(doubled) and @mod(doubled, 2) == 1) {
+                return @floatCast(gammaHalfShapeP(@as(usize, @intFromFloat(doubled)), x_f));
+            }
+        }
+    }
     if (x < a + 1) return gammaSeriesP(T, a, x);
     return 1 - gammaContinuedFractionQ(T, a, x);
+}
+
+/// `P(a, x)` for half-integer `a = a2/2` (`a2` odd) from the recurrence
+/// `P(a+1, x) = P(a, x) − e^{-x} x^a / Γ(a+1)` anchored at the exact
+/// `P(1/2, x) = erf(√x)`.
+fn gammaHalfShapeP(a2: usize, x: f64) f64 {
+    const m = (a2 - 1) / 2;
+    const erf = gammaHalfErfTaylor(x);
+    var term = 2 * @sqrt(x) / @sqrt(std.math.pi); // x^(1/2)/Γ(3/2)
+    var sum: f64 = 0;
+    var j: usize = 0;
+    while (j < m) : (j += 1) {
+        sum += term;
+        term *= x / (@as(f64, @floatFromInt(j)) + 1.5);
+    }
+    const value = erf - @exp(-x) * sum;
+    return @min(@as(f64, 1), @max(@as(f64, 0), value));
 }
 
 /// Regularized upper incomplete gamma Q(a, x) = Γ(a, x)/Γ(a) = 1 − P(a, x).
@@ -61615,6 +61645,17 @@ test "gammaIncompleteP and gammaIncompleteQ match known values" {
     try std.testing.expectEqual(@as(f64, 0), gammaIncompleteP(@as(f64, 2), @as(f64, 0)));
 }
 
+test "half-integer gamma CDF matches the series" {
+    // The half-integer recurrence anchors at erf(√x); compare it with the
+    // generic series (which handles every shape) across the gated domain.
+    inline for ([_]f64{ 0.5, 1.5, 2.5, 5.5, 7.5 }) |a| {
+        inline for ([_]f64{ 0, 0.5, 2, 4, 8 }) |dx| {
+            const x = @min(a + dx, 8);
+            try std.testing.expectApproxEqAbs(gammaSeriesP(f64, a, x), gammaIncompleteP(a, x), 1e-12);
+        }
+    }
+}
+
 test "gammaIncompleteP large shape resolves the mean" {
     // P(a, a) converges to 0.5 + 1/(3√(2πa)) for large a. At a = 9999 the
     // series needs ~500 terms; the old 300-iteration cap returned
@@ -72743,5 +72784,3 @@ test "vector geometric dyadic multi-word lanes stay exact" {
     try std.testing.expectApproxEqAbs(p, rate, 0.01);
     try std.testing.expectApproxEqAbs(1 / p, mean, 0.2);
 }
-
-
