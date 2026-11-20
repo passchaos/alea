@@ -12310,7 +12310,7 @@ const VonMisesCdfCache = struct {
         // multiplied the per-call sine sum by roughly 2-4x for small kappa.
         const k_band = kf + 6 * @sqrt(kf);
         const k_total: usize = @intFromFloat(@ceil(k_band + 16));
-        const k_sum: usize = @intFromFloat(@ceil(@min(k_band + 10, 8.5 * @sqrt(kf) + 40)));
+        const k_sum: usize = @intFromFloat(@ceil(@min(kf + 4.5 * @sqrt(kf) + 8, 8.5 * @sqrt(kf) + 40)));
         if (k_sum > max_terms) return null;
 
         var raw: [max_terms + 1]f64 = undefined;
@@ -12416,7 +12416,7 @@ fn vonMisesRelativeCdf(comptime T: type, d: T, kappa: T) T {
         // 64/40 floors only added iterations (and sines) for small kappa.
         const k_band = kf + 6 * @sqrt(kf);
         const k_total: usize = @intFromFloat(@ceil(k_band + 16));
-        const k_sum: usize = @intFromFloat(@ceil(@min(k_band + 10, 8.5 * @sqrt(kf) + 40)));
+        const k_sum: usize = @intFromFloat(@ceil(@min(kf + 4.5 * @sqrt(kf) + 8, 8.5 * @sqrt(kf) + 40)));
         const df: f64 = @floatCast(d);
         var ratio: f64 = 1;
         var sum: f64 = 0;
