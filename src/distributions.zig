@@ -3121,6 +3121,15 @@ fn skewNormalCdfZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTable20)
     return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
 }
 
+/// `skewNormalUpperTailZ` with the 20-point geometry table.
+fn skewNormalUpperTailZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTable20) f64 {
+    if (z >= 0) {
+        const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
+        return q + 2 * owenTWithGlTable20(z, alpha, table);
+    }
+    return 1 - skewNormalCdfZWithGlTable20(z, alpha, table);
+}
+
 /// `owenT` with the Gauss-Legendre geometry served from a table built for
 /// this shape; every other branch matches `owenT`.
 fn owenTWithGlTable(h: f64, a: f64, table: *const OwenTGlTable) f64 {
@@ -14303,7 +14312,9 @@ const WrappedSkewNormalCdfCache = struct {
     /// the loops and the term tables.
     k_lo: i32,
     k_hi: i32,
+    use_gl20: bool,
     use_gl_table: bool,
+    gl20: OwenTGlTable20,
     gl_table: OwenTGlTable,
     lower_terms: [max_images]f64 = undefined,
     upper_terms: [max_images]f64 = undefined,
@@ -14319,7 +14330,11 @@ const WrappedSkewNormalCdfCache = struct {
         const hi_f = (6.5 - lower_z0) / stride;
         const k_lo: i32 = @max(-k_max, @as(i32, @intFromFloat(@floor(lo_f))));
         const k_hi: i32 = @min(k_max, @as(i32, @intFromFloat(@ceil(hi_f))));
-        const use_gl_table = alpha != 0 and @abs(alpha) <= 6;
+        // The 20-point rule is accurate to ~6e-13 for |alpha| <= 2, far
+        // inside the 1e-9 quantile contract; wider shapes keep the 24-point
+        // rule.
+        const use_gl20 = alpha != 0 and @abs(alpha) <= 2;
+        const use_gl_table = alpha != 0 and @abs(alpha) <= 6 and !use_gl20;
         return .{
             .mu_w = mu_w,
             .sigma = sigma,
@@ -14327,7 +14342,9 @@ const WrappedSkewNormalCdfCache = struct {
             .k_max = k_max,
             .k_lo = k_lo,
             .k_hi = @max(k_hi, k_lo),
+            .use_gl20 = use_gl20,
             .use_gl_table = use_gl_table,
+            .gl20 = if (use_gl20) owenTGlTable20(alpha) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined },
             .gl_table = if (use_gl_table) owenTGlTable(alpha) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined },
         };
     }
@@ -14353,6 +14370,8 @@ const WrappedSkewNormalCdfCache = struct {
                     0
                 else if (z_end <= -6.5)
                     1
+                else if (self.use_gl20)
+                    skewNormalUpperTailZWithGlTable20(z_end, self.alpha, &self.gl20)
                 else if (self.use_gl_table)
                     skewNormalUpperTailZWithGlTable(z_end, self.alpha, &self.gl_table)
                 else
@@ -14374,6 +14393,8 @@ const WrappedSkewNormalCdfCache = struct {
                 1
             else if (z_end <= -6.5)
                 0
+            else if (self.use_gl20)
+                skewNormalCdfZWithGlTable20(z_end, self.alpha, &self.gl20)
             else if (self.use_gl_table)
                 skewNormalCdfZWithGlTable(z_end, self.alpha, &self.gl_table)
             else
@@ -14425,10 +14446,14 @@ const WrappedSkewNormalCdfCache = struct {
                 continue;
             }
             sum += (if (upper)
-                if (self.use_gl_table)
+                if (self.use_gl20)
+                    skewNormalUpperTailZWithGlTable20(z, self.alpha, &self.gl20)
+                else if (self.use_gl_table)
                     skewNormalUpperTailZWithGlTable(z, self.alpha, &self.gl_table)
                 else
                     skewNormalUpperTailZ(z, self.alpha)
+            else if (self.use_gl20)
+                skewNormalCdfZWithGlTable20(z, self.alpha, &self.gl20)
             else if (self.use_gl_table)
                 skewNormalCdfZWithGlTable(z, self.alpha, &self.gl_table)
             else
