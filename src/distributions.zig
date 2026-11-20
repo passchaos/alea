@@ -12599,21 +12599,35 @@ const VonMisesCdfCache = struct {
         // `2/κ` is constant, so `2k/κ` is one multiply per step instead of a
         // division; only the reciprocal of `t` remains.
         const two_over_kappa = 2 / kf;
+        // Two steps per iteration: the composed update
+        // `rho_{k-2} = t / ((2(k-1)/kappa)·t + 1)`, `t = 2k/kappa + rho_k`,
+        // keeps one division on the dependency chain for every two steps;
+        // the intermediate reciprocal only feeds the ratio product and
+        // overlaps with it.
         var k: usize = k_total;
-        while (k >= 1) : (k -= 1) {
+        while (k >= 2) : (k -= 2) {
             const k_d: f64 = @floatFromInt(k);
             if (k <= k_sum) raw[k] = ratio;
-            // `rho = 1/(2k/κ + rho)` and `ratio /= rho`, so track
-            // `t = 1/rho` and use one division and one multiply per step.
             const t = k_d * two_over_kappa + rho;
-            ratio *= t;
-            rho = 1 / t;
+            const base = (k_d - 1) * two_over_kappa;
+            const rho_mid = 1 / t;
+            const t1 = base + rho_mid;
+            const ratio_mid = ratio * t;
+            if (k - 1 <= k_sum) raw[k - 1] = ratio_mid;
+            ratio = ratio_mid * t1;
+            rho = t / (base * t + 1);
             if (ratio > 1.0e100) {
                 const inv = 1 / ratio;
-                var j: usize = k;
+                var j: usize = k - 1;
                 while (j <= k_sum) : (j += 1) raw[j] *= inv;
                 ratio = 1;
             }
+        }
+        if (k == 1) {
+            if (k_sum >= 1) raw[1] = ratio;
+            const t = two_over_kappa + rho;
+            ratio *= t;
+            rho = 1 / t;
         }
 
         var cache: VonMisesCdfCache = .{
