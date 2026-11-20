@@ -13801,7 +13801,16 @@ fn WrappedNormalCdfCache(comptime T: type) type {
             var i: usize = @intCast(k + self.k_max);
             while (k <= self.k_hi) : (k += 1) {
                 const shift: T = @as(T, @floatFromInt(k)) * two_pi;
-                self.endpoint_terms[i] = normCdf((-pi - self.mu_w + shift) / self.sigma);
+                const z_end = (-pi - self.mu_w + shift) / self.sigma;
+                // Beyond the 9-sigma band the endpoint term saturates at 0 or
+                // 1; clamping avoids the Mills series for the far negative
+                // images.
+                self.endpoint_terms[i] = if (z_end >= 9)
+                    1
+                else if (z_end <= -9)
+                    0
+                else
+                    normCdf(z_end);
                 i += 1;
             }
         }
