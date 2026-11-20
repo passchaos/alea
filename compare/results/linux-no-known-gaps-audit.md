@@ -7352,7 +7352,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1820-inverse-gaussian-density-direct.md`. and
 `compare/results/s4-m1821-von-mises-ratio-recurrence.md`. and
 `compare/results/s4-m1822-validate-all-refresh.md`. and
-`compare/results/s4-m1823-half-integer-gamma-cdf.md`.
+`compare/results/s4-m1823-half-integer-gamma-cdf.md`. and
+`compare/results/s4-m1824-wrapped-endpoint-saturation.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7430,5 +7431,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1820-inverse-gaussian-density-direct.md`. and
 `compare/results/s4-m1821-von-mises-ratio-recurrence.md`. and
 `compare/results/s4-m1822-validate-all-refresh.md`. and
-`compare/results/s4-m1823-half-integer-gamma-cdf.md`.
+`compare/results/s4-m1823-half-integer-gamma-cdf.md`. and
+`compare/results/s4-m1824-wrapped-endpoint-saturation.md`.
 

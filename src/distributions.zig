@@ -14239,17 +14239,32 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
         // Both terms saturate in the same tail: their difference is zero in
         // f64 and the pair can be skipped (|z| >= 9 leaves < 1e-18).
         if ((z >= 9 and z_end >= 9) or (z <= -9 and z_end <= -9)) continue;
+        // An endpoint image beyond the 9-sigma band contributes less than
+        // 2e-18; clamping it to the limiting value avoids re-deriving a
+        // saturated tail through the Owen T or incomplete-gamma paths.
+        const endpoint_term: f64 = if (upper)
+            if (z_end >= 9)
+                0
+            else if (z_end <= -9)
+                1
+            else if (use_gl_table)
+                skewNormalUpperTailZWithGlTable(z_end, alpha, &gl_table)
+            else
+                skewNormalUpperTailZ(z_end, alpha)
+        else if (z_end >= 9)
+            1
+        else if (z_end <= -9)
+            0
+        else if (use_gl_table)
+            skewNormalCdfZWithGlTable(z_end, alpha, &gl_table)
+        else
+            skewNormalCdfZ(z_end, alpha);
         sum += (if (upper)
             if (use_gl_table) skewNormalUpperTailZWithGlTable(z, alpha, &gl_table) else skewNormalUpperTailZ(z, alpha)
         else if (use_gl_table)
             skewNormalCdfZWithGlTable(z, alpha, &gl_table)
         else
-            skewNormalCdfZ(z, alpha)) - (if (upper)
-            if (use_gl_table) skewNormalUpperTailZWithGlTable(z_end, alpha, &gl_table) else skewNormalUpperTailZ(z_end, alpha)
-        else if (use_gl_table)
-            skewNormalCdfZWithGlTable(z_end, alpha, &gl_table)
-        else
-            skewNormalCdfZ(z_end, alpha));
+            skewNormalCdfZ(z, alpha)) - endpoint_term;
     }
     if (upper) return @min(@as(f64, 1), @max(@as(f64, 0), 1 - sum));
     return @min(@as(f64, 1), @max(@as(f64, 0), sum));
@@ -14331,7 +14346,14 @@ const WrappedSkewNormalCdfCache = struct {
             while (k <= self.k_hi) : (k += 1) {
                 const shift = @as(f64, @floatFromInt(k)) * two_pi;
                 const z_end = (pi - self.mu_w + shift) / self.sigma;
-                self.upper_terms[i] = if (self.use_gl_table)
+                // Endpoint images beyond the 6.5-sigma band contribute less
+                // than 8e-11, so their term is the limiting value: the Owen T
+                // evaluation would only re-derive a saturated tail.
+                self.upper_terms[i] = if (z_end >= 6.5)
+                    0
+                else if (z_end <= -6.5)
+                    1
+                else if (self.use_gl_table)
                     skewNormalUpperTailZWithGlTable(z_end, self.alpha, &self.gl_table)
                 else
                     skewNormalUpperTailZ(z_end, self.alpha);
@@ -14348,7 +14370,11 @@ const WrappedSkewNormalCdfCache = struct {
         while (k <= self.k_hi) : (k += 1) {
             const shift = @as(f64, @floatFromInt(k)) * two_pi;
             const z_end = (-pi - self.mu_w + shift) / self.sigma;
-            self.lower_terms[i] = if (self.use_gl_table)
+            self.lower_terms[i] = if (z_end >= 6.5)
+                1
+            else if (z_end <= -6.5)
+                0
+            else if (self.use_gl_table)
                 skewNormalCdfZWithGlTable(z_end, self.alpha, &self.gl_table)
             else
                 skewNormalCdfZ(z_end, self.alpha);
