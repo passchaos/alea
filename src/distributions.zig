@@ -3414,8 +3414,15 @@ fn ricePdfImpl(x: f64, nu: f64, sigma: f64) f64 {
         if (sd == 0) return 0;
         return normPdf((x - mean) / sd) / sd;
     }
-    const log_density = @log(x) - @log(sigma2) -
-        (x * x + nu * nu) / (2 * sigma2) + logBesselI0(x * nu / sigma2);
+    const u = x * nu / sigma2;
+    const exponent = -(x * x + nu * nu) / (2 * sigma2);
+    if (u <= 30 and exponent > -700) {
+        // Direct form for the moderate range: one exp plus the I0 series
+        // instead of two logs, the log-Bessel series, and an exp.
+        return (x / sigma2) * @exp(exponent) * besselI0(u);
+    }
+    const log_density = @log(x) - @log(sigma2) +
+        exponent + logBesselI0(u);
     if (log_density < -745.0) return 0;
     return @exp(log_density);
 }
