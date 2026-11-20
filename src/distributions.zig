@@ -2699,12 +2699,15 @@ fn owenT(h: f64, a: f64) f64 {
     if (a == 0 or std.math.isNan(h)) return 0;
     const sign: f64 = if (a < 0) -1 else 1;
     if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
-    if (@abs(h) <= 3 and @abs(a) <= 6) {
+    if (@abs(a) <= 6 and @abs(h) <= 6) {
+        // The fixed 24-point rule is spectrally accurate over the whole
+        // |h|, |a| <= 6 box (the v = h*tan(theta) form converges below 1e-18
+        // across it); the far tail stays the cheaper path where it applies.
+        if (@abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
+            return sign * owenTFarTail(@abs(h), @abs(a));
+        }
         const b = std.math.atan(@abs(a));
         return sign * owenTGaussLegendre(0.5 * h * h, b) / (2 * std.math.pi);
-    }
-    if (@abs(a) <= 6 and @abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
-        return sign * owenTFarTail(@abs(h), @abs(a));
     }
     return owenTSlow(h, a);
 }
@@ -2725,6 +2728,14 @@ fn owenTSlow(h: f64, a: f64) f64 {
 test "Owen T Gauss-Legendre matches adaptive Simpson" {
     inline for ([_]f64{ 0.0, 0.1, 0.5, 1.0, 2.0, 3.0 }) |h| {
         inline for ([_]f64{ 0.1, 0.5, 1.0, 2.0, 5.0, 6.0 }) |a| {
+            try std.testing.expectApproxEqAbs(owenTSlow(h, a), owenT(h, a), 1e-12);
+        }
+    }
+    // Extended Gauss-Legendre band |h| in (3, 6] with |h*a| < 6, where the
+    // adaptive Simpson reference itself is only accurate to ~1e-12.
+    inline for ([_]f64{ 3.5, 4.0, 4.7, 5.5, 6.0 }) |h| {
+        inline for ([_]f64{ 0.1, 0.5, 1.0 }) |a| {
+            if (h * a >= 6) continue;
             try std.testing.expectApproxEqAbs(owenTSlow(h, a), owenT(h, a), 1e-12);
         }
     }
