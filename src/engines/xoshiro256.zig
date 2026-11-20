@@ -109,6 +109,15 @@ pub fn fill(self: *Xoshiro256, buf: []u8) void {
     var i: usize = 0;
     const aligned_len = buf.len - (buf.len & 7);
 
+    // Four-word batches keep the state updates and the 32-byte stores
+    // pipelined; the emitted word order is unchanged.
+    while (i + 32 <= aligned_len) : (i += 32) {
+        var bytes: [32]u8 = undefined;
+        inline for (0..4) |k| {
+            std.mem.writeInt(u64, bytes[k * 8 ..][0..8], self.next(), .little);
+        }
+        @memcpy(buf[i..][0..32], &bytes);
+    }
     while (i < aligned_len) : (i += 8) {
         var bytes: [8]u8 = undefined;
         std.mem.writeInt(u64, &bytes, self.next(), .little);

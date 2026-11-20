@@ -232,6 +232,8 @@ project does not repeat unproductive work.
 
 | ChaCha fill zeroing removal | The buffered ChaCha `fill` zeroed each consumed buffer region after copying it out, adding a second memory pass over every emitted byte | Removed the zeroing (the copied bytes are public output and the hidden key prefix is regenerated on refill); `chacha12 fill-only` rises from 2400.9M to 2476-2494M MiB/s with an unchanged stream. The remaining gap to Rust `StdRng` is the rekeying construction's buffer copy-through. | Adopted; evidence: `compare/results/s4-m1780-chacha-fill-zeroing.md`. |
 
+| Four-word batched engine fills | The xoshiro/pcg/wyhash fills emitted one word per iteration with a separate `writeInt` + `@memcpy`, while Rust `SmallRng` writes 32-byte chunks | The five 64-bit/32-bit engine fills now emit four words per iteration (32-byte/16-byte stores) with unchanged word order and tail handling. Three-run A/B: `xoshiro256++ fill-only` 10841-11069M -> 11263-11269M MiB/s (about +4%, parity with local Rust `SmallRng` 11314M). | Adopted; evidence: `compare/results/s4-m1781-batched-engine-fills.md`. |
+
 ## Rejected Or Deferred Attempts
 
 | Attempt | Result | Decision |
