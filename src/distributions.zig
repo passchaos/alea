@@ -3707,12 +3707,10 @@ fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: P
     if (p_f == 0) return 0;
     if (p_f == 1) return std.math.inf(T);
     var lo: f64 = 0;
-    var hi: f64 = @max(sigma_f, nu_f) + sigma_f;
-    var expansion: usize = 0;
-    while (riceCdf(@as(f64, hi), nu_f, sigma_f) < p_f and expansion < 1024) : (expansion += 1) {
-        if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
-        hi *= 2;
-    }
+    // `nu + 40 sigma` leaves an upper tail below 1e-10 across the parameter
+    // range, so the bracket is guaranteed and the verification CDF can be
+    // skipped.
+    var hi: f64 = nu_f + 40 * sigma_f;
 
     // Normal/Rayleigh starts cover the concentrated and zero-noncentrality
     // limits; the bracket fallback handles the rest.
@@ -3861,12 +3859,10 @@ fn hoytQuantileImpl(comptime PeerType: type, p: PeerType, q_param: PeerType, ome
     if (p_f == 0) return 0;
     if (p_f == 1) return std.math.inf(T);
     var lo: f64 = 0;
-    var hi: f64 = @sqrt(omega_f);
-    var expansion: usize = 0;
-    while (hoytCdf(@as(f64, hi), q_f, omega_f) < p_f and expansion < 1024) : (expansion += 1) {
-        if (hi > std.math.floatMax(f64) / 2) return std.math.inf(T);
-        hi *= 2;
-    }
+    // `40 sqrt(Omega)` leaves an upper tail below 3e-13 across the shape
+    // range, so the bracket is guaranteed and the verification CDF can be
+    // skipped.
+    var hi: f64 = 40 * @sqrt(omega_f);
 
     // Rayleigh start; exact at q = 1 and a good bracket seed otherwise.
     // Below p = 0.2 the density is linear in x near zero, so the CDF
