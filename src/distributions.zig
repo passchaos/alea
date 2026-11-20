@@ -2709,6 +2709,10 @@ fn owenT(h: f64, a: f64) f64 {
         const b = std.math.atan(@abs(a));
         return sign * owenTGaussLegendre(0.5 * h * h, b) / (2 * std.math.pi);
     }
+    // For |h*a| >= 6 the far-tail series is accurate regardless of how the
+    // product splits (the tail term is already below 1e-11), so large |a|
+    // with small |h| no longer needs the adaptive Simpson path.
+    if (@abs(h) * @abs(a) >= 6) return sign * owenTFarTail(@abs(h), @abs(a));
     return owenTSlow(h, a);
 }
 
@@ -2736,6 +2740,12 @@ test "Owen T Gauss-Legendre matches adaptive Simpson" {
     inline for ([_]f64{ 3.5, 4.0, 4.7, 5.5, 6.0 }) |h| {
         inline for ([_]f64{ 0.1, 0.5, 1.0 }) |a| {
             if (h * a >= 6) continue;
+            try std.testing.expectApproxEqAbs(owenTSlow(h, a), owenT(h, a), 1e-12);
+        }
+    }
+    // Far-tail series with |a| > 6 and small |h| (|h*a| >= 6).
+    inline for ([_]f64{ 0.5, 1.0, 2.0 }) |h| {
+        inline for ([_]f64{ 10.0, 50.0 }) |a| {
             try std.testing.expectApproxEqAbs(owenTSlow(h, a), owenT(h, a), 1e-12);
         }
     }
