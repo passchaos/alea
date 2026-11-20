@@ -666,8 +666,16 @@ Four-normal unit ball projection | Checked whether four standard normals project
 
 | Polynomial erf replacement for the half-integer gamma anchor (rejected) | `gammaHalfErfTaylor` dominates the half-integer `gammaIncompleteP/Q` (the chi-squared quantile's CDF and the wrapped skew upper tail). Tried a minimax polynomial `erf(y)` over the used range `y in [0, 2.83]` to replace the ~27-35-term Taylor. | A pure-Python Chebyshev interpolation needs degree 22 for 1.5e-13 worst absolute error and stalls near 5e-14 at degree 24-26, versus the Taylor's ~1e-17. That is a 6x accuracy loss in the half-integer recurrence anchor for a projected ~10-15% gain on diagnostic quantile rows, so the fit was not carried into the library. | Rejected on accuracy grounds; the erf Taylor (with the S4-M1852 reciprocal table) stays. A Cephes-style rational erfc would be the next candidate if this path ever needs more headroom. |## Next Candidate
 
+| Reciprocal-sigma substitution in the wrapped caches (rejected) | Both wrapped CDF caches and the public wrapped skew CDF divide `(x - mu + k*2pi)` by `sigma` per image per evaluation; tried a precomputed `1/sigma` multiply (bit-identical at the bench's `sigma = 1`). | Three alternating pairs: `wrapped normal quantile` 4.932/4.975/4.533M vs 5.392/4.833/4.936M, `wrapped skew-normal quantile` 1.820/2.088/2.133M vs 2.003/1.898/2.129M, and `wrapped skew-normal cdf` 5.202/4.875/5.438M vs 5.148/4.817/4.760M — mixed to slightly worse, inside the loaded-host noise band. | Rejected and reverted; the divisions are not the bottleneck (the Owen T and `normCdf` work dominates). |
 Continue performance triage on the remaining focused watch items only when a
-new concrete hypothesis is available. `s4-m4-remaining-gaps.md` summarizes the
+new concrete hypothesis is available.
+
+- Long-run bar: the same-session statistical bar is a 50M-sample long run
+  (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 25 min).
+  The 1e9 run is the next stricter bar and needs roughly 7-8 hours, so it
+  runs in the background across turns; the S4-M1813 1e9 evidence came from
+  such a long window. Broader platform runners (QEMU, Wine, Wasmtime) stay
+  blocked until that infrastructure is installed. `s4-m4-remaining-gaps.md` summarizes the
 current blocker audit and the requirements for a successful next candidate:
 
 - LogNormal: the inlined branchless exponential is now the exact default
