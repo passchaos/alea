@@ -1380,10 +1380,18 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
     const log_norm = std.math.lgamma(T, shape) + shape * @log(scale);
     var lo: T = 0;
     var hi = scale * @max(@as(T, 1), shape);
-    var expansion: usize = 0;
-    while (gammaCdf(hi, shape, scale) < p and expansion < 1024) : (expansion += 1) {
-        hi *= 2;
-        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    if (shape >= 0.3) {
+        // `mean + 40 standard deviations` leaves an upper tail below 1e-11
+        // for every shape in the Wilson-Hilferty range (8.4e-12 at the
+        // boundary), so the bracket is guaranteed and the verification CDF
+        // can be skipped.
+        hi = scale * (shape + 40 * @sqrt(shape));
+    } else {
+        var expansion: usize = 0;
+        while (gammaCdf(hi, shape, scale) < p and expansion < 1024) : (expansion += 1) {
+            hi *= 2;
+            if (!std.math.isFinite(hi)) return std.math.inf(T);
+        }
     }
 
     if (1 - p < 1.0e-7) {
