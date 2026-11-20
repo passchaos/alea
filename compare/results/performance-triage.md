@@ -228,6 +228,8 @@ project does not repeat unproductive work.
 | Skew-normal upper-tail Mills replacement (rejected) | After the Owen T far-tail win, tried replacing `Q(1/2, z²/2)` in `skewNormalUpperTailZ` with `normUpperTailF64(z)` for all `z` | Wrapped skew-normal CDF 2.70M -> 3.05M cdf/s (+13%), but the quantile collapsed from 0.342M to 0.115M quantiles/s and the checksums changed because the Mills series is inaccurate below `z = 6`, so Newton failed to converge. | Rejected and reverted; keep the incomplete-gamma `Q` for `z < 6`. |
 | Skew-normal quantile tolerance loosening (neutral) | Tried relaxing the skew-normal quantile bracket tolerance from `1e-12` to `1e-9` (the CDF itself is only ~1e-7 accurate) | 1.016M -> 1.025M quantiles/s with unchanged checksums — within noise. | Reverted to keep the documented `1e-12` tolerance. |
 
+| Facade-aware f32 standard normal fill | `fillStandardNormalFrom(f32)` always used the vector8 chunk path, which pays the `Rng` vtable cost per draw for the type-erased facade (about 377M samples/s versus 650-695M for direct sources) | The f32 fill now uses the scalar per-element loop when the source is `Rng` and keeps the vector8 chunk path for direct sources; the facade row rises to 529-561M samples/s with an unchanged checksum. The same split for `fillStandardExponentialFrom(f32)` regressed 562.3M -> 529.9M and was reverted. | Adopted for the standard normal fill only; evidence: `compare/results/s4-m1778-facade-f32-normal-fill.md`. |
+
 ## Rejected Or Deferred Attempts
 
 | Attempt | Result | Decision |

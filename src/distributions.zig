@@ -9216,6 +9216,13 @@ pub fn fillStandardNormal(rng: Rng, comptime T: type, dest: []T) void {
 pub fn fillStandardNormalFrom(source: anytype, comptime T: type, dest: []T) void {
     comptime requireFloat(T);
     if (T == f32) {
+        // The vector-chunk path issues fewer, wider engine draws, which wins
+        // for monomorphized direct sources; the type-erased `Rng` facade pays
+        // the vtable cost per draw, so the scalar loop is faster there.
+        if (comptime @TypeOf(source) == Rng) {
+            for (dest) |*item| item.* = standardNormalFrom(source, T);
+            return;
+        }
         fillStandardNormalF32VectorChunksFrom(source, dest);
         return;
     }
