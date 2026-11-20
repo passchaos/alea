@@ -14535,10 +14535,30 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
             skewNormalCdfZWithGlTable(z_s, alpha_f, &cache.gl_table)
         else
             skewNormalCdfZ(z_s, alpha_f);
-        const d_s = skewNormalPdfZ(z_s, alpha_f);
+        const pdf_pair = skewNormalPdfPairZ(z_s, alpha_f);
+        const d_s = pdf_pair[0];
         if (d_s > 0 and std.math.isFinite(d_s)) {
-            const z1 = z_s - (f_s - p_f) / d_s;
-            if (std.math.isFinite(z1)) guess = wrapAngleModulo(mu_f + sigma_f * z1, pi_f, two_pi_f);
+            // A Halley start (cubic) is nearly free here because the density
+            // pair already carries the second derivative. In the far tail the
+            // density is tiny and the raw correction overshoots by many
+            // radians (the wrap then hides it), so the step is capped at a
+            // trust radius.
+            var delta = (f_s - p_f) / d_s;
+            const quadratic = (f_s - p_f) * pdf_pair[1];
+            const denom = 2 * d_s * d_s - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d_s * d_s >= @abs(quadratic)) {
+                const halley_delta = 2 * (f_s - p_f) * d_s / denom;
+                if (std.math.isFinite(halley_delta)) delta = halley_delta;
+            }
+            const max_step: f64 = 1;
+            delta = @min(@max(delta, -max_step), max_step);
+            const z1 = z_s - delta;
+            // Reject a step that leaves the wrapped domain: the angle would
+            // wrap to the opposite side and start the solve from far away.
+            const z_lo = (-pi_f - mu_f) / sigma_f;
+            const z_hi = (pi_f - mu_f) / sigma_f;
+            if (std.math.isFinite(z1) and z1 >= z_lo and z1 <= z_hi)
+                guess = wrapAngleModulo(mu_f + sigma_f * z1, pi_f, two_pi_f);
         }
     }
     var lo: f64 = -pi_f;
