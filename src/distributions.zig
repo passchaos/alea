@@ -3366,6 +3366,13 @@ fn skewNormalCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, s
     if (x_f == std.math.inf(f64)) return 1;
     if (x_f == -std.math.inf(f64)) return 0;
     const z = (x_f - location_f) / scale_f;
+    // The 20-point Owen rule is accurate to about 6e-13 for |alpha| <= 2 —
+    // far below the CDF's own Abramowitz-Stegun floor (about 1e-7) — and it
+    // trims four nodes from the per-call geometry build and quadrature.
+    if (shape_f != 0 and @abs(shape_f) <= 2) {
+        const table = owenTGlTable20(shape_f);
+        return @floatCast(skewNormalCdfZWithGlTable20(z, shape_f, &table));
+    }
     return @floatCast(skewNormalCdfZ(z, shape_f));
 }
 
