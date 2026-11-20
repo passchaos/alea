@@ -3433,6 +3433,48 @@ fn skewNormalCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, s
     return @floatCast(skewNormalCdfZ(z, shape_f));
 }
 
+/// Reusable skew-normal CDF model: builds the Owen geometry table once for
+/// `0 < |shape| <= 2`, so repeated `cdf` calls with runtime parameters skip
+/// the per-call table build (about 1.6x on the runtime-shape row). Values
+/// are bit-identical to `skewNormalCdf` for the same parameters.
+pub fn SkewNormalCdfModel(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        location: f64,
+        scale: f64,
+        shape: f64,
+        table: ?OwenTGlTable12,
+
+        pub fn init(location: T, scale: T, shape: T) Rng.Error!Self {
+            const location_f: f64 = @floatCast(location);
+            const scale_f: f64 = @floatCast(scale);
+            const shape_f: f64 = @floatCast(shape);
+            if (!std.math.isFinite(location_f) or !std.math.isFinite(scale_f) or scale_f < 0 or !std.math.isFinite(shape_f)) {
+                return error.InvalidParameter;
+            }
+            return .{
+                .location = location_f,
+                .scale = scale_f,
+                .shape = shape_f,
+                .table = if (shape_f != 0 and @abs(shape_f) <= 2) owenTGlTable12(shape_f) else null,
+            };
+        }
+
+        pub fn cdf(self: *const Self, x: T) T {
+            const x_f: f64 = @floatCast(x);
+            if (std.math.isNan(x_f)) return std.math.nan(T);
+            if (self.scale == 0) return if (x_f < self.location) 0 else 1;
+            if (x_f == std.math.inf(f64)) return 1;
+            if (x_f == -std.math.inf(f64)) return 0;
+            const z = (x_f - self.location) / self.scale;
+            if (self.table) |*table| return @floatCast(skewNormalCdfZWithGlTable12(z, self.shape, table));
+            return @floatCast(skewNormalCdfZ(z, self.shape));
+        }
+    };
+}
+
 /// Skew-normal quantile via safeguarded Newton on the standardized CDF.
 /// `p = 0 → −∞`, `p = 1 → +∞`.
 pub fn skewNormalQuantile(p: anytype, location: anytype, scale: anytype, shape: anytype) resolvedFloatType(@TypeOf(p, location, scale, shape)) {
@@ -62799,6 +62841,23 @@ test "skew-normal far-left tail uses the Mills expansion" {
         const q = skewNormalQuantile(p, @as(f64, 0), @as(f64, 1), @as(f64, 1));
         try std.testing.expectApproxEqRel(p, skewNormalCdf(q, @as(f64, 0), @as(f64, 1), @as(f64, 1)), 5e-4);
     }
+}
+
+test "SkewNormalCdfModel is bit-identical to the free CDF" {
+    inline for ([_]f64{ -6, -2, -1, 0, 0.5, 2, 6 }) |shape| {
+        const model = try SkewNormalCdfModel(f64).init(0.3, 1.5, shape);
+        var x: f64 = -8;
+        while (x <= 8) : (x += 0.125) {
+            try std.testing.expectEqual(skewNormalCdf(x, 0.3, 1.5, shape), model.cdf(x));
+        }
+    }
+    const point = try SkewNormalCdfModel(f64).init(1, 0, 1);
+    try std.testing.expectEqual(@as(f64, 0), point.cdf(0.5));
+    try std.testing.expectEqual(@as(f64, 1), point.cdf(1.5));
+    const f32_model = try SkewNormalCdfModel(f32).init(0, 1, 1);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.25), f32_model.cdf(0), 1e-6);
+    try std.testing.expectError(error.InvalidParameter, SkewNormalCdfModel(f64).init(0, -1, 1));
+    try std.testing.expectError(error.InvalidParameter, SkewNormalCdfModel(f64).init(0, 1, std.math.inf(f64)));
 }
 
 test "SkewNormal and PERT CDF and quantile helpers" {

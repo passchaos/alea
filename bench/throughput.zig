@@ -593,6 +593,7 @@ pub fn main(init: std.process.Init) !void {
     try benchQuantileModel(QuantileProbeSkewNormalRuntime, io, stdout, "alea skew-normal quantile runtime", bytes / 4096);
     try benchCdfModel(CdfProbeSkewNormal, io, stdout, "alea skew-normal cdf", bytes / 4096);
     try benchCdfModel(CdfProbeSkewNormalRuntime, io, stdout, "alea skew-normal cdf runtime", bytes / 4096);
+    try benchSkewNormalCdfModel(io, stdout, "alea skew-normal cdf model", bytes / 4096);
     try benchCdfModel(CdfProbeRice, io, stdout, "alea rice cdf", bytes / 4096);
     try benchQuantileModel(QuantileProbeRice, io, stdout, "alea rice quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeHoyt, io, stdout, "alea hoyt quantile", bytes / 4096);
@@ -12604,6 +12605,32 @@ const QuantileProbeHoyt = struct {
         return alea.distributions.hoytQuantile(p, 0.5, 1);
     }
 };
+
+fn benchSkewNormalCdfModel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const model = alea.distributions.SkewNormalCdfModel(f64).init(0.0, 1.0, runtime_skew_shape.*) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < count) : (i += 1) {
+            const x = -4 + 8 * (@as(f64, @floatFromInt(i % 1000)) + 0.5) / 1000.0;
+            checksum += model.cdf(x);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (per_s > best) {
+            best = per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.3} M cdf/s checksum={d:.3}\n", .{ name, best, best_checksum });
+}
 
 fn benchVonMisesCdfModel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
