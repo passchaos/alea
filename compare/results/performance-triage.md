@@ -713,7 +713,9 @@ Four-normal unit ball projection | Checked whether four standard normals project
   with `-Doptimize=ReleaseFast` for long runs: the S4-M1859/S4-M1869
   binaries were Debug builds, where a 4M long check costs 131 s of CPU; the
   ReleaseFast binary costs 14.3 s (about 9x), so a 1e9 run is about 50
-  minutes instead of 8 hours and a 4e9 soak is about 3.3 hours. After the 1e9, the next rungs are a 4e9-sample soak (about 30
+  minutes instead of 8 hours and a 4e9 soak is about 3.3 hours. S4-M1870
+  records a current-tree ReleaseFast 1e9 run (about one hour) that
+  reproduces every gate exactly and covers the post-M1856 changes. After the 1e9, the next rungs are a 4e9-sample soak (about 30
   hours) or a 24-hour wall-clock soak with the gate block repeated at
   intervals, and a fresh 128GiB PractRand pass once PractRand is
   installed. Broader platform runners
