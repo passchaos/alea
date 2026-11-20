@@ -14765,6 +14765,53 @@ const WrappedSkewNormalCdfCache = struct {
     }
 };
 
+/// Reusable wrapped skew-normal CDF model: builds the Owen geometry and the
+/// endpoint image terms once, so repeated `cdf` calls for one parameter set
+/// skip the per-call setup (about 1.6x). The table path uses the quantile's
+/// 6.5-sigma image threshold, so values agree with `wrappedSkewNormalCdf`
+/// to about 1e-11; the public free function stays the accuracy reference.
+pub fn WrappedSkewNormalCdfModel(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        mu_w: f64,
+        sigma: f64,
+        alpha: f64,
+        cache: ?WrappedSkewNormalCdfCache,
+
+        pub fn init(mu: T, sigma: T, alpha: T) Rng.Error!Self {
+            const mu_f: f64 = @floatCast(mu);
+            const sigma_f: f64 = @floatCast(sigma);
+            const alpha_f: f64 = @floatCast(alpha);
+            if (!std.math.isFinite(mu_f) or !std.math.isFinite(sigma_f) or sigma_f < 0 or !std.math.isFinite(alpha_f)) {
+                return error.InvalidParameter;
+            }
+            const mu_w = wrapAngleModulo(mu_f, std.math.pi, 2 * std.math.pi);
+            var cache: ?WrappedSkewNormalCdfCache = null;
+            if (sigma_f > 0 and sigma_f < 10) {
+                var value = WrappedSkewNormalCdfCache.init(mu_w, sigma_f, alpha_f);
+                value.ensureTerms(true);
+                value.ensureTerms(false);
+                cache = value;
+            }
+            return .{ .mu_w = mu_w, .sigma = sigma_f, .alpha = alpha_f, .cache = cache };
+        }
+
+        pub fn cdf(self: *Self, x: T) T {
+            const x_f: f64 = @floatCast(x);
+            if (std.math.isNan(x_f)) return std.math.nan(T);
+            const pi = std.math.pi;
+            if (x_f <= -pi) return 0;
+            if (x_f >= pi) return 1;
+            if (self.sigma == 0) return if (x_f < self.mu_w) 0 else 1;
+            if (self.sigma >= 10) return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), (x_f + pi) / (2 * pi))));
+            if (self.cache) |*cache| return @floatCast(cache.eval(x_f, false).cdf);
+            return 0;
+        }
+    };
+}
+
 /// Inverse wrapped Skew-Normal CDF; `quantile(0) = -π`, `quantile(1) = π`.
 pub fn wrappedSkewNormalQuantile(p: anytype, mu: anytype, sigma: anytype, alpha: anytype) resolvedFloatType(@TypeOf(p, mu, sigma, alpha)) {
     return wrappedSkewNormalQuantileImpl(resolvedFloatType(@TypeOf(p, mu, sigma, alpha)), p, mu, sigma, alpha);
@@ -68827,6 +68874,28 @@ test "WrappedSkewNormal alpha=0 matches WrappedNormal" {
     inline for ([_]f64{ 1e-4, 0.1, 0.5, 0.9, 1 - 1e-4 }) |p| {
         try std.testing.expectApproxEqAbs(wn.quantile(p), wsn.quantile(p), 1e-10);
     }
+}
+
+test "WrappedSkewNormalCdfModel matches the free CDF and edge cases" {
+    inline for ([_]f64{ 0.2, 0.5, 1.0, 2.0, 5.0 }) |sigma| {
+        inline for ([_]f64{ -2, -1, 0.5, 2 }) |alpha| {
+            var model = try WrappedSkewNormalCdfModel(f64).init(0.4, sigma, alpha);
+            var x: f64 = -std.math.pi;
+            while (x <= std.math.pi) : (x += 0.05) {
+                try std.testing.expectApproxEqAbs(wrappedSkewNormalCdf(x, 0.4, sigma, alpha), model.cdf(x), 1e-10);
+            }
+        }
+    }
+    var point = try WrappedSkewNormalCdfModel(f64).init(0.4, 0, 2);
+    try std.testing.expectEqual(@as(f64, 0), point.cdf(0.0));
+    try std.testing.expectEqual(@as(f64, 1), point.cdf(0.5));
+    var uniform_model = try WrappedSkewNormalCdfModel(f64).init(0.4, 12, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.5), uniform_model.cdf(0.0), 1e-15);
+    try std.testing.expectEqual(@as(f64, 0), uniform_model.cdf(-std.math.pi));
+    try std.testing.expectEqual(@as(f64, 1), uniform_model.cdf(std.math.pi));
+    try std.testing.expectError(error.InvalidParameter, WrappedSkewNormalCdfModel(f64).init(0, -1, 1));
+    var nan_model = try WrappedSkewNormalCdfModel(f64).init(0, 1, 1);
+    try std.testing.expect(std.math.isNan(nan_model.cdf(std.math.nan(f64))));
 }
 
 test "WrappedSkewNormal CDF and quantile are inverses" {
