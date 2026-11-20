@@ -14809,6 +14809,19 @@ pub fn WrappedSkewNormalCdfModel(comptime T: type) type {
             if (self.cache) |*cache| return @floatCast(cache.eval(x_f, false).cdf);
             return 0;
         }
+
+        /// Inverse circular CDF; bit-identical to `wrappedSkewNormalQuantile`.
+        pub fn quantile(self: *Self, p: T) T {
+            const p_f: f64 = @floatCast(p);
+            if (std.math.isNan(p_f) or !(p_f >= 0 and p_f <= 1)) return std.math.nan(T);
+            const pi = std.math.pi;
+            if (p_f == 0) return @floatCast(-pi);
+            if (p_f == 1) return @floatCast(pi);
+            if (self.sigma == 0) return @floatCast(self.mu_w);
+            if (self.sigma >= 10) return @floatCast(-pi + 2 * pi * p_f);
+            if (self.cache) |*cache| return @floatCast(wrappedSkewNormalQuantileSolve(cache, p_f));
+            return std.math.nan(T);
+        }
     };
 }
 
@@ -14833,9 +14846,19 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     const mu_f: f64 = @floatCast(mu_w);
     const sigma_f: f64 = @floatCast(sigma);
     const alpha_f: f64 = @floatCast(alpha);
-    const pi_f: f64 = @floatCast(std.math.pi);
-    const two_pi_f = 2 * pi_f;
     var cache = WrappedSkewNormalCdfCache.init(mu_f, sigma_f, alpha_f);
+    return @floatCast(wrappedSkewNormalQuantileSolve(&cache, p_f));
+}
+
+/// Safeguarded-Halley solve for the wrapped skew-normal quantile using an
+/// already-built cache. The free function builds one per call; the reusable
+/// `WrappedSkewNormalCdfModel` reuses its cache across calls.
+fn wrappedSkewNormalQuantileSolve(cache: *WrappedSkewNormalCdfCache, p_f: f64) f64 {
+    const mu_f = cache.mu_w;
+    const sigma_f = cache.sigma;
+    const alpha_f = cache.alpha;
+    const pi_f: f64 = std.math.pi;
+    const two_pi_f = 2 * pi_f;
     // The wrapped-normal start is far cheaper than a full skew-normal
     // quantile solve; one Newton step on the standardized skew-normal CDF
     // sharpens it for the same asymptotic cost.
@@ -14926,8 +14949,9 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
         if (next == x) break;
         x = next;
     }
-    return @floatCast(x);
+    return x;
 }
+
 
 /// Wrapped Skew-Normal sampling: draw the skew-normal and wrap it.
 pub fn wrappedSkewNormal(rng: Rng, comptime T: type, mu: T, sigma: T, alpha: T) T {
@@ -68896,6 +68920,23 @@ test "WrappedSkewNormalCdfModel matches the free CDF and edge cases" {
     try std.testing.expectError(error.InvalidParameter, WrappedSkewNormalCdfModel(f64).init(0, -1, 1));
     var nan_model = try WrappedSkewNormalCdfModel(f64).init(0, 1, 1);
     try std.testing.expect(std.math.isNan(nan_model.cdf(std.math.nan(f64))));
+
+    // The quantile shares the cache and is bit-identical to the free function.
+    inline for ([_]f64{ 0.2, 0.5, 1.0, 2.0, 5.0 }) |sigma| {
+        inline for ([_]f64{ -2, -1, 0.5, 2 }) |alpha| {
+            var qmodel = try WrappedSkewNormalCdfModel(f64).init(0.4, sigma, alpha);
+            var p: f64 = 0.001;
+            while (p < 1) : (p += 0.01) {
+                try std.testing.expectEqual(wrappedSkewNormalQuantile(p, 0.4, sigma, alpha), qmodel.quantile(p));
+            }
+        }
+    }
+    var qpoint = try WrappedSkewNormalCdfModel(f64).init(0.4, 0, 2);
+    try std.testing.expectEqual(@as(f64, 0.4), qpoint.quantile(0.5));
+    var quniform = try WrappedSkewNormalCdfModel(f64).init(0.4, 12, 2);
+    try std.testing.expectApproxEqAbs(@as(f64, 0.0), quniform.quantile(0.5), 1e-15);
+    try std.testing.expectEqual(@as(f64, -std.math.pi), quniform.quantile(0));
+    try std.testing.expectEqual(@as(f64, std.math.pi), quniform.quantile(1));
 }
 
 test "WrappedSkewNormal CDF and quantile are inverses" {

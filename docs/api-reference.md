@@ -694,7 +694,7 @@ self-forking.
   `SkewNormalCdfModel(T)`, `SkewNormalCdfModel(T).init`,
   `SkewNormalCdfModel(T).cdf`,
   `WrappedSkewNormalCdfModel(T)`, `WrappedSkewNormalCdfModel(T).init`,
-  `WrappedSkewNormalCdfModel(T).cdf`,
+  `WrappedSkewNormalCdfModel(T).cdf`, `WrappedSkewNormalCdfModel(T).quantile`,
   `StandardWrappedSkewNormal`,
   `StandardWrappedSkewNormal.locationValue`, `StandardWrappedSkewNormal.scaleValue`,
   `StandardWrappedSkewNormal.shapeValue`, `StandardWrappedSkewNormal.minValue`,

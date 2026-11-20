@@ -689,9 +689,10 @@ Four-normal unit ball projection | Checked whether four standard normals project
   (`init`/`cdf`/`pdf`/`quantile`) would amortize these; it is a feature/API
   decision rather than a kernel change. S4-M1863 adopted it for the von
   Mises CDF (`vonMisesCdf` row about 2.5x on repeated calls) and S4-M1864
-  for the runtime-shape skew CDF (about 1.5x, bit-identical) and the
-  wrapped skew CDF (about 2.15x, documented ~8e-11 threshold difference).
-  The model family is complete for the current watch list.
+  for the runtime-shape skew CDF (about 1.5x, bit-identical), the wrapped
+  skew CDF (about 2.15x, documented ~8e-11 threshold difference), and the
+  wrapped skew quantile (about 1.25x, bit-identical). The model family is
+  complete for the current watch list.
 - Vector trig: a range-reduced degree-8 `cos` polynomial over
   `[0, pi/2]` matches libm to 3.3e-16 and costs 4.8 ns per f64x4 vector
   versus 9.9 ns for vector `@cos`. The directional kernels (`vonMisesVectorFrom`,
