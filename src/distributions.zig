@@ -3368,7 +3368,14 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     // bracket (the old expansion loops could never run).
     var lo: f64 = -40;
     var hi: f64 = 40;
-    var z: f64 = @min(@max(probit(p_f), lo), hi);
+    // The skew-normal has mean `delta*sqrt(2/pi)` and standard deviation
+    // `sqrt(1 - 2*delta^2/pi)` with `delta = alpha/sqrt(1 + alpha^2)`; the
+    // shifted/scaled normal quantile is a far better start than the plain
+    // probit, whose median error is 0.5 radians at alpha = 1.
+    const delta = shape_f / @sqrt(1 + shape_f * shape_f);
+    const start_mean = delta * @sqrt(@as(f64, 2) / std.math.pi);
+    const start_sd = @sqrt(@max(@as(f64, 0), 1 - 2 * delta * delta / std.math.pi));
+    var z: f64 = @min(@max(start_mean + start_sd * probit(p_f), lo), hi);
     const tol: f64 = 1e-12;
     const max_iters: usize = 40;
     // The 20-point rule is accurate to ~6e-13 for |alpha| <= 2; wider
@@ -14532,8 +14539,14 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     // The wrapped-normal start is far cheaper than a full skew-normal
     // quantile solve; one Newton step on the standardized skew-normal CDF
     // sharpens it for the same asymptotic cost.
+    // Same shifted/scaled normal start as the plain skew-normal quantile:
+    // the skew-normal mean and standard deviation follow from
+    // `delta = alpha/sqrt(1 + alpha^2)`.
+    const skew_delta = alpha_f / @sqrt(1 + alpha_f * alpha_f);
+    const start_mean = skew_delta * @sqrt(@as(f64, 2) / std.math.pi);
+    const start_sd = @sqrt(@max(@as(f64, 0), 1 - 2 * skew_delta * skew_delta / std.math.pi));
     var guess: f64 = if (sigma_f <= 2)
-        wrapAngleModulo(mu_f + sigma_f * probit(p_f), pi_f, two_pi_f)
+        wrapAngleModulo(mu_f + sigma_f * (start_mean + start_sd * probit(p_f)), pi_f, two_pi_f)
     else
         -pi_f + two_pi_f * p_f;
     if (sigma_f <= 2 and alpha_f != 0) {
