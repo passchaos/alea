@@ -3493,7 +3493,9 @@ fn marcumP1Recurrence(a: f64, b: f64) f64 {
     const half_a2 = 0.5 * a * a;
     const y = 0.5 * b * b;
     const exp_neg_y = @exp(-y);
-    var p_gamma = -std.math.expm1(-y);
+    // `P(1, y) = 1 - e^-y`; reusing the exponential saves a second
+    // transcendental per evaluation.
+    var p_gamma = 1 - exp_neg_y;
     var gamma_pdf = y * exp_neg_y;
     var poisson_weight = @exp(-half_a2);
     var sum = poisson_weight * p_gamma;
@@ -3687,7 +3689,9 @@ fn hoytCdfImpl(comptime PeerType: type, x: PeerType, q_param: PeerType, omega: P
     // `P(k+1, y) = P(k, y) - e^-y·y^k/k!` instead of evaluating a fresh
     // incomplete gamma (and lgamma) per term.
     const exp_neg_y = @exp(-ay);
-    var p_gamma = -std.math.expm1(-ay); // P(1, ay)
+    // `P(1, ay) = 1 - e^-ay`; reusing the exponential saves a second
+    // transcendental per evaluation.
+    var p_gamma = 1 - exp_neg_y; // P(1, ay)
     var pdf_term = exp_neg_y * ay; // e^-y·y^1/1!
     var c: f64 = 1;
     var sum = p_gamma;

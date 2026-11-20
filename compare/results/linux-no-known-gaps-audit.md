@@ -7346,7 +7346,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1814-validate-all-refresh.md`. and
 `compare/results/s4-m1815-inverse-gaussian-hoist.md`. and
 `compare/results/s4-m1816-wrapped-cdf-table.md`. and
-`compare/results/s4-m1817-twenty-point-owen-rule.md`.
+`compare/results/s4-m1817-twenty-point-owen-rule.md`. and
+`compare/results/s4-m1818-expm1-reuse.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7418,5 +7419,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1814-validate-all-refresh.md`. and
 `compare/results/s4-m1815-inverse-gaussian-hoist.md`. and
 `compare/results/s4-m1816-wrapped-cdf-table.md`. and
-`compare/results/s4-m1817-twenty-point-owen-rule.md`.
+`compare/results/s4-m1817-twenty-point-owen-rule.md`. and
+`compare/results/s4-m1818-expm1-reuse.md`.
 
