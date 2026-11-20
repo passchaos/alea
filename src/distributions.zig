@@ -1004,6 +1004,22 @@ fn betaQuantileRecurrence(p: f64, comptime half_a: bool, half2: usize) f64 {
         if (next == y) break;
         y = next;
     }
+    if (p > 0 and (lo == 0 or hi - lo > hi * 1e-6)) {
+        // Tiny quantiles sit below the linear resolution; refine the lower
+        // tail in log space with the same recurrence CDF.
+        var log_lo: f64 = @log(std.math.floatMin(f64));
+        var log_hi: f64 = @log(hi);
+        var it: usize = 0;
+        while (it < 100) : (it += 1) {
+            const mid = (log_lo + log_hi) / 2;
+            const f = if (half_a)
+                betaCdfHalfAWithPdf(@exp(mid), half2).cdf
+            else
+                betaCdfHalfBWithPdf(@exp(mid), half2).cdf;
+            if (f < p) log_lo = mid else log_hi = mid;
+        }
+        return @exp((log_lo + log_hi) / 2);
+    }
     return y;
 }
 
