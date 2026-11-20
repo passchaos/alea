@@ -680,10 +680,10 @@ new concrete hypothesis is available.
   40% Owen T, 28% CDF base, 11% density; further gains need fewer Owen nodes
   (accuracy-limited) or a faster exp (already rejected as slower in this loop).
 - Long-run bar: the same-session statistical bar is a 50M-sample long run
-  (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 25 min).
-  The 1e9 run is the next stricter bar and needs roughly 7-8 hours, so it
-  runs in the background across turns; the S4-M1813 1e9 evidence came from
-  such a long window. Broader platform runners (QEMU, Wine, Wasmtime) stay
+  (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 27 min),
+  recorded in S4-M1859. The 1e9 run is the next stricter bar and needs
+  roughly 7-8 hours, so it runs in the background across turns; the
+  S4-M1813 1e9 evidence came from such a long window. Broader platform runners (QEMU, Wine, Wasmtime) stay
   blocked until that infrastructure is installed. `s4-m4-remaining-gaps.md` summarizes the
 current blocker audit and the requirements for a successful next candidate:
 
