@@ -679,6 +679,16 @@ new concrete hypothesis is available.
   which is why it stays). The wrapped skew quantile's per-eval cost is roughly
   40% Owen T, 28% CDF base, 11% density; further gains need fewer Owen nodes
   (accuracy-limited) or a faster exp (already rejected as slower in this loop).
+- Vector trig: a range-reduced degree-8 `cos` polynomial over
+  `[0, pi/2]` matches libm to 3.3e-16 and costs 4.8 ns per f64x4 vector
+  versus 9.9 ns for vector `@cos`. The directional kernels (`vonMisesVectorFrom`,
+  `vectorVonMisesFisherFrom`, `vectorWatsonFrom`, `vectorBinghamFrom`,
+  `vectorKentFrom`) call vector `cos`/`sin` once per accepted lane and are
+  the slowest vector rows (4.9-6.0M vectors/s). Replacing them is the next
+  candidate for those rows, but it changes every sample's low bits, so it
+  needs versioned stream entries in `reproducibility-matrix.md`; a custom
+  vector `acos` (used by the von Mises acceptance) would be the larger
+  win and the larger accuracy risk.
 - Long-run bar: the same-session statistical bar is a 50M-sample long run
   (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 27 min),
   recorded in S4-M1859. The 1e9 run is the next stricter bar and needs
