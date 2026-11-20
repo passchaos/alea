@@ -2825,6 +2825,17 @@ fn inverseGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerT
         if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
         const d = inverseGaussianPdfF64(x, mean_f, shape_f);
         var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else (lo + hi) / 2;
+        // Halley upgrade with the slope-dominance guard; the inverse-Gaussian
+        // density derivative is `f' · (−3/(2x) − λ(1 − μ²/x²)/(2μ²))`.
+        if (f > 0 and d > 0 and std.math.isFinite(d)) {
+            const pdf_deriv = d * (-1.5 / x - shape_f * (1 - mean_f * mean_f / (x * x)) / (2 * mean_f * mean_f));
+            const quadratic = (f - p_f) * pdf_deriv;
+            const denom = 2 * d * d - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d * d >= @abs(quadratic)) {
+                const candidate = x - 2 * (f - p_f) * d / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
         if (next == x) break;
         x = next;
