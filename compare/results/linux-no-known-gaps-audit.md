@@ -7305,7 +7305,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1773-lognormal-inlined-exp-default.md`. and
 `compare/results/s4-m1774-no-known-gaps-refresh.md`. and
 `compare/results/s4-m1775-vector-beta-free-routing.md`. and
-`compare/results/s4-m1776-1e7-refresh-lognormal-default.md`.
+`compare/results/s4-m1776-1e7-refresh-lognormal-default.md`. and
+`compare/results/s4-m1777-1e9-refresh-lognormal-default.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7336,5 +7337,6 @@ new algorithm; the remaining performance work is Alea-only surface (quantiles,
 vector-directional samplers). Evidence:
 `compare/results/s4-m1774-no-known-gaps-refresh.md`. and
 `compare/results/s4-m1775-vector-beta-free-routing.md`. and
-`compare/results/s4-m1776-1e7-refresh-lognormal-default.md`.
+`compare/results/s4-m1776-1e7-refresh-lognormal-default.md`. and
+`compare/results/s4-m1777-1e9-refresh-lognormal-default.md`.
 
