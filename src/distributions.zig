@@ -3081,6 +3081,15 @@ fn skewNormalCdfZWithGlTable(z: f64, alpha: f64, table: *const OwenTGlTable) f64
     return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
 }
 
+/// `skewNormalUpperTailZ` with the Owen T geometry precomputed for `alpha`.
+fn skewNormalUpperTailZWithGlTable(z: f64, alpha: f64, table: *const OwenTGlTable) f64 {
+    if (z >= 0) {
+        const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
+        return q + 2 * owenTWithGlTable(z, alpha, table);
+    }
+    return 1 - skewNormalCdfZWithGlTable(z, alpha, table);
+}
+
 /// Standardized skew-normal density `2·φ(z)·Φ(αz)`. Used by the
 /// safeguarded-Newton quantile.
 fn skewNormalPdfZ(z: f64, alpha: f64) f64 {
@@ -14020,6 +14029,8 @@ const WrappedSkewNormalCdfCache = struct {
     /// the loops and the term tables.
     k_lo: i32,
     k_hi: i32,
+    use_gl_table: bool,
+    gl_table: OwenTGlTable,
     lower_terms: [max_images]f64 = undefined,
     upper_terms: [max_images]f64 = undefined,
     has_lower: bool = false,
@@ -14034,6 +14045,7 @@ const WrappedSkewNormalCdfCache = struct {
         const hi_f = (6.5 - lower_z0) / stride;
         const k_lo: i32 = @max(-k_max, @as(i32, @intFromFloat(@floor(lo_f))));
         const k_hi: i32 = @min(k_max, @as(i32, @intFromFloat(@ceil(hi_f))));
+        const use_gl_table = alpha != 0 and @abs(alpha) <= 6;
         return .{
             .mu_w = mu_w,
             .sigma = sigma,
@@ -14041,6 +14053,8 @@ const WrappedSkewNormalCdfCache = struct {
             .k_max = k_max,
             .k_lo = k_lo,
             .k_hi = @max(k_hi, k_lo),
+            .use_gl_table = use_gl_table,
+            .gl_table = if (use_gl_table) owenTGlTable(alpha) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined },
         };
     }
 
@@ -14057,7 +14071,11 @@ const WrappedSkewNormalCdfCache = struct {
             var i: usize = @intCast(k + self.k_max);
             while (k <= self.k_hi) : (k += 1) {
                 const shift = @as(f64, @floatFromInt(k)) * two_pi;
-                self.upper_terms[i] = skewNormalUpperTailZ((pi - self.mu_w + shift) / self.sigma, self.alpha);
+                const z_end = (pi - self.mu_w + shift) / self.sigma;
+                self.upper_terms[i] = if (self.use_gl_table)
+                    skewNormalUpperTailZWithGlTable(z_end, self.alpha, &self.gl_table)
+                else
+                    skewNormalUpperTailZ(z_end, self.alpha);
                 i += 1;
             }
             return;
@@ -14070,7 +14088,11 @@ const WrappedSkewNormalCdfCache = struct {
         var i: usize = @intCast(k + self.k_max);
         while (k <= self.k_hi) : (k += 1) {
             const shift = @as(f64, @floatFromInt(k)) * two_pi;
-            self.lower_terms[i] = skewNormalCdfZ((-pi - self.mu_w + shift) / self.sigma, self.alpha);
+            const z_end = (-pi - self.mu_w + shift) / self.sigma;
+            self.lower_terms[i] = if (self.use_gl_table)
+                skewNormalCdfZWithGlTable(z_end, self.alpha, &self.gl_table)
+            else
+                skewNormalCdfZ(z_end, self.alpha);
             i += 1;
         }
     }
@@ -14097,9 +14119,9 @@ const WrappedSkewNormalCdfCache = struct {
         while (k <= self.k_hi) : (k += 1) {
             const shift = @as(f64, @floatFromInt(k)) * two_pi;
             const z = (x - self.mu_w + shift) / self.sigma;
-            // |z| >= 9 leaves < 1e-18 of probability or density; those images
-            // contribute nothing at f64 resolution.
-            if (need_pdf and z < 9 and z > -9) {
+            // |z| >= 6.5 leaves < 4e-11 of density; the far images cannot
+            // move the Halley correction at the quantile's 1e-9 contract.
+            if (need_pdf and z < 6.5 and z > -6.5) {
                 const phi_z = normPdf(z);
                 const az = self.alpha * z;
                 const phi_az = normPdf(az);
@@ -14118,7 +14140,12 @@ const WrappedSkewNormalCdfCache = struct {
                 continue;
             }
             sum += (if (upper)
-                skewNormalUpperTailZ(z, self.alpha)
+                if (self.use_gl_table)
+                    skewNormalUpperTailZWithGlTable(z, self.alpha, &self.gl_table)
+                else
+                    skewNormalUpperTailZ(z, self.alpha)
+            else if (self.use_gl_table)
+                skewNormalCdfZWithGlTable(z, self.alpha, &self.gl_table)
             else
                 skewNormalCdfZ(z, self.alpha)) - (if (upper) self.upper_terms[i] else self.lower_terms[i]);
             i += 1;
