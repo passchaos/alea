@@ -680,6 +680,15 @@ Four-normal unit ball projection | Checked whether four standard normals project
   which is why it stays). The wrapped skew quantile's per-eval cost is roughly
   40% Owen T, 28% CDF base, 11% density; further gains need fewer Owen nodes
   (accuracy-limited) or a faster exp (already rejected as slower in this loop).
+- Reusable CDF/quantile models: the free functions rebuild their per-parameter
+  setup on every call. Measured setup shares: `vonMisesCdf` ~127 ns/call with
+  about 100 ns of `VonMisesCdfCache` build (a cached model would be ~3x for
+  repeated calls), `wrappedSkewNormalCdf` ~200 ns with 60-80 ns of endpoint and
+  geometry terms (~1.5x), and the runtime-shape `skewNormalCdf` ~70 ns with
+  ~28 ns of geometry (~1.6x). A `CachedBinomial`-style model type
+  (`init`/`cdf`/`pdf`/`quantile`) would amortize these; it is a feature/API
+  decision rather than a kernel change, so it is left as the next feature
+  candidate after the current evidence bar.
 - Vector trig: a range-reduced degree-8 `cos` polynomial over
   `[0, pi/2]` matches libm to 3.3e-16 and costs 4.8 ns per f64x4 vector
   versus 9.9 ns for vector `@cos`. The directional kernels (`vonMisesVectorFrom`,
