@@ -2643,6 +2643,28 @@ fn checkLongRun(samples: usize) !void {
         try expectFloatBetween("long vector vmf mean", sum_z / lane_nf, expected - vector_vmf_tol, expected + vector_vmf_tol);
     }
 
+    // SIMD von Mises lane mean resultant cosine.
+    {
+        var engine = alea.FastPrng.init(0x10c9);
+        const rng = alea.Rng.init(&engine);
+        const V = @Vector(4, f64);
+        const kappa: f64 = 5;
+        const mu: f64 = 0.4;
+        const dist = try alea.distributions.VectorVonMises(V).new(mu, kappa);
+        // E[cos(X - mu)] = I1(kappa)/I0(kappa).
+        const expected: f64 = 0.8933831370440853;
+        const vector_count = samples / 4;
+        var sum_cos: f64 = 0;
+        var i: usize = 0;
+        while (i < vector_count) : (i += 1) {
+            const angles = dist.sample(rng);
+            inline for (0..4) |lane| sum_cos += @cos(angles[lane] - mu);
+        }
+        const lane_nf: f64 = @floatFromInt(vector_count * 4);
+        const vector_vm_tol = longMeanTolerance(0.25, samples, 0.003);
+        try expectFloatBetween("long vector von mises mean cos", sum_cos / lane_nf, expected - vector_vm_tol, expected + vector_vm_tol);
+    }
+
     // Scalar Watson bipolar and girdle mean cosine-squared moments.
     {
         var engine = alea.FastPrng.init(0x10d2);
