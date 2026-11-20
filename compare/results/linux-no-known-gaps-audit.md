@@ -7307,7 +7307,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1775-vector-beta-free-routing.md`. and
 `compare/results/s4-m1776-1e7-refresh-lognormal-default.md`. and
 `compare/results/s4-m1777-1e9-refresh-lognormal-default.md`. and
-`compare/results/s4-m1778-facade-f32-normal-fill.md`.
+`compare/results/s4-m1778-facade-f32-normal-fill.md`. and
+`compare/results/s4-m1779-validate-all-refresh.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7340,5 +7341,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1775-vector-beta-free-routing.md`. and
 `compare/results/s4-m1776-1e7-refresh-lognormal-default.md`. and
 `compare/results/s4-m1777-1e9-refresh-lognormal-default.md`. and
-`compare/results/s4-m1778-facade-f32-normal-fill.md`.
+`compare/results/s4-m1778-facade-f32-normal-fill.md`. and
+`compare/results/s4-m1779-validate-all-refresh.md`.
 
