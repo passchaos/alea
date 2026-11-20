@@ -7320,7 +7320,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1788-skew-quantile-bracket.md`. and
 `compare/results/s4-m1789-wrapped-skew-start-step.md`. and
 `compare/results/s4-m1790-half-integer-beta.md`. and
-`compare/results/s4-m1791-halley-beta-gamma-quantiles.md`.
+`compare/results/s4-m1791-halley-beta-gamma-quantiles.md`. and
+`compare/results/s4-m1792-vector-von-mises-squeeze.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7366,5 +7367,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1788-skew-quantile-bracket.md`. and
 `compare/results/s4-m1789-wrapped-skew-start-step.md`. and
 `compare/results/s4-m1790-half-integer-beta.md`. and
-`compare/results/s4-m1791-halley-beta-gamma-quantiles.md`.
+`compare/results/s4-m1791-halley-beta-gamma-quantiles.md`. and
+`compare/results/s4-m1792-vector-von-mises-squeeze.md`.
 
