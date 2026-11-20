@@ -14321,7 +14321,9 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
     // The endpoint and point terms share one shape, so the Owen T
     // Gauss-Legendre geometry is built once per call when the shape reaches
     // the fixed rule.
-    const use_gl_table = alpha != 0 and @abs(alpha) <= 6;
+    const use_gl20 = alpha != 0 and @abs(alpha) <= 2;
+    const use_gl_table = alpha != 0 and @abs(alpha) <= 6 and !use_gl20;
+    const gl20 = if (use_gl20) owenTGlTable20(alpha) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined };
     const gl_table = if (use_gl_table) owenTGlTable(alpha) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     var sum: f64 = 0;
     var k: i32 = -k_max;
@@ -14343,6 +14345,8 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
                 0
             else if (z_end <= -9)
                 1
+            else if (use_gl20)
+                skewNormalUpperTailZWithGlTable20(z_end, alpha, &gl20)
             else if (use_gl_table)
                 skewNormalUpperTailZWithGlTable(z_end, alpha, &gl_table)
             else
@@ -14351,12 +14355,16 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
             1
         else if (z_end <= -9)
             0
+        else if (use_gl20)
+            skewNormalCdfZWithGlTable20(z_end, alpha, &gl20)
         else if (use_gl_table)
             skewNormalCdfZWithGlTable(z_end, alpha, &gl_table)
         else
             skewNormalCdfZ(z_end, alpha);
         sum += (if (upper)
-            if (use_gl_table) skewNormalUpperTailZWithGlTable(z, alpha, &gl_table) else skewNormalUpperTailZ(z, alpha)
+            if (use_gl20) skewNormalUpperTailZWithGlTable20(z, alpha, &gl20) else if (use_gl_table) skewNormalUpperTailZWithGlTable(z, alpha, &gl_table) else skewNormalUpperTailZ(z, alpha)
+        else if (use_gl20)
+            skewNormalCdfZWithGlTable20(z, alpha, &gl20)
         else if (use_gl_table)
             skewNormalCdfZWithGlTable(z, alpha, &gl_table)
         else
