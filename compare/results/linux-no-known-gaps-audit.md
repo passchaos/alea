@@ -7326,7 +7326,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1794-wrapped-normal-halley.md`. and
 `compare/results/s4-m1795-ex-gaussian-halley.md`. and
 `compare/results/s4-m1796-wrapped-skew-image-range.md`. and
-`compare/results/s4-m1797-halley-dominance-guard.md`.
+`compare/results/s4-m1797-halley-dominance-guard.md`. and
+`compare/results/s4-m1798-owen-t-geometry-table.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7378,5 +7379,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1794-wrapped-normal-halley.md`. and
 `compare/results/s4-m1795-ex-gaussian-halley.md`. and
 `compare/results/s4-m1796-wrapped-skew-image-range.md`. and
-`compare/results/s4-m1797-halley-dominance-guard.md`.
+`compare/results/s4-m1797-halley-dominance-guard.md`. and
+`compare/results/s4-m1798-owen-t-geometry-table.md`.
 

@@ -2895,6 +2895,54 @@ fn owenTGaussLegendre(h2: f64, b: f64) f64 {
     return 0.5 * b * sum;
 }
 
+/// Precomputed Gauss-Legendre geometry for one fixed shape `a`: the 24 node
+/// angles depend only on `b = atan(|a|)`, so repeated `T(h, a)` evaluations
+/// with a fixed shape (the skew-normal quantile's Halley loop) can skip the
+/// per-node `cos` calls.
+const OwenTGlTable = struct {
+    b: f64,
+    inv_cos2: [24]f64,
+};
+
+fn owenTGlTable(a: f64) OwenTGlTable {
+    var table: OwenTGlTable = undefined;
+    table.b = std.math.atan(@abs(a));
+    inline for (0..12) |i| {
+        const lo = 0.5 * table.b * (1 - owen_gl_nodes[i]);
+        const hi = 0.5 * table.b * (1 + owen_gl_nodes[i]);
+        const cos_lo = @cos(lo);
+        const cos_hi = @cos(hi);
+        table.inv_cos2[2 * i] = 1 / (cos_lo * cos_lo);
+        table.inv_cos2[2 * i + 1] = 1 / (cos_hi * cos_hi);
+    }
+    return table;
+}
+
+fn owenTGlTableEval(h2: f64, table: *const OwenTGlTable) f64 {
+    var sum: f64 = 0;
+    inline for (0..12) |i| {
+        const w = owen_gl_weights[i];
+        sum += w * (@exp(-h2 * table.inv_cos2[2 * i]) + @exp(-h2 * table.inv_cos2[2 * i + 1]));
+    }
+    return 0.5 * table.b * sum;
+}
+
+/// `owenT` with the Gauss-Legendre geometry served from a table built for
+/// this shape; every other branch matches `owenT`.
+fn owenTWithGlTable(h: f64, a: f64, table: *const OwenTGlTable) f64 {
+    if (a == 0 or std.math.isNan(h)) return 0;
+    const sign: f64 = if (a < 0) -1 else 1;
+    if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
+    if (@abs(a) <= 6 and @abs(h) <= 6) {
+        if (@abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
+            return sign * owenTFarTail(@abs(h), @abs(a));
+        }
+        return sign * owenTGlTableEval(0.5 * h * h, table) / (2 * std.math.pi);
+    }
+    if (@abs(h) * @abs(a) >= 6) return sign * owenTFarTail(@abs(h), @abs(a));
+    return owenTSlow(h, a);
+}
+
 /// Owen's T function `T(h, a)`. The smooth central range uses the fixed
 /// Gauss-Legendre rule; larger `|h|` or `|a|` keeps the adaptive Simpson
 /// path. `T(h, ±∞)` uses the closed form `±½(1 − Φ(|h|))`.
@@ -3024,6 +3072,15 @@ fn skewNormalCdfZ(z: f64, alpha: f64) f64 {
     return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
 }
 
+/// `skewNormalCdfZ` with the Owen T geometry precomputed for `alpha`.
+fn skewNormalCdfZWithGlTable(z: f64, alpha: f64, table: *const OwenTGlTable) f64 {
+    const cdf = if (z < 0 and alpha > 0 and alpha * -z >= 3.5)
+        skewNormalLowerTailAsym(-z, alpha)
+    else
+        normCdf(z) - 2 * owenTWithGlTable(z, alpha, table);
+    return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
+}
+
 /// Standardized skew-normal density `2·φ(z)·Φ(αz)`. Used by the
 /// safeguarded-Newton quantile.
 fn skewNormalPdfZ(z: f64, alpha: f64) f64 {
@@ -3095,8 +3152,13 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     var z: f64 = @min(@max(probit(p_f), lo), hi);
     const tol: f64 = 1e-12;
     const max_iters: usize = 40;
+    const use_gl_table = @abs(shape_f) <= 6 and shape_f != 0;
+    const gl_table = if (use_gl_table) owenTGlTable(shape_f) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     for (0..max_iters) |_| {
-        const f = skewNormalCdfZ(z, shape_f);
+        const f = if (use_gl_table)
+            skewNormalCdfZWithGlTable(z, shape_f, &gl_table)
+        else
+            skewNormalCdfZ(z, shape_f);
         const f_err = f - p_f;
         if (f < p_f) lo = z else hi = z;
         if (f_err == 0 or hi - lo <= tol) break;
