@@ -992,8 +992,11 @@ fn betaQuantileRecurrence(p: f64, comptime half_a: bool, half2: usize) f64 {
             // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic; the
             // beta density derivative is `f' · ((a−1)/y − (b−1)/(1−y))`.
             const pdf_deriv = evaluated.pdf * (((a - 1) / y) - ((b - 1) / (1 - y)));
-            const denom = 2 * evaluated.pdf * evaluated.pdf - f_err * pdf_deriv;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = f_err * pdf_deriv;
+            const denom = 2 * evaluated.pdf * evaluated.pdf - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and
+                2 * evaluated.pdf * evaluated.pdf >= @abs(quadratic))
+            {
                 const candidate = y - 2 * f_err * evaluated.pdf / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
@@ -1062,8 +1065,11 @@ fn betaQuantileIntegerB(p: f64, a: f64, b: usize) ?f64 {
         var next: f64 = (lo + hi) / 2;
         if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf)) {
             const pdf_deriv = evaluated.pdf * (((a - 1) / y) - ((bf - 1) / (1 - y)));
-            const denom = 2 * evaluated.pdf * evaluated.pdf - f_err * pdf_deriv;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = f_err * pdf_deriv;
+            const denom = 2 * evaluated.pdf * evaluated.pdf - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and
+                2 * evaluated.pdf * evaluated.pdf >= @abs(quadratic))
+            {
                 const candidate = y - 2 * f_err * evaluated.pdf / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
@@ -1355,8 +1361,9 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         // CDF underflows, where the local quadratic model has no meaning.
         if (f > 0 and d > 0 and std.math.isFinite(d)) {
             const pdf_deriv = d * ((shape - 1) / x - 1 / scale);
-            const denom = 2 * d * d - (f - p) * pdf_deriv;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = (f - p) * pdf_deriv;
+            const denom = 2 * d * d - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d * d >= @abs(quadratic)) {
                 const candidate = x - 2 * (f - p) * d / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
@@ -2715,8 +2722,9 @@ fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, si
         var next: f64 = if (d > 0 and std.math.isFinite(d)) x - f_err / d else (lo + hi) / 2;
         // Halley upgrade; skipped where the CDF underflows.
         if (f > 0 and d > 0 and std.math.isFinite(d)) {
-            const denom = 2 * d * d - f_err * evaluated.pdf_deriv;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = f_err * evaluated.pdf_deriv;
+            const denom = 2 * d * d - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d * d >= @abs(quadratic)) {
                 const candidate = x - 2 * f_err * d / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
@@ -3097,16 +3105,21 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
         // The correction is `|f-p| / d`; below the x tolerance the quantile
         // already meets its accuracy contract.
         if (d > 0 and @abs(f_err) <= d * tol) break;
-        var next: f64 = 0.5 * (lo + hi);
+        var next: f64 = if (d > 0) z - f_err / d else 0.5 * (lo + hi);
         if (d > 0) {
             // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic near
-            // the root; the density derivative shares its normal terms.
-            const denom = 2 * d * d - f_err * pdf_pair[1];
-            if (denom > 0 and std.math.isFinite(denom)) {
+            // the root; the density derivative shares its normal terms. The
+            // quadratic term must not dominate the slope term: in the far
+            // tail both vanish and the raw Halley step stalls at a tiny
+            // fraction of the bracket, so Newton (or bisection) takes over.
+            const quadratic = f_err * pdf_pair[1];
+            const denom = 2 * d * d - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d * d >= @abs(quadratic)) {
                 const candidate = z - 2 * f_err * d / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
         }
+        if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == z) break;
         z = next;
     }
@@ -12401,8 +12414,9 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
         // underflows, where the quadratic model has no meaning.
         if (f > 0 and density > 0 and std.math.isFinite(density)) {
             const pdf_deriv = -kappa * @sin(d) * density;
-            const denom = 2 * density * density - f_err * pdf_deriv;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = f_err * pdf_deriv;
+            const denom = 2 * density * density - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * density * density >= @abs(quadratic)) {
                 const candidate = d - 2 * f_err * density / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
@@ -13571,8 +13585,9 @@ fn wrappedNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType,
         // Halley upgrade; the wrapped normal density derivative is
         // `Σ −z·φ(z)/σ²`, accumulated in the same image loop.
         if (f > 0 and d > 0 and std.math.isFinite(d)) {
-            const denom = 2 * d * d - f_err * evaluated.pdf_deriv;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = f_err * evaluated.pdf_deriv;
+            const denom = 2 * d * d - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d * d >= @abs(quadratic)) {
                 const candidate = x - 2 * f_err * d / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
@@ -14123,8 +14138,9 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
             // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic once
             // the bracket is tight; the density derivative comes from the
             // same image loop, so it costs only a few extra flops.
-            const denom = 2 * d * d - f_err * dd;
-            if (denom > 0 and std.math.isFinite(denom)) {
+            const quadratic = f_err * dd;
+            const denom = 2 * d * d - quadratic;
+            if (denom > 0 and std.math.isFinite(denom) and 2 * d * d >= @abs(quadratic)) {
                 const candidate = x - 2 * f_err * d / denom;
                 if (candidate >= lo and candidate <= hi) next = candidate;
             }
