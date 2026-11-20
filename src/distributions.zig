@@ -13417,6 +13417,7 @@ fn WrappedNormalCdfCache(comptime T: type) type {
         const Eval = struct {
             cdf: T,
             pdf: T,
+            pdf_deriv: T,
         };
 
         fn eval(self: *Self, x: T, comptime need_pdf: bool) Eval {
@@ -13425,13 +13426,18 @@ fn WrappedNormalCdfCache(comptime T: type) type {
             const two_pi: T = 2 * pi;
             var sum: T = 0;
             var pdf_sum: T = 0;
+            var pdf_deriv_sum: T = 0;
             var k: i32 = -self.k_max;
             var i: usize = 0;
             while (k <= self.k_max) : (k += 1) {
                 const shift: T = @as(T, @floatFromInt(k)) * two_pi;
                 const z = (x - self.mu_w + shift) / self.sigma;
                 // |z| >= 9 leaves < 1e-18 of probability or density.
-                if (need_pdf and z < 9 and z > -9) pdf_sum += normPdf(z);
+                if (need_pdf and z < 9 and z > -9) {
+                    const phi = normPdf(z);
+                    pdf_sum += phi;
+                    pdf_deriv_sum -= z * phi;
+                }
                 const z_end = (-pi - self.mu_w + shift) / self.sigma;
                 // Both terms saturate in the same tail: the per-image
                 // difference is zero at this precision.
@@ -13445,6 +13451,7 @@ fn WrappedNormalCdfCache(comptime T: type) type {
             return .{
                 .cdf = @min(@as(T, 1), @max(@as(T, 0), sum)),
                 .pdf = if (need_pdf) pdf_sum / self.sigma else 0,
+                .pdf_deriv = if (need_pdf) pdf_deriv_sum / (self.sigma * self.sigma) else 0,
             };
         }
 
@@ -13513,6 +13520,15 @@ fn wrappedNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType,
         // quantile already meets its accuracy contract.
         if (d > 0 and @abs(f_err) <= d * tol) break;
         var next: T = if (d > 0) x - f_err / d else 0.5 * (lo + hi);
+        // Halley upgrade; the wrapped normal density derivative is
+        // `Σ −z·φ(z)/σ²`, accumulated in the same image loop.
+        if (f > 0 and d > 0 and std.math.isFinite(d)) {
+            const denom = 2 * d * d - f_err * evaluated.pdf_deriv;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = x - 2 * f_err * d / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == x) break;
         x = next;
