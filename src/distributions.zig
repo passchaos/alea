@@ -3093,94 +3093,12 @@ fn owenTGlTableEval(h2: f64, table: *const OwenTGlTable) f64 {
     return 0.5 * table.b * sum;
 }
 
-// 20-point Gauss-Legendre nodes/weights (positive half), used by the
-// quantile path for moderate shapes where a 2.6e-11 rule error is far
-// inside the 1e-9 contract.
-const owen_gl20_nodes = [10]f64{
-    0.9931285991850949, 0.9639719272779138, 0.9122344282513259,
-    0.8391169718222188, 0.7463319064601508, 0.6360536807265150,
-    0.5108670019508271, 0.3737060887154196, 0.2277858511416451,
-    0.0765265211334973,
-};
-const owen_gl20_weights = [10]f64{
-    0.0176140071391521, 0.0406014298003869, 0.0626720483341091,
-    0.0832767415767048, 0.1019301198172404, 0.1181945319615184,
-    0.1316886384491766, 0.1420961093183821, 0.1491729864726037,
-    0.1527533871307258,
-};
-
-const OwenTGlTable20 = struct {
-    b: f64,
-    inv_cos2: [20]f64,
-};
-
-fn owenTGlTable20(a: f64) OwenTGlTable20 {
-    var table: OwenTGlTable20 = undefined;
-    table.b = std.math.atan(@abs(a));
-    inline for (0..10) |i| {
-        const lo = 0.5 * table.b * (1 - owen_gl20_nodes[i]);
-        const hi = 0.5 * table.b * (1 + owen_gl20_nodes[i]);
-        const cos_lo = @cos(lo);
-        const cos_hi = @cos(hi);
-        table.inv_cos2[2 * i] = 1 / (cos_lo * cos_lo);
-        table.inv_cos2[2 * i + 1] = 1 / (cos_hi * cos_hi);
-    }
-    return table;
-}
-
-fn owenTGlTableEval20(h2: f64, table: *const OwenTGlTable20) f64 {
-    var sum: f64 = 0;
-    inline for (0..10) |i| {
-        const w = owen_gl20_weights[i];
-        sum += w * (@exp(-h2 * table.inv_cos2[2 * i]) + @exp(-h2 * table.inv_cos2[2 * i + 1]));
-    }
-    return 0.5 * table.b * sum;
-}
-
-fn owenTWithGlTable20(h: f64, a: f64, table: *const OwenTGlTable20) f64 {
-    if (a == 0 or std.math.isNan(h)) return 0;
-    const sign: f64 = if (a < 0) -1 else 1;
-    if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
-    if (@abs(a) <= 6 and @abs(h) <= 6) {
-        if (@abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
-            return sign * owenTFarTail(@abs(h), @abs(a));
-        }
-        return sign * owenTGlTableEval20(0.5 * h * h, table) / (2 * std.math.pi);
-    }
-    if (@abs(h) * @abs(a) >= 6) return sign * owenTFarTail(@abs(h), @abs(a));
-    return owenTSlow(h, a);
-}
-
-/// `skewNormalCdfZ` with the 20-point geometry table for the quantile path.
-fn skewNormalCdfZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTable20) f64 {
-    const cdf = if (z < 0 and alpha > 0 and alpha * -z >= 3.5)
-        skewNormalLowerTailAsym(-z, alpha)
-    else
-        normCdf(z) - 2 * owenTWithGlTable20(z, alpha, table);
-    return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
-}
-
-/// `skewNormalUpperTailZ` with the 20-point geometry table.
-fn skewNormalUpperTailZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTable20) f64 {
-    if (z >= 0) {
-        const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
-        return q + 2 * owenTWithGlTable20(z, alpha, table);
-    }
-    // See `skewNormalUpperTailZ`: the asymptotic lower tail is below an ulp of
-    // 1 here, so the upper tail is exactly 1.
-    if (alpha > 0 and alpha * -z >= 3.5) {
-        const x = 0.5 * (1 + alpha * alpha) * z * z;
-        if (x > 36) return 1;
-    }
-    return 1 - skewNormalCdfZWithGlTable20(z, alpha, table);
-}
-
-// 12-point Gauss-Legendre nodes/weights (positive half). The quantile paths
-// use this rule for moderate shapes: a grid audit over `|a| <= 2`,
-// `|h| <= 6.5` against the 24-point rule gives a worst `T` error of 1.55e-12
-// (the 10-point rule reaches 8.2e-11 there), far inside the 1e-9 quantile
-// contract while cutting the per-image exponential count by 40% versus the
-// 20-point rule. The public CDFs keep the 20-point rule.
+// 12-point Gauss-Legendre nodes/weights (positive half). The CDF and
+// quantile paths use this rule for moderate shapes: a grid audit over
+// `|a| <= 2`, `|h| <= 6.5` against the 24-point rule gives a worst `T` error
+// of 1.55e-12 (the 10-point rule reaches 8.2e-11 there), five orders below
+// the CDF's own Abramowitz-Stegun floor (about 1e-7) and far inside the
+// 1e-9 quantile round-trip contract. Wider shapes keep the 24-point rule.
 const owen_gl12_nodes = [6]f64{
     0.1252334085114689, 0.3678314989981802, 0.5873179542866175,
     0.7699026741943047, 0.9041172563704749, 0.9815606342467192,
@@ -3467,12 +3385,13 @@ fn skewNormalCdfImpl(comptime PeerType: type, x: PeerType, location: PeerType, s
     if (x_f == std.math.inf(f64)) return 1;
     if (x_f == -std.math.inf(f64)) return 0;
     const z = (x_f - location_f) / scale_f;
-    // The 20-point Owen rule is accurate to about 6e-13 for |alpha| <= 2 —
-    // far below the CDF's own Abramowitz-Stegun floor (about 1e-7) — and it
-    // trims four nodes from the per-call geometry build and quadrature.
+    // The 12-point Owen rule is accurate to about 1.6e-12 for |alpha| <= 2 —
+    // five orders below the CDF's own Abramowitz-Stegun floor (about 1e-7) —
+    // and it matches the quantile paths' rule, so CDF/quantile round trips no
+    // longer mix two rules.
     if (shape_f != 0 and @abs(shape_f) <= 2) {
-        const table = owenTGlTable20(shape_f);
-        return @floatCast(skewNormalCdfZWithGlTable20(z, shape_f, &table));
+        const table = owenTGlTable12(shape_f);
+        return @floatCast(skewNormalCdfZWithGlTable12(z, shape_f, &table));
     }
     return @floatCast(skewNormalCdfZ(z, shape_f));
 }
@@ -3515,8 +3434,8 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     const max_iters: usize = 40;
     // The 12-point rule is accurate to ~1.6e-12 for |alpha| <= 2 (audited
     // against the 24-point rule), far inside the quantile's 1e-9 round-trip
-    // contract and cheaper than the 20-point public-CDF rule; wider shapes
-    // keep the 24-point rule.
+    // contract and the same rule the public CDF uses; wider shapes keep the
+    // 24-point rule.
     const use_gl12 = shape_f != 0 and @abs(shape_f) <= 2;
     const use_gl24 = shape_f != 0 and @abs(shape_f) <= 6 and !use_gl12;
     // The fixed rules carry a small absolute CDF error (about 1.6e-12 for the
@@ -14435,10 +14354,11 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
     const endpoint: f64 = if (upper) pi else -pi;
     // The endpoint and point terms share one shape, so the Owen T
     // Gauss-Legendre geometry is built once per call when the shape reaches
-    // the fixed rule.
-    const use_gl20 = alpha != 0 and @abs(alpha) <= 2;
-    const use_gl_table = alpha != 0 and @abs(alpha) <= 6 and !use_gl20;
-    const gl20 = if (use_gl20) owenTGlTable20(alpha) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined };
+    // the fixed rule. The 12-point rule is accurate to about 1.6e-12 for
+    // |alpha| <= 2, five orders below the CDF's own A&S floor.
+    const use_gl12 = alpha != 0 and @abs(alpha) <= 2;
+    const use_gl_table = alpha != 0 and @abs(alpha) <= 6 and !use_gl12;
+    const gl12 = if (use_gl12) owenTGlTable12(alpha) else OwenTGlTable12{ .b = 0, .inv_cos2 = undefined };
     const gl_table = if (use_gl_table) owenTGlTable(alpha) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     var sum: f64 = 0;
     var k: i32 = -k_max;
@@ -14460,8 +14380,8 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
                 0
             else if (z_end <= -9)
                 1
-            else if (use_gl20)
-                skewNormalUpperTailZWithGlTable20(z_end, alpha, &gl20)
+            else if (use_gl12)
+                skewNormalUpperTailZWithGlTable12(z_end, alpha, &gl12)
             else if (use_gl_table)
                 skewNormalUpperTailZWithGlTable(z_end, alpha, &gl_table)
             else
@@ -14470,16 +14390,16 @@ fn wrappedSkewNormalCdfF64(x: f64, mu_w: f64, sigma: f64, alpha: f64) f64 {
             1
         else if (z_end <= -9)
             0
-        else if (use_gl20)
-            skewNormalCdfZWithGlTable20(z_end, alpha, &gl20)
+        else if (use_gl12)
+            skewNormalCdfZWithGlTable12(z_end, alpha, &gl12)
         else if (use_gl_table)
             skewNormalCdfZWithGlTable(z_end, alpha, &gl_table)
         else
             skewNormalCdfZ(z_end, alpha);
         sum += (if (upper)
-            if (use_gl20) skewNormalUpperTailZWithGlTable20(z, alpha, &gl20) else if (use_gl_table) skewNormalUpperTailZWithGlTable(z, alpha, &gl_table) else skewNormalUpperTailZ(z, alpha)
-        else if (use_gl20)
-            skewNormalCdfZWithGlTable20(z, alpha, &gl20)
+            if (use_gl12) skewNormalUpperTailZWithGlTable12(z, alpha, &gl12) else if (use_gl_table) skewNormalUpperTailZWithGlTable(z, alpha, &gl_table) else skewNormalUpperTailZ(z, alpha)
+        else if (use_gl12)
+            skewNormalCdfZWithGlTable12(z, alpha, &gl12)
         else if (use_gl_table)
             skewNormalCdfZWithGlTable(z, alpha, &gl_table)
         else
