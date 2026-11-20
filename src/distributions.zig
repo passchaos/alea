@@ -2816,8 +2816,14 @@ fn inverseGaussianCdfImpl(comptime PeerType: type, x: PeerType, mean: PeerType, 
     const z1 = sqrt_term * (x_f / mean_f - 1);
     const z2 = -sqrt_term * (x_f / mean_f + 1);
     var term: f64 = 0;
-    const log_term = 2 * shape_f / mean_f + normLogCdf(z2);
-    if (!std.math.isNan(log_term)) term = @exp(log_term);
+    const exponent = 2 * shape_f / mean_f;
+    if (exponent < 700 and z2 > -10) {
+        // Direct form skips the log; Φ(z2) is accurate there.
+        term = @exp(exponent) * normCdf(z2);
+    } else {
+        const log_term = exponent + normLogCdf(z2);
+        if (!std.math.isNan(log_term)) term = @exp(log_term);
+    }
     const cdf = normCdf(z1) + term;
     return @floatCast(@min(@as(f64, 1), @max(@as(f64, 0), cdf)));
 }
@@ -2828,6 +2834,25 @@ pub fn inverseGaussianQuantile(p: anytype, mean: anytype, shape: anytype) resolv
     return inverseGaussianQuantileImpl(resolvedFloatType(@TypeOf(p, mean, shape)), p, mean, shape);
 }
 /// Inverse-Gaussian density used by the safeguarded-Newton quantile.
+/// Inverse-Gaussian CDF with the `exp(2·λ/μ)` constant hoisted out of a
+/// quantile's iteration loop; the direct form is used when it is
+/// representable and the lower-tail argument is not deep in the log range.
+fn inverseGaussianCdfWithExp(x: f64, mean: f64, shape: f64, exp_const: f64) f64 {
+    if (x <= 0) return 0;
+    if (x == std.math.inf(f64)) return 1;
+    const sqrt_term = @sqrt(shape / x);
+    const z1 = sqrt_term * (x / mean - 1);
+    const z2 = -sqrt_term * (x / mean + 1);
+    var term: f64 = 0;
+    if (std.math.isFinite(exp_const) and z2 > -10) {
+        term = exp_const * normCdf(z2);
+    } else {
+        const log_term = 2 * shape / mean + normLogCdf(z2);
+        if (!std.math.isNan(log_term)) term = @exp(log_term);
+    }
+    return @min(@as(f64, 1), @max(@as(f64, 0), normCdf(z1) + term));
+}
+
 fn inverseGaussianPdfF64(x: f64, mean: f64, shape: f64) f64 {
     if (x <= 0) return 0;
     const mean2 = mean * mean;
@@ -2862,8 +2887,9 @@ fn inverseGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerT
     const sd = @sqrt(mean_f * mean_f * mean_f / shape_f);
     var x: f64 = @min(@max(mean_f + sd * probit(p_f), lo), hi);
     const max_iters: usize = 60;
+    const exp_const = @exp(2 * shape_f / mean_f);
     for (0..max_iters) |_| {
-        const f = inverseGaussianCdf(x, mean_f, shape_f);
+        const f = inverseGaussianCdfWithExp(x, mean_f, shape_f, exp_const);
         if (f < p_f) lo = x else hi = x;
         if (f == p_f) return @floatCast(x);
         if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
