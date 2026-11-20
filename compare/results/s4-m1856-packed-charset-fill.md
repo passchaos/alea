@@ -37,6 +37,24 @@ against the old loop measured 715.8M -> 1023.6M (about 1.43x) in the same
 window. With local Rust at about 1028M in the no-known-gaps window, the row
 moves from 1.02x to roughly 1.2-1.4x.
 
+## Local Rust Comparison
+
+Six interleaved pairs against the local Rust harness
+(`alea-rand-compare 16777216 alphanumeric`) in the same busy window:
+
+| Pair | Rust (M samples/s) | Alea (M chars/s) | Ratio |
+| --- | --- | --- | --- |
+| 1 | 760.7 | 1245.0 | 1.64x |
+| 2 | 758.6 | 1001.5 | 1.32x |
+| 3 | 757.3 | 1006.0 | 1.33x |
+| 4 | 671.5 | 1178.4 | 1.75x |
+| 5 | 742.5 | 1180.3 | 1.59x |
+| 6 | 733.1 | 866.2 | 1.18x |
+
+Every pair favors Alea, with a median ratio of about 1.46x. The absolute
+values are window-dependent (the host was loaded by the concurrent long
+run), so only the ratios should be compared.
+
 ## Statistical Quality
 
 Each `width`-bit chunk is uniform over `[0, 2^width)` when the engine word
