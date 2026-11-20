@@ -14568,7 +14568,11 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
         wrapAngleModulo(mu_f + sigma_f * (start_mean + start_sd * probit(p_f)), pi_f, two_pi_f)
     else
         -pi_f + two_pi_f * p_f;
-    if (sigma_f <= 2 and alpha_f != 0) {
+    // The pre-step refines the seed against the *unwrapped* skew-normal CDF,
+    // so it only pays off where the wrap mass is negligible: at
+    // `sigma = 0.75` the mass beyond the cut is about 3e-5, and above that
+    // the step no longer saves an iteration.
+    if (sigma_f <= 0.75 and alpha_f != 0) {
         const z_s = (guess - mu_f) / sigma_f;
         // The start only needs a rough CDF; reuse the cache's geometry table
         // instead of rebuilding the generic Owen T quadrature per call.
