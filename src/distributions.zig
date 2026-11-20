@@ -12552,7 +12552,7 @@ const VonMisesCdfCache = struct {
         // still inside the quantile's 1e-12 target.
         const k_band = kf + 6 * @sqrt(kf);
         const k_total: usize = @intFromFloat(@ceil(k_band + 12));
-        const k_sum: usize = @intFromFloat(@ceil(@min(kf + 4.5 * @sqrt(kf) + 8, 8.5 * @sqrt(kf) + 40)));
+        const k_sum: usize = @intFromFloat(@ceil(@min(kf + 4.5 * @sqrt(kf) + 4, 8.5 * @sqrt(kf) + 36)));
         if (k_sum > max_terms) return null;
 
         var raw: [max_terms + 1]f64 = undefined;
