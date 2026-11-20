@@ -3070,16 +3070,47 @@ const OwenTGlTable = struct {
     inv_cos2: [24]f64,
 };
 
+// `cos(theta)` for `theta in [0, atan(6)]` from `z = theta^2` via a
+// degree-7 minimax polynomial in `t = z / 0.98792265710413907 - 1` (worst
+// absolute error 5.6e-16 over the full Owen angle range). The 24 libm
+// `@cos` calls in the geometry build cost about 3.3 ns each, so the
+// polynomial (evaluated four angles at a time) removes most of the
+// runtime-parameter setup cost; constant shapes still fold at comptime.
+const owen_cos_coeffs = [8]f64{
+    5.45389166096772571e-01,
+    -4.16553031531362805e-01,
+    3.67879686170836731e-02,
+    -1.24722690290237194e-03,
+    2.23570703953805101e-05,
+    -2.47902862712639095e-07,
+    1.86842657029518245e-09,
+    -1.01934926841600769e-11,
+};
+const owen_cos_inv_half = 1.0 / 0.98792265710413907;
+
+inline fn owenCosVecFromTheta2(z: @Vector(4, f64)) @Vector(4, f64) {
+    const t = z * @as(@Vector(4, f64), @splat(owen_cos_inv_half)) - @as(@Vector(4, f64), @splat(1.0));
+    var v: @Vector(4, f64) = @splat(owen_cos_coeffs[7]);
+    inline for (0..7) |i| v = v * t + @as(@Vector(4, f64), @splat(owen_cos_coeffs[6 - i]));
+    return v;
+}
+
 fn owenTGlTable(a: f64) OwenTGlTable {
     var table: OwenTGlTable = undefined;
     table.b = std.math.atan(@abs(a));
-    inline for (0..12) |i| {
-        const lo = 0.5 * table.b * (1 - owen_gl_nodes[i]);
-        const hi = 0.5 * table.b * (1 + owen_gl_nodes[i]);
-        const cos_lo = @cos(lo);
-        const cos_hi = @cos(hi);
-        table.inv_cos2[2 * i] = 1 / (cos_lo * cos_lo);
-        table.inv_cos2[2 * i + 1] = 1 / (cos_hi * cos_hi);
+    const half_b = 0.5 * table.b;
+    inline for (0..6) |g| {
+        const x0 = owen_gl_nodes[2 * g];
+        const x1 = owen_gl_nodes[2 * g + 1];
+        const thetas = @Vector(4, f64){
+            half_b * (1 - x0),
+            half_b * (1 + x0),
+            half_b * (1 - x1),
+            half_b * (1 + x1),
+        };
+        const cos_v = owenCosVecFromTheta2(thetas * thetas);
+        const inv = @as(@Vector(4, f64), @splat(1.0)) / (cos_v * cos_v);
+        inline for (0..4) |lane| table.inv_cos2[4 * g + lane] = inv[lane];
     }
     return table;
 }
@@ -3116,13 +3147,19 @@ const OwenTGlTable12 = struct {
 fn owenTGlTable12(a: f64) OwenTGlTable12 {
     var table: OwenTGlTable12 = undefined;
     table.b = std.math.atan(@abs(a));
-    inline for (0..6) |i| {
-        const lo = 0.5 * table.b * (1 - owen_gl12_nodes[i]);
-        const hi = 0.5 * table.b * (1 + owen_gl12_nodes[i]);
-        const cos_lo = @cos(lo);
-        const cos_hi = @cos(hi);
-        table.inv_cos2[2 * i] = 1 / (cos_lo * cos_lo);
-        table.inv_cos2[2 * i + 1] = 1 / (cos_hi * cos_hi);
+    const half_b = 0.5 * table.b;
+    inline for (0..3) |g| {
+        const x0 = owen_gl12_nodes[2 * g];
+        const x1 = owen_gl12_nodes[2 * g + 1];
+        const thetas = @Vector(4, f64){
+            half_b * (1 - x0),
+            half_b * (1 + x0),
+            half_b * (1 - x1),
+            half_b * (1 + x1),
+        };
+        const cos_v = owenCosVecFromTheta2(thetas * thetas);
+        const inv = @as(@Vector(4, f64), @splat(1.0)) / (cos_v * cos_v);
+        inline for (0..4) |lane| table.inv_cos2[4 * g + lane] = inv[lane];
     }
     return table;
 }

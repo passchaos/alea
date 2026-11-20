@@ -24,6 +24,10 @@ var runtime_binomial_mean12_trials: u64 = 1_000;
 var runtime_binomial_mean12_p: f64 = 0.012;
 var runtime_negative_binomial_successes: u64 = 5;
 var runtime_negative_binomial_p: f64 = 0.4;
+// Runtime skew shape: same volatile-pointer treatment, so the Owen geometry
+// build is not folded away.
+var runtime_skew_shape_storage: f64 = 2.0;
+const runtime_skew_shape: *volatile f64 = &runtime_skew_shape_storage;
 
 fn parseOptions(args: []const []const u8) Options {
     var options: Options = .{};
@@ -586,7 +590,9 @@ pub fn main(init: std.process.Init) !void {
     try benchQuantileModel(QuantileProbeExGaussian, io, stdout, "alea ex-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeInverseGaussian, io, stdout, "alea inverse-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeSkewNormal, io, stdout, "alea skew-normal quantile", bytes / 4096);
+    try benchQuantileModel(QuantileProbeSkewNormalRuntime, io, stdout, "alea skew-normal quantile runtime", bytes / 4096);
     try benchCdfModel(CdfProbeSkewNormal, io, stdout, "alea skew-normal cdf", bytes / 4096);
+    try benchCdfModel(CdfProbeSkewNormalRuntime, io, stdout, "alea skew-normal cdf runtime", bytes / 4096);
     try benchCdfModel(CdfProbeRice, io, stdout, "alea rice cdf", bytes / 4096);
     try benchQuantileModel(QuantileProbeRice, io, stdout, "alea rice quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeHoyt, io, stdout, "alea hoyt quantile", bytes / 4096);
@@ -12471,6 +12477,12 @@ const QuantileProbeInverseGaussian = struct {
         return alea.distributions.inverseGaussianQuantile(p, 1, 2);
     }
 };
+const QuantileProbeSkewNormalRuntime = struct {
+    fn quantile(p: f64) f64 {
+        return alea.distributions.skewNormalQuantile(p, 0.0, 1.0, runtime_skew_shape.*);
+    }
+};
+
 const QuantileProbeSkewNormal = struct {
     fn quantile(p: f64) f64 {
         return alea.distributions.skewNormalQuantile(p, 0, 1, 1);
@@ -12509,6 +12521,12 @@ fn benchCdfModel(comptime Model: type, io: std.Io, stdout: *std.Io.Writer, name:
 const CdfProbeRice = struct {
     fn cdf(x: f64) f64 {
         return alea.distributions.riceCdf(x, 1, 1);
+    }
+};
+
+const CdfProbeSkewNormalRuntime = struct {
+    fn cdf(x: f64) f64 {
+        return alea.distributions.skewNormalCdf(x, 0.0, 1.0, runtime_skew_shape.*);
     }
 };
 
