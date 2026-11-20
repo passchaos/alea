@@ -230,6 +230,8 @@ project does not repeat unproductive work.
 
 | Facade-aware f32 standard normal fill | `fillStandardNormalFrom(f32)` always used the vector8 chunk path, which pays the `Rng` vtable cost per draw for the type-erased facade (about 377M samples/s versus 650-695M for direct sources) | The f32 fill now uses the scalar per-element loop when the source is `Rng` and keeps the vector8 chunk path for direct sources; the facade row rises to 529-561M samples/s with an unchanged checksum. The same split for `fillStandardExponentialFrom(f32)` regressed 562.3M -> 529.9M and was reverted. | Adopted for the standard normal fill only; evidence: `compare/results/s4-m1778-facade-f32-normal-fill.md`. |
 
+| ChaCha fill zeroing removal | The buffered ChaCha `fill` zeroed each consumed buffer region after copying it out, adding a second memory pass over every emitted byte | Removed the zeroing (the copied bytes are public output and the hidden key prefix is regenerated on refill); `chacha12 fill-only` rises from 2400.9M to 2476-2494M MiB/s with an unchanged stream. The remaining gap to Rust `StdRng` is the rekeying construction's buffer copy-through. | Adopted; evidence: `compare/results/s4-m1780-chacha-fill-zeroing.md`. |
+
 ## Rejected Or Deferred Attempts
 
 | Attempt | Result | Decision |

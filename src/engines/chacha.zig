@@ -126,7 +126,10 @@ pub fn ChaChaRng(comptime Cipher: type) type {
                 const available = bytes.len - self.offset;
                 const n = @min(dest.len, available);
                 @memcpy(dest[0..n], bytes[self.offset..][0..n]);
-                @memset(bytes[self.offset..][0..n], 0);
+                // The copied keystream bytes are already public output, and
+                // the hidden key prefix is overwritten by the next refill, so
+                // zeroing the consumed buffer region would only add a second
+                // memory pass over every emitted byte.
                 self.offset += n;
                 dest = dest[n..];
             }
