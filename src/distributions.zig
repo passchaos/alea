@@ -3134,6 +3134,12 @@ fn skewNormalUpperTailZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTa
         const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
         return q + 2 * owenTWithGlTable20(z, alpha, table);
     }
+    // See `skewNormalUpperTailZ`: the asymptotic lower tail is below an ulp of
+    // 1 here, so the upper tail is exactly 1.
+    if (alpha > 0 and alpha * -z >= 3.5) {
+        const x = 0.5 * (1 + alpha * alpha) * z * z;
+        if (x > 69) return 1;
+    }
     return 1 - skewNormalCdfZWithGlTable20(z, alpha, table);
 }
 
@@ -3296,6 +3302,12 @@ fn skewNormalUpperTailZWithGlTable(z: f64, alpha: f64, table: *const OwenTGlTabl
     if (z >= 0) {
         const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
         return q + 2 * owenTWithGlTable(z, alpha, table);
+    }
+    // See `skewNormalUpperTailZ`: the asymptotic lower tail is below an ulp of
+    // 1 here, so the upper tail is exactly 1.
+    if (alpha > 0 and alpha * -z >= 3.5) {
+        const x = 0.5 * (1 + alpha * alpha) * z * z;
+        if (x > 69) return 1;
     }
     return 1 - skewNormalCdfZWithGlTable(z, alpha, table);
 }
@@ -14257,6 +14269,13 @@ fn skewNormalUpperTailZ(z: f64, alpha: f64) f64 {
         // fraction resolves the upper tail far below the A&S erf floor.
         const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
         return q + 2 * owenT(z, alpha);
+    }
+    // The lower-tail asymptotic branch carries a factor exp(-(1+alpha^2)z^2/2);
+    // once that is far below an ulp of 1 the upper tail is exactly 1 and the
+    // E1 series (about |z| terms) can be skipped. Bit-identical for f64.
+    if (alpha > 0 and alpha * -z >= 3.5) {
+        const x = 0.5 * (1 + alpha * alpha) * z * z;
+        if (x > 69) return 1;
     }
     return 1 - skewNormalCdfZ(z, alpha);
 }
