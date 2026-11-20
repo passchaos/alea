@@ -12580,20 +12580,22 @@ const VonMisesCdfCache = struct {
     fn init(kappa: f64) ?VonMisesCdfCache {
         if (!(kappa > 0 and kappa <= 1.0e4)) return null;
         const kf = kappa;
-        // Same decay-band bound as the direct CDF: the old 64/40 floors
-        // multiplied the per-call sine sum by roughly 2-4x for small kappa.
-        // The backward recurrence converges well before the old
-        // `k + 6*sqrt(k) + 16` start: dropping four steps keeps the
-        // coefficient error at about 3e-14 relative across kappa = 1..100,
-        // still inside the quantile's 1e-12 target.
-        const k_band = kf + 6 * @sqrt(kf);
-        const k_total: usize = @intFromFloat(@ceil(k_band + 12));
         const k_sum: usize = @intFromFloat(@ceil(@min(kf + 4.5 * @sqrt(kf) + 4, 8.5 * @sqrt(kf) + 36)));
         if (k_sum > max_terms) return null;
-
+        // For kappa <= 50 the backward ratio recurrence can start from the
+        // asymptotic `I_k/I_{k-1} ~ h (1 - h^2 k/(k+1))`, `h = kappa/(2k)`:
+        // the residual decays by about `h^2` per step, so seven steps above
+        // the truncation reach the f64 noise floor and the table is four
+        // steps shorter than the zero-start margin. Above that `h` is too
+        // large for the expansion and the zero-start margin stays.
+        const use_asymptotic = kf <= 50;
+        const margin: usize = if (use_asymptotic) 7 else @intFromFloat(@ceil(1.5 * @sqrt(kf) + 8));
+        const k_total: usize = k_sum + margin;
+        const kt_f: f64 = @floatFromInt(k_total);
+        const h = kf / (2 * kt_f);
         var raw: [max_terms + 1]f64 = undefined;
         var ratio: f64 = 1;
-        var rho: f64 = 0;
+        var rho: f64 = if (use_asymptotic) h * (1 - h * h * kt_f / (kt_f + 1)) else 0;
         // `2/κ` is constant, so `2k/κ` is one multiply per step instead of a
         // division; only the reciprocal of `t` remains.
         const two_over_kappa = 2 / kf;

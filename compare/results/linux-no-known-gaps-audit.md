@@ -7376,7 +7376,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1844-skew-cdf-twenty-point.md`. and
 `compare/results/s4-m1845-wrapped-cdf-twenty-point.md`. and
 `compare/results/s4-m1846-gamma-bracket-skip.md`. and
-`compare/results/s4-m1847-rice-hoyt-bracket-skip.md`.
+`compare/results/s4-m1847-rice-hoyt-bracket-skip.md`. and
+`compare/results/s4-m1848-von-mises-asymptotic-start.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7478,5 +7479,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1844-skew-cdf-twenty-point.md`. and
 `compare/results/s4-m1845-wrapped-cdf-twenty-point.md`. and
 `compare/results/s4-m1846-gamma-bracket-skip.md`. and
-`compare/results/s4-m1847-rice-hoyt-bracket-skip.md`.
+`compare/results/s4-m1847-rice-hoyt-bracket-skip.md`. and
+`compare/results/s4-m1848-von-mises-asymptotic-start.md`.
 
