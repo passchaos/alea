@@ -3175,6 +3175,87 @@ fn skewNormalUpperTailZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTa
     return 1 - skewNormalCdfZWithGlTable20(z, alpha, table);
 }
 
+// 12-point Gauss-Legendre nodes/weights (positive half). The quantile paths
+// use this rule for moderate shapes: a grid audit over `|a| <= 2`,
+// `|h| <= 6.5` against the 24-point rule gives a worst `T` error of 1.55e-12
+// (the 10-point rule reaches 8.2e-11 there), far inside the 1e-9 quantile
+// contract while cutting the per-image exponential count by 40% versus the
+// 20-point rule. The public CDFs keep the 20-point rule.
+const owen_gl12_nodes = [6]f64{
+    0.1252334085114689, 0.3678314989981802, 0.5873179542866175,
+    0.7699026741943047, 0.9041172563704749, 0.9815606342467192,
+};
+const owen_gl12_weights = [6]f64{
+    0.2491470458134028, 0.2334925365383548, 0.2031674267230659,
+    0.1600783285433462, 0.1069393259953184, 0.0471753363865118,
+};
+
+const OwenTGlTable12 = struct {
+    b: f64,
+    inv_cos2: [12]f64,
+};
+
+fn owenTGlTable12(a: f64) OwenTGlTable12 {
+    var table: OwenTGlTable12 = undefined;
+    table.b = std.math.atan(@abs(a));
+    inline for (0..6) |i| {
+        const lo = 0.5 * table.b * (1 - owen_gl12_nodes[i]);
+        const hi = 0.5 * table.b * (1 + owen_gl12_nodes[i]);
+        const cos_lo = @cos(lo);
+        const cos_hi = @cos(hi);
+        table.inv_cos2[2 * i] = 1 / (cos_lo * cos_lo);
+        table.inv_cos2[2 * i + 1] = 1 / (cos_hi * cos_hi);
+    }
+    return table;
+}
+
+fn owenTGlTableEval12(h2: f64, table: *const OwenTGlTable12) f64 {
+    var sum: f64 = 0;
+    inline for (0..6) |i| {
+        const w = owen_gl12_weights[i];
+        sum += w * (@exp(-h2 * table.inv_cos2[2 * i]) + @exp(-h2 * table.inv_cos2[2 * i + 1]));
+    }
+    return 0.5 * table.b * sum;
+}
+
+fn owenTWithGlTable12(h: f64, a: f64, table: *const OwenTGlTable12) f64 {
+    if (a == 0 or std.math.isNan(h)) return 0;
+    const sign: f64 = if (a < 0) -1 else 1;
+    if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
+    if (@abs(a) <= 6 and @abs(h) <= 6) {
+        if (@abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
+            return sign * owenTFarTail(@abs(h), @abs(a));
+        }
+        return sign * owenTGlTableEval12(0.5 * h * h, table) / (2 * std.math.pi);
+    }
+    if (@abs(h) * @abs(a) >= 6) return sign * owenTFarTail(@abs(h), @abs(a));
+    return owenTSlow(h, a);
+}
+
+/// `skewNormalCdfZ` with the 12-point geometry table for the quantile paths.
+fn skewNormalCdfZWithGlTable12(z: f64, alpha: f64, table: *const OwenTGlTable12) f64 {
+    const cdf = if (z < 0 and alpha > 0 and alpha * -z >= 3.5)
+        skewNormalLowerTailAsym(-z, alpha)
+    else
+        normCdf(z) - 2 * owenTWithGlTable12(z, alpha, table);
+    return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
+}
+
+/// `skewNormalUpperTailZ` with the 12-point geometry table.
+fn skewNormalUpperTailZWithGlTable12(z: f64, alpha: f64, table: *const OwenTGlTable12) f64 {
+    if (z >= 0) {
+        const q = 0.5 * gammaIncompleteQ(@as(f64, 0.5), 0.5 * z * z);
+        return q + 2 * owenTWithGlTable12(z, alpha, table);
+    }
+    // See `skewNormalUpperTailZ`: the asymptotic lower tail is below an ulp of
+    // 1 here, so the upper tail is exactly 1.
+    if (alpha > 0 and alpha * -z >= 3.5) {
+        const x = 0.5 * (1 + alpha * alpha) * z * z;
+        if (x > 36) return 1;
+    }
+    return 1 - skewNormalCdfZWithGlTable12(z, alpha, table);
+}
+
 /// `owenT` with the Gauss-Legendre geometry served from a table built for
 /// this shape; every other branch matches `owenT`.
 fn owenTWithGlTable(h: f64, a: f64, table: *const OwenTGlTable) f64 {
@@ -3432,21 +3513,23 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     var z: f64 = @min(@max(start_mean + start_sd * probit(p_f), lo), hi);
     const tol: f64 = 1e-12;
     const max_iters: usize = 40;
-    // The 20-point rule is accurate to ~6e-13 for |alpha| <= 2; wider
-    // shapes keep the 24-point rule.
-    const use_gl20 = shape_f != 0 and @abs(shape_f) <= 2;
-    const use_gl24 = shape_f != 0 and @abs(shape_f) <= 6 and !use_gl20;
-    // The fixed rules carry a small absolute CDF error (about 6e-13 for the
-    // 20-point rule); below that floor the Newton correction only chases
+    // The 12-point rule is accurate to ~1.6e-12 for |alpha| <= 2 (audited
+    // against the 24-point rule), far inside the quantile's 1e-9 round-trip
+    // contract and cheaper than the 20-point public-CDF rule; wider shapes
+    // keep the 24-point rule.
+    const use_gl12 = shape_f != 0 and @abs(shape_f) <= 2;
+    const use_gl24 = shape_f != 0 and @abs(shape_f) <= 6 and !use_gl12;
+    // The fixed rules carry a small absolute CDF error (about 1.6e-12 for the
+    // 12-point rule); below that floor the Newton correction only chases
     // rule noise. The allowance is capped at a fraction of `p` so the deep
     // tails keep their relative accuracy.
-    const cdf_floor_raw: f64 = if (use_gl20) 1e-12 else if (use_gl24) 1e-14 else 0;
+    const cdf_floor_raw: f64 = if (use_gl12) 2e-12 else if (use_gl24) 1e-14 else 0;
     const cdf_floor = @min(cdf_floor_raw, p_f * 1e-5);
-    const gl20 = if (use_gl20) owenTGlTable20(shape_f) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined };
+    const gl12 = if (use_gl12) owenTGlTable12(shape_f) else OwenTGlTable12{ .b = 0, .inv_cos2 = undefined };
     const gl24 = if (use_gl24) owenTGlTable(shape_f) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     for (0..max_iters) |_| {
-        const f = if (use_gl20)
-            skewNormalCdfZWithGlTable20(z, shape_f, &gl20)
+        const f = if (use_gl12)
+            skewNormalCdfZWithGlTable12(z, shape_f, &gl12)
         else if (use_gl24)
             skewNormalCdfZWithGlTable(z, shape_f, &gl24)
         else
@@ -14452,9 +14535,9 @@ const WrappedSkewNormalCdfCache = struct {
     /// the loops and the term tables.
     k_lo: i32,
     k_hi: i32,
-    use_gl20: bool,
+    use_gl12: bool,
     use_gl_table: bool,
-    gl20: OwenTGlTable20,
+    gl12: OwenTGlTable12,
     gl_table: OwenTGlTable,
     lower_terms: [max_images]f64 = undefined,
     upper_terms: [max_images]f64 = undefined,
@@ -14470,11 +14553,11 @@ const WrappedSkewNormalCdfCache = struct {
         const hi_f = (6.5 - lower_z0) / stride;
         const k_lo: i32 = @max(-k_max, @as(i32, @intFromFloat(@floor(lo_f))));
         const k_hi: i32 = @min(k_max, @as(i32, @intFromFloat(@ceil(hi_f))));
-        // The 20-point rule is accurate to ~6e-13 for |alpha| <= 2, far
+        // The 12-point rule is accurate to ~1.6e-12 for |alpha| <= 2, far
         // inside the 1e-9 quantile contract; wider shapes keep the 24-point
         // rule.
-        const use_gl20 = alpha != 0 and @abs(alpha) <= 2;
-        const use_gl_table = alpha != 0 and @abs(alpha) <= 6 and !use_gl20;
+        const use_gl12 = alpha != 0 and @abs(alpha) <= 2;
+        const use_gl_table = alpha != 0 and @abs(alpha) <= 6 and !use_gl12;
         return .{
             .mu_w = mu_w,
             .sigma = sigma,
@@ -14482,9 +14565,9 @@ const WrappedSkewNormalCdfCache = struct {
             .k_max = k_max,
             .k_lo = k_lo,
             .k_hi = @max(k_hi, k_lo),
-            .use_gl20 = use_gl20,
+            .use_gl12 = use_gl12,
             .use_gl_table = use_gl_table,
-            .gl20 = if (use_gl20) owenTGlTable20(alpha) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined },
+            .gl12 = if (use_gl12) owenTGlTable12(alpha) else OwenTGlTable12{ .b = 0, .inv_cos2 = undefined },
             .gl_table = if (use_gl_table) owenTGlTable(alpha) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined },
         };
     }
@@ -14510,8 +14593,8 @@ const WrappedSkewNormalCdfCache = struct {
                     0
                 else if (z_end <= -6.5)
                     1
-                else if (self.use_gl20)
-                    skewNormalUpperTailZWithGlTable20(z_end, self.alpha, &self.gl20)
+                else if (self.use_gl12)
+                    skewNormalUpperTailZWithGlTable12(z_end, self.alpha, &self.gl12)
                 else if (self.use_gl_table)
                     skewNormalUpperTailZWithGlTable(z_end, self.alpha, &self.gl_table)
                 else
@@ -14533,8 +14616,8 @@ const WrappedSkewNormalCdfCache = struct {
                 1
             else if (z_end <= -6.5)
                 0
-            else if (self.use_gl20)
-                skewNormalCdfZWithGlTable20(z_end, self.alpha, &self.gl20)
+            else if (self.use_gl12)
+                skewNormalCdfZWithGlTable12(z_end, self.alpha, &self.gl12)
             else if (self.use_gl_table)
                 skewNormalCdfZWithGlTable(z_end, self.alpha, &self.gl_table)
             else
@@ -14586,14 +14669,14 @@ const WrappedSkewNormalCdfCache = struct {
                 continue;
             }
             sum += (if (upper)
-                if (self.use_gl20)
-                    skewNormalUpperTailZWithGlTable20(z, self.alpha, &self.gl20)
+                if (self.use_gl12)
+                    skewNormalUpperTailZWithGlTable12(z, self.alpha, &self.gl12)
                 else if (self.use_gl_table)
                     skewNormalUpperTailZWithGlTable(z, self.alpha, &self.gl_table)
                 else
                     skewNormalUpperTailZ(z, self.alpha)
-            else if (self.use_gl20)
-                skewNormalCdfZWithGlTable20(z, self.alpha, &self.gl20)
+            else if (self.use_gl12)
+                skewNormalCdfZWithGlTable12(z, self.alpha, &self.gl12)
             else if (self.use_gl_table)
                 skewNormalCdfZWithGlTable(z, self.alpha, &self.gl_table)
             else
@@ -14661,8 +14744,8 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
         const z_s = (guess - mu_f) / sigma_f;
         // The start only needs a rough CDF; reuse the cache's geometry table
         // instead of rebuilding the generic Owen T quadrature per call.
-        const f_s = if (cache.use_gl20)
-            skewNormalCdfZWithGlTable20(z_s, alpha_f, &cache.gl20)
+        const f_s = if (cache.use_gl12)
+            skewNormalCdfZWithGlTable12(z_s, alpha_f, &cache.gl12)
         else if (cache.use_gl_table)
             skewNormalCdfZWithGlTable(z_s, alpha_f, &cache.gl_table)
         else
@@ -14697,11 +14780,11 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     var hi: f64 = pi_f;
     var x: f64 = @min(@max(guess, lo), hi);
     const tol: f64 = 1e-12;
-    // The fixed Owen rules carry a small absolute CDF error (about 6e-13 for
-    // the 20-point rule, summed over the active images); below that floor the
-    // Halley correction only chases rule noise. The allowance is capped at a
-    // fraction of `p` so the deep tails keep their relative accuracy.
-    const cdf_floor_raw: f64 = if (cache.use_gl20) 5e-12 else if (cache.use_gl_table) 5e-14 else 0;
+    // The fixed Owen rules carry a small absolute CDF error (about 1.6e-12
+    // for the 12-point rule, summed over the active images); below that floor
+    // the Halley correction only chases rule noise. The allowance is capped
+    // at a fraction of `p` so the deep tails keep their relative accuracy.
+    const cdf_floor_raw: f64 = if (cache.use_gl12) 2e-12 else if (cache.use_gl_table) 5e-14 else 0;
     const cdf_floor = @min(cdf_floor_raw, p_f * 1e-5);
     for (0..40) |_| {
         const evaluated = cache.eval(x, true);

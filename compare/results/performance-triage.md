@@ -659,6 +659,7 @@ Four-normal unit ball projection | Checked whether four standard normals project
 | Wrapped CDF rule-noise floor raise (rejected) | The wrapped 20-point rule drops terms below a 5e-12 absolute floor; tried raising the floor to 5e-11 to stop the image loop earlier. | The wrapped skew-normal quantile moved -1% in the paired bracket with unchanged checksums, and the looser floor gives up accuracy for nothing. | Rejected; the floor stays 5e-12. |
 | Ten-point Owen rule for small skew (rejected) | The skew paths use the 20-point Gauss-Legendre rule for small `h` magnitudes; tried the 10-point rule there to halve the node work. | The worst error at `h = 0.6` is 1.26e-11, which exceeds the 1e-12 skew CDF contract. | Rejected for accuracy; small `h` keeps the 20-point rule. |
 | Wrapped endpoint z caching (rejected) | `WrappedNormalCdfCache.ensureTerms` evaluates each endpoint `normCdf(z_end)`; tried caching the endpoint z values and walking them incrementally instead of recomputing the affine image. | Both variants measured neutral to slower on the wrapped quantile rows with unchanged checksums; the endpoint evaluation, not the affine image, dominates. | Rejected; the cache keeps the direct endpoint evaluation with the S4-M1826 saturation clamps. |
+| Twelve-point Owen rule in the quantile paths | The plain and wrapped skew-normal quantiles ran the 20-point Owen rule (20 exponentials per image), but their contract is only a 1e-9 round trip; the public CDFs need the 20-point rule's 6e-13 accuracy. A 10-point rule was rejected for the public CDF (8.2e-11 worst error over the quantile domain) but a fixed-rule audit showed the 12-point rule is accurate to 1.55e-12 there. | Same-host four alternating pairs: `skew-normal quantile` 3.374/3.833/4.183/3.711M -> 5.376/5.603/5.615/5.617M (median about +49%) and `wrapped skew-normal quantile` 1.558/2.048/1.973/1.854M -> 2.088/2.278/2.158/2.166M (median about +13%), every candidate run above every baseline, with unchanged checksums (`2174.360`, `4282.426`). The wrapped contract grid stays bit-equal at 5.014e-10 worst round trip and the plain skew grid at 8.889e-6 worst relative; a 2080-point value diff moves only deep wrapped tails (worst absolute 4.79e-7 where the density is about 3e-6). | Adopted as S4-M1854: `OwenTGlTable12` is used only by the quantile paths for `0 < |alpha| <= 2`; public CDFs keep 20 points and wider shapes keep 24. Recorded in `compare/results/s4-m1854-quantile-twelve-point-owen.md`. |
 
 ## Next Candidate
 
@@ -776,14 +777,17 @@ current blocker audit and the requirements for a successful next candidate:
   `s4-m1768-1e7-long-run-refresh.md` and
   `s4-m1769-gamma-quantile-density-hoist.md` and
   `s4-m1771-owen-t-far-tail.md`.
-- Quantile sweep status (post S4-M1853): the S4-M1823..M1853 series lifted
-  the diagnostic quantile rows to roughly wrapped skew-normal 2.3M/s, von
-  Mises 4.2M/s, chi-squared 4.8M/s, skew-normal 4.9M/s, wrapped
+- Quantile sweep status (post S4-M1854): the S4-M1823..M1854 series lifted
+  the diagnostic quantile rows to roughly wrapped skew-normal 2.2-2.6M/s,
+  von Mises 4.2M/s, chi-squared 4.8M/s, skew-normal 5.6M/s, wrapped
   normal/Rice/Hoyt 6.5M/s, gamma 7.2M/s, ex-Gaussian 9.4M/s, and
   inverse-Gaussian 10.5M/s; the public skew-normal CDF reaches about 20M
-  calls/s. The remaining pressure is the Owen-T/transcendental work in the
-  wrapped and plain skew paths. Evidence: `compare/results/s4-m1823-half-integer-gamma-cdf.md`
-  through `s4-m1853-no-known-gaps-refresh.md`.
+  calls/s. S4-M1854 moved the skew quantile paths to a 12-point Owen rule
+  (quantile-only; public CDFs keep 20 points). The remaining pressure is
+  the wrapped quantile's endpoint/density/normCdf work and the plain skew
+  path's Owen-T/transcendental cost. Evidence:
+  `compare/results/s4-m1823-half-integer-gamma-cdf.md` through
+  `s4-m1854-quantile-twelve-point-owen.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
   (243M lanes/s) for f64x4, reusing the skew-normal sampler and the circular
   wrap. Evidence: `compare/results/s4-m1758-wrapped-skew-normal-circular-distribution.md`.
