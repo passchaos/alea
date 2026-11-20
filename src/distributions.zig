@@ -2636,6 +2636,44 @@ fn exGaussianPdfF64(x: f64, mu: f64, sigma: f64, tau: f64) f64 {
     return @exp(log_density);
 }
 
+const ExGaussianEval = struct {
+    cdf: f64,
+    pdf: f64,
+    pdf_deriv: f64,
+};
+
+/// CDF, density, and density derivative in one pass. The derivative is
+/// `f · (−1/τ + φ(w)/(σ·Φ(w)))` with `w = (x−μ)/σ − σ/τ`, reusing the
+/// `exp(...)·Φ(w)` term that the CDF already forms.
+fn exGaussianEvalF64(x: f64, mu: f64, sigma: f64, tau: f64) ExGaussianEval {
+    if (sigma == 0) {
+        if (x < mu) return .{ .cdf = 0, .pdf = 0, .pdf_deriv = 0 };
+        const pdf = (1 / tau) * @exp(-(x - mu) / tau);
+        return .{ .cdf = 1 - @exp(-(x - mu) / tau), .pdf = pdf, .pdf_deriv = -pdf / tau };
+    }
+    const z = (x - mu) / sigma;
+    const sigma_over_tau = sigma / tau;
+    const w = z - sigma_over_tau;
+    const exponent = 0.5 * sigma_over_tau * sigma_over_tau - (x - mu) / tau;
+    var term: f64 = 0;
+    if (!std.math.isNan(exponent)) {
+        const log_term = exponent + normLogCdf(w);
+        if (!std.math.isNan(log_term)) term = @exp(log_term);
+    }
+    const cdf = normCdf(z) - term;
+    const pdf = term / tau;
+    const Phi_w = if (w > -10) normCdf(w) else @exp(normLogCdf(w));
+    const pdf_deriv = if (Phi_w > 0 and std.math.isFinite(Phi_w))
+        pdf * (-1 / tau + normPdf(w) / (sigma * Phi_w))
+    else
+        0;
+    return .{
+        .cdf = @min(@as(f64, 1), @max(@as(f64, 0), cdf)),
+        .pdf = pdf,
+        .pdf_deriv = pdf_deriv,
+    };
+}
+
 fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, sigma: PeerType, tau: PeerType) PeerType {
     const T = @TypeOf(p, mu, sigma, tau);
     comptime requireFloat(T);
@@ -2667,12 +2705,22 @@ fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, si
     var x: f64 = @min(@max(mu_f + spread * probit(p_f), lo), hi);
     const max_iters: usize = 60;
     for (0..max_iters) |_| {
-        const f = exGaussianCdf(x, mu_f, sigma_f, tau_f);
+        const evaluated = exGaussianEvalF64(x, mu_f, sigma_f, tau_f);
+        const f = evaluated.cdf;
+        const f_err = f - p_f;
         if (f < p_f) lo = x else hi = x;
-        if (f == p_f) return @floatCast(x);
+        if (f_err == 0) return @floatCast(x);
         if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
-        const d = exGaussianPdfF64(x, mu_f, sigma_f, tau_f);
-        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else (lo + hi) / 2;
+        const d = evaluated.pdf;
+        var next: f64 = if (d > 0 and std.math.isFinite(d)) x - f_err / d else (lo + hi) / 2;
+        // Halley upgrade; skipped where the CDF underflows.
+        if (f > 0 and d > 0 and std.math.isFinite(d)) {
+            const denom = 2 * d * d - f_err * evaluated.pdf_deriv;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = x - 2 * f_err * d / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
         if (next == x) break;
         x = next;
