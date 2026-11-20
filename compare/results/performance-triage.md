@@ -823,3 +823,10 @@ current blocker audit and the requirements for a successful next candidate:
 - Platform runners: QEMU, Wine, and Wasmtime are not installed on the current
   host, so second-platform execution beyond the Node WASI suite and the six
   crosscheck compile targets stays blocked until infrastructure exists.
+  `zig build runtimecheck` confirms `required found=3 missing=0;
+  opportunities found=0 missing=10` (qemu-aarch64/riscv64/x86_64 and their
+  `-static` forms, wine/wine64, wasmtime, wasmer). To raise the platform bar,
+  install any one of them (`brew install qemu`, `brew install --cask
+  wine-stable`, or `brew install wasmtime`), re-run `zig build runtimecheck`
+  (it fails when an opportunity runner appears, prompting a blocker-audit
+  refresh), then run the crosscheck matrix and record the results.
