@@ -3842,7 +3842,12 @@ fn hoytQuantileImpl(comptime PeerType: type, p: PeerType, q_param: PeerType, ome
     }
 
     // Rayleigh start; exact at q = 1 and a good bracket seed otherwise.
-    const guess = @sqrt(-omega_f * @log(1 - p_f));
+    // Below p = 0.2 the density is linear in x near zero, so the CDF
+    // inverts in closed form: `F(x) ~ a x^2 2q/(1+q^2)`.
+    const guess = if (p_f < 0.2)
+        @sqrt(2 * p_f * q_f * omega_f / (1 + q_f * q_f))
+    else
+        @sqrt(-omega_f * @log(1 - p_f));
     var x: f64 = @min(@max(guess, lo), hi);
     const max_iters: usize = 60;
     for (0..max_iters) |_| {
