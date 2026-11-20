@@ -12887,6 +12887,18 @@ pub fn VonMisesCdfModel(comptime T: type) type {
             if (self.cache) |*cache| return @floatCast(cache.cdf(delta));
             return @floatCast(vonMisesRelativeCdf(f64, delta, self.kappa));
         }
+
+        /// Inverse CDF; bit-identical to `vonMisesQuantile` for f64.
+        pub fn quantile(self: *const Self, p: T) T {
+            const p_f: f64 = @floatCast(p);
+            if (!std.math.isFinite(p_f) or !(p_f >= 0 and p_f <= 1)) return std.math.nan(T);
+            const pi = std.math.pi;
+            if (p_f == 0) return @floatCast(self.mu - pi);
+            if (p_f == 1) return @floatCast(self.mu + pi);
+            if (self.kappa == 0) return @floatCast(self.mu + 2 * pi * p_f - pi);
+            const cache_ptr: ?*const VonMisesCdfCache = if (self.cache) |*cache| cache else null;
+            return @floatCast(vonMisesQuantileSolve(f64, cache_ptr, p_f, self.mu, self.kappa));
+        }
     };
 }
 
@@ -12911,6 +12923,22 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
     if (p == 1) return mu + pi;
     if (kappa == 0) return mu + 2 * pi * p - pi;
 
+    var cache: VonMisesCdfCache = undefined;
+    var cache_ptr: ?*const VonMisesCdfCache = null;
+    if (T == f64) {
+        if (VonMisesCdfCache.init(@floatCast(kappa))) |value| {
+            cache = value;
+            cache_ptr = &cache;
+        }
+    }
+    return vonMisesQuantileSolve(T, cache_ptr, p, mu, kappa);
+}
+
+/// Safeguarded-Newton von Mises quantile solve. `cache` may be null (f32 or
+/// `kappa` outside the table range); the reusable `VonMisesCdfModel` passes
+/// its eagerly built table so repeated solves skip the per-call setup.
+fn vonMisesQuantileSolve(comptime T: type, cache: ?*const VonMisesCdfCache, p: T, mu: T, kappa: T) T {
+    const pi: T = @floatCast(std.math.pi);
     // Safeguarded Newton on the relative CDF. The concentrated limit is
     // approximately N(0, 1/kappa), while small kappa starts from the uniform
     // quantile. The bracket keeps d in (-pi, pi] and falls back to bisection
@@ -12924,20 +12952,12 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
     var d: T = @min(@max(guess, -pi), pi);
     const tol: T = if (T == f32) 1e-5 else 1e-12;
     const max_iters: usize = if (T == f32) 20 else 40;
-    var cache: VonMisesCdfCache = undefined;
-    var use_cache = false;
-    if (T == f64) {
-        if (VonMisesCdfCache.init(@floatCast(kappa))) |value| {
-            cache = value;
-            use_cache = true;
-        }
-    }
     for (0..max_iters) |_| {
-        const f: T = if (use_cache) @floatCast(cache.cdf(@floatCast(d))) else vonMisesRelativeCdf(T, d, kappa);
+        const f: T = if (cache) |c| @floatCast(c.cdf(@floatCast(d))) else vonMisesRelativeCdf(T, d, kappa);
         const f_err = f - p;
         if (f < p) lo = d else hi = d;
         if (f_err == 0 or hi - lo <= tol) break;
-        const density: T = if (use_cache) @floatCast(cache.pdf(@floatCast(d))) else vonMisesRelativePdf(T, d, kappa);
+        const density: T = if (cache) |c| @floatCast(c.pdf(@floatCast(d))) else vonMisesRelativePdf(T, d, kappa);
         // The Newton correction is `|f-p| / density`; below the x tolerance
         // the quantile already meets its accuracy contract.
         if (density > 0 and @abs(f_err) <= density * tol) break;
@@ -12960,6 +12980,7 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
     }
     return mu + d;
 }
+
 
 pub fn VonMises(comptime T: type) type {
     comptime requireFloat(T);
@@ -68088,6 +68109,17 @@ test "VonMisesCdfModel matches the free CDF and fallbacks" {
     const model = try VonMisesCdfModel(f64).init(0, 1);
     try std.testing.expect(std.math.isNan(model.cdf(std.math.nan(f64))));
     try std.testing.expect(std.math.isNan(model.cdf(std.math.inf(f64))));
+
+    // The quantile shares the cache and is bit-identical for f64.
+    inline for ([_]f64{ 0, 0.5, 1, 5, 20, 1.0e4, 1.0e5 }) |kappa| {
+        const qmodel = try VonMisesCdfModel(f64).init(0.3, kappa);
+        var p: f64 = 0.001;
+        while (p < 1) : (p += 0.01) {
+            try std.testing.expectEqual(vonMisesQuantile(p, 0.3, kappa), qmodel.quantile(p));
+        }
+    }
+    const qf32 = try VonMisesCdfModel(f32).init(0, 5);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.0), qf32.quantile(0.5), 1e-5);
 }
 
 test "VonMises samples stay within (-pi, pi] bounds relative to mu" {

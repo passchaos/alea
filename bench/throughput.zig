@@ -587,6 +587,7 @@ pub fn main(init: std.process.Init) !void {
     try benchBingham(io, stdout, "alea bingham 3d", bytes / 64);
     try benchVonMises(io, stdout, "alea von mises", bytes / 8);
     try benchVonMisesQuantile(io, stdout, "alea von mises quantile", bytes / 4096);
+    try benchVonMisesQuantileModel(io, stdout, "alea von mises quantile model", bytes / 4096);
     try benchQuantileModel(QuantileProbeExGaussian, io, stdout, "alea ex-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeInverseGaussian, io, stdout, "alea inverse-gaussian quantile", bytes / 4096);
     try benchQuantileModel(QuantileProbeSkewNormal, io, stdout, "alea skew-normal quantile", bytes / 4096);
@@ -12710,6 +12711,32 @@ fn benchVonMisesCdfModel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, c
     }
     std.mem.doNotOptimizeAway(best_checksum);
     try stdout.print("{s}: {d:.1} M cdf/s checksum={d:.3}\n", .{ name, best, best_checksum });
+}
+
+fn benchVonMisesQuantileModel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const model = alea.distributions.VonMisesCdfModel(f64).init(0.5, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < count) : (i += 1) {
+            const p = (@as(f64, @floatFromInt(i % 1000)) + 0.5) / 1000.0;
+            checksum += model.quantile(p);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (per_s > best) {
+            best = per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.3} M quantiles/s checksum={d:.3}\n", .{ name, best, best_checksum });
 }
 
 fn benchVonMisesQuantile(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
