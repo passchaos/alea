@@ -12528,13 +12528,16 @@ const VonMisesCdfCache = struct {
         var raw: [max_terms + 1]f64 = undefined;
         var ratio: f64 = 1;
         var rho: f64 = 0;
+        // `2/κ` is constant, so `2k/κ` is one multiply per step instead of a
+        // division; only the reciprocal of `t` remains.
+        const two_over_kappa = 2 / kf;
         var k: usize = k_total;
         while (k >= 1) : (k -= 1) {
             const k_d: f64 = @floatFromInt(k);
             if (k <= k_sum) raw[k] = ratio;
             // `rho = 1/(2k/κ + rho)` and `ratio /= rho`, so track
             // `t = 1/rho` and use one division and one multiply per step.
-            const t = 2 * k_d / kf + rho;
+            const t = k_d * two_over_kappa + rho;
             ratio *= t;
             rho = 1 / t;
             if (ratio > 1.0e100) {
