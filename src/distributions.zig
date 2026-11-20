@@ -1399,9 +1399,10 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         if (next == x) break;
         x = next;
     }
-    if (lo == 0 and p > 0) {
-        // The quantile is below the linear bisection resolution
-        // (`hi·2^-100`, about 1e-30): refine the lower tail in log space so
+    if (p > 0 and (lo == 0 or hi - lo > hi * @as(T, 1e-6))) {
+        // The quantile sits below the linear bisection resolution: either the
+        // bracket collapsed onto zero or its absolute width is still large
+        // relative to a tiny `hi`. Refine the lower tail in log space so
         // tiny-shape quantiles are not pinned to the resolution floor.
         var log_lo: T = @log(std.math.floatMin(T));
         var log_hi: T = @log(hi);
