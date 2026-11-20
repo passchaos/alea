@@ -13937,17 +13937,33 @@ const WrappedSkewNormalCdfCache = struct {
     sigma: f64,
     alpha: f64,
     k_max: i32,
+    /// Images outside `[k_lo, k_hi]` lie entirely beyond the 6.5-sigma
+    /// saturation band on the same side as their endpoint, so the existing
+    /// skip test would drop them on every evaluation; they are excluded from
+    /// the loops and the term tables.
+    k_lo: i32,
+    k_hi: i32,
     lower_terms: [max_images]f64 = undefined,
     upper_terms: [max_images]f64 = undefined,
     has_lower: bool = false,
     has_upper: bool = false,
 
     fn init(mu_w: f64, sigma: f64, alpha: f64) WrappedSkewNormalCdfCache {
+        const k_max = wrappedNormalImageCount(f64, sigma);
+        const stride = 2 * std.math.pi / sigma;
+        const lower_z0 = (-std.math.pi - mu_w) / sigma;
+        const upper_z0 = (std.math.pi - mu_w) / sigma;
+        const lo_f = (-6.5 - upper_z0) / stride;
+        const hi_f = (6.5 - lower_z0) / stride;
+        const k_lo: i32 = @max(-k_max, @as(i32, @intFromFloat(@floor(lo_f))));
+        const k_hi: i32 = @min(k_max, @as(i32, @intFromFloat(@ceil(hi_f))));
         return .{
             .mu_w = mu_w,
             .sigma = sigma,
             .alpha = alpha,
-            .k_max = wrappedNormalImageCount(f64, sigma),
+            .k_max = k_max,
+            .k_lo = k_lo,
+            .k_hi = @max(k_hi, k_lo),
         };
     }
 
@@ -13960,9 +13976,9 @@ const WrappedSkewNormalCdfCache = struct {
             self.has_upper = true;
             const pi = std.math.pi;
             const two_pi = 2 * pi;
-            var k: i32 = -self.k_max;
-            var i: usize = 0;
-            while (k <= self.k_max) : (k += 1) {
+            var k: i32 = self.k_lo;
+            var i: usize = @intCast(k + self.k_max);
+            while (k <= self.k_hi) : (k += 1) {
                 const shift = @as(f64, @floatFromInt(k)) * two_pi;
                 self.upper_terms[i] = skewNormalUpperTailZ((pi - self.mu_w + shift) / self.sigma, self.alpha);
                 i += 1;
@@ -13973,9 +13989,9 @@ const WrappedSkewNormalCdfCache = struct {
         self.has_lower = true;
         const pi = std.math.pi;
         const two_pi = 2 * pi;
-        var k: i32 = -self.k_max;
-        var i: usize = 0;
-        while (k <= self.k_max) : (k += 1) {
+        var k: i32 = self.k_lo;
+        var i: usize = @intCast(k + self.k_max);
+        while (k <= self.k_hi) : (k += 1) {
             const shift = @as(f64, @floatFromInt(k)) * two_pi;
             self.lower_terms[i] = skewNormalCdfZ((-pi - self.mu_w + shift) / self.sigma, self.alpha);
             i += 1;
@@ -13999,9 +14015,9 @@ const WrappedSkewNormalCdfCache = struct {
         var sum: f64 = 0;
         var pdf_sum: f64 = 0;
         var pdf_deriv_sum: f64 = 0;
-        var k: i32 = -self.k_max;
-        var i: usize = 0;
-        while (k <= self.k_max) : (k += 1) {
+        var k: i32 = self.k_lo;
+        var i: usize = @intCast(k + self.k_max);
+        while (k <= self.k_hi) : (k += 1) {
             const shift = @as(f64, @floatFromInt(k)) * two_pi;
             const z = (x - self.mu_w + shift) / self.sigma;
             // |z| >= 9 leaves < 1e-18 of probability or density; those images
