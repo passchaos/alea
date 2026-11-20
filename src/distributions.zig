@@ -3019,6 +3019,73 @@ fn owenTGlTableEval(h2: f64, table: *const OwenTGlTable) f64 {
     return 0.5 * table.b * sum;
 }
 
+// 20-point Gauss-Legendre nodes/weights (positive half), used by the
+// quantile path for moderate shapes where a 2.6e-11 rule error is far
+// inside the 1e-9 contract.
+const owen_gl20_nodes = [10]f64{
+    0.9931285991850949, 0.9639719272779138, 0.9122344282513259,
+    0.8391169718222188, 0.7463319064601508, 0.6360536807265150,
+    0.5108670019508271, 0.3737060887154196, 0.2277858511416451,
+    0.0765265211334973,
+};
+const owen_gl20_weights = [10]f64{
+    0.0176140071391521, 0.0406014298003869, 0.0626720483341091,
+    0.0832767415767048, 0.1019301198172404, 0.1181945319615184,
+    0.1316886384491766, 0.1420961093183821, 0.1491729864726037,
+    0.1527533871307258,
+};
+
+const OwenTGlTable20 = struct {
+    b: f64,
+    inv_cos2: [20]f64,
+};
+
+fn owenTGlTable20(a: f64) OwenTGlTable20 {
+    var table: OwenTGlTable20 = undefined;
+    table.b = std.math.atan(@abs(a));
+    inline for (0..10) |i| {
+        const lo = 0.5 * table.b * (1 - owen_gl20_nodes[i]);
+        const hi = 0.5 * table.b * (1 + owen_gl20_nodes[i]);
+        const cos_lo = @cos(lo);
+        const cos_hi = @cos(hi);
+        table.inv_cos2[2 * i] = 1 / (cos_lo * cos_lo);
+        table.inv_cos2[2 * i + 1] = 1 / (cos_hi * cos_hi);
+    }
+    return table;
+}
+
+fn owenTGlTableEval20(h2: f64, table: *const OwenTGlTable20) f64 {
+    var sum: f64 = 0;
+    inline for (0..10) |i| {
+        const w = owen_gl20_weights[i];
+        sum += w * (@exp(-h2 * table.inv_cos2[2 * i]) + @exp(-h2 * table.inv_cos2[2 * i + 1]));
+    }
+    return 0.5 * table.b * sum;
+}
+
+fn owenTWithGlTable20(h: f64, a: f64, table: *const OwenTGlTable20) f64 {
+    if (a == 0 or std.math.isNan(h)) return 0;
+    const sign: f64 = if (a < 0) -1 else 1;
+    if (std.math.isInf(a)) return sign * 0.5 * (1 - normCdf(@abs(h)));
+    if (@abs(a) <= 6 and @abs(h) <= 6) {
+        if (@abs(h) >= 3 and @abs(h) * @abs(a) >= 6) {
+            return sign * owenTFarTail(@abs(h), @abs(a));
+        }
+        return sign * owenTGlTableEval20(0.5 * h * h, table) / (2 * std.math.pi);
+    }
+    if (@abs(h) * @abs(a) >= 6) return sign * owenTFarTail(@abs(h), @abs(a));
+    return owenTSlow(h, a);
+}
+
+/// `skewNormalCdfZ` with the 20-point geometry table for the quantile path.
+fn skewNormalCdfZWithGlTable20(z: f64, alpha: f64, table: *const OwenTGlTable20) f64 {
+    const cdf = if (z < 0 and alpha > 0 and alpha * -z >= 3.5)
+        skewNormalLowerTailAsym(-z, alpha)
+    else
+        normCdf(z) - 2 * owenTWithGlTable20(z, alpha, table);
+    return @min(@as(f64, 1), @max(@as(f64, 0), cdf));
+}
+
 /// `owenT` with the Gauss-Legendre geometry served from a table built for
 /// this shape; every other branch matches `owenT`.
 fn owenTWithGlTable(h: f64, a: f64, table: *const OwenTGlTable) f64 {
@@ -3253,11 +3320,17 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     var z: f64 = @min(@max(probit(p_f), lo), hi);
     const tol: f64 = 1e-12;
     const max_iters: usize = 40;
-    const use_gl_table = @abs(shape_f) <= 6 and shape_f != 0;
-    const gl_table = if (use_gl_table) owenTGlTable(shape_f) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
+    // The 20-point rule is accurate to ~6e-13 for |alpha| <= 2; wider
+    // shapes keep the 24-point rule.
+    const use_gl20 = shape_f != 0 and @abs(shape_f) <= 2;
+    const use_gl24 = shape_f != 0 and @abs(shape_f) <= 6 and !use_gl20;
+    const gl20 = if (use_gl20) owenTGlTable20(shape_f) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined };
+    const gl24 = if (use_gl24) owenTGlTable(shape_f) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     for (0..max_iters) |_| {
-        const f = if (use_gl_table)
-            skewNormalCdfZWithGlTable(z, shape_f, &gl_table)
+        const f = if (use_gl20)
+            skewNormalCdfZWithGlTable20(z, shape_f, &gl20)
+        else if (use_gl24)
+            skewNormalCdfZWithGlTable(z, shape_f, &gl24)
         else
             skewNormalCdfZ(z, shape_f);
         const f_err = f - p_f;
