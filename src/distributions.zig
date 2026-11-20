@@ -14524,7 +14524,14 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
         -pi_f + two_pi_f * p_f;
     if (sigma_f <= 2 and alpha_f != 0) {
         const z_s = (guess - mu_f) / sigma_f;
-        const f_s = skewNormalCdfZ(z_s, alpha_f);
+        // The start only needs a rough CDF; reuse the cache's geometry table
+        // instead of rebuilding the generic Owen T quadrature per call.
+        const f_s = if (cache.use_gl20)
+            skewNormalCdfZWithGlTable20(z_s, alpha_f, &cache.gl20)
+        else if (cache.use_gl_table)
+            skewNormalCdfZWithGlTable(z_s, alpha_f, &cache.gl_table)
+        else
+            skewNormalCdfZ(z_s, alpha_f);
         const d_s = skewNormalPdfZ(z_s, alpha_f);
         if (d_s > 0 and std.math.isFinite(d_s)) {
             const z1 = z_s - (f_s - p_f) / d_s;
