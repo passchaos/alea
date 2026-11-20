@@ -12348,6 +12348,17 @@ fn vonMisesQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, kapp
         // the quantile already meets its accuracy contract.
         if (density > 0 and @abs(f_err) <= density * tol) break;
         var next: T = if (density > 0) d - f_err / density else 0.5 * (lo + hi);
+        // Halley's correction `2 f f' / (2 f'^2 - f f'')`; the relative von
+        // Mises density derivative is `−κ·sin(d)·f'`. Skipped where the CDF
+        // underflows, where the quadratic model has no meaning.
+        if (f > 0 and density > 0 and std.math.isFinite(density)) {
+            const pdf_deriv = -kappa * @sin(d) * density;
+            const denom = 2 * density * density - f_err * pdf_deriv;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = d - 2 * f_err * density / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (!(next >= lo and next <= hi)) next = 0.5 * (lo + hi);
         if (next == d) break;
         d = next;
