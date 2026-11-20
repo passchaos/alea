@@ -987,11 +987,17 @@ fn betaQuantileRecurrence(p: f64, comptime half_a: bool, half2: usize) f64 {
         const tol = 64 * std.math.floatEps(f64) * @max(y, std.math.floatMin(f64));
         if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf) and
             @abs(f_err) <= evaluated.pdf * tol) return y;
-        var next: f64 = if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf))
-            y - f_err / evaluated.pdf
-        else
-            (lo + hi) / 2;
-        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        var next: f64 = (lo + hi) / 2;
+        if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf)) {
+            // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic; the
+            // beta density derivative is `f' · ((a−1)/y − (b−1)/(1−y))`.
+            const pdf_deriv = evaluated.pdf * (((a - 1) / y) - ((b - 1) / (1 - y)));
+            const denom = 2 * evaluated.pdf * evaluated.pdf - f_err * pdf_deriv;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = y - 2 * f_err * evaluated.pdf / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (next == y) break;
         y = next;
     }
@@ -1053,11 +1059,15 @@ fn betaQuantileIntegerB(p: f64, a: f64, b: usize) ?f64 {
         const tol = 64 * std.math.floatEps(f64) * @max(y, std.math.floatMin(f64));
         if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf) and
             @abs(f_err) <= evaluated.pdf * tol) return y;
-        var next: f64 = if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf))
-            y - f_err / evaluated.pdf
-        else
-            (lo + hi) / 2;
-        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        var next: f64 = (lo + hi) / 2;
+        if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf)) {
+            const pdf_deriv = evaluated.pdf * (((a - 1) / y) - ((bf - 1) / (1 - y)));
+            const denom = 2 * evaluated.pdf * evaluated.pdf - f_err * pdf_deriv;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = y - 2 * f_err * evaluated.pdf / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (next == y) break;
         y = next;
     }
@@ -1340,6 +1350,17 @@ fn gammaQuantileImpl(comptime PeerType: type, p: PeerType, shape: PeerType, scal
         if (d > 0 and std.math.isFinite(d) and
             @abs(f - p) <= d * 64 * std.math.floatEps(T) * @max(x, std.math.floatMin(T))) return x;
         var next: T = if (d > 0 and std.math.isFinite(d)) x - (f - p) / d else (lo + hi) / 2;
+        // Halley's correction `2 f f' / (2 f'^2 - f f'')`; the gamma density
+        // derivative is `f' · ((a−1)/x − 1/scale)`. It is skipped where the
+        // CDF underflows, where the local quadratic model has no meaning.
+        if (f > 0 and d > 0 and std.math.isFinite(d)) {
+            const pdf_deriv = d * ((shape - 1) / x - 1 / scale);
+            const denom = 2 * d * d - (f - p) * pdf_deriv;
+            if (denom > 0 and std.math.isFinite(denom)) {
+                const candidate = x - 2 * (f - p) * d / denom;
+                if (candidate >= lo and candidate <= hi) next = candidate;
+            }
+        }
         if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
         if (next == x) break;
         x = next;
@@ -12821,8 +12842,13 @@ fn vonMisesVectorFrom(source: anytype, comptime T: type, mu: T, kappa: T) T {
         const c = kappa * (r - f);
         const ub = Rng.vectorOpenFrom(source, V);
         const fast = (c * (two - c) - ub) > zero;
-        const slow = (@log(c / ub) + one - c) >= zero;
-        const accept = active & (fast | slow);
+        // The squeeze accepts most lanes; only pay for the vector `log` when
+        // at least one active lane actually needs the slow test.
+        const needs_slow = active & ~fast;
+        const accept = if (@reduce(.Or, needs_slow))
+            active & (fast | ((@log(c / ub) + one - c) >= zero))
+        else
+            active & fast;
         if (@reduce(.Or, accept)) {
             const uc = Rng.vectorOpenClosedFrom(source, V);
             const sign = @select(Child, uc >= half, one, -one);
