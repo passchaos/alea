@@ -3493,6 +3493,9 @@ fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: P
     // Normal/Rayleigh starts cover the concentrated and zero-noncentrality
     // limits; the bracket fallback handles the rest.
     const a = nu_f / sigma_f;
+    // Wilson-Hilferty start: R = sigma*sqrt(chi'^2_2(lambda)) with
+    // lambda = (nu/sigma)^2, and the noncentral chi-square quantile follows
+    // the cube-root normal approximation with df_eff = 2 + lambda.
     const guess = if (a > 200) blk: {
         const mean = riceMeanForCdf(nu_f, sigma_f);
         const variance = 2 * sigma_f * sigma_f + nu_f * nu_f - mean * mean;
@@ -3501,8 +3504,13 @@ fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: P
         break :blk mean + sd * probit(p_f);
     } else if (nu_f == 0)
         sigma_f * @sqrt(-2 * @log(1 - p_f))
-    else
-        nu_f + sigma_f * probit(p_f);
+    else blk: {
+        const lambda = a * a;
+        const df_eff = 2 + lambda;
+        const t = 1 - 2 / (9 * df_eff) + probit(p_f) * @sqrt(2 / (9 * df_eff));
+        if (t > 0) break :blk sigma_f * @sqrt(df_eff * t * t * t);
+        break :blk nu_f + sigma_f * probit(p_f);
+    };
     var x: f64 = @min(@max(guess, lo), hi);
     const max_iters: usize = 60;
     for (0..max_iters) |_| {
