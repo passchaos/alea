@@ -687,8 +687,9 @@ Four-normal unit ball projection | Checked whether four standard normals project
   geometry terms (~1.5x), and the runtime-shape `skewNormalCdf` ~70 ns with
   ~28 ns of geometry (~1.6x). A `CachedBinomial`-style model type
   (`init`/`cdf`/`pdf`/`quantile`) would amortize these; it is a feature/API
-  decision rather than a kernel change, so it is left as the next feature
-  candidate after the current evidence bar.
+  decision rather than a kernel change. S4-M1863 adopted it for the von
+  Mises CDF (`vonMisesCdf` row about 2.5x on repeated calls); the wrapped
+  skew CDF and runtime-shape skew CDF models remain the next candidates.
 - Vector trig: a range-reduced degree-8 `cos` polynomial over
   `[0, pi/2]` matches libm to 3.3e-16 and costs 4.8 ns per f64x4 vector
   versus 9.9 ns for vector `@cos`. The directional kernels (`vonMisesVectorFrom`,

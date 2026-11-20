@@ -12812,6 +12812,42 @@ fn vonMisesCdfImpl(comptime PeerType: type, x: PeerType, mu: PeerType, kappa: Pe
     return vonMisesRelativeCdf(T, wrapAngle(delta, pi, two_pi), kappa);
 }
 
+/// Reusable von Mises CDF model: builds the Fourier-Bessel table once, so
+/// repeated `cdf` calls with the same parameters skip the per-call ratio
+/// recurrence that `vonMisesCdf` pays (about 2.5x on repeated calls). The
+/// table path uses the quantile's sine recurrence, so values agree with
+/// `vonMisesCdf` to about 4e-13 (the worst case is at small kappa; the
+/// direct-sum public CDF stays the reference).
+pub fn VonMisesCdfModel(comptime T: type) type {
+    comptime requireFloat(T);
+    return struct {
+        const Self = @This();
+
+        mu: f64,
+        kappa: f64,
+        cache: ?VonMisesCdfCache,
+
+        pub fn init(mu: T, kappa: T) Rng.Error!Self {
+            const mu_f: f64 = @floatCast(mu);
+            const kappa_f: f64 = @floatCast(kappa);
+            if (!std.math.isFinite(mu_f) or !std.math.isFinite(kappa_f) or kappa_f < 0) return error.InvalidParameter;
+            return .{
+                .mu = mu_f,
+                .kappa = kappa_f,
+                .cache = if (kappa_f > 0) VonMisesCdfCache.init(kappa_f) else null,
+            };
+        }
+
+        pub fn cdf(self: *const Self, x: T) T {
+            const x_f: f64 = @floatCast(x);
+            if (!std.math.isFinite(x_f)) return std.math.nan(T);
+            const delta = wrapAngle(x_f - self.mu, std.math.pi, 2 * std.math.pi);
+            if (self.cache) |*cache| return @floatCast(cache.cdf(delta));
+            return @floatCast(vonMisesRelativeCdf(f64, delta, self.kappa));
+        }
+    };
+}
+
 /// Inverse von Mises CDF: `p = 0 → μ − π`, `p = 1 → μ + π`. Uses
 /// safeguarded Newton on the relative CDF with a bisection fallback.
 pub fn vonMisesQuantile(p: anytype, mu: anytype, kappa: anytype) resolvedFloatType(@TypeOf(p, mu, kappa)) {
@@ -67905,6 +67941,23 @@ test "vonMisesQuantile cached and fallback paths match the public CDF" {
             try std.testing.expectApproxEqAbs(p, vonMisesCdf(q, 0, kappa), 1e-10);
         }
     }
+}
+
+test "VonMisesCdfModel matches the free CDF and fallbacks" {
+    inline for ([_]f64{ 0.0, 0.5, 2, 20, 1.0e4, 1.0e5 }) |kappa| {
+        const model = try VonMisesCdfModel(f64).init(0.3, kappa);
+        var x: f64 = -4;
+        while (x <= 4) : (x += 0.125) {
+            try std.testing.expectApproxEqAbs(vonMisesCdf(x, 0.3, kappa), model.cdf(x), 5e-13);
+        }
+    }
+    const f32_model = try VonMisesCdfModel(f32).init(0, 5);
+    try std.testing.expectApproxEqAbs(@as(f32, 0.5), f32_model.cdf(0), 1e-6);
+    try std.testing.expectError(error.InvalidParameter, VonMisesCdfModel(f64).init(0, -1));
+    try std.testing.expectError(error.InvalidParameter, VonMisesCdfModel(f64).init(std.math.inf(f64), 1));
+    const model = try VonMisesCdfModel(f64).init(0, 1);
+    try std.testing.expect(std.math.isNan(model.cdf(std.math.nan(f64))));
+    try std.testing.expect(std.math.isNan(model.cdf(std.math.inf(f64))));
 }
 
 test "VonMises samples stay within (-pi, pi] bounds relative to mu" {

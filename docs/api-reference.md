@@ -637,6 +637,8 @@ self-forking.
   `VonMises(T).cdf`, `VonMises(T).quantile`,
   `VonMises(T).sample`, `VonMises(T).sampleFrom`, `VonMises(T).fill`,
   `VonMises(T).fillFrom`, `vonMisesCdf`, `vonMisesQuantile`,
+  `VonMisesCdfModel(T)`, `VonMisesCdfModel(T).init`,
+  `VonMisesCdfModel(T).cdf`,
   `StandardVonMises`,
   `StandardVonMises.locationValue`, `StandardVonMises.concentrationValue`,
   `StandardVonMises.expectedValue`, `StandardVonMises.varianceValue`,

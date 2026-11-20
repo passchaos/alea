@@ -611,6 +611,7 @@ pub fn main(init: std.process.Init) !void {
     try benchVectorWrappedSkewNormal(io, stdout, "alea vector wrapped skew-normal f64x4", bytes / 32);
     try benchQuantileModel(QuantileProbeWrappedSkewNormal, io, stdout, "alea wrapped skew-normal quantile", bytes / 4096);
     try benchCdfModel(CdfProbeVonMises, io, stdout, "alea von mises cdf", bytes / 4096);
+    try benchVonMisesCdfModel(io, stdout, "alea von mises cdf model", bytes / 4096);
     try benchCdfModel(CdfProbeFisherF, io, stdout, "alea fisher-f cdf", bytes / 4096);
     try benchCdfModel(CdfProbeHoyt, io, stdout, "alea hoyt cdf", bytes / 4096);
     try benchCdfModel(CdfProbeWrappedSkewNormal, io, stdout, "alea wrapped skew-normal cdf", bytes / 4096);
@@ -12603,6 +12604,32 @@ const QuantileProbeHoyt = struct {
         return alea.distributions.hoytQuantile(p, 0.5, 1);
     }
 };
+
+fn benchVonMisesCdfModel(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
+    if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
+    const model = alea.distributions.VonMisesCdfModel(f64).init(0.5, 5) catch unreachable;
+    var best: f64 = 0;
+    var best_checksum: f64 = 0;
+    var trial: usize = 0;
+    while (trial < trials) : (trial += 1) {
+        const start = std.Io.Clock.awake.now(io).nanoseconds;
+        var checksum: f64 = 0;
+        var i: usize = 0;
+        while (i < count) : (i += 1) {
+            const x = -4 + 8 * (@as(f64, @floatFromInt(i % 1000)) + 0.5) / 1000.0;
+            checksum += model.cdf(x);
+        }
+        const elapsed_ns = std.Io.Clock.awake.now(io).nanoseconds - start;
+        const per_s = (@as(f64, @floatFromInt(count)) / 1_000_000.0) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1_000_000_000.0);
+        if (per_s > best) {
+            best = per_s;
+            best_checksum = checksum;
+        }
+    }
+    std.mem.doNotOptimizeAway(best_checksum);
+    try stdout.print("{s}: {d:.1} M cdf/s checksum={d:.3}\n", .{ name, best, best_checksum });
+}
 
 fn benchVonMisesQuantile(io: std.Io, stdout: *std.Io.Writer, name: []const u8, count: usize) !void {
     if (bench_filter) |filter| if (std.ascii.indexOfIgnoreCase(name, filter) == null) return;
