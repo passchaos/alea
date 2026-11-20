@@ -47,6 +47,11 @@ unchanged (`1717.912`, `1462.384`, `2174.360`, `4282.426`).
 - The contract grids are bit-equal to S4-M1854: wrapped worst round trip
   5.014e-10, plain skew worst relative round trip 8.889e-6. CDF and
   quantile now share one rule, so the round trips no longer mix rules.
+- A dense round-trip audit (5 sigmas x 8 shapes x 3 locations x 999
+  probabilities, 119,880 calls) measures a worst wrapped-skew
+  `|cdf(q) - p|` of 8.1e-11 (`sigma = 1`, `alpha = 2`, `mu = 2`,
+  `p = 0.501`) and a worst plain-skew error of 5.0e-10 (`alpha = -1`,
+  `p = 0.75`), both inside the 1e-9 contract with margin.
 - `zig build test --summary all` passes 996/996, including the skew-normal
   reference-value tests and the wrapped monotonicity/round-trip tests.
 
