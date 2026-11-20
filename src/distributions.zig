@@ -13843,13 +13843,22 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     const pi_f: f64 = @floatCast(std.math.pi);
     const two_pi_f = 2 * pi_f;
     var cache = WrappedSkewNormalCdfCache.init(mu_f, sigma_f, alpha_f);
-    // The wrapped-normal start is far cheaper than a skew-normal quantile
-    // solve and needs only a couple of extra Halley steps; it wins at every
-    // measured shape, including strongly skewed ones.
-    const guess = if (sigma_f <= 2)
+    // The wrapped-normal start is far cheaper than a full skew-normal
+    // quantile solve; one Newton step on the standardized skew-normal CDF
+    // sharpens it for the same asymptotic cost.
+    var guess: f64 = if (sigma_f <= 2)
         wrapAngleModulo(mu_f + sigma_f * probit(p_f), pi_f, two_pi_f)
     else
         -pi_f + two_pi_f * p_f;
+    if (sigma_f <= 2 and alpha_f != 0) {
+        const z_s = (guess - mu_f) / sigma_f;
+        const f_s = skewNormalCdfZ(z_s, alpha_f);
+        const d_s = skewNormalPdfZ(z_s, alpha_f);
+        if (d_s > 0 and std.math.isFinite(d_s)) {
+            const z1 = z_s - (f_s - p_f) / d_s;
+            if (std.math.isFinite(z1)) guess = wrapAngleModulo(mu_f + sigma_f * z1, pi_f, two_pi_f);
+        }
+    }
     var lo: f64 = -pi_f;
     var hi: f64 = pi_f;
     var x: f64 = @min(@max(guess, lo), hi);
