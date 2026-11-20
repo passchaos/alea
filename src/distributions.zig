@@ -770,6 +770,21 @@ pub fn betaCdf(x: anytype, alpha: anytype, beta_param: anytype) resolvedFloatTyp
     return betaCdfImpl(resolvedFloatType(@TypeOf(x, alpha, beta_param)), x, alpha, beta_param);
 }
 fn betaCdfImpl(comptime PeerType: type, x: PeerType, alpha: PeerType, beta_param: PeerType) PeerType {
+    if (PeerType == f64) {
+        const a_f: f64 = @floatCast(alpha);
+        const b_f: f64 = @floatCast(beta_param);
+        const x_f: f64 = @floatCast(x);
+        if (b_f == 0.5 and a_f >= 0.5 and a_f <= 64.5 and 2 * a_f == @floor(2 * a_f)) {
+            const a2: usize = @intFromFloat(2 * a_f);
+            return @floatCast(if (x_f <= 0.5)
+                betaCdfHalfBWithPdf(x_f, a2).cdf
+            else
+                1 - betaCdfHalfAWithPdf(1 - x_f, a2).cdf);
+        }
+        if (a_f == 0.5 and b_f >= 0.5 and b_f <= 64.5 and 2 * b_f == @floor(2 * b_f)) {
+            return @floatCast(betaCdfHalfAWithPdf(x_f, @intFromFloat(2 * b_f)).cdf);
+        }
+    }
     return betaIncomplete(x, alpha, beta_param);
 }
 
@@ -806,6 +821,14 @@ fn betaQuantileImpl(comptime PeerType: type, p: PeerType, alpha: PeerType, beta_
         if (alpha == @floor(alpha) and alpha >= 1 and alpha <= 64 and beta_param >= 1) {
             const u = betaQuantileIntegerB(@floatCast(1 - p), @floatCast(beta_param), @intFromFloat(alpha)).?;
             return @floatCast(1 - u);
+        }
+        const a_f: f64 = @floatCast(alpha);
+        const b_f: f64 = @floatCast(beta_param);
+        if (b_f == 0.5 and a_f >= 0.5 and a_f <= 64.5 and 2 * a_f == @floor(2 * a_f)) {
+            return @floatCast(betaQuantileHalfB(@floatCast(p), @intFromFloat(2 * a_f)).?);
+        }
+        if (a_f == 0.5 and b_f >= 0.5 and b_f <= 64.5 and 2 * b_f == @floor(2 * b_f)) {
+            return @floatCast(betaQuantileHalfA(@floatCast(p), @intFromFloat(2 * b_f)).?);
         }
     }
 
@@ -892,6 +915,109 @@ fn betaCdfIntegerBWithPdf(x: f64, a: f64, b: usize) BetaCdfInt {
 
 /// Even-denominator Fisher F CDF fast path. Returns null when neither degree
 /// of freedom gives an integer second beta parameter in `[1, 64]`.
+/// `I_x(a, 1/2)` and the beta density for half-integer `a = a2/2` (`a2` odd,
+/// `1 <= a2 <= 129`). The base case `I_x(1/2, 1/2) = 2·asin(√x)/π` is exact,
+/// and `I_x(a+1, b) = I_x(a, b) − x^a(1−x)^b/(a·B(a,b))` advances one unit of
+/// `a` with three multiplies, carrying `B(a, 1/2)` in the same step. The
+/// subtraction is well conditioned for `x <= 1/2`; callers mirror the upper
+/// half through `betaCdfHalfAWithPdf`.
+fn betaCdfHalfBWithPdf(x: f64, a2: usize) BetaCdfInt {
+    if (!(x > 0)) return .{ .cdf = 0, .pdf = 0 };
+    if (!(x < 1)) return .{ .cdf = 1, .pdf = 0 };
+    const sqrt_x = @sqrt(x);
+    const sqrt_one_minus = @sqrt(1 - x);
+    var ib = 2 * std.math.asin(sqrt_x) / std.math.pi;
+    var term = sqrt_x * sqrt_one_minus; // x^a (1−x)^(1/2) at a = 1/2
+    var beta_val: f64 = std.math.pi; // B(1/2, 1/2)
+    var a: f64 = 0.5;
+    var steps: usize = 1;
+    const target: usize = (a2 + 1) / 2; // a advances 0.5 -> target
+    while (steps < target) : (steps += 1) {
+        ib -= term / (a * beta_val);
+        term *= x;
+        beta_val *= a / (a + 0.5);
+        a += 1;
+    }
+    const pdf = term / (x * (1 - x) * beta_val);
+    return .{ .cdf = @min(@as(f64, 1), @max(@as(f64, 0), ib)), .pdf = pdf };
+}
+
+/// `I_x(1/2, b)` and the beta density for half-integer `b = b2/2` (`b2` odd,
+/// `1 <= b2 <= 129`), using the additive recurrence
+/// `I_x(1/2, b+1) = I_x(1/2, b) + x^(1/2)(1−x)^b/(b·B(1/2,b))`. All terms are
+/// positive, so the upper half of the distribution keeps full relative
+/// accuracy without a mirror.
+fn betaCdfHalfAWithPdf(x: f64, b2: usize) BetaCdfInt {
+    if (!(x > 0)) return .{ .cdf = 0, .pdf = 0 };
+    if (!(x < 1)) return .{ .cdf = 1, .pdf = 0 };
+    const sqrt_x = @sqrt(x);
+    var ib = 2 * std.math.asin(sqrt_x) / std.math.pi;
+    var term = sqrt_x * @sqrt(1 - x); // x^(1/2) (1−x)^b at b = 1/2
+    var beta_val: f64 = std.math.pi; // B(1/2, 1/2)
+    var b: f64 = 0.5;
+    var steps: usize = 1;
+    const target: usize = (b2 + 1) / 2;
+    while (steps < target) : (steps += 1) {
+        ib += term / (b * beta_val);
+        term *= 1 - x;
+        beta_val *= b / (b + 0.5);
+        b += 1;
+    }
+    const pdf = term / (x * (1 - x) * beta_val);
+    return .{ .cdf = @min(@as(f64, 1), @max(@as(f64, 0), ib)), .pdf = pdf };
+}
+
+fn betaQuantileRecurrence(p: f64, comptime half_a: bool, half2: usize) f64 {
+    const a: f64 = if (half_a) 0.5 else @as(f64, @floatFromInt(half2)) / 2;
+    const b: f64 = if (half_a) @as(f64, @floatFromInt(half2)) / 2 else 0.5;
+    var lo: f64 = 0;
+    var hi: f64 = 1;
+    var y = @min(@max(a / (a + b), lo), hi);
+    const max_iters: usize = 60;
+    for (0..max_iters) |_| {
+        const evaluated = if (half_a)
+            betaCdfHalfAWithPdf(y, half2)
+        else
+            betaCdfHalfBWithPdf(y, half2);
+        const f = evaluated.cdf;
+        const f_err = f - p;
+        if (f < p) lo = y else hi = y;
+        if (f_err == 0) return y;
+        if (hi - lo <= 64 * std.math.floatEps(f64) * @max(hi, std.math.floatMin(f64))) break;
+        const tol = 64 * std.math.floatEps(f64) * @max(y, std.math.floatMin(f64));
+        if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf) and
+            @abs(f_err) <= evaluated.pdf * tol) return y;
+        var next: f64 = if (evaluated.pdf > 0 and std.math.isFinite(evaluated.pdf))
+            y - f_err / evaluated.pdf
+        else
+            (lo + hi) / 2;
+        if (!(next >= lo and next <= hi)) next = (lo + hi) / 2;
+        if (next == y) break;
+        y = next;
+    }
+    return y;
+}
+
+/// Solve `I_y(a, 1/2) = p` for half-integer `a = a2/2`. For `p > 1/2` the
+/// mirror `I_y(a,1/2) = 1 − I_{1−y}(1/2,a)` switches to the additive
+/// recurrence, keeping both tails accurate.
+fn betaQuantileHalfB(p: f64, a2: usize) ?f64 {
+    if (!(p >= 0 and p <= 1)) return null;
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+    if (p > 0.5) return 1 - betaQuantileRecurrence(1 - p, true, a2);
+    return betaQuantileRecurrence(p, false, a2);
+}
+
+/// Solve `I_y(1/2, b) = p` for half-integer `b = b2/2` with the additive
+/// recurrence (accurate across the whole range).
+fn betaQuantileHalfA(p: f64, b2: usize) ?f64 {
+    if (!(p >= 0 and p <= 1)) return null;
+    if (p == 0) return 0;
+    if (p == 1) return 1;
+    return betaQuantileRecurrence(p, true, b2);
+}
+
 fn fisherFCdfEvenDof(y: f64, d1: f64, d2: f64) ?f64 {
     const half1 = d1 / 2;
     const half2 = d2 / 2;
