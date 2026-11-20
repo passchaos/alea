@@ -708,10 +708,12 @@ Four-normal unit ball projection | Checked whether four standard normals project
   larger win and the larger accuracy risk.
 - Long-run bar: the same-session statistical bar is a 50M-sample long run
   (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 27 min),
-  recorded in S4-M1859. The 1e9 run is the next stricter bar and needs
-  roughly 7-8 hours, so it runs in the background across turns; S4-M1869
-  records a completed 1e9 run that reproduces the S4-M1813 gate block
-  exactly. After the 1e9, the next rungs are a 4e9-sample soak (about 30
+  recorded in S4-M1859. S4-M1869 records a completed 1e9 run that
+  reproduces the S4-M1813 gate block exactly. Build the distcheck tool
+  with `-Doptimize=ReleaseFast` for long runs: the S4-M1859/S4-M1869
+  binaries were Debug builds, where a 4M long check costs 131 s of CPU; the
+  ReleaseFast binary costs 14.3 s (about 9x), so a 1e9 run is about 50
+  minutes instead of 8 hours and a 4e9 soak is about 3.3 hours. After the 1e9, the next rungs are a 4e9-sample soak (about 30
   hours) or a 24-hour wall-clock soak with the gate block repeated at
   intervals, and a fresh 128GiB PractRand pass once PractRand is
   installed. Broader platform runners
