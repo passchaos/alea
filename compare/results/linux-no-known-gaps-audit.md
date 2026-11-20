@@ -7388,7 +7388,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1856-packed-charset-fill.md`. and
 `compare/results/s4-m1857-validate-all-refresh.md`. and
 `compare/results/s4-m1858-owen-cos-polynomial.md`. and
-`compare/results/s4-m1859-50m-long-run.md`.
+`compare/results/s4-m1859-50m-long-run.md`. and
+`compare/results/s4-m1860-vector-von-mises-cos-polynomial.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7502,5 +7503,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1856-packed-charset-fill.md`. and
 `compare/results/s4-m1857-validate-all-refresh.md`. and
 `compare/results/s4-m1858-owen-cos-polynomial.md`. and
-`compare/results/s4-m1859-50m-long-run.md`.
+`compare/results/s4-m1859-50m-long-run.md`. and
+`compare/results/s4-m1860-vector-von-mises-cos-polynomial.md`.
 

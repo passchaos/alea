@@ -684,11 +684,13 @@ new concrete hypothesis is available.
   versus 9.9 ns for vector `@cos`. The directional kernels (`vonMisesVectorFrom`,
   `vectorVonMisesFisherFrom`, `vectorWatsonFrom`, `vectorBinghamFrom`,
   `vectorKentFrom`) call vector `cos`/`sin` once per accepted lane and are
-  the slowest vector rows (4.9-6.0M vectors/s). Replacing them is the next
-  candidate for those rows, but it changes every sample's low bits, so it
-  needs versioned stream entries in `reproducibility-matrix.md`; a custom
-  vector `acos` (used by the von Mises acceptance) would be the larger
-  win and the larger accuracy risk.
+  the slowest vector rows (4.9-7.1M vectors/s). S4-M1860 adopted it for the
+  f64x4 von Mises proposal (`vector von mises` 7.1M -> 7.75M, +9%) with a
+  versioned stream entry; the same substitution for the
+  vMF/Watson/Bingham/Kent `cos`/`sin` pairs is the remaining candidate and
+  is expected to be smaller because those rows are Bessel/ACG dominated. A
+  custom vector `acos` (used by the von Mises acceptance) would be the
+  larger win and the larger accuracy risk.
 - Long-run bar: the same-session statistical bar is a 50M-sample long run
   (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 27 min),
   recorded in S4-M1859. The 1e9 run is the next stricter bar and needs
