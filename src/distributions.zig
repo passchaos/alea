@@ -3332,7 +3332,10 @@ fn marcumP1Recurrence(a: f64, b: f64) f64 {
     var gamma_pdf = y * exp_neg_y;
     var poisson_weight = @exp(-half_a2);
     var sum = poisson_weight * p_gamma;
-    const peak = half_a2 + 10 * @sqrt(half_a2 + 1) + 10;
+    // The `term <= sum*eps` test is the accuracy control; the peak guard only
+    // has to clear the term mode (near `half_a2`), so a tighter margin stops
+    // the recurrence as soon as the tail is negligible.
+    const peak = half_a2 + 5 * @sqrt(half_a2 + 1) + 5;
     const eps = 64 * std.math.floatEps(f64);
     var k: usize = 1;
     while (k < 2_000_000) : (k += 1) {
