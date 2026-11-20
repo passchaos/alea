@@ -29,6 +29,21 @@ The 1e9 background run started before this gate existed, so its evidence
 covers the same sampling code without the new lane check; the 4M run above
 exercises the gate on the current binary.
 
+## High-Volume Stream Audit
+
+A dedicated 400M-lane audit of the S4-M1860 `VectorVonMises(@Vector(4,
+f64))` stream (`mu = 0.4`, `kappa = 5`, 100M vectors, about 13.5 s of CPU)
+gives:
+
+- `mean cos(X - mu) = 0.89339177` against `I1/I0 = 0.89338314`
+  (+0.38 SE);
+- `mean sin(X - mu) = -2.79e-6` against 0 (-0.08 SE);
+- a 36-bin chi-square over the full circle of 26.4 with 35 degrees of
+  freedom (mean 35, sd 8.4), worst bin -2.48 SE.
+
+The versioned cos-polynomial stream is therefore statistically
+indistinguishable from the von Mises law at this volume.
+
 ## Next Bar
 
 The 1e9 background run remains the next statistical bar; the
