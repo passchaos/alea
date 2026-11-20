@@ -51,7 +51,10 @@ unchanged (`1717.912`, `1462.384`, `2174.360`, `4282.426`).
   probabilities, 119,880 calls) measures a worst wrapped-skew
   `|cdf(q) - p|` of 8.1e-11 (`sigma = 1`, `alpha = 2`, `mu = 2`,
   `p = 0.501`) and a worst plain-skew error of 5.0e-10 (`alpha = -1`,
-  `p = 0.75`), both inside the 1e-9 contract with margin.
+  `p = 0.75`), both inside the 1e-9 contract with margin. The same audit
+  on the pre-M1854 binary measures 5.0e-10 (wrapped, `sigma = 0.3`) and
+  5.002e-10 (plain), so the twelve-point rule is equal or better on the
+  dense grid.
 - `zig build test --summary all` passes 996/996, including the skew-normal
   reference-value tests and the wrapped monotonicity/round-trip tests.
 
