@@ -2780,15 +2780,22 @@ fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, si
     const spread = spread_scale * @sqrt((sigma / spread_scale) * (sigma / spread_scale) + (tau / spread_scale) * (tau / spread_scale));
     var lo: f64 = mu - 40 * spread;
     var hi: f64 = mu + 40 * spread;
-    var expansion: usize = 0;
-    while (exGaussianCdf(@as(f64, lo), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) > p and expansion < 64) : (expansion += 1) {
-        lo -= spread;
-        if (!std.math.isFinite(lo)) return -std.math.inf(T);
-    }
-    expansion = 0;
-    while (exGaussianCdf(@as(f64, hi), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) < p and expansion < 64) : (expansion += 1) {
-        hi += spread;
-        if (!std.math.isFinite(hi)) return std.math.inf(T);
+    // The 40-spread bracket already saturates the f64 CDF at both ends: the
+    // left tail is Gaussian at 40 sigma or more, and the right tail is at
+    // most exp(-40) because spread >= tau. Only a target within a few ulps
+    // of 1 can fall outside, so the verification CDF evaluations are skipped
+    // for the ordinary range.
+    if (1 - p < 1e-12) {
+        var expansion: usize = 0;
+        while (exGaussianCdf(@as(f64, lo), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) > p and expansion < 64) : (expansion += 1) {
+            lo -= spread;
+            if (!std.math.isFinite(lo)) return -std.math.inf(T);
+        }
+        expansion = 0;
+        while (exGaussianCdf(@as(f64, hi), @as(f64, mu), @as(f64, sigma), @as(f64, tau)) < p and expansion < 64) : (expansion += 1) {
+            hi += spread;
+            if (!std.math.isFinite(hi)) return std.math.inf(T);
+        }
     }
     const p_f: f64 = @floatCast(p);
     const mu_f: f64 = @floatCast(mu);
