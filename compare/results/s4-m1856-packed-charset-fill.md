@@ -55,6 +55,20 @@ Every pair favors Alea, with a median ratio of about 1.46x. The absolute
 values are window-dependent (the host was loaded by the concurrent long
 run), so only the ratios should be compared.
 
+## High-Volume Stream Audit
+
+A 1e9-character audit of `Alphanumeric.fill` (FastPrng seed `0xa11a`)
+gives:
+
+- 1-gram chi-square 68.7 with 61 degrees of freedom (mean 61, sd 11),
+  worst single-character z = 2.69;
+- 2-gram chi-square 3739.9 with 3843 degrees of freedom (mean 3843,
+  sd 87.7), worst pair z = -3.56, which is the expected maximum over
+  3844 bins.
+
+The packed stream is uniform over the 62 characters and pairwise
+independent at this volume.
+
 ## Statistical Quality
 
 Each `width`-bit chunk is uniform over `[0, 2^width)` when the engine word
