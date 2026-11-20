@@ -663,7 +663,8 @@ Four-normal unit ball projection | Checked whether four standard normals project
 | Twelve-point Owen rule in the public skew CDFs | After S4-M1854, the public skew and wrapped skew CDFs still used the 20-point rule, whose extra accuracy sits far below the CDF's own Abramowitz-Stegun `normCdf` floor (about 1.5e-7), and CDF/quantile round trips mixed two rules. | Same-host three alternating pairs: `skew-normal cdf` 26.778/20.009/25.303M -> 41.166/37.853/28.837M (median about +50%, every candidate above every baseline) and `wrapped skew-normal cdf` 5.987/5.167/5.792M -> 5.791/6.311/6.330M (median about +9%); the quantile rows are unchanged within noise and all checksums are unchanged (`1717.912`, `1462.384`). A 393,060-point grid shows worst CDF changes of 3.09e-12 (skew) and 9.69e-12 (wrapped), and the contract grids stay bit-equal. | Adopted as S4-M1855: both public CDFs use `OwenTGlTable12` for `0 < |alpha| <= 2`; wider shapes keep 24 points and the unused 20-point code was removed. Recorded in `compare/results/s4-m1855-public-skew-cdf-twelve-point.md`. |
 
 | Packed bulk fill for the standard charsets | `Charset.fill`/`fillFrom` drew one bounded `u64` per character (128-bit multiply-high plus a near-never rejection), so `alea alphanumeric` sat at 1.02x local Rust while Rust's `Alphanumeric` takes six bits from a `u32` per character. Fills of the standard 10/26/52/62-byte alphabets now take 4/5/6-bit chunks from one `u64` per 10-16 characters with rejection; `sample`/`sampleFrom` keep the bounded draw and other lengths keep the generic loop. | Same-host four alternating pairs: `alea alphanumeric` 999.8/889.3/863.0/757.7M -> 1269.8/1213.7/1261.1/1261.5M (median about +44%), every candidate run above every baseline, with the versioned checksum `182252759` -> `182224526`. A standalone probe of the kernel measured 715.8M -> 1023.6M (about 1.43x). | Adopted as S4-M1856; the versioned bulk-fill policy is recorded in `reproducibility-matrix.md`. Recorded in `compare/results/s4-m1856-packed-charset-fill.md`. |
-## Next Candidate
+
+| Polynomial erf replacement for the half-integer gamma anchor (rejected) | `gammaHalfErfTaylor` dominates the half-integer `gammaIncompleteP/Q` (the chi-squared quantile's CDF and the wrapped skew upper tail). Tried a minimax polynomial `erf(y)` over the used range `y in [0, 2.83]` to replace the ~27-35-term Taylor. | A pure-Python Chebyshev interpolation needs degree 22 for 1.5e-13 worst absolute error and stalls near 5e-14 at degree 24-26, versus the Taylor's ~1e-17. That is a 6x accuracy loss in the half-integer recurrence anchor for a projected ~10-15% gain on diagnostic quantile rows, so the fit was not carried into the library. | Rejected on accuracy grounds; the erf Taylor (with the S4-M1852 reciprocal table) stays. A Cephes-style rational erfc would be the next candidate if this path ever needs more headroom. |## Next Candidate
 
 Continue performance triage on the remaining focused watch items only when a
 new concrete hypothesis is available. `s4-m4-remaining-gaps.md` summarizes the
@@ -779,6 +780,10 @@ current blocker audit and the requirements for a successful next candidate:
   `s4-m1768-1e7-long-run-refresh.md` and
   `s4-m1769-gamma-quantile-density-hoist.md` and
   `s4-m1771-owen-t-far-tail.md`.
+- Long-run scaling: `alea-distcheck --long N` draws N samples in each of 28
+  long-run blocks, so `--long 1000000` costs about 29 s and `--long
+  4000000` about 131 s of CPU; a 1e9 run needs roughly 7-8 hours, not one.
+  Use 10M-50M for same-session evidence and reserve 1e9 for overnight runs.
 - Quantile sweep status (post S4-M1855): the S4-M1823..M1855 series lifted
   the diagnostic quantile rows to roughly wrapped skew-normal 2.2-2.6M/s,
   von Mises 4.2M/s, chi-squared 4.8M/s, skew-normal 5.6M/s, wrapped
