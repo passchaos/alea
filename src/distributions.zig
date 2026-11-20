@@ -1304,6 +1304,18 @@ fn gammaIncompleteQImpl(comptime PeerType: type, a: PeerType, x: PeerType) PeerT
 /// `erf(√x)` for `x <= 4.5` from the alternating Taylor series. The
 /// cancellation is bounded by `e^x` ulps (about 9e-15 at the switch point),
 /// far inside the quantile contracts, and the series needs no log or exp.
+/// `1/(n(2n+1))` for the erf Taylor ratio, so each term is a multiply chain
+/// instead of a division.
+const gamma_half_erf_inv = blk: {
+    var table: [41]f64 = undefined;
+    table[0] = 0;
+    for (1..41) |i| {
+        const fi: f64 = @floatFromInt(i);
+        table[i] = 1.0 / (fi * (2 * fi + 1));
+    }
+    break :blk table;
+};
+
 fn gammaHalfErfTaylor(x: f64) f64 {
     const t = @sqrt(x);
     var term: f64 = t;
@@ -1311,7 +1323,7 @@ fn gammaHalfErfTaylor(x: f64) f64 {
     var n: usize = 1;
     while (n <= 40) : (n += 1) {
         const nf: f64 = @floatFromInt(n);
-        term *= -x * (2 * nf - 1) / (nf * (2 * nf + 1));
+        term *= -x * (2 * nf - 1) * gamma_half_erf_inv[n];
         sum += term;
         if (@abs(term) <= 1e-17 * (1 + @abs(sum))) break;
     }
