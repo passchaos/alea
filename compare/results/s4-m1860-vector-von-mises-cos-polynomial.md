@@ -37,8 +37,10 @@ low-bit change. The `vector von mises-fisher` row is unchanged within noise
 ## Accuracy
 
 - The polynomial's worst absolute `cos` error over `[0, pi/2]` is
-  3.3e-16 (Chebyshev fit verified over 200k points), so the proposal
-  density and acceptance probability move by about 1e-16.
+  3.3e-16 (Chebyshev fit verified over 200k points); a 2M-point sweep over
+  the full-turn range `[0, pi]` measures a worst error of 3.46e-16 at the
+  `pi/2` fold, so the proposal density and acceptance probability move by
+  about 1e-16.
 - The `VectorVonMises` moment tests (mean direction and concentration at
   `kappa = 5`, the `kappa = 0` uniform case, and the f32x8 path) pass.
 - Full tests 996/996, distcheck/statcheck/doccheck pass.
