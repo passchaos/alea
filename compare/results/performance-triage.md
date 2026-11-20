@@ -806,10 +806,13 @@ current blocker audit and the requirements for a successful next candidate:
   von Mises 4.2M/s, chi-squared 4.8M/s, skew-normal 5.6M/s, wrapped
   normal/Rice/Hoyt 6.5M/s, gamma 7.2M/s, ex-Gaussian 9.4M/s, and
   inverse-Gaussian 10.5M/s; the public skew-normal CDF reaches about
-  28-41M calls/s and the wrapped skew-normal CDF about 6M calls/s. S4-M1854
-  moved the skew quantile paths to a 12-point Owen rule and S4-M1855 moved
-  the public CDFs to the same rule, so CDF/quantile round trips no longer
-  mix rules. The remaining pressure is the wrapped quantile's
+  28-41M calls/s with a literal shape and about 14M calls/s with a runtime
+  shape (S4-M1858: the literal rows fold the Owen geometry build), and the
+  wrapped skew-normal CDF is about 5-6M calls/s. S4-M1854 moved the skew
+  quantile paths to a 12-point Owen rule, S4-M1855 moved the public CDFs to
+  the same rule, and S4-M1858 vectorized the geometry build, so CDF/quantile
+  round trips no longer mix rules and runtime shapes skip the libm cos
+  setup. The remaining pressure is the wrapped quantile's
   endpoint/density/normCdf work and the plain skew path's
   Owen-T/transcendental cost. Evidence:
   `compare/results/s4-m1823-half-integer-gamma-cdf.md` through
