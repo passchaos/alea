@@ -3702,6 +3702,11 @@ fn riceQuantileImpl(comptime PeerType: type, p: PeerType, nu: PeerType, sigma: P
     } else if (nu_f == 0)
         sigma_f * @sqrt(-2 * @log(1 - p_f))
     else blk: {
+        // Lower tail: the density is linear in `x` near zero, so
+        // `F(x) ~ x^2 e^{-nu^2/(2 sigma^2)} / (2 sigma^2)` inverts exactly.
+        // The Wilson-Hilferty cube-root start is poor there (50% off at
+        // p = 0.01) and good above.
+        if (p_f < 0.2) break :blk sigma_f * @sqrt(2 * p_f * @exp(nu_f * nu_f / (2 * sigma_f * sigma_f)));
         const lambda = a * a;
         const df_eff = 2 + lambda;
         const t = 1 - 2 / (9 * df_eff) + probit(p_f) * @sqrt(2 / (9 * df_eff));
