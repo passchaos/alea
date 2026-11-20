@@ -2811,6 +2811,11 @@ fn exGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerType, si
         if (f_err == 0) return @floatCast(x);
         if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
         const d = evaluated.pdf;
+        // Same noise floor as the inverse-Gaussian quantile: `normCdf` is an
+        // A&S approximation, so chasing `|f-p|` below about 1e-7 only stalls.
+        const cdf_floor: f64 = @min(1e-8, p_f * 1e-5);
+        if (d > 0 and std.math.isFinite(d) and
+            @abs(f_err) <= d * 1e-12 * @max(@as(f64, 1), @abs(x)) + cdf_floor) break;
         var next: f64 = if (d > 0 and std.math.isFinite(d)) x - f_err / d else (lo + hi) / 2;
         // Halley upgrade; skipped where the CDF underflows.
         if (f > 0 and d > 0 and std.math.isFinite(d)) {
@@ -2936,6 +2941,13 @@ fn inverseGaussianQuantileImpl(comptime PeerType: type, p: PeerType, mean: PeerT
         if (f == p_f) return @floatCast(x);
         if (hi - lo <= 1e-12 * @max(@as(f64, 1), hi)) break;
         const d = inverseGaussianPdfF64(x, mean_f, shape_f);
+        // The Newton correction is `|f-p| / d`; below the x tolerance the
+        // quantile meets its contract. `normCdf` carries an A&S error of
+        // about 1e-7, so the stop also allows a small absolute CDF floor,
+        // capped at a fraction of `p` for the tails.
+        const cdf_floor: f64 = @min(1e-8, p_f * 1e-5);
+        if (d > 0 and std.math.isFinite(d) and
+            @abs(f - p_f) <= d * 1e-12 * @max(@as(f64, 1), @abs(x)) + cdf_floor) break;
         var next: f64 = if (d > 0 and std.math.isFinite(d)) x - (f - p_f) / d else (lo + hi) / 2;
         // Halley upgrade with the slope-dominance guard; the inverse-Gaussian
         // density derivative is `f' · (−3/(2x) − λ(1 − μ²/x²)/(2μ²))`.
