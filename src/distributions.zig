@@ -11963,7 +11963,7 @@ pub const StandardLogistic = struct {
 /// for `kappa <= 1e4` with at most `max_terms` series terms; other parameters
 /// keep the direct path.
 const VonMisesCdfCache = struct {
-    const max_terms = 128;
+    const max_terms = 192;
 
     kappa: f64,
     k_sum: usize,
@@ -11976,8 +11976,11 @@ const VonMisesCdfCache = struct {
     fn init(kappa: f64) ?VonMisesCdfCache {
         if (!(kappa > 0 and kappa <= 1.0e4)) return null;
         const kf = kappa;
-        const k_total: usize = @max(64, @as(usize, @intFromFloat(@ceil(kf + 10 * @sqrt(kf) + 40))));
-        const k_sum: usize = @min(k_total, @max(64, @as(usize, @intFromFloat(@ceil(8.5 * @sqrt(kf) + 40)))));
+        // Same decay-band bound as the direct CDF: the old 64/40 floors
+        // multiplied the per-call sine sum by roughly 2-4x for small kappa.
+        const k_band = kf + 6 * @sqrt(kf);
+        const k_total: usize = @intFromFloat(@ceil(k_band + 16));
+        const k_sum: usize = @intFromFloat(@ceil(@min(k_band + 10, 8.5 * @sqrt(kf) + 40)));
         if (k_sum > max_terms) return null;
 
         var raw: [max_terms + 1]f64 = undefined;
@@ -12078,8 +12081,12 @@ fn vonMisesRelativeCdf(comptime T: type, d: T, kappa: T) T {
     }
     if (kappa <= 1.0e4) {
         const kf: f64 = @floatCast(kappa);
-        const k_total: usize = @max(64, @as(usize, @intFromFloat(@ceil(kf + 10 * @sqrt(kf) + 40))));
-        const k_sum: usize = @min(k_total, @max(64, @as(usize, @intFromFloat(@ceil(8.5 * @sqrt(kf) + 40)))));
+        // Both the backward continued fraction and the sine sum converge once
+        // the index passes the `kappa + 6*sqrt(kappa)` decay band; the old
+        // 64/40 floors only added iterations (and sines) for small kappa.
+        const k_band = kf + 6 * @sqrt(kf);
+        const k_total: usize = @intFromFloat(@ceil(k_band + 16));
+        const k_sum: usize = @intFromFloat(@ceil(@min(k_band + 10, 8.5 * @sqrt(kf) + 40)));
         const df: f64 = @floatCast(d);
         var ratio: f64 = 1;
         var sum: f64 = 0;
