@@ -2882,15 +2882,13 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     const shape_f: f64 = @floatCast(shape);
     const p_f: f64 = @floatCast(p);
 
-    // Safeguarded Newton in standardized coordinates. The normal quantile is
-    // the shape=0 exact solution and a good start for moderate skew; the
-    // bracket expands only for probabilities beyond the ±40 initial range.
+    // Safeguarded Halley in standardized coordinates. The normal quantile is
+    // the shape=0 exact solution and a good start for moderate skew. The
+    // bracket is fixed at ±40: the standardized CDF is clamped to [0, 1] and
+    // saturates there for every finite shape, so no finite `p` needs a wider
+    // bracket (the old expansion loops could never run).
     var lo: f64 = -40;
     var hi: f64 = 40;
-    var expansion: usize = 0;
-    while (skewNormalCdfZ(lo, shape_f) > p_f and expansion < 64) : (expansion += 1) lo -= 1;
-    expansion = 0;
-    while (skewNormalCdfZ(hi, shape_f) < p_f and expansion < 64) : (expansion += 1) hi += 1;
     var z: f64 = @min(@max(probit(p_f), lo), hi);
     const tol: f64 = 1e-12;
     const max_iters: usize = 40;

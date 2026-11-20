@@ -7316,7 +7316,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1784-von-mises-term-bounds.md`. and
 `compare/results/s4-m1785-owen-t-gl-band.md`. and
 `compare/results/s4-m1786-wrapped-skew-normal-start.md`. and
-`compare/results/s4-m1787-owen-t-large-a.md`.
+`compare/results/s4-m1787-owen-t-large-a.md`. and
+`compare/results/s4-m1788-skew-quantile-bracket.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7358,5 +7359,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1784-von-mises-term-bounds.md`. and
 `compare/results/s4-m1785-owen-t-gl-band.md`. and
 `compare/results/s4-m1786-wrapped-skew-normal-start.md`. and
-`compare/results/s4-m1787-owen-t-large-a.md`.
+`compare/results/s4-m1787-owen-t-large-a.md`. and
+`compare/results/s4-m1788-skew-quantile-bracket.md`.
 
