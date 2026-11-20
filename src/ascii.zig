@@ -7,6 +7,41 @@ pub const lowercase = "abcdefghijklmnopqrstuvwxyz";
 pub const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 pub const digits = "0123456789";
 
+/// Packed bulk fill for standard-width charsets. Draw one `u64` per
+/// `64 / width` characters, take `width` bits per character, and reject
+/// values outside the charset. The standard alphabets use 4/5/6-bit widths,
+/// so rejection stays between 0 and 38% and each word yields 10-16
+/// characters instead of one bounded draw per character. This is a versioned
+/// bulk-fill policy: `sample`/`sampleFrom` keep the per-character bounded
+/// draw, and fills for other lengths keep the generic loop.
+fn fillPackedFrom(source: anytype, comptime width: u7, bytes: []const u8, out: []u8) void {
+    const per_word = 64 / width;
+    const limit: u64 = @intCast(bytes.len);
+    var i: usize = 0;
+    while (i + per_word <= out.len) {
+        var word = Rng.nextFrom(source);
+        inline for (0..per_word) |_| {
+            const index = word >> (64 - width);
+            word <<= width;
+            if (index < limit) {
+                out[i] = bytes[@intCast(index)];
+                i += 1;
+            }
+        }
+    }
+    while (i < out.len) {
+        var word = Rng.nextFrom(source);
+        inline for (0..per_word) |_| {
+            const index = word >> (64 - width);
+            word <<= width;
+            if (index < limit and i < out.len) {
+                out[i] = bytes[@intCast(index)];
+                i += 1;
+            }
+        }
+    }
+}
+
 pub const Charset = struct {
     bytes: []const u8,
 
@@ -163,6 +198,12 @@ pub const Charset = struct {
             @memset(out, self.bytes[0]);
             return;
         }
+        switch (self.bytes.len) {
+            10 => return fillPackedFrom(rng, 4, self.bytes, out),
+            26 => return fillPackedFrom(rng, 5, self.bytes, out),
+            52, 62 => return fillPackedFrom(rng, 6, self.bytes, out),
+            else => {},
+        }
         if (comptime @bitSizeOf(usize) <= 64) {
             const byte_count: u64 = @intCast(self.bytes.len);
             for (out) |*byte| {
@@ -190,6 +231,12 @@ pub const Charset = struct {
         if (self.bytes.len == 1) {
             @memset(out, self.bytes[0]);
             return;
+        }
+        switch (self.bytes.len) {
+            10 => return fillPackedFrom(source, 4, self.bytes, out),
+            26 => return fillPackedFrom(source, 5, self.bytes, out),
+            52, 62 => return fillPackedFrom(source, 6, self.bytes, out),
+            else => {},
         }
         if (comptime @bitSizeOf(usize) <= 64) {
             const byte_count: u64 = @intCast(self.bytes.len);
@@ -801,14 +848,17 @@ test "ascii charset fills requested length" {
     var direct_buf: [32]u8 = undefined;
     Alphanumeric.fillFrom(&engine, &direct_buf);
     for (direct_buf) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
+    // The packed bulk fill is a versioned policy: fills consume packed
+    // 4/5/6-bit chunks while `sampleFrom` keeps the per-character bounded
+    // draw, so a fill no longer equals a repeated-sample loop.
     var charset_fill_engine = alea.ScalarPrng.init(0x5880_a5c1);
-    var charset_loop_engine = alea.ScalarPrng.init(0x5880_a5c1);
+    var charset_fill_from_engine = alea.ScalarPrng.init(0x5880_a5c1);
     var charset_fill: [32]u8 = undefined;
-    var charset_loop: [32]u8 = undefined;
-    Alphanumeric.fillFrom(&charset_fill_engine, &charset_fill);
-    for (&charset_loop) |*byte| byte.* = Alphanumeric.sampleFrom(&charset_loop_engine);
-    try std.testing.expectEqualSlices(u8, &charset_loop, &charset_fill);
-    try std.testing.expectEqual(charset_loop_engine.next(), charset_fill_engine.next());
+    var charset_fill_from: [32]u8 = undefined;
+    Alphanumeric.fill(alea.Rng.init(&charset_fill_engine), &charset_fill);
+    Alphanumeric.fillFrom(&charset_fill_from_engine, &charset_fill_from);
+    try std.testing.expectEqualSlices(u8, &charset_fill_from, &charset_fill);
+    for (charset_fill) |byte| try std.testing.expect(std.ascii.isAlphanumeric(byte));
 
     const direct_password = try Alphanumeric.allocFrom(std.testing.allocator, &engine, 32);
     defer std.testing.allocator.free(direct_password);
@@ -1648,20 +1698,20 @@ test "ascii helpers have stable snapshots" {
 
     var filled: [16]u8 = undefined;
     Alphanumeric.fill(rng, &filled);
-    try std.testing.expectEqualSlices(u8, "YgyjAl2O8koQA6gG", &filled);
+    try std.testing.expectEqualSlices(u8, "Y52jPKMSUniDB5d7", &filled);
 
     const sampled = try string(std.testing.allocator, rng, 16);
     defer std.testing.allocator.free(sampled);
-    try std.testing.expectEqualSlices(u8, "2jpYtsabnOVHQtfb", sampled);
+    try std.testing.expectEqualSlices(u8, "0aY6sk3H3dkxp3Ld", sampled);
 
-    try std.testing.expectEqual(@as(u21, 0x59e2b), unicodeScalar(rng));
+    try std.testing.expectEqual(@as(u21, 0xb1b16), unicodeScalar(rng));
 
     const utf8 = try unicodeUtf8Alloc(std.testing.allocator, rng, 6);
     defer std.testing.allocator.free(utf8);
     try std.testing.expectEqualSlices(u8, &.{
-        0xf1, 0x9e, 0xb9, 0x99, 0xf2, 0xa8, 0x9b, 0x83,
-        0xf1, 0xaa, 0xaf, 0xae, 0xf1, 0x93, 0xb5, 0xae,
-        0xf3, 0x9f, 0xa8, 0xa9, 0xf4, 0x85, 0xa2, 0x8c,
+        0xf3, 0x84, 0xbc, 0x80, 0xf3, 0xbb, 0xa5, 0x86,
+        0xf1, 0xbb, 0xac, 0x8a, 0xf1, 0xa2, 0xb6, 0x84,
+        0xf0, 0x9f, 0xa8, 0x9a, 0xf0, 0xb1, 0xa9, 0x84,
     }, utf8);
-    try std.testing.expectEqual(@as(u64, 0x11b40122bde6eb6a), engine.next());
+    try std.testing.expectEqual(@as(u64, 0x2aa90fc028513e3), engine.next());
 }
