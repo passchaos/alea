@@ -3368,6 +3368,12 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
     // shapes keep the 24-point rule.
     const use_gl20 = shape_f != 0 and @abs(shape_f) <= 2;
     const use_gl24 = shape_f != 0 and @abs(shape_f) <= 6 and !use_gl20;
+    // The fixed rules carry a small absolute CDF error (about 6e-13 for the
+    // 20-point rule); below that floor the Newton correction only chases
+    // rule noise. The allowance is capped at a fraction of `p` so the deep
+    // tails keep their relative accuracy.
+    const cdf_floor_raw: f64 = if (use_gl20) 1e-12 else if (use_gl24) 1e-14 else 0;
+    const cdf_floor = @min(cdf_floor_raw, p_f * 1e-5);
     const gl20 = if (use_gl20) owenTGlTable20(shape_f) else OwenTGlTable20{ .b = 0, .inv_cos2 = undefined };
     const gl24 = if (use_gl24) owenTGlTable(shape_f) else OwenTGlTable{ .b = 0, .inv_cos2 = undefined };
     for (0..max_iters) |_| {
@@ -3384,7 +3390,7 @@ fn skewNormalQuantileImpl(comptime PeerType: type, p: PeerType, location: PeerTy
         const d = pdf_pair[0];
         // The correction is `|f-p| / d`; below the x tolerance the quantile
         // already meets its accuracy contract.
-        if (d > 0 and @abs(f_err) <= d * tol) break;
+        if (d > 0 and @abs(f_err) <= d * tol + cdf_floor) break;
         var next: f64 = if (d > 0) z - f_err / d else 0.5 * (lo + hi);
         if (d > 0) {
             // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic near
@@ -14529,6 +14535,12 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
     var hi: f64 = pi_f;
     var x: f64 = @min(@max(guess, lo), hi);
     const tol: f64 = 1e-12;
+    // The fixed Owen rules carry a small absolute CDF error (about 6e-13 for
+    // the 20-point rule, summed over the active images); below that floor the
+    // Halley correction only chases rule noise. The allowance is capped at a
+    // fraction of `p` so the deep tails keep their relative accuracy.
+    const cdf_floor_raw: f64 = if (cache.use_gl20) 5e-12 else if (cache.use_gl_table) 5e-14 else 0;
+    const cdf_floor = @min(cdf_floor_raw, p_f * 1e-5);
     for (0..40) |_| {
         const evaluated = cache.eval(x, true);
         const f = evaluated.cdf;
@@ -14540,7 +14552,7 @@ fn wrappedSkewNormalQuantileImpl(comptime PeerType: type, p: PeerType, mu: PeerT
         // The correction is `|f-p| / d`; once it falls below the x tolerance
         // the quantile already meets the 1e-12 contract, so the remaining
         // bracket bisection cannot improve it.
-        if (d > 0 and std.math.isFinite(d) and @abs(f_err) <= d * tol) break;
+        if (d > 0 and std.math.isFinite(d) and @abs(f_err) <= d * tol + cdf_floor) break;
         var next: f64 = 0.5 * (lo + hi);
         if (d > 0 and std.math.isFinite(d)) {
             // Halley's correction `2 f f' / (2 f'^2 - f f'')` is cubic once

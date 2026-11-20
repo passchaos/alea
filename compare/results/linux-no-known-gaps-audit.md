@@ -7356,7 +7356,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1824-wrapped-endpoint-saturation.md`. and
 `compare/results/s4-m1825-wrapped-quantile-twenty-point.md`. and
 `compare/results/s4-m1826-wrapped-normal-endpoint-clamp.md`. and
-`compare/results/s4-m1827-validate-all-refresh.md`.
+`compare/results/s4-m1827-validate-all-refresh.md`. and
+`compare/results/s4-m1828-quantile-rule-noise-floor.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7438,5 +7439,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1824-wrapped-endpoint-saturation.md`. and
 `compare/results/s4-m1825-wrapped-quantile-twenty-point.md`. and
 `compare/results/s4-m1826-wrapped-normal-endpoint-clamp.md`. and
-`compare/results/s4-m1827-validate-all-refresh.md`.
+`compare/results/s4-m1827-validate-all-refresh.md`. and
+`compare/results/s4-m1828-quantile-rule-noise-floor.md`.
 
