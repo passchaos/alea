@@ -2856,8 +2856,13 @@ fn inverseGaussianCdfWithExp(x: f64, mean: f64, shape: f64, exp_const: f64) f64 
 fn inverseGaussianPdfF64(x: f64, mean: f64, shape: f64) f64 {
     if (x <= 0) return 0;
     const mean2 = mean * mean;
-    const log_density = 0.5 * @log(shape / (2 * std.math.pi)) - 1.5 * @log(x) -
-        shape * (x - mean) * (x - mean) / (2 * mean2 * x);
+    const exponent = -shape * (x - mean) * (x - mean) / (2 * mean2 * x);
+    if (x > 1e-100 and exponent > -700) {
+        // Direct form: `sqrt(λ/(2π))·e^exponent/x^1.5` replaces the `log(x)`
+        // in the log-space path with a square root and a division.
+        return @sqrt(shape / (2 * std.math.pi)) * @exp(exponent) / (x * @sqrt(x));
+    }
+    const log_density = 0.5 * @log(shape / (2 * std.math.pi)) - 1.5 * @log(x) + exponent;
     if (log_density < -745) return 0;
     if (!(log_density < 700)) return std.math.inf(f64);
     return @exp(log_density);
