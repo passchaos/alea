@@ -670,6 +670,14 @@ Four-normal unit ball projection | Checked whether four standard normals project
 Continue performance triage on the remaining focused watch items only when a
 new concrete hypothesis is available.
 
+- Component costs (measured on the current host, loaded window): Owen T
+  12-node ~21.7 ns, `normCdf` ~4.2 ns, `normPdf` ~2.2 ns, `gammaIncompleteQ(0.5, y)`
+  ~20 ns (Taylor, y <= 4.5), ~46 ns (continued fraction, 4.5 < y < 18), ~21 ns
+  (Mills, y >= 18); `gammaIncompleteQ(2, 4)` ~15 ns while the a=2.5 continued
+  fraction near `x = a + 1` costs ~82 ns (the half-integer recurrence P is ~28 ns,
+  which is why it stays). The wrapped skew quantile's per-eval cost is roughly
+  40% Owen T, 28% CDF base, 11% density; further gains need fewer Owen nodes
+  (accuracy-limited) or a faster exp (already rejected as slower in this loop).
 - Long-run bar: the same-session statistical bar is a 50M-sample long run
   (`alea-distcheck --long 50000000`: 28 blocks x 50M draws, about 25 min).
   The 1e9 run is the next stricter bar and needs roughly 7-8 hours, so it
