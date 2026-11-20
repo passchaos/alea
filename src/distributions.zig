@@ -3719,8 +3719,15 @@ fn hoytPdfImpl(x: f64, q: f64, omega: f64) f64 {
     const q2 = q * q;
     const r = (1 - q2) / (1 + q2);
     const a = (1 + q2) * (1 + q2) / (4 * q2 * omega);
-    const log_density = @log(2 * a * x) + @log(2 * q / (1 + q2)) -
-        a * x * x + logBesselI0(r * a * x * x);
+    const z = r * a * x * x;
+    const exponent = -a * x * x;
+    if (z <= 30 and exponent > -700) {
+        // Direct form for the moderate range: one exp plus the I0 series
+        // instead of two logs, the log-Bessel series, and an exp.
+        return (2 * a * x) * (2 * q / (1 + q2)) * @exp(exponent) * besselI0(z);
+    }
+    const log_density = @log(2 * a * x) + @log(2 * q / (1 + q2)) +
+        exponent + logBesselI0(z);
     if (log_density < -745.0) return 0;
     return @exp(log_density);
 }
