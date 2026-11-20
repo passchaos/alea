@@ -13581,14 +13581,31 @@ fn WrappedNormalCdfCache(comptime T: type) type {
         mu_w: T,
         sigma: T,
         k_max: i32,
+        /// Images outside `[k_lo, k_hi]` lie entirely beyond the 9-sigma
+        /// saturation band on the endpoint side, so the skip test would drop
+        /// them on every evaluation; excluding them removes four of the seven
+        /// loop iterations for `sigma = 1`.
+        k_lo: i32,
+        k_hi: i32,
         endpoint_terms: [max_images]T = undefined,
         has_terms: bool = false,
 
         fn init(mu_w: T, sigma: T) Self {
+            const k_max = wrappedNormalImageCount(T, sigma);
+            const two_pi: T = @floatCast(2 * std.math.pi);
+            const pi: T = @floatCast(std.math.pi);
+            const stride = two_pi / sigma;
+            const lower_z0 = (-pi - mu_w) / sigma;
+            const upper_z0 = (pi - mu_w) / sigma;
+            const nine: T = 9;
+            const k_lo: i32 = @max(-k_max, @as(i32, @intFromFloat(@floor((-nine - upper_z0) / stride))));
+            const k_hi: i32 = @min(k_max, @as(i32, @intFromFloat(@ceil((nine - lower_z0) / stride))));
             return .{
                 .mu_w = mu_w,
                 .sigma = sigma,
-                .k_max = wrappedNormalImageCount(T, sigma),
+                .k_max = k_max,
+                .k_lo = k_lo,
+                .k_hi = @max(k_hi, k_lo),
             };
         }
 
@@ -13597,9 +13614,9 @@ fn WrappedNormalCdfCache(comptime T: type) type {
             self.has_terms = true;
             const pi: T = @floatCast(std.math.pi);
             const two_pi: T = 2 * pi;
-            var k: i32 = -self.k_max;
-            var i: usize = 0;
-            while (k <= self.k_max) : (k += 1) {
+            var k: i32 = self.k_lo;
+            var i: usize = @intCast(k + self.k_max);
+            while (k <= self.k_hi) : (k += 1) {
                 const shift: T = @as(T, @floatFromInt(k)) * two_pi;
                 self.endpoint_terms[i] = normCdf((-pi - self.mu_w + shift) / self.sigma);
                 i += 1;
@@ -13619,9 +13636,9 @@ fn WrappedNormalCdfCache(comptime T: type) type {
             var sum: T = 0;
             var pdf_sum: T = 0;
             var pdf_deriv_sum: T = 0;
-            var k: i32 = -self.k_max;
-            var i: usize = 0;
-            while (k <= self.k_max) : (k += 1) {
+            var k: i32 = self.k_lo;
+            var i: usize = @intCast(k + self.k_max);
+            while (k <= self.k_hi) : (k += 1) {
                 const shift: T = @as(T, @floatFromInt(k)) * two_pi;
                 const z = (x - self.mu_w + shift) / self.sigma;
                 // |z| >= 9 leaves < 1e-18 of probability or density.

@@ -7337,7 +7337,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1805-no-known-gaps-refresh.md`. and
 `compare/results/s4-m1806-validate-all-refresh.md`. and
 `compare/results/s4-m1807-1e7-long-run-refresh.md`. and
-`compare/results/s4-m1808-taylor-erfc.md`.
+`compare/results/s4-m1808-taylor-erfc.md`. and
+`compare/results/s4-m1809-wrapped-normal-image-range.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7400,5 +7401,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1805-no-known-gaps-refresh.md`. and
 `compare/results/s4-m1806-validate-all-refresh.md`. and
 `compare/results/s4-m1807-1e7-long-run-refresh.md`. and
-`compare/results/s4-m1808-taylor-erfc.md`.
+`compare/results/s4-m1808-taylor-erfc.md`. and
+`compare/results/s4-m1809-wrapped-normal-image-range.md`.
 
