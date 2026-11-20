@@ -818,7 +818,7 @@ current blocker audit and the requirements for a successful next candidate:
   long-run blocks, so `--long 1000000` costs about 29 s and `--long
   4000000` about 131 s of CPU; a 1e9 run needs roughly 7-8 hours, not one.
   Use 10M-50M for same-session evidence and reserve 1e9 for overnight runs.
-- Quantile sweep status (post S4-M1855): the S4-M1823..M1855 series lifted
+- Quantile sweep status (post S4-M1862): the S4-M1823..M1862 series lifted
   the diagnostic quantile rows to roughly wrapped skew-normal 2.2-2.6M/s,
   von Mises 4.2M/s, chi-squared 4.8M/s, skew-normal 5.6M/s, wrapped
   normal/Rice/Hoyt 6.5M/s, gamma 7.2M/s, ex-Gaussian 9.4M/s, and
@@ -829,9 +829,12 @@ current blocker audit and the requirements for a successful next candidate:
   quantile paths to a 12-point Owen rule, S4-M1855 moved the public CDFs to
   the same rule, and S4-M1858 vectorized the geometry build, so CDF/quantile
   round trips no longer mix rules and runtime shapes skip the libm cos
-  setup. The remaining pressure is the wrapped quantile's
-  endpoint/density/normCdf work and the plain skew path's
-  Owen-T/transcendental cost. Evidence:
+  setup. The vector directional rows were also touched: S4-M1860 lifted
+  `vector von mises f64x4` 7.1M -> 7.75M (about +9%) with the same cos
+  polynomial, and S4-M1862 added the long-run lane gate for its versioned
+  stream. The remaining pressure is the wrapped quantile's
+  endpoint/density/normCdf work, the plain skew path's
+  Owen-T/transcendental cost, and the Kent/Bingham Bessel kernels. Evidence:
   `compare/results/s4-m1823-half-integer-gamma-cdf.md` through
   `s4-m1855-public-skew-cdf-twelve-point.md`.
 - Wrapped skew-normal sampling: 401.6M samples/s scalar and 60.8M vectors/s
