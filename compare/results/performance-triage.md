@@ -720,7 +720,8 @@ Four-normal unit ball projection | Checked whether four standard normals project
   tighten around the exact expectations. Note that the distcheck seeds are
   fixed, so repeating a run reproduces the same gate values; a true soak
   needs a larger `--long` count (1e10 is about 9.4 hours, 2.5e10 about
-  23.5 hours) or a new per-run seed option. A fresh 128GiB PractRand pass
+  23.5 hours) or a new per-run seed option. The 1e10 run is in flight as
+  the next rung after S4-M1871. A fresh 128GiB PractRand pass
   (once PractRand is installed) is the other next rung.
   S4-M1872 re-measures the thin no-known-gaps rows on the current binary:
   alphanumeric about 1.37x, standard-normal about 1.08x,
