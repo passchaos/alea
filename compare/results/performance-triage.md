@@ -717,8 +717,11 @@ Four-normal unit ball projection | Checked whether four standard normals project
   records a current-tree ReleaseFast 1e9 run (about one hour) that
   reproduces every gate exactly and covers the post-M1856 changes, and
   S4-M1871 records a completed 4e9 soak (about 3.75 hours) whose gates
-  tighten around the exact expectations. The next rungs are a 24-hour
-  wall-clock soak and a fresh 128GiB PractRand pass once installed.
+  tighten around the exact expectations. Note that the distcheck seeds are
+  fixed, so repeating a run reproduces the same gate values; a true soak
+  needs a larger `--long` count (1e10 is about 9.4 hours, 2.5e10 about
+  23.5 hours) or a new per-run seed option. A fresh 128GiB PractRand pass
+  (once PractRand is installed) is the other next rung.
   S4-M1872 re-measures the thin no-known-gaps rows on the current binary:
   alphanumeric about 1.37x, standard-normal about 1.08x,
   normal-inverse-gaussian about 1.05x, poisson about 1.18x, and
