@@ -718,7 +718,11 @@ Four-normal unit ball projection | Checked whether four standard normals project
   reproduces every gate exactly and covers the post-M1856 changes, and
   S4-M1871 records a completed 4e9 soak (about 3.75 hours) whose gates
   tighten around the exact expectations. The next rungs are a 24-hour
-  wall-clock soak and a fresh 128GiB PractRand pass once installed. After the 1e9, the next rungs are a 4e9-sample soak (about 30
+  wall-clock soak and a fresh 128GiB PractRand pass once installed.
+  S4-M1872 re-measures the thin no-known-gaps rows on the current binary:
+  alphanumeric about 1.37x, standard-normal about 1.08x,
+  normal-inverse-gaussian about 1.05x, poisson about 1.18x, and
+  inverse-gaussian about 1.11x. After the 1e9, the next rungs are a 4e9-sample soak (about 30
   hours) or a 24-hour wall-clock soak with the gate block repeated at
   intervals, and a fresh 128GiB PractRand pass once PractRand is
   installed. Broader platform runners
