@@ -7399,7 +7399,8 @@ S4-M1264, S4-M1265, S4-M1266, S4-M1267, S4-M1268, S4-M1269, S4-M1270, S4-M1271, 
 `compare/results/s4-m1867-wrapped-quantile-model.md`. and
 `compare/results/s4-m1868-von-mises-quantile-model.md`. and
 `compare/results/s4-m1869-1e9-long-run.md`. and
-`compare/results/s4-m1870-current-tree-1e9-releasefast.md`.
+`compare/results/s4-m1870-current-tree-1e9-releasefast.md`. and
+`compare/results/s4-m1871-4e9-soak.md`.
 
 ## S4-M1774 No-Known-Gaps Refresh (current host)
 
@@ -7524,5 +7525,6 @@ vector-directional samplers). Evidence:
 `compare/results/s4-m1867-wrapped-quantile-model.md`. and
 `compare/results/s4-m1868-von-mises-quantile-model.md`. and
 `compare/results/s4-m1869-1e9-long-run.md`. and
-`compare/results/s4-m1870-current-tree-1e9-releasefast.md`.
+`compare/results/s4-m1870-current-tree-1e9-releasefast.md`. and
+`compare/results/s4-m1871-4e9-soak.md`.
 

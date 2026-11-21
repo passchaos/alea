@@ -715,7 +715,10 @@ Four-normal unit ball projection | Checked whether four standard normals project
   ReleaseFast binary costs 14.3 s (about 9x), so a 1e9 run is about 50
   minutes instead of 8 hours and a 4e9 soak is about 3.3 hours. S4-M1870
   records a current-tree ReleaseFast 1e9 run (about one hour) that
-  reproduces every gate exactly and covers the post-M1856 changes. After the 1e9, the next rungs are a 4e9-sample soak (about 30
+  reproduces every gate exactly and covers the post-M1856 changes, and
+  S4-M1871 records a completed 4e9 soak (about 3.75 hours) whose gates
+  tighten around the exact expectations. The next rungs are a 24-hour
+  wall-clock soak and a fresh 128GiB PractRand pass once installed. After the 1e9, the next rungs are a 4e9-sample soak (about 30
   hours) or a 24-hour wall-clock soak with the gate block repeated at
   intervals, and a fresh 128GiB PractRand pass once PractRand is
   installed. Broader platform runners
